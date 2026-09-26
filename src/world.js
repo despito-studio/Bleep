@@ -173,728 +173,321 @@ function recordingCamera(parent,x,z,rotation=0) {
   label(g,['ТК–04'],.282,1.63,-.06,.42,.16,Math.PI/2,{font:25,width:128,height:48});box(g,0,1.91,.25,.075,.04,.04,glow(0xe51f12,2));return g;
 }
 
-function createOlenaFaceTexture() {
+// --- Broadcaster Monster (The Anchor / Диктор - Entity 04 / Arthur Cole) ---
+
+function createAnchorFaceTexture(bloody = false) {
   const c = document.createElement('canvas'); c.width = 128; c.height = 128;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#eddccb'; ctx.fillRect(0, 0, 128, 128);
+  // Pale dead CRT wax skin or bloody sludge
+  ctx.fillStyle = bloody ? '#593232' : '#7c8879';
+  ctx.fillRect(0, 0, 128, 128);
 
-  // Soft cheekbone blush
-  const blushL = ctx.createRadialGradient(28, 76, 2, 28, 76, 28);
-  blushL.addColorStop(0, 'rgba(214, 110, 125, 0.45)'); blushL.addColorStop(1, 'rgba(214, 110, 125, 0)');
-  ctx.fillStyle = blushL; ctx.fillRect(0, 50, 60, 50);
-  const blushR = ctx.createRadialGradient(100, 76, 2, 100, 76, 28);
-  blushR.addColorStop(0, 'rgba(214, 110, 125, 0.45)'); blushR.addColorStop(1, 'rgba(214, 110, 125, 0)');
-  ctx.fillStyle = blushR; ctx.fillRect(68, 50, 60, 50);
+  // CRT scanlines
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+  for (let y = 0; y < 128; y += 2) ctx.fillRect(0, y, 128, 1);
 
-  // Arched sleek dark brows
-  ctx.strokeStyle = '#2b211d'; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(22, 42); ctx.quadraticCurveTo(38, 34, 52, 42); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(76, 42); ctx.quadraticCurveTo(90, 34, 106, 42); ctx.stroke();
-
-  // Dramatic winged eyeliner & sultry eyes
-  for (const [lx, rx] of [[24, 50], [78, 104]]) {
-    ctx.fillStyle = '#f8f8f5';
-    ctx.beginPath(); ctx.ellipse((lx + rx) / 2, 53, (rx - lx) / 2, 6.5, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#1c1817';
-    ctx.beginPath(); ctx.arc((lx + rx) / 2, 53, 5, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#4a3d36';
-    ctx.beginPath(); ctx.arc((lx + rx) / 2, 53, 3, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#111111';
-    ctx.beginPath(); ctx.arc((lx + rx) / 2, 53, 1.8, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath(); ctx.arc((lx + rx) / 2 - 1.5, 51, 1.2, 0, Math.PI * 2); ctx.fill();
-    // Heavy winged upper eyeliner line
-    ctx.strokeStyle = '#111111'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(lx - 2, 54); ctx.quadraticCurveTo((lx + rx) / 2, 47, rx + 4, 50); ctx.stroke();
+  // Analog broadcast static flecks
+  for (let i = 0; i < 180; i++) {
+    const sx = Math.floor(rnd() * 128);
+    const sy = Math.floor(rnd() * 128);
+    ctx.fillStyle = bloody
+      ? (rnd() > 0.4 ? 'rgba(180, 20, 20, 0.4)' : 'rgba(20, 10, 10, 0.5)')
+      : (rnd() > 0.5 ? 'rgba(120, 240, 160, 0.25)' : 'rgba(10, 20, 15, 0.4)');
+    ctx.fillRect(sx, sy, 2, 1);
   }
 
-  // Delicate nose bridge hint
-  ctx.fillStyle = 'rgba(180, 140, 120, 0.4)';
-  ctx.fillRect(62, 62, 4, 14);
-
-  // Glamorous Burgundy / Wine Matte Lips (#821428)
-  ctx.fillStyle = '#821428';
-  ctx.beginPath();
-  ctx.moveTo(42, 94);
-  ctx.quadraticCurveTo(54, 88, 64, 91);
-  ctx.quadraticCurveTo(74, 88, 86, 94);
-  ctx.quadraticCurveTo(64, 108, 42, 94);
-  ctx.fill();
-  ctx.strokeStyle = '#540816'; ctx.lineWidth = 1.5; ctx.stroke();
-  ctx.fillStyle = 'rgba(255, 180, 190, 0.55)';
-  ctx.beginPath(); ctx.ellipse(64, 98, 9, 3, 0, 0, Math.PI * 2); ctx.fill();
-
-  // Vintage 90s beauty mark
-  ctx.fillStyle = '#221512';
-  ctx.beginPath(); ctx.arc(77, 85, 2, 0, Math.PI * 2); ctx.fill();
-
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
-
-function createMariaFaceTexture() {
-  const c = document.createElement('canvas'); c.width = 128; c.height = 128;
-  const ctx = c.getContext('2d');
-  // Warm golden-olive tan skin
-  ctx.fillStyle = '#dca672'; ctx.fillRect(0, 0, 128, 128);
-
-  // Cheek blush
-  ctx.fillStyle = 'rgba(224, 92, 108, 0.35)';
-  ctx.beginPath(); ctx.ellipse(26, 75, 18, 10, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(102, 75, 18, 10, 0, 0, Math.PI * 2); ctx.fill();
-
-  // Dramatic arched 70s eyebrows
-  ctx.strokeStyle = '#23140d'; ctx.lineWidth = 4; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(18, 38); ctx.quadraticCurveTo(36, 26, 56, 38); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(72, 38); ctx.quadraticCurveTo(92, 26, 110, 38); ctx.stroke();
-
-  // Vibrant Pink/Magenta Eyeshadow above lids
-  ctx.fillStyle = '#d94178';
-  ctx.beginPath(); ctx.ellipse(37, 46, 18, 6.5, -0.05, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(91, 46, 18, 6.5, 0.05, 0, Math.PI * 2); ctx.fill();
-
-  // Big stylized almond Psychonauts eyes
-  for (const cx of [37, 91]) {
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath(); ctx.ellipse(cx, 54, 16, 10, 0, 0, Math.PI * 2); ctx.fill();
-    const irisGrad = ctx.createRadialGradient(cx, 54, 1, cx, 54, 9);
-    irisGrad.addColorStop(0, '#3ae678'); irisGrad.addColorStop(0.7, '#149e48'); irisGrad.addColorStop(1, '#095c27');
-    ctx.fillStyle = irisGrad;
-    ctx.beginPath(); ctx.arc(cx, 54, 8.5, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#08170c';
-    ctx.beginPath(); ctx.arc(cx, 54, 4.2, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath(); ctx.arc(cx - 2.5, 51.5, 2.5, 0, Math.PI * 2); ctx.fill();
-    // Heavy black winged lashes
-    ctx.strokeStyle = '#170f0a'; ctx.lineWidth = 3.5;
-    ctx.beginPath(); ctx.moveTo(cx - 18, 56); ctx.quadraticCurveTo(cx, 44, cx + 18, 50); ctx.stroke();
-  }
-
-  // Nose tip
-  ctx.fillStyle = '#bf8756';
-  ctx.beginPath(); ctx.arc(64, 71, 3.5, 0, Math.PI * 2); ctx.fill();
-
-  // Big Joyful Wide Smile (Milla Vodello signature)
-  ctx.fillStyle = '#d93654'; // coral-red lips
-  ctx.beginPath();
-  ctx.moveTo(30, 86);
-  ctx.quadraticCurveTo(64, 80, 98, 86);
-  ctx.quadraticCurveTo(64, 114, 30, 86);
-  ctx.fill();
-  ctx.fillStyle = '#540d1c';
-  ctx.beginPath();
-  ctx.moveTo(36, 88);
-  ctx.quadraticCurveTo(64, 84, 92, 88);
-  ctx.quadraticCurveTo(64, 108, 36, 88);
-  ctx.fill();
-  // Pearly white upper teeth
-  ctx.fillStyle = '#ffffff';
-  ctx.beginPath();
-  ctx.moveTo(39, 88); ctx.lineTo(89, 88); ctx.lineTo(85, 94); ctx.lineTo(43, 94); ctx.closePath();
-  ctx.fill();
-  // Pink tongue
-  ctx.fillStyle = '#e8617d';
-  ctx.beginPath(); ctx.arc(64, 104, 8, Math.PI, 0); ctx.fill();
-
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
-
-function createTarasFaceTexture() {
-  const c = document.createElement('canvas'); c.width = 128; c.height = 128;
-  const ctx = c.getContext('2d');
-  // Distinctive Psychonauts yellow security guard skin
-  ctx.fillStyle = '#e8c467'; ctx.fillRect(0, 0, 128, 128);
-
-  // Frantic paranoid furrowed eyebrows
-  ctx.strokeStyle = '#292113'; ctx.lineWidth = 4.5; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(22, 38); ctx.lineTo(54, 46); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(106, 38); ctx.lineTo(74, 46); ctx.stroke();
-
-  // Wide bulging paranoid eyes
-  for (const [cx, pupilOff] of [[38, 2], [90, 2]]) {
-    ctx.fillStyle = '#fffdf7';
-    ctx.beginPath(); ctx.ellipse(cx, 55, 16, 15, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#382a17'; ctx.lineWidth = 2.5; ctx.stroke();
-    ctx.strokeStyle = 'rgba(210, 50, 40, 0.4)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(cx - 13, 56); ctx.lineTo(cx - 7, 54); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx + 13, 53); ctx.lineTo(cx + 6, 56); ctx.stroke();
-    ctx.fillStyle = '#111111';
-    ctx.beginPath(); ctx.arc(cx + pupilOff, 55, 5.5, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath(); ctx.arc(cx + pupilOff - 1.5, 53, 1.8, 0, Math.PI * 2); ctx.fill();
-    // Heavy droopy under-eye bags
-    ctx.strokeStyle = '#7c653d'; ctx.lineWidth = 2.2;
-    ctx.beginPath(); ctx.arc(cx, 63, 15, 0.2 * Math.PI, 0.8 * Math.PI); ctx.stroke();
-  }
-
-  // Guard nose
-  ctx.fillStyle = '#caa346';
-  ctx.beginPath(); ctx.ellipse(64, 70, 7, 10, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = '#634f1e'; ctx.lineWidth = 2; ctx.stroke();
-
-  // Greenish-grey 5 o'clock stubble across jaw
-  ctx.fillStyle = 'rgba(102, 107, 72, 0.45)';
-  ctx.fillRect(18, 82, 92, 42);
-
-  // Tightly clamped grimacing mouth
-  ctx.strokeStyle = '#291b12'; ctx.lineWidth = 3.5; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(40, 94); ctx.quadraticCurveTo(64, 91, 88, 93); ctx.stroke();
-
-  // The iconic spiral swirl on the chin from Boyd Cooper!
-  ctx.strokeStyle = '#544c2a'; ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  let angle = 0;
-  for (let r = 2; r < 12; r += 0.5) {
-    angle += 0.35;
-    const x = 64 + Math.cos(angle) * r;
-    const y = 111 + Math.sin(angle) * r;
-    if (r === 2) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-  }
-  ctx.stroke();
-
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
-
-function createBogdanFaceTexture() {
-  const c = document.createElement('canvas'); c.width = 128; c.height = 128;
-  const ctx = c.getContext('2d');
-  // Weathered, sculptured clay skin
-  ctx.fillStyle = '#c7a68a'; ctx.fillRect(0, 0, 128, 128);
-
-  // Heavy wrinkled forehead furrows
-  ctx.strokeStyle = '#6e5444'; ctx.lineWidth = 2.2; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(26, 32); ctx.quadraticCurveTo(64, 28, 102, 32); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(34, 40); ctx.quadraticCurveTo(64, 36, 94, 40); ctx.stroke();
-
-  // Weary hooded sunken eye sockets looking upward
-  for (const cx of [40, 88]) {
-    ctx.fillStyle = 'rgba(78, 54, 44, 0.5)';
-    ctx.beginPath(); ctx.ellipse(cx, 55, 15, 12, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#eae2d6';
-    ctx.beginPath(); ctx.ellipse(cx, 53, 10, 5, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#261b17';
-    ctx.beginPath(); ctx.arc(cx, 51.5, 3.5, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath(); ctx.arc(cx - 1, 50.5, 1.2, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#422c22'; ctx.lineWidth = 2.5;
-    ctx.beginPath(); ctx.moveTo(cx - 12, 53); ctx.quadraticCurveTo(cx, 48, cx + 12, 53); ctx.stroke();
-  }
-
-  // Prominent sculptural nose
-  ctx.fillStyle = '#ab8567';
-  ctx.beginPath();
-  ctx.moveTo(60, 48); ctx.lineTo(68, 48); ctx.lineTo(73, 76); ctx.lineTo(55, 76); ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = '#5a3d2c'; ctx.lineWidth = 2; ctx.stroke();
-
-  // Weary downturned mouth
-  ctx.strokeStyle = '#382218'; ctx.lineWidth = 3; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(42, 98); ctx.quadraticCurveTo(64, 93, 86, 98); ctx.stroke();
-
-  // Stubble shading
-  ctx.fillStyle = 'rgba(70, 56, 48, 0.28)';
-  ctx.fillRect(30, 86, 68, 36);
-
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
-
-function createTweedTexture() {
-  const c = document.createElement('canvas'); c.width = 128; c.height = 128;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#1e2420'; ctx.fillRect(0, 0, 128, 128);
-  for (let y = 0; y < 128; y += 4) {
-    for (let x = 0; x < 128; x += 4) {
-      const v = ((x ^ y) % 5 === 0) ? '#2d382f' : ((x + y) % 7 === 0) ? '#384236' : ((x * y) % 11 === 0) ? '#4a3d2e' : '#1e2420';
-      ctx.fillStyle = v;
-      ctx.fillRect(x, y, 3, 3);
-    }
-  }
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.repeat.set(3, 3);
-  return t;
-}
-
-function createPsychDressTexture() {
-  const c = document.createElement('canvas'); c.width = 256; c.height = 256;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#e85d22'; ctx.fillRect(0, 0, 256, 256);
-  const colors = ['#e6286b', '#f58220', '#fad12a', '#d92b52', '#a8208a', '#f59b2a'];
-  for (let i = 0; i < 16; i++) {
-    ctx.fillStyle = colors[i % colors.length];
+  // Deep sunken hollow eye sockets
+  for (const cx of [38, 90]) {
+    ctx.fillStyle = bloody ? '#200505' : '#111713';
     ctx.beginPath();
-    const y = i * 16;
-    ctx.moveTo(0, y);
-    ctx.bezierCurveTo(64, y + 20, 128, y - 18, 256, y + 10);
-    ctx.lineTo(256, y + 24);
-    ctx.bezierCurveTo(128, y + 8, 64, y + 42, 0, y + 24);
-    ctx.closePath();
+    ctx.ellipse(cx, 44, 16, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = bloody ? '#400808' : '#222d25';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Cathode beam pupils
+    ctx.fillStyle = bloody ? '#ff2a18' : '#7eff96';
+    ctx.beginPath();
+    ctx.arc(cx, 44, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(cx, 43, 1, 0, Math.PI * 2);
     ctx.fill();
   }
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  return t;
-}
 
-function createStripedTexture() {
-  const c = document.createElement('canvas'); c.width = 64; c.height = 64;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#f5efe6'; ctx.fillRect(0, 0, 64, 64);
-  for (let x = 3; x < 64; x += 12) {
-    ctx.fillStyle = '#992222'; ctx.fillRect(x, 0, 1.5, 64);
-    ctx.fillStyle = '#1e3845'; ctx.fillRect(x + 3, 0, 1.5, 64);
+  // Broadcaster Microphone Mandible (Lower Face / Jaw)
+  // Ribbed metallic studio microphone grille fused into lower jaw
+  ctx.fillStyle = bloody ? '#1f0d0d' : '#141a16';
+  ctx.fillRect(24, 68, 80, 52);
+
+  // Metallic horizontal slats
+  ctx.strokeStyle = bloody ? '#8a3a3a' : '#7a8c7e';
+  ctx.lineWidth = 2.5;
+  for (let y = 72; y < 118; y += 5) {
+    ctx.beginPath();
+    ctx.moveTo(28, y);
+    ctx.lineTo(100, y);
+    ctx.stroke();
   }
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  return t;
-}
+  // Center vertical microphone spine
+  ctx.strokeStyle = bloody ? '#aa4444' : '#9bb2a0';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(64, 68);
+  ctx.lineTo(64, 120);
+  ctx.stroke();
 
-function createFloralTieTexture() {
-  const c = document.createElement('canvas'); c.width = 128; c.height = 256;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#9e7428'; ctx.fillRect(0, 0, 128, 256);
-  const roseColors = ['#7c1818', '#a82424', '#d94838', '#540f0f'];
-  const leafColors = ['#284226', '#3b5c35', '#576e43', '#1b2b18'];
-  const goldColors = ['#d4ad3c', '#eed26e', '#b58c24'];
-
-  for (let y = 8; y < 256; y += 22) {
-    for (let x = 8; x < 128; x += 22) {
-      const off = ((Math.floor(y / 22) % 2) * 11);
-      const px = (x + off) % 128;
-      ctx.strokeStyle = '#223820'; ctx.lineWidth = 1.8;
-      ctx.beginPath(); ctx.moveTo(px - 6, y - 6); ctx.quadraticCurveTo(px, y, px + 8, y + 8); ctx.stroke();
-      ctx.fillStyle = leafColors[(x + y) % leafColors.length];
-      ctx.beginPath(); ctx.ellipse(px - 5, y + 3, 4, 2, 0.6, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(px + 6, y - 3, 4, 2, -0.6, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = roseColors[(x * 3 + y) % roseColors.length];
-      ctx.beginPath(); ctx.arc(px, y, 5, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = goldColors[(x + y * 2) % goldColors.length];
-      ctx.beginPath(); ctx.arc(px + 1.2, y - 1, 2.2, 0, Math.PI * 2); ctx.fill();
+  // Blood/viscous broadcast oil tears dripping down
+  if (bloody) {
+    ctx.fillStyle = 'rgba(140, 15, 15, 0.85)';
+    for (const [dx, w, len] of [[38, 4, 38], [42, 2, 22], [88, 3, 34], [92, 5, 42], [64, 8, 48]]) {
+      ctx.fillRect(dx, 48, w, len);
     }
   }
-  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.repeat.set(1, 2);
+
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.magFilter = THREE.NearestFilter;
+  t.minFilter = THREE.NearestMipmapNearestFilter;
   return t;
 }
 
-let olenaFaceMat = null, mariaFaceMat = null, tarasFaceMat = null, bogdanFaceMat = null;
-let tweedMat = null, psychDressMat = null, stripedMat = null, floralTieMat = null;
+function createAnchorSuitTexture(bloody = false) {
+  const c = document.createElement('canvas'); c.width = 128; c.height = 128;
+  const ctx = c.getContext('2d');
+  // Charcoal broadcaster wool suit
+  ctx.fillStyle = bloody ? '#221111' : '#1c221e';
+  ctx.fillRect(0, 0, 128, 128);
 
-export function createCharacter(color=0x737e60, monster=false, bloody=false, charClass='engineer') {
-  if (!monster) return createSurvivor(color, charClass);
-  const g=new THREE.Group();
-  const cVal = typeof color === 'string' ? (color.startsWith('#') ? parseInt(color.slice(1), 16) : parseInt(color, 16)) : color;
-  const clothColor = monster ? (bloody ? 0x481110 : 0x272c24) : cVal;
-  const cloth = mat('fabric', clothColor);
-  const skin = plain(monster ? (bloody ? 0xb59388 : 0xc5bda0) : 0xb4a48a);
-  const dark = plain(0x111815);
+  // Subtle 90s television pinstripes
+  ctx.strokeStyle = bloody ? '#3a1b1b' : '#2d3831';
+  ctx.lineWidth = 1;
+  for (let x = 4; x < 128; x += 8) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, 128);
+    ctx.stroke();
+  }
+
+  // Lapel folds
+  ctx.strokeStyle = bloody ? '#150808' : '#131915';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(34, 0); ctx.lineTo(54, 70); ctx.lineTo(34, 128);
+  ctx.moveTo(94, 0); ctx.lineTo(74, 70); ctx.lineTo(94, 128);
+  ctx.stroke();
+
+  // Station 04 laminate press card on chest
+  ctx.fillStyle = '#dcd6b8';
+  ctx.fillRect(16, 28, 20, 26);
+  ctx.fillStyle = '#b03322';
+  ctx.fillRect(18, 30, 16, 4); // Red BUREAU header bar
+  ctx.fillStyle = '#222222';
+  ctx.fillRect(19, 38, 7, 9);  // Photo silhouette
+  ctx.fillStyle = '#333333';
+  ctx.fillRect(28, 38, 6, 2);  // Text lines
+  ctx.fillRect(28, 42, 6, 2);
+
+  // If bloody: suit slashes and visceral seepage
+  if (bloody) {
+    ctx.fillStyle = '#5c1010';
+    ctx.fillRect(48, 40, 32, 45);
+    ctx.strokeStyle = '#991515';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 8; i++) {
+      ctx.beginPath();
+      ctx.moveTo(40 + rnd() * 40, 35 + rnd() * 50);
+      ctx.lineTo(30 + rnd() * 60, 45 + rnd() * 50);
+      ctx.stroke();
+    }
+  }
+
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.magFilter = THREE.NearestFilter;
+  t.minFilter = THREE.NearestMipmapNearestFilter;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
+export function createAnchorMonster(bloody = false) {
+  const g = new THREE.Group();
+
+  const faceMat = new THREE.MeshStandardMaterial({
+    map: createAnchorFaceTexture(bloody),
+    roughness: 0.75,
+    metalness: 0.15,
+    flatShading: true
+  });
+  const suitMat = new THREE.MeshStandardMaterial({
+    map: createAnchorSuitTexture(bloody),
+    roughness: 0.92,
+    metalness: 0.05,
+    flatShading: true
+  });
+  const hairMat = plain(bloody ? 0x181010 : 0x141814, 0.9);
+  const darkMat = plain(0x0a0d0b);
+  const shirtMat = plain(bloody ? 0x8a5555 : 0xc7ccbe, 0.85);
+  const tieMat = plain(bloody ? 0x4a0a0a : 0x131714, 0.9);
+  const skinMat = plain(bloody ? 0x9b706b : 0x879486, 0.85);
+  const shoeMat = plain(0x0d100e, 0.6);
+  const metalMat = mat('metal', bloody ? 0x5a3030 : 0x6e7d72);
+  const antennaMat = mat('metal', 0x98a396);
+  const glowEyeMat = glow(bloody ? 0xff1e12 : 0x76ff8e, bloody ? 3.5 : 2.0);
+  const cathodeTubeMat = glow(bloody ? 0xff2818 : 0x78e690, bloody ? 2.8 : 1.8);
+
   const limbs = [];
 
-  if(monster){
-    // Creepier Monster proportions: elongated, asymmetric, distorted
-    box(g,0,1.56,0,.54,1.15,.32,cloth);
-    box(g,0,2.15,0,.78,.32,.36,cloth);
-    box(g,0,1.02,0,.58,.25,.35,cloth);
+  // 1. Torso & Broadcaster Suit (2.85m tall distorted silhouette)
+  // Stooped broad 90s shoulders
+  box(g, 0, 1.96, 0.04, 0.84, 0.58, 0.44, suitMat);
+  // Boxy retro shoulder pads
+  box(g, -0.40, 2.22, 0.04, 0.22, 0.08, 0.46, suitMat);
+  box(g, 0.40, 2.22, 0.04, 0.22, 0.08, 0.46, suitMat);
 
-    if (bloody) {
-      box(g, 0, 1.6, 0.165, 0.44, 0.75, 0.02, glow(0x780e0e, 1.2));
-      box(g, -0.1, 1.35, 0.17, 0.18, 0.4, 0.02, plain(0x500a0a));
-    }
+  // Shirt collar & Broadcaster Necktie
+  box(g, 0, 2.26, 0.22, 0.26, 0.10, 0.08, shirtMat);
+  box(g, 0, 2.20, 0.25, 0.10, 0.09, 0.06, tieMat);
+  box(g, 0, 1.88, 0.26, 0.08, 0.52, 0.04, tieMat);
 
-    const head=new THREE.Group();head.position.set(0,2.62,.08);g.add(head);
-    box(head,0,0,0,.31,.74,.31,skin);
-    box(head,0,.22,.16,.31,.14,.02,plain(0x222620));
-
-    const eyeMat = glow(bloody ? 0xff1808 : 0xb0cfaa, bloody ? 3.5 : 1.2);
-    for(const x of [-.085,.085]) box(head, x, .18, .172, .06, .038, .022, eyeMat);
-
-    box(head,0,-.19,.165,.14,.34,.025,dark);
-    box(head,0,-.24,.188,.028,.22,.012,plain(bloody ? 0x881111 : 0x888373));
-
-    if (bloody) {
-      box(head, 0.08, -0.12, 0.17, 0.12, 0.28, 0.02, plain(0x6b0d0d));
-    }
-
-    for(const s of [-1,1]){
-      const arm=new THREE.Group();arm.position.set(s*.42,2.12,0);g.add(arm);
-      box(arm,0,-.55,0,.15,1.2,.16,cloth);
-      box(arm,s*.028,-1.2,.04,.14,.32,.13,skin);
-      const clawMat = bloody ? glow(0x6b1010, 1.2) : skin;
-      for(let i=0;i<4;i++) box(arm,(i-1.5)*.04,-1.42,.07,.024,.26,.028,clawMat);
-      arm.rotation.z=s*.14;
-
-      const leg=new THREE.Group();leg.position.set(s*.18,1.02,0);g.add(leg);
-      box(leg,0,-.48,0,.16,1.04,.18,cloth);
-      box(leg,0,-1.05,.08,.19,.12,.38,dark);
-      limbs.push({arm,leg,s});
-    }
-
-    g.userData.animate=(time,moving)=>{
-      const speedMult = bloody ? 4.8 : 2.8;
-      const phase = time * speedMult;
-      for(const {arm,leg,s}of limbs){
-        leg.rotation.x = moving ? Math.sin(phase)*s*.42 : 0;
-        arm.rotation.x = moving ? -Math.sin(phase+.5)*s*.28 : Math.sin(time*.7+s)*.05;
-      }
-      const twitch = Math.sin(time * 19) > (bloody ? 0.94 : 0.985) ? (Math.random() - 0.5) * 0.45 : 0;
-      head.rotation.z = Math.sin(time*.95)*.14 + twitch;
-      head.rotation.y = Math.sin(time*.48)*.18;
-      g.userData.head=head;
-    };
-  } else {
-    if (!olenaFaceMat) olenaFaceMat = new THREE.MeshStandardMaterial({ map: createOlenaFaceTexture(), roughness: 0.8 });
-    if (!mariaFaceMat) mariaFaceMat = new THREE.MeshStandardMaterial({ map: createMariaFaceTexture(), roughness: 0.8 });
-    if (!tarasFaceMat) tarasFaceMat = new THREE.MeshStandardMaterial({ map: createTarasFaceTexture(), roughness: 0.85 });
-    if (!bogdanFaceMat) bogdanFaceMat = new THREE.MeshStandardMaterial({ map: createBogdanFaceTexture(), roughness: 0.85 });
-    if (!tweedMat) tweedMat = new THREE.MeshStandardMaterial({ map: createTweedTexture(), roughness: 0.9 });
-    if (!psychDressMat) psychDressMat = new THREE.MeshStandardMaterial({ map: createPsychDressTexture(), roughness: 0.85 });
-    if (!stripedMat) stripedMat = new THREE.MeshStandardMaterial({ map: createStripedTexture(), roughness: 0.85 });
-    if (!floralTieMat) floralTieMat = new THREE.MeshStandardMaterial({ map: createFloralTieTexture(), roughness: 0.85 });
-
-    const cls = charClass || 'engineer';
-
-    if (cls === 'operator') {
-      // 1. ОЛЕНА (Операторка): Platinum bob with straight bangs, gold hoop earrings, 3D pearl choker,
-      // burgundy slip dress with dark bustier, black sheer tights, cigarette with live animated curling smoke!
-      const opSkin = plain(0xeddccb);
-      const bobHair = plain(0xf6f3ea);
-      const slipMat = mat('fabric', 0x4d1624);
-      const bustierMat = plain(0x191e1a);
-      const goldMat = mat('metal', 0xe0b63e);
-      const stockingMat = plain(0x181818);
-
-      // Torso / Burgundy slip dress with sweetheart bustier & peplum hem
-      box(g, 0, 1.16, 0, 0.38, 0.44, 0.25, slipMat);
-      box(g, 0, 1.35, 0.012, 0.36, 0.13, 0.255, bustierMat);
-      // Sweetheart cleavage cutout
-      box(g, 0, 1.38, 0.125, 0.14, 0.07, 0.04, opSkin);
-      box(g, 0, 0.86, 0, 0.44, 0.22, 0.29, slipMat); // peplum skirt flare
-
-      // Slender neck
-      cyl(g, 0, 1.47, 0, 0.062, 0.16, opSkin, 10);
-
-      // 3D Pearl Choker Necklace: 7 individual pearl spheres around the neck
-      const pearlMat = plain(0xfdfcf8, 0.3);
-      for (let p = 0; p < 7; p++) {
-        const ang = (p - 3) * 0.36;
-        const px = Math.sin(ang) * 0.078;
-        const pz = Math.cos(ang) * 0.078;
-        const bead = new THREE.Mesh(new THREE.SphereGeometry(0.016, 8, 8), pearlMat);
-        bead.position.set(px, 1.43, pz);
-        g.add(bead);
-      }
-
-      // Head with bespoke painted face texture
-      const head = new THREE.Group(); head.position.set(0, 1.62, 0); g.add(head);
-      box(head, 0, 0, 0, 0.25, 0.29, 0.24, opSkin);
-      // Front face decal
-      const faceMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.28), olenaFaceMat);
-      faceMesh.position.set(0, 0, 0.122);
-      head.add(faceMesh);
-
-      // 3D Polished Gold Hoop Earrings
-      for (const s of [-1, 1]) {
-        const hoop = new THREE.Mesh(new THREE.TorusGeometry(0.044, 0.007, 8, 16), goldMat);
-        hoop.position.set(s * 0.14, -0.04, 0.01);
-        hoop.rotation.y = Math.PI / 2;
-        head.add(hoop);
-      }
-
-      // Platinum blonde bob with straight blunt bangs
-      box(head, 0, 0.16, -0.01, 0.28, 0.09, 0.28, bobHair); // top crown
-      box(head, 0, 0.07, 0.134, 0.27, 0.12, 0.024, bobHair); // blunt bangs covering brow
-      for (const s of [-1, 1]) box(head, s * 0.14, -0.02, 0.01, 0.035, 0.27, 0.27, bobHair); // angled sides
-      box(head, 0, 0.01, -0.135, 0.28, 0.27, 0.04, bobHair); // back
-
-      // Legs in black sheer tights & pointed stilettos
-      for (const s of [-1, 1]) {
-        const leg = new THREE.Group(); leg.position.set(s * 0.125, 0.78, 0); g.add(leg);
-        box(leg, 0, -0.32, 0, 0.14, 0.64, 0.17, stockingMat);
-        // Pointed high heel shoe
-        box(leg, 0, -0.68, 0.04, 0.13, 0.10, 0.26, plain(0x0a0a0a));
-        box(leg, 0, -0.71, 0.14, 0.09, 0.04, 0.08, plain(0x0a0a0a)); // pointed toe tip
-        cyl(leg, 0, -0.72, -0.06, 0.015, 0.08, plain(0x1a1a1a), 6); // thin stiletto heel
-        limbs.push({ arm: null, leg, s });
-      }
-
-      // Left Arm: sassy fashion model pose with hand on hip
-      const armL = new THREE.Group(); armL.position.set(-0.24, 1.34, 0); g.add(armL);
-      box(armL, -0.06, -0.18, 0.02, 0.10, 0.38, 0.11, opSkin).rotation.z = -0.32;
-      const forearmL = new THREE.Group(); forearmL.position.set(-0.12, -0.34, 0.03); armL.add(forearmL);
-      forearmL.rotation.z = 0.85; forearmL.rotation.y = -0.3;
-      box(forearmL, 0.04, -0.12, 0.01, 0.09, 0.26, 0.10, opSkin);
-      box(forearmL, 0.06, -0.24, 0.01, 0.08, 0.07, 0.08, opSkin); // hand on hip
-      limbs[0].arm = armL;
-
-      // Right Arm: raised holding thin white cigarette with curling animated smoke
-      const armR = new THREE.Group(); armR.position.set(0.24, 1.34, 0); g.add(armR);
-      box(armR, 0.04, -0.16, 0.02, 0.10, 0.35, 0.11, opSkin).rotation.z = 0.15;
-      const forearmR = new THREE.Group(); forearmR.position.set(0.06, -0.32, 0); armR.add(forearmR);
-      forearmR.rotation.x = -0.85; forearmR.rotation.z = -0.35;
-      box(forearmR, 0, -0.14, 0, 0.09, 0.28, 0.10, opSkin);
-      box(forearmR, 0, -0.29, 0.02, 0.075, 0.09, 0.08, opSkin); // hand
-
-      // Long slim white cigarette with filter and glowing ember
-      const cig = box(forearmR, 0.01, -0.33, 0.12, 0.016, 0.016, 0.20, plain(0xf8f8f8));
-      cig.rotation.x = 0.2;
-      box(forearmR, 0.01, -0.35, 0.05, 0.018, 0.018, 0.04, plain(0xd28d54)); // cork filter
-      box(forearmR, 0.01, -0.30, 0.225, 0.02, 0.02, 0.016, glow(0xff3b0a, 3.2)); // glowing red cherry
-
-      // Dynamic curling smoke wisps
-      const smokeParticles = [];
-      const smokeMat = plain(0xd8e4dc, 0.85);
-      const smokeRoot = new THREE.Group(); smokeRoot.position.set(0.01, -0.29, 0.24); forearmR.add(smokeRoot);
-      for (let s = 0; s < 4; s++) {
-        const sm = new THREE.Mesh(new THREE.SphereGeometry(0.018 + s * 0.008, 8, 8), smokeMat);
-        sm.position.set((s % 2 ? 0.015 : -0.015), s * 0.07, s * 0.02);
-        smokeRoot.add(sm);
-        smokeParticles.push(sm);
-      }
-      limbs[1].arm = armR;
-
-      g.userData.animate = (time, moving) => {
-        for (const { leg, s } of limbs) {
-          if (leg) leg.rotation.x = moving ? Math.sin(time * 7) * s * 0.52 : 0;
-        }
-        armL.rotation.x = moving ? Math.sin(time * 7) * 0.25 : 0;
-        armR.rotation.x = moving ? -Math.sin(time * 7) * 0.12 : Math.sin(time * 1.5) * 0.025;
-        // Animated smoke curls
-        smokeRoot.rotation.y = time * 1.8;
-        for (let i = 0; i < smokeParticles.length; i++) {
-          const sm = smokeParticles[i];
-          sm.position.y = (i * 0.07) + (Math.sin(time * 2.5 + i) * 0.015);
-          sm.position.x = Math.sin(time * 3 + i * 1.5) * 0.02;
-          sm.scale.setScalar(1 + Math.sin(time * 2 + i) * 0.2);
-        }
-        g.userData.bob = moving ? Math.abs(Math.sin(time * 7)) * 0.03 : 0;
-      };
-
-    } else if (cls === 'dispatcher') {
-      // 2. МАРІЯ (Диспетчерка): Psychonauts Milla Vodello style: Hexagonal head, wide smiling face,
-      // long dark hair with iconic winged bangs, long swan neck, retro teardrop earrings, vibrant 70s mod dress!
-      const dispSkin = plain(0xdca672);
-      const darkHair = plain(0x1c130d);
-
-      // Torso in 1970s psychedelic mod wavy dress
-      box(g, 0, 1.15, 0, 0.40, 0.56, 0.25, psychDressMat);
-      box(g, 0, 0.84, 0, 0.44, 0.20, 0.28, psychDressMat);
-
-      // Elongated slender swan neck (Psychonauts signature!)
-      cyl(g, 0, 1.48, 0, 0.06, 0.26, dispSkin, 10);
-
-      // Head with painted Psychonauts face
-      const head = new THREE.Group(); head.position.set(0, 1.66, 0); g.add(head);
-      box(head, 0, 0, 0, 0.26, 0.31, 0.25, dispSkin);
-      const faceMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.25, 0.30), mariaFaceMat);
-      faceMesh.position.set(0, 0, 0.127);
-      head.add(faceMesh);
-
-      // Dangling retro earrings: curved white horn + pink drop bead
-      for (const s of [-1, 1]) {
-        const eGroup = new THREE.Group(); eGroup.position.set(s * 0.15, -0.06, 0.01); head.add(eGroup);
-        cyl(eGroup, 0, -0.04, 0, 0.018, 0.10, plain(0xf8f8fa), 8);
-        const bead = new THREE.Mesh(new THREE.SphereGeometry(0.026, 8, 8), plain(0xe8558a));
-        bead.position.set(0, -0.11, 0);
-        eGroup.add(bead);
-      }
-
-      // Very long hair cascading down back to thighs
-      box(head, 0, 0.18, -0.02, 0.28, 0.08, 0.27, darkHair); // crown
-      box(head, 0, -0.22, -0.145, 0.32, 0.68, 0.08, darkHair); // long flowing back hair!
-      for (const s of [-1, 1]) box(head, s * 0.15, -0.18, 0, 0.04, 0.60, 0.25, darkHair); // flowing side locks
-
-      // Iconic Winged Bangs: flaring wide out to sides and curving upward!
-      for (const s of [-1, 1]) {
-        const wingRoot = new THREE.Group(); wingRoot.position.set(s * 0.10, 0.13, 0.14); head.add(wingRoot);
-        const wing = box(wingRoot, s * 0.08, 0.02, 0, 0.16, 0.06, 0.04, darkHair);
-        wing.rotation.z = s * -0.42;
-        const wingTip = box(wingRoot, s * 0.18, 0.06, 0, 0.08, 0.04, 0.035, darkHair);
-        wingTip.rotation.z = s * -0.68;
-      }
-
-      // Arms in psychedelic bell sleeves
-      for (const s of [-1, 1]) {
-        const arm = new THREE.Group(); arm.position.set(s * 0.26, 1.35, 0); g.add(arm);
-        box(arm, 0, -0.22, 0, 0.12, 0.44, 0.13, psychDressMat);
-        box(arm, 0, -0.47, 0, 0.09, 0.13, 0.10, dispSkin);
-
-        const leg = new THREE.Group(); leg.position.set(s * 0.13, 0.78, 0); g.add(leg);
-        box(leg, 0, -0.32, 0, 0.14, 0.64, 0.17, plain(0x321e16)); // dark tights
-        // Retro coral-pink platform shoes
-        box(leg, 0, -0.68, 0.04, 0.14, 0.13, 0.26, plain(0xd93852));
-        box(leg, 0, -0.73, 0.04, 0.15, 0.04, 0.28, plain(0xfa8898)); // platform sole
-        limbs.push({ arm, leg, s });
-      }
-
-      g.userData.animate = (time, moving) => {
-        for (const { arm, leg, s } of limbs) {
-          leg.rotation.x = moving ? Math.sin(time * 7) * s * 0.55 : 0;
-          arm.rotation.x = moving ? -Math.sin(time * 7) * s * 0.32 : Math.sin(time * 1.4) * 0.025;
-        }
-        head.rotation.y = moving ? 0 : Math.sin(time * 1.2) * 0.05;
-        g.userData.bob = moving ? Math.abs(Math.sin(time * 7)) * 0.035 : 0;
-      };
-
-    } else if (cls === 'engineer') {
-      // 3. ТАРАС (Інженер / Охоронець станції): Boyd Cooper style: Peaked octagonal security guard cap
-      // with gold star badge, yellow face with paranoid wide eyes, stubble with spiral chin swirl,
-      // oversized double-breasted teal coat with big brass buttons, pinstriped shirt & tie, paranoid claw hands!
-      const guardSkin = plain(0xe8c467);
-      const coatTeal = mat('fabric', 0x133431);
-      const capMat = mat('fabric', 0x112d2b);
-      const goldStar = glow(0xebb828, 1.4);
-      const brassBtn = glow(0xebb828, 1.3);
-
-      // Sturdy Torso in dark teal double-breasted security coat
-      box(g, 0, 1.14, 0, 0.54, 0.65, 0.35, coatTeal);
-      box(g, 0, 0.86, 0, 0.56, 0.16, 0.37, coatTeal);
-
-      // Large polished embossed brass buttons down front
-      for (let b = 0; b < 2; b++) {
-        for (const side of [-0.08, 0.08]) {
-          cyl(g, side, 1.25 - b * 0.20, 0.185, 0.04, 0.02, brassBtn, 10, Math.PI / 2);
-        }
-      }
-      // Dark chest pocket flaps with security badge & pen
-      box(g, -0.16, 1.28, 0.182, 0.14, 0.035, 0.015, plain(0x0e2422));
-      box(g, 0.16, 1.28, 0.182, 0.14, 0.035, 0.015, plain(0x0e2422));
-      box(g, -0.16, 1.32, 0.188, 0.035, 0.04, 0.01, goldStar); // pocket star badge
-      box(g, 0.13, 1.33, 0.188, 0.012, 0.06, 0.01, plain(0xd8d8d8)); // pen clip
-
-      // Open collar with red/blue striped shirt & black necktie
-      box(g, 0, 1.38, 0.168, 0.20, 0.14, 0.02, stripedMat);
-      box(g, 0, 1.26, 0.182, 0.07, 0.24, 0.018, plain(0x121413)); // black tie
-
-      // Neck & Head with painted Boyd Cooper face
-      cyl(g, 0, 1.48, 0, 0.09, 0.15, guardSkin, 8);
-      const head = new THREE.Group(); head.position.set(0, 1.64, 0); g.add(head);
-      box(head, 0, 0, 0, 0.29, 0.34, 0.28, guardSkin);
-      const faceMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 0.33), tarasFaceMat);
-      faceMesh.position.set(0, -0.005, 0.142);
-      head.add(faceMesh);
-
-      // Prominent cartoon ears sticking out horizontally
-      for (const s of [-1, 1]) {
-        const ear = box(head, s * 0.17, 0.02, 0, 0.05, 0.11, 0.07, guardSkin);
-        ear.rotation.y = s * 0.2;
-        box(ear, s * 0.01, 0, 0, 0.02, 0.07, 0.04, plain(0xc79e46)); // inner ear
-      }
-
-      // Peaked Octagonal Guard Cap with Gold Star & Visor
-      box(head, 0, 0.22, -0.02, 0.36, 0.16, 0.38, capMat);
-      box(head, 0, 0.28, 0.04, 0.32, 0.08, 0.32, capMat);
-      // Glossy black visor
-      const visor = box(head, 0, 0.14, 0.20, 0.36, 0.025, 0.14, plain(0x0a0c0b));
-      visor.rotation.x = 0.22;
-      // 3D Polished Gold Star Badge
-      const star = box(head, 0, 0.24, 0.19, 0.09, 0.09, 0.025, goldStar);
-      star.rotation.z = Math.PI / 4;
-
-      // Paranoid Claw Hands & Arms
-      for (const s of [-1, 1]) {
-        const arm = new THREE.Group(); arm.position.set(s * 0.34, 1.38, 0); g.add(arm);
-        box(arm, 0, -0.24, 0, 0.16, 0.48, 0.17, coatTeal);
-
-        // Forearm angled inward with claw hands
-        const forearm = new THREE.Group(); forearm.position.set(0, -0.48, 0); arm.add(forearm);
-        forearm.rotation.x = -0.35;
-        forearm.rotation.y = s * 0.25;
-        box(forearm, 0, -0.08, 0, 0.14, 0.16, 0.14, guardSkin); // hand base
-        // 4 chunky curled fingers
-        for (let f = 0; f < 4; f++) {
-          const finger = box(forearm, (f - 1.5) * 0.03, -0.16, 0.05, 0.024, 0.07, 0.03, guardSkin);
-          finger.rotation.x = 0.6;
-        }
-
-        const leg = new THREE.Group(); leg.position.set(s * 0.16, 0.82, 0); g.add(leg);
-        box(leg, 0, -0.33, 0, 0.18, 0.64, 0.20, coatTeal);
-        box(leg, 0, -0.72, 0.05, 0.20, 0.14, 0.32, plain(0x0e100f)); // heavy duty boots
-        limbs.push({ arm, leg, s });
-      }
-
-      g.userData.animate = (time, moving) => {
-        for (const { arm, leg, s } of limbs) {
-          leg.rotation.x = moving ? Math.sin(time * 7) * s * 0.55 : 0;
-          arm.rotation.x = moving ? -Math.sin(time * 7) * s * 0.32 : Math.sin(time * 1.5) * 0.02;
-        }
-        // Paranoid glance around
-        head.rotation.y = moving ? 0 : Math.sin(time * 2.2) * 0.15;
-        g.userData.bob = moving ? Math.abs(Math.sin(time * 7)) * 0.035 : 0;
-      };
-
-    } else {
-      // 4. БОГДАН (Журналіст): Hunched sculpture style: Heavily stooped posture, massive rounded
-      // tweed blazer shoulders enveloping back, small weathered sunken head peering up, open cream shirt,
-      // and the iconic ULTRA-LONG tapestry floral tie extending down past knees with secondary loose tail!
-      const hunchedSkin = plain(0xc7a68a);
-      const darkHair = plain(0x1f1915);
-
-      // Huge oversized rounded tweed blazer with massive dropped shoulders
-      box(g, 0, 1.08, 0, 0.62, 0.60, 0.40, tweedMat);
-      box(g, 0, 1.42, -0.16, 0.66, 0.44, 0.38, tweedMat); // huge hunched upper back
-      for (const s of [-1, 1]) {
-        box(g, s * 0.34, 1.48, -0.06, 0.30, 0.34, 0.40, tweedMat); // dropped rounded shoulder mass
-      }
-
-      // Small sunken head nestled deep down, tilted backward/upward
-      const head = new THREE.Group(); head.position.set(0, 1.50, 0.06); g.add(head);
-      head.rotation.x = -0.22; // tilted up to peer forward from hunch
-      box(head, 0, 0, 0, 0.22, 0.24, 0.22, hunchedSkin);
-      const faceMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.21, 0.23), bogdanFaceMat);
-      faceMesh.position.set(0, 0, 0.112);
-      head.add(faceMesh);
-      box(head, 0, 0.12, -0.04, 0.23, 0.08, 0.22, darkHair); // disheveled balding hair
-
-      // Rumpled open cream collared dress shirt
-      box(g, 0, 1.26, 0.17, 0.26, 0.45, 0.04, plain(0xeae3d0));
-      for (const s of [-1, 1]) {
-        const col = box(g, s * 0.09, 1.42, 0.19, 0.08, 0.08, 0.02, plain(0xeae3d0));
-        col.rotation.z = s * -0.4;
-      }
-
-      // The Iconic Extra-Long Floral Tapestry Tie: drapes all the way down past knees to shins!
-      const tieRoot = new THREE.Group(); tieRoot.position.set(0.02, 1.25, 0.19); g.add(tieRoot);
-      const mainTie = box(tieRoot, 0, -0.48, 0.01, 0.12, 0.98, 0.02, floralTieMat);
-      // Pointed triangular tip
-      const tieTip = box(tieRoot, 0, -0.99, 0.01, 0.08, 0.06, 0.02, floralTieMat);
-      tieTip.rotation.z = Math.PI / 4;
-
-      // Secondary loose tail of tie hanging free from collar
-      const tail = box(tieRoot, -0.08, -0.32, 0.015, 0.045, 0.65, 0.015, floralTieMat);
-      tail.rotation.z = 0.08;
-
-      // Heavy baggy trousers & black dress shoes
-      for (const s of [-1, 1]) {
-        const arm = new THREE.Group(); arm.position.set(s * 0.42, 1.34, -0.06); g.add(arm);
-        box(arm, 0, -0.28, 0, 0.18, 0.55, 0.19, tweedMat);
-        box(arm, 0, -0.56, 0.01, 0.15, 0.06, 0.16, plain(0xeae3d0)); // shirt cuff
-        box(arm, 0, -0.62, 0.02, 0.13, 0.12, 0.13, hunchedSkin); // weathered hand
-
-        const leg = new THREE.Group(); leg.position.set(s * 0.16, 0.78, 0); g.add(leg);
-        box(leg, 0, -0.32, 0, 0.21, 0.64, 0.23, tweedMat);
-        box(leg, 0, -0.68, 0.06, 0.22, 0.14, 0.33, plain(0x111111)); // rounded leather shoes
-        limbs.push({ arm, leg, s });
-      }
-
-      g.userData.animate = (time, moving) => {
-        // Lumbering stooped gait
-        for (const { arm, leg, s } of limbs) {
-          leg.rotation.x = moving ? Math.sin(time * 6.5) * s * 0.58 : 0;
-          arm.rotation.x = moving ? -Math.sin(time * 6.5) * s * 0.36 : Math.sin(time * 1.1) * 0.02;
-        }
-        // Breathing tie flutter
-        tail.rotation.z = 0.08 + Math.sin(time * 6) * 0.06;
-        mainTie.rotation.x = moving ? Math.sin(time * 6.5) * 0.08 : Math.sin(time * 1.5) * 0.015;
-        g.userData.bob = moving ? Math.abs(Math.sin(time * 6.5)) * 0.04 : 0;
-      };
-    }
+  // Recessed Sternum Cavity with 3D Vacuum Cathode Tube (Analog Broadcast Generator)
+  box(g, 0, 1.90, 0.20, 0.30, 0.36, 0.12, darkMat);
+  // Broken rib cage struts over the cavity
+  for (let r = -1; r <= 1; r++) {
+    box(g, 0, 1.90 + r * 0.10, 0.25, 0.28, 0.03, 0.02, bloody ? plain(0x6b1515) : plain(0x6e786b));
   }
-  g.traverse(o=>{if(o.isMesh)o.castShadow=true;});
+  // Cathode Tube socket & glowing envelope
+  cyl(g, 0, 1.78, 0.20, 0.045, 0.05, metalMat, 8);
+  cyl(g, 0, 1.91, 0.20, 0.055, 0.15, cathodeTubeMat, 8);
+  // Filament wire inside
+  box(g, 0, 1.91, 0.20, 0.02, 0.10, 0.02, glow(bloody ? 0xffffff : 0xddffdd, bloody ? 4.0 : 2.5));
+
+  // Tapered waist & double-breasted jacket skirt
+  box(g, 0, 1.48, 0.02, 0.66, 0.48, 0.36, suitMat);
+  box(g, 0, 1.18, 0.02, 0.70, 0.26, 0.38, suitMat);
+
+  // Spinal Transmission Insulator Column & Twin Broadcast Antenna Aerials
+  box(g, 0, 2.05, -0.21, 0.16, 0.44, 0.12, metalMat);
+  for (let ring = 0; ring < 3; ring++) {
+    box(g, 0, 1.92 + ring * 0.12, -0.22, 0.22, 0.04, 0.16, metalMat);
+  }
+  // Antenna rods protruding from spine (Broadcaster Horns)
+  const antL = cyl(g, -0.18, 2.72, -0.20, 0.016, 0.88, antennaMat, 6);
+  antL.rotation.z = 0.15; antL.rotation.x = -0.12;
+  const antR = cyl(g, 0.18, 2.72, -0.20, 0.016, 0.88, antennaMat, 6);
+  antR.rotation.z = -0.15; antR.rotation.x = -0.12;
+  // Terminal antenna sensor beads
+  box(g, -0.25, 3.12, -0.25, 0.05, 0.05, 0.05, glowEyeMat);
+  box(g, 0.25, 3.12, -0.25, 0.05, 0.05, 0.05, glowEyeMat);
+
+  // 2. Head & CRT / Microphone Face
+  const head = new THREE.Group();
+  head.position.set(0, 2.54, 0.08);
+  g.add(head);
+
+  // Head volume
+  box(head, 0, 0, 0, 0.34, 0.54, 0.36, faceMat);
+
+  // Slicked-back 1990s TV news anchor hair
+  box(head, 0, 0.26, -0.04, 0.36, 0.15, 0.40, hairMat);
+  box(head, -0.18, 0.06, -0.05, 0.04, 0.28, 0.22, hairMat);
+  box(head, 0.18, 0.06, -0.05, 0.04, 0.28, 0.22, hairMat);
+
+  // Microphone Mandible (Lower Jaw)
+  box(head, 0, -0.18, 0.15, 0.24, 0.24, 0.12, metalMat);
+  // Chrome grille slats
+  for (let s = 0; s < 3; s++) {
+    box(head, 0, -0.12 - s * 0.05, 0.215, 0.20, 0.02, 0.015, antennaMat);
+  }
+
+  // Glowing Phosphor Eyes
+  for (const x of [-0.085, 0.085]) {
+    box(head, x, 0.09, 0.184, 0.055, 0.038, 0.02, glowEyeMat);
+  }
+
+  // Bloody variant: torn forehead cathode shards & dripping gore
+  if (bloody) {
+    box(head, 0.06, 0.20, 0.18, 0.08, 0.10, 0.03, glow(0xff1818, 2.5));
+    box(head, -0.08, -0.14, 0.19, 0.10, 0.28, 0.02, plain(0x6b0a0a));
+  }
+
+  // 3. Spindly Broadcaster Arms with Antenna Tine Claws
+  for (const s of [-1, 1]) {
+    const arm = new THREE.Group();
+    arm.position.set(s * 0.46, 2.16, 0.02);
+    g.add(arm);
+
+    // Suited Upper Arm
+    box(arm, 0, -0.32, 0, 0.16, 0.66, 0.18, suitMat);
+    // Suited Forearm
+    box(arm, 0, -0.84, 0.02, 0.14, 0.58, 0.16, suitMat);
+    // Shirt cuff
+    box(arm, 0, -1.13, 0.02, 0.15, 0.06, 0.17, shirtMat);
+    // Palm
+    box(arm, 0, -1.22, 0.03, 0.13, 0.14, 0.11, skinMat);
+
+    // 4 Elongated Broadcast Tuning-Fork Claws
+    const clawMat = bloody ? glow(0x751212, 1.4) : skinMat;
+    for (let i = 0; i < 4; i++) {
+      box(arm, (i - 1.5) * 0.035, -1.40, 0.06, 0.022, 0.32, 0.024, clawMat);
+    }
+    arm.rotation.z = s * 0.12;
+
+    // 4. Suited Legs & Oxford Shoes
+    const leg = new THREE.Group();
+    leg.position.set(s * 0.20, 1.10, 0);
+    g.add(leg);
+
+    // Thigh
+    box(leg, 0, -0.32, 0, 0.20, 0.64, 0.22, suitMat);
+    // Shin
+    box(leg, 0, -0.82, 0.01, 0.18, 0.62, 0.20, suitMat);
+    // Oxford shoe
+    box(leg, 0, -1.16, 0.08, 0.17, 0.13, 0.38, shoeMat);
+    box(leg, 0, -1.19, -0.05, 0.16, 0.06, 0.12, darkMat);
+
+    limbs.push({ arm, leg, s });
+  }
+
+  // 5. Animation Routine (PS1 VHS Horror Twitch & Stride)
+  g.userData.animate = (time, moving) => {
+    const speedMult = bloody ? 5.2 : 3.0;
+    const phase = time * speedMult;
+
+    for (const { arm, leg, s } of limbs) {
+      leg.rotation.x = moving ? Math.sin(phase) * s * 0.54 : 0;
+      arm.rotation.x = moving
+        ? -Math.sin(phase + 0.4) * s * 0.38 + (s > 0 ? 0.22 : -0.10)
+        : Math.sin(time * 0.8 + s) * 0.06;
+      arm.rotation.z = s * 0.12 + Math.sin(time * 1.6) * 0.03;
+    }
+
+    // Vacuum tube radio interference pulsation
+    if (cathodeTubeMat) {
+      cathodeTubeMat.emissiveIntensity = (bloody ? 2.8 : 1.6) + Math.sin(time * 8.5) * 0.5 + (Math.sin(time * 23) > 0.85 ? 0.8 : 0);
+    }
+
+    // Analog tape jitter & violent head snaps
+    const glitch = Math.sin(time * 21.3) > (bloody ? 0.91 : 0.965);
+    const twitchY = glitch ? (Math.sin(time * 50) > 0 ? 0.42 : -0.38) : 0;
+    const twitchZ = glitch ? (Math.cos(time * 47) > 0 ? 0.28 : -0.25) : 0;
+
+    head.rotation.x = Math.sin(time * 0.6) * 0.08 + (moving ? 0.12 : 0);
+    head.rotation.y = Math.sin(time * 0.45) * 0.16 + twitchY;
+    head.rotation.z = Math.sin(time * 0.85) * 0.10 + twitchZ;
+
+    g.userData.head = head;
+  };
+
+  g.traverse(o => { if (o.isMesh) o.castShadow = true; });
   return g;
+}
+
+export function createCharacter(color = 0x737e60, monster = false, bloody = false, charClass = 'engineer') {
+  if (!monster) return createSurvivor(color, charClass);
+  return createAnchorMonster(bloody);
 }
 
 // --- Courtyard Props ---
