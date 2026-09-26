@@ -65,6 +65,22 @@ export async function createGameServer({ serveClient = true, production = proces
       response.status(500).json({ ok: false, error: 'Не вдалося скинути мапу: ' + e.message });
     }
   });
+
+  app.post('/api/export-glb', express.raw({ type: '*/*', limit: '100mb' }), (request, response) => {
+    try {
+      const name = request.query.name || 'model';
+      const safeName = path.basename(name).replace(/[^a-zA-Z0-9_\-\.]/g, '_');
+      const targetDir = path.join(root, 'unity_assets');
+      fs.mkdirSync(targetDir, { recursive: true });
+      fs.writeFileSync(path.join(targetDir, `${safeName}.glb`), request.body);
+      console.log(`[EXPORT] Saved unity asset: ${safeName}.glb (${request.body.length} bytes)`);
+      response.json({ ok: true, file: `${safeName}.glb`, size: request.body.length });
+    } catch (e) {
+      console.error('[EXPORT] Error saving glb:', e);
+      response.status(500).json({ ok: false, error: e.message });
+    }
+  });
+
   if (serveClient) {
     if (production) {
       app.use(express.static(path.join(root, 'dist')));

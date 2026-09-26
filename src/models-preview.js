@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { createCharacter, createProp, createWorld } from './world.js';
 import { createExterior, createVan } from './exterior.js';
 
@@ -127,3 +128,87 @@ document.querySelectorAll('[data-color]').forEach(button=>button.addEventListene
 $('animation-toggle').addEventListener('click',()=>{walking=!walking;updateButtons();});
 $('rotation-toggle').addEventListener('click',()=>{rotating=!rotating;updateButtons();});
 $('reset-view').addEventListener('click',resetView);
+
+export async function exportModel(modelKey, download = true) {
+  const isStation = modelKey === 'station';
+  const isExt = modelKey === 'courtyard' || modelKey === 'facade';
+  const target = current || (isStation ? world.root : (currentExterior ? currentExterior.root : null));
+  if (!target) return null;
+
+  const exporter = new GLTFExporter();
+  return new Promise((resolve, reject) => {
+    exporter.parse(
+      target,
+      async (gltf) => {
+        try {
+          const blob = new Blob([gltf], { type: 'model/gltf-binary' });
+          // Save directly to server's unity_assets directory
+          try {
+            await fetch(`/api/export-glb?name=${modelKey}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/octet-stream' },
+              body: blob
+            });
+          } catch (e) {
+            console.warn('[EXPORT] Server save failed:', e);
+          }
+
+          if (download) {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `${modelKey}.glb`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+          }
+          resolve(gltf);
+        } catch (err) {
+          reject(err);
+        }
+      },
+      reject,
+      { binary: true }
+    );
+  });
+}
+
+export async function exportAllUnityAssets() {
+  const keys = Object.keys(info);
+  const statusEl = $('view-hint');
+  const btn = $('export-all-glb');
+  if (btn) btn.disabled = true;
+  for (let i = 0; i < keys.length; i++) {
+    const k = keys[i];
+    if (btn) btn.textContent = `⏳ [${i + 1}/${keys.length}] ${k}`;
+    if (statusEl) statusEl.textContent = `ЕКСПОРТ ДЛЯ UNITY: ${k} (${i + 1}/${keys.length})...`;
+    choose(k);
+    await new Promise(r => setTimeout(r, 150));
+    await exportModel(k, false);
+  }
+  if (btn) {
+    btn.textContent = '✓ ВСІ 30 ЗБЕРЕЖЕНО!';
+    setTimeout(() => { btn.textContent = '📦 ВСІ 30 МОДЕЛЕЙ (UNITY)'; btn.disabled = false; }, 3000);
+  }
+  if (statusEl) statusEl.textContent = '✓ ВСІ 30 МОДЕЛЕЙ ЗБЕРЕЖЕНО В ПАПКУ unity_assets/';
+  return { ok: true, count: keys.length };
+}
+
+window.exportAllUnityAssets = exportAllUnityAssets;
+window.exportModel = exportModel;
+
+$('export-single-glb')?.addEventListener('click', async () => {
+  const btn = $('export-single-glb');
+  const prevText = btn.textContent;
+  btn.textContent = '⏳ ЕКСПОРТ...';
+  btn.disabled = true;
+  try {
+    await exportModel(chosen, true);
+    btn.textContent = '✓ ЗБЕРЕЖЕНО!';
+    setTimeout(() => { btn.textContent = prevText; btn.disabled = false; }, 1800);
+  } catch (e) {
+    console.error(e);
+    btn.textContent = 'ПОМИЛКА';
+    setTimeout(() => { btn.textContent = prevText; btn.disabled = false; }, 2000);
+  }
+});
+
+$('export-all-glb')?.addEventListener('click', () => exportAllUnityAssets());
