@@ -30,7 +30,38 @@ export const objects = [
   { id: 'power', x: -11, y: 1.4, z: -16.5, type: 'power', label: 'Електрощит генератора' },
   { id: 'broadcast', x: 10, y: 1.2, z: -2, type: 'broadcast', label: 'Передати запис' },
   { id: 'exit', ...extraction, type: 'exit', label: 'Сісти у фургон · покинути станцію' },
+  { id: 'keycard-guard', x: -15, y: 1.1, z: 14, type: 'keycard', label: 'Картка доступу (Охорона)' },
+  { id: 'keycard-engineer', x: -8, y: 1.1, z: 2, type: 'keycard', label: 'Картка доступу (Головний інженер)' },
+  { id: 'fuel-canister', x: 18, y: 1.1, z: 11, type: 'canister', label: 'Каністра з паливом' },
+  { id: 'pressure-valve', x: -10.5, y: 1.3, z: -34.5, type: 'valve', label: 'Вентиль тиску' },
 ];
+
+export const doors = {
+  'door-archive': { id: 'door-archive', x: -2.5, y: 1.1, z: -1.5, requires: 'keycard-guard', label: 'Двері: Архів' },
+  'door-generator': { id: 'door-generator', x: -2.5, y: 1.1, z: -16.5, requires: 'keycard-engineer', label: 'Двері: Генераторна' },
+  'door-studio': { id: 'door-studio', x: 2.5, y: 1.1, z: -16.5, requires: null, label: 'Двері: Студія 04' },
+  'door-vent': { id: 'door-vent', x: -2.5, y: 1.1, z: -31.5, requires: 'keycard-guard', label: 'Двері: Вентвузол' },
+  'door-server': { id: 'door-server', x: 2.5, y: 1.1, z: -31.5, requires: 'keycard-engineer', label: 'Двері: Серверна' },
+  'door-tech': { id: 'door-tech', x: -2.5, y: 1.1, z: -46.5, requires: 'keycard-engineer', label: 'Двері: Техсклад' },
+  'door-dispatch': { id: 'door-dispatch', x: 2.5, y: 1.1, z: -46.5, requires: null, label: 'Двері: Диспетчерська' },
+};
+export const DOORS = doors;
+export const stationDoors = doors;
+
+export function getDoorObstacle(doorOrId, open) {
+  if (open) return null;
+  const d = typeof doorOrId === 'string' ? doors[doorOrId] : doorOrId;
+  if (!d || typeof d.x !== 'number' || typeof d.z !== 'number') return null;
+  const id = typeof doorOrId === 'string' ? doorOrId : d.id;
+  return {
+    id: id || 'door',
+    type: 'door',
+    minX: Number((d.x - 0.2).toFixed(2)),
+    maxX: Number((d.x + 0.2).toFixed(2)),
+    minZ: Number((d.z - 1.0).toFixed(2)),
+    maxZ: Number((d.z + 1.0).toFixed(2)),
+  };
+}
 
 export const lockers = [
   { id: 'locker-1', x: -3.4, y: 1.1, z: 3.5, ry: Math.PI, exitX: -3.4, exitZ: 2.1, label: 'Шафа в архіві' },

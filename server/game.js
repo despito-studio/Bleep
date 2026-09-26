@@ -1,11 +1,59 @@
 import { randomInt } from 'node:crypto';
-import { isWalkable, spawn, lockers, objects, rooms, exteriorObstacles, activeObstacles, updateObstacles } from '../shared/world-data.js';
+import { isWalkable, spawn, lockers, objects, rooms, exteriorObstacles, activeObstacles, updateObstacles, doors, getDoorObstacle } from '../shared/world-data.js';
 import { CHARACTER_CLASSES, DEFAULT_CLASS, getClassData } from '../shared/classes.js';
 
 const COLORS = ['#4e7048', '#a67d43', '#7a3e35', '#3d5975'];
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 // Client prompts and authoritative interactions use the same map coordinates.
 const OBJECTIVES = Object.fromEntries(objects.map(({ id, x, z }) => [id, { x, z }]));
+for (const [id, d] of Object.entries(doors)) {
+  OBJECTIVES[id] = { x: d.x, z: d.z };
+}
+
+function removeDoorObstacle(doorId) {
+  for (let i = activeObstacles.length - 1; i >= 0; i--) {
+    if (activeObstacles[i].id === doorId) {
+      activeObstacles.splice(i, 1);
+    }
+  }
+}
+
+function addDoorObstacle(doorId) {
+  removeDoorObstacle(doorId);
+  const obs = getDoorObstacle(doorId, false);
+  if (obs) activeObstacles.push(obs);
+}
+
+function createDefaultDoors() {
+  const result = {};
+  for (const [id, d] of Object.entries(doors)) {
+    result[id] = {
+      id,
+      x: d.x,
+      z: d.z,
+      label: d.label,
+      locked: Boolean(d.requires),
+      requiredKey: d.requires || null,
+      open: false,
+    };
+  }
+  return result;
+}
+
+function updateQuestStage(room) {
+  if (!room.quest) return;
+  if (room.phase === 'won') {
+    room.quest.stage = 4;
+  } else if (room.broadcast) {
+    room.quest.stage = 4;
+  } else if (room.power) {
+    room.quest.stage = 3;
+  } else if (room.tapes?.size >= 1 || (room.keycards && room.keycards.size >= 1)) {
+    room.quest.stage = 2;
+  } else {
+    room.quest.stage = 1;
+  }
+}
 
 const WAYPOINTS = [
   // Open station entrance and courtyard route back to the crew's van.
@@ -202,8 +250,21 @@ export class GameManager {
       players: [...room.players.values()].map(({ id, name, color, characterClass, x, z, yaw, pitch, flashlight, camera, sprinting, down, hiding, sanity }) => ({
         id, name, color, characterClass: characterClass || 'engineer', x, z, yaw, pitch, flashlight, camera, sprinting, down, hiding, sanity: Math.round(sanity ?? 100),
       })),
-      tapes: [...room.tapes],
+      tapes: [...(room.tapes || [])],
       fuses: [...(room.fuses || [])],
+      keycards: [...(room.keycards || [])],
+      doors: room.doors || {},
+      quest: room.quest || {
+        stage: 1,
+        fuelAdded: Boolean(room.canister),
+        valveOpened: Boolean(room.valveOpened),
+        calibrated: Boolean(room.calibrated),
+        power: Boolean(room.power),
+        broadcast: Boolean(room.broadcast),
+      },
+      canister: Boolean(room.canister),
+      valveOpened: Boolean(room.valveOpened),
+      calibrated: Boolean(room.calibrated),
       power: room.power,
       broadcast: room.broadcast,
       spawnCountdown: Math.ceil(room.spawnCountdown || 0),
@@ -257,6 +318,16 @@ export class GameManager {
     const room = {
       code, hostId: playerId, solo: input.solo === true, creative: isCreative, phase: 'lobby', paused: false,
       players: new Map(), tapes: new Set(), fuses: new Set(), power: false, broadcast: false,
+      keycards: new Set(), canister: false, valveOpened: false, calibrated: false,
+      quest: {
+        stage: 1,
+        fuelAdded: false,
+        valveOpened: false,
+        calibrated: false,
+        power: false,
+        broadcast: false,
+      },
+      doors: createDefaultDoors(),
       spawnCountdown: isCreative ? Infinity : 35,
       enemy: { x: 0, z: -48, active: false, stunned: false },
       elapsed: 0, scare: 0, message: isCreative ? 'РЕЖИМ ДОСЛІДЖЕННЯ: Істота пасивна. Досліджуйте станцію.' : 'Сигнал установлено. Чекаємо на операторів.',
@@ -292,6 +363,11 @@ export class GameManager {
     if (!room) return { ok: true };
     room.players.delete(playerId);
     if (!room.players.size) {
+      if (room.doors) {
+        for (const doorId of Object.keys(room.doors)) {
+          removeDoorObstacle(doorId);
+        }
+      }
       this.rooms.delete(room.code);
       return { ok: true };
     }
@@ -307,8 +383,27 @@ export class GameManager {
     room.paused = false;
     room.tapes.clear();
     room.fuses.clear();
+    if (room.keycards) room.keycards.clear();
+    else room.keycards = new Set();
+    room.canister = false;
+    room.valveOpened = false;
+    room.calibrated = false;
     room.power = false;
     room.broadcast = false;
+    room.quest = {
+      stage: 1,
+      fuelAdded: false,
+      valveOpened: false,
+      calibrated: false,
+      power: false,
+      broadcast: false,
+    };
+    if (room.doors) {
+      for (const doorId of Object.keys(room.doors)) {
+        removeDoorObstacle(doorId);
+      }
+    }
+    room.doors = createDefaultDoors();
     room.spawnCountdown = room.creative ? Infinity : 35;
     room.enemy = { x: 0, z: -48, active: false, stunned: false, heardRadio: null };
     room.radioTransmission = null;
@@ -508,7 +603,50 @@ export class GameManager {
     const objective = Object.hasOwn(OBJECTIVES, id) ? OBJECTIVES[id] : undefined;
     if (!objective) return failure('Невідомий предмет.');
     if (distance(player, objective) > 2.5 || !segmentWalkable(player, objective, 0.04, false)) return failure('Підійдіть ближче.');
-    if (id.startsWith('fuse-')) {
+
+    if (id.startsWith('door-')) {
+      const door = room.doors?.[id];
+      if (!door) return failure('Двері не знайдено.');
+      if (door.locked) {
+        if (door.requiredKey && (!room.keycards || !room.keycards.has(door.requiredKey))) {
+          const keyName = door.requiredKey === 'keycard-guard' ? 'картка охорони' : 'картка інженера';
+          return failure(`Заблоковано магнітним замком. Потрібна ${keyName}.`);
+        }
+        door.locked = false;
+      }
+      door.open = !door.open;
+      if (door.open) {
+        removeDoorObstacle(door.id);
+      } else {
+        addDoorObstacle(door.id);
+      }
+      room.message = `${door.label || door.id}: ${door.open ? 'відчинено' : 'зачинено'}.`;
+      this.publish(room);
+      return { ok: true, open: door.open, locked: door.locked };
+    } else if (id === 'keycard-guard' || id === 'keycard-engineer') {
+      if (!room.keycards) room.keycards = new Set();
+      if (room.keycards.has(id)) return { ok: true };
+      room.keycards.add(id);
+      room.scare++;
+      if (id === 'keycard-guard') {
+        room.message = 'КАРТКА ОХОРОНИ: Доступ до архіву та вентвузла дозволено.';
+      } else {
+        room.message = 'КАРТКА ГОЛОВНОГО ІНЖЕНЕРА: Доступ до генераторної, серверної та техскладу дозволено.';
+      }
+      updateQuestStage(room);
+    } else if (id === 'fuel-canister') {
+      room.canister = true;
+      if (room.quest) room.quest.fuelAdded = true;
+      room.scare++;
+      room.message = 'КАНІСТРА З ПАЛИВОМ: Дизель знайдено. Заправте генератор у генераторній.';
+      updateQuestStage(room);
+    } else if (id === 'pressure-valve') {
+      room.valveOpened = true;
+      if (room.quest) room.quest.valveOpened = true;
+      room.scare++;
+      room.message = 'ВЕНТИЛЬ ТИСКУ: Тиск у системі вирівняно. Контур подачі палива відкрито.';
+      updateQuestStage(room);
+    } else if (id.startsWith('fuse-')) {
       if (room.fuses.has(id)) return { ok: true };
       room.fuses.add(id);
       room.scare++;
@@ -527,17 +665,31 @@ export class GameManager {
         : room.tapes.size === 2
           ? 'КАСЕТА 02: «Голос у радіо — не твій напарник. Він чує ваші рації».'
           : 'КАСЕТА 03: «Знайдіть 2 запобіжники. Увімкніть живлення. Передайте запис».';
+      updateQuestStage(room);
     } else if (id === 'power') {
       if (room.power) return { ok: true };
       if (room.fuses.size < 2) return failure(`Потрібні 2 запобіжники 380В (знайдено: ${room.fuses.size}/2). Перевірте вентвузол та серверну.`);
       room.power = true;
+      if (room.quest) room.quest.power = true;
       room.scare++;
-      room.message = 'Живлення відновлено! Обидва запобіжники 380В встановлено. Передавач готовий!';
+      if (room.quest?.fuelAdded && room.quest?.valveOpened) {
+        room.message = 'Живлення відновлено! Паливо заправлено, тиск у нормі, обидва запобіжники 380В встановлено. Передавач готовий!';
+      } else if (room.quest?.fuelAdded) {
+        room.message = 'Живлення відновлено! Дизель заправлено, обидва запобіжники 380В встановлено. Передавач готовий!';
+      } else if (room.quest?.valveOpened) {
+        room.message = 'Живлення відновлено! Тиск вирівняно, обидва запобіжники 380В встановлено. Передавач готовий!';
+      } else {
+        room.message = 'Живлення відновлено! Обидва запобіжники 380В встановлено. Передавач готовий!';
+      }
+      updateQuestStage(room);
+    } else if (id === 'calibrate') {
+      return this.calibrate(playerId, input);
     } else if (id === 'broadcast') {
       if (room.tapes.size < 3) return failure('Для передачі потрібні всі три касети.');
       if (!room.power) return failure('Спочатку відновіть живлення в генераторній.');
       if (room.broadcast) return { ok: true };
       room.broadcast = true;
+      if (room.quest) room.quest.broadcast = true;
       room.scare += 2;
       room.enemy.active = !room.creative;
       room.enemy.x = 0;
@@ -545,15 +697,42 @@ export class GameManager {
       player.moveBudget = 2.0;
       player.moveUpdated = this.now();
       player.invulnerableUntil = room.elapsed + 5;
-      room.message = 'ЗАПИС У ЕФІРІ. ДИКТОР ЗБОЖЕВІВ — ПОВЕРТАЙТЕСЯ ДО ФУРГОНА У ДВОРІ!';
+      room.message = room.quest?.calibrated
+        ? 'ЗАПИС У ЕФІРІ (96.4 МГц). ДИКТОР ЗБОЖЕВІВ — ПОВЕРТАЙТЕСЯ ДО ФУРГОНА У ДВОРІ!'
+        : 'ЗАПИС У ЕФІРІ. ДИКТОР ЗБОЖЕВІВ — ПОВЕРТАЙТЕСЯ ДО ФУРГОНА У ДВОРІ!';
+      updateQuestStage(room);
     } else if (id === 'exit') {
       if (!room.broadcast) return failure('Завершіть роботу на станції: знайдіть записи та передайте сигнал перед від’їздом.');
       room.phase = 'won';
       room.enemy.active = false;
       room.message = 'Ви вийшли. Але на записі чути на один голос більше.';
+      updateQuestStage(room);
     }
     this.publish(room);
     return { ok: true };
+  }
+
+  calibrate(playerId, input = {}) {
+    const room = this.roomFor(playerId);
+    if (!room || room.phase !== 'playing' || room.paused) return failure('Ефір не активний.');
+    const player = room.players.get(playerId);
+    if (!player || player.down) return failure('Потрібна допомога іншого оператора.');
+    const consolePos = { x: 10, z: -2 };
+    if (distance(player, consolePos) > 2.5 || !segmentWalkable(player, consolePos, 0.04, false)) {
+      return failure('Підійдіть ближче до пульта мовлення.');
+    }
+    const frequency = typeof input.frequency === 'number' ? input.frequency : Number(input.frequency);
+    if (!Number.isFinite(frequency)) return failure('Неправильне значення частоти.');
+    if (Math.abs(frequency - 96.4) >= 0.2) {
+      return failure('Частоту не налаштовано. Потрібна несуча 96.4 МГц.');
+    }
+    room.calibrated = true;
+    if (room.quest) room.quest.calibrated = true;
+    room.scare++;
+    room.message = 'ЧАСТОТУ НАЛАШТОВАНО (96.4 МГц). Несучий сигнал стабільний. Можна починати передачу.';
+    updateQuestStage(room);
+    this.publish(room);
+    return { ok: true, frequency };
   }
 
   checkDefeat(room) {

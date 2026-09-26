@@ -17,6 +17,9 @@ import {
   isInsideWorld,
   roomAt,
   propToObstacle,
+  doors,
+  DOORS,
+  getDoorObstacle,
 } from '../../shared/world-data.js';
 import { DEFAULT_PROPS, PROP_CATALOG } from '../../shared/props.js';
 import { CHARACTER_CLASSES, DEFAULT_CLASS } from '../../shared/classes.js';
@@ -36,6 +39,9 @@ export {
   isInsideWorld,
   roomAt,
   propToObstacle,
+  doors,
+  DOORS,
+  getDoorObstacle,
   DEFAULT_PROPS,
   PROP_CATALOG,
   CHARACTER_CLASSES,

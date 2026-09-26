@@ -141,6 +141,11 @@ export async function createGameServer({ serveClient = true, production = proces
       serverLog('INTERACT', `Взаємодія ${socket.id}: об'єкт "${parsed.id}"`);
       reply(ack, game.interact(socket.id, parsed));
     });
+    socket.on('game:calibrate', (input, ack) => {
+      const parsed = object(input);
+      serverLog('CALIBRATE', `Калібрування ${socket.id}: частота ${parsed.frequency}`);
+      reply(ack, game.calibrate(socket.id, parsed));
+    });
     socket.on('disconnect', () => {
       serverLog('SOCKET', `Гравець відключився: ${socket.id}`);
       game.leaveRoom(socket.id);
