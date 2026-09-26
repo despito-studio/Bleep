@@ -1664,6 +1664,7 @@ export function createWorld(scene, customProps = null) {
   wallBox(0, -54, 5.3, 0.3);
 
   // Outer Room Walls and Dividing Partition Walls
+  const doorObjects = new Map();
   for (const side of [-1, 1]) {
     // Outer perimeter walls (North, South, East, West)
     wallBox(side * 12, -24, 0.3, 60.3);
@@ -1696,9 +1697,47 @@ export function createWorld(scene, customProps = null) {
       box(root, cx, 3.13, z, 0.24, 0.74, 2.4, wall);
       for (const edge of [-1, 1]) box(root, cx, 1.4, z + edge * 1.19, 0.4, 2.8, 0.16, trim);
       box(root, cx, 2.79, z, 0.4, 0.14, 2.5, trim);
-      const door = box(root, cx + side * 0.92, 1.35, z - 1.03, 1.7, 2.65, 0.09, mat('wood', 0x949a7b));
-      door.rotation.y = side * 0.06;
-      box(root, cx + side * 0.3, 1.2, z - 0.96, 0.12, 0.06, 0.09, rusty);
+
+      let doorId = null;
+      if (side < 0) {
+        if (z === -1.5) doorId = 'door-archive';
+        else if (z === -16.5) doorId = 'door-generator';
+        else if (z === -31.5) doorId = 'door-vent';
+        else if (z === -46.5) doorId = 'door-tech';
+      } else {
+        if (z === -16.5) doorId = 'door-studio';
+        else if (z === -31.5) doorId = 'door-server';
+        else if (z === -46.5) doorId = 'door-dispatch';
+      }
+
+      if (doorId) {
+        const doorPivot = new THREE.Group();
+        doorPivot.position.set(cx, 1.35, z + 1.05);
+        root.add(doorPivot);
+
+        const doorMat = mat('wood', 0x8a9274);
+        box(doorPivot, 0, 0, -1.05, 0.12, 2.65, 2.1, doorMat);
+        box(doorPivot, -side * 0.1, -0.1, -1.9, 0.08, 0.06, 0.16, rusty);
+        box(doorPivot, side * 0.1, -0.1, -1.9, 0.08, 0.06, 0.16, rusty);
+
+        // Keycard Reader box on corridor side
+        const readerMat = mat('metal', 0x1a221a);
+        box(root, cx - side * 0.22, 1.4, z - 1.25, 0.12, 0.28, 0.18, readerMat);
+        const ledMat = new THREE.MeshBasicMaterial({ color: 0xe04434 });
+        const led = box(root, cx - side * 0.29, 1.48, z - 1.25, 0.03, 0.06, 0.06, ledMat);
+        const ledLight = new THREE.PointLight(0xe04434, 1.2, 2.5);
+        ledLight.position.set(cx - side * 0.35, 1.48, z - 1.25);
+        root.add(ledLight);
+
+        doorObjects.set(doorId, {
+          id: doorId,
+          pivot: doorPivot,
+          side,
+          ledMat,
+          ledLight,
+        });
+        interactables.set(doorId, doorPivot);
+      }
     }
   }
 
@@ -1833,8 +1872,42 @@ export function createWorld(scene, customProps = null) {
   const f2 = industrialFuse(root, 10.5, 1.1, -31.5, -0.35, 'fuse-2');
   interactables.set('fuse-2', f2); fuseObjects.push(f2);
 
-  let current = { tapes: [], fuses: [], power: false, broadcast: false };
-  let lastTapesSig = null, lastFusesSig = null, lastPowerState = null, lastBroadcastState = null, lastNightmare = null;
+  // Keycards (Guard Keycard at CP booth, Engineer Keycard in Archive)
+  const keycardObjects = [];
+  function createKeycard(id, x, y, z, colorHex) {
+    const g = new THREE.Group();
+    g.position.set(x, y, z);
+    box(g, 0, 0, 0, 0.42, 0.03, 0.28, mat('plastic', colorHex));
+    box(g, -0.09, 0.02, 0, 0.12, 0.01, 0.14, mat('metal', 0xd5bd77));
+    const l = new THREE.PointLight(colorHex, 4, 3, 2);
+    l.position.set(0, 0.2, 0);
+    g.add(l);
+    g.userData.id = id;
+    g.userData.light = l;
+    root.add(g);
+    interactables.set(id, g);
+    keycardObjects.push(g);
+    return g;
+  }
+  createKeycard('keycard-guard', -15, 1.1, 14, 0x50c878);
+  createKeycard('keycard-engineer', -8, 1.1, 2, 0x48a0ff);
+
+  // Fuel canister in courtyard service shed (x: 18, z: 11)
+  const canisterMesh = fuelCanister(root, 18, 11, 0.3);
+  canisterMesh.userData.id = 'fuel-canister';
+  const canisterLight = new THREE.PointLight(0xff7733, 4, 3.5, 2);
+  canisterLight.position.set(18, 0.8, 11);
+  root.add(canisterLight);
+  canisterMesh.userData.light = canisterLight;
+  interactables.set('fuel-canister', canisterMesh);
+
+  // Pressure valve in vent room (x: -10.5, z: -34.5)
+  const valveMesh = fuelValve(root, -10.5, -34.5, 0);
+  valveMesh.userData.id = 'pressure-valve';
+  interactables.set('pressure-valve', valveMesh);
+
+  let current = { tapes: [], fuses: [], keycards: [], doors: {}, power: false, broadcast: false };
+  let lastTapesSig = null, lastFusesSig = null, lastKeycardsSig = null, lastPowerState = null, lastBroadcastState = null, lastNightmare = null;
 
   function setState(state = {}) {
     current = state;
@@ -1852,6 +1925,40 @@ export function createWorld(scene, customProps = null) {
         if (fuse.userData.light) fuse.userData.light.visible = !collected;
       }
     }
+
+    const keycardsSig = (state.keycards || []).join(',');
+    if (keycardsSig !== lastKeycardsSig) {
+      lastKeycardsSig = keycardsSig;
+      for (const kc of keycardObjects) {
+        const collected = (state.keycards || []).includes(kc.userData.id);
+        kc.visible = !collected;
+        if (kc.userData.light) kc.userData.light.visible = !collected;
+      }
+    }
+
+    const hasFuel = Boolean(state.canister || state.quest?.fuelAdded);
+    if (canisterMesh) {
+      canisterMesh.visible = !hasFuel;
+      if (canisterMesh.userData.light) canisterMesh.userData.light.visible = !hasFuel;
+    }
+
+    const hasValve = Boolean(state.valveOpened || state.quest?.valveOpened);
+    if (valveMesh) {
+      valveMesh.rotation.y = hasValve ? Math.PI : 0;
+    }
+
+    if (state.doors) {
+      for (const [id, dObj] of doorObjects) {
+        const d = state.doors[id] || { locked: false, open: false };
+        const isOpen = Boolean(d.open);
+        const isLocked = Boolean(d.locked);
+        dObj.pivot.rotation.y = isOpen ? -dObj.side * (Math.PI / 2.2) : 0;
+        const color = isLocked ? 0xe04434 : (isOpen ? 0x50c878 : 0xd5bd77);
+        dObj.ledMat.color.setHex(color);
+        dObj.ledLight.color.setHex(color);
+      }
+    }
+
     const p = Boolean(state.power);
     if (p !== lastPowerState) {
       lastPowerState = p;
@@ -1895,6 +2002,10 @@ export function createWorld(scene, customProps = null) {
       item.userData.light.intensity = flickerEnabled ? 1.0 + Math.sin(time * 3.5) * 0.35 : 1.0;
     }
 
+    for (const kc of keycardObjects) if (kc.visible) {
+      if (kc.userData.light) kc.userData.light.intensity = flickerEnabled ? 0.9 + Math.sin(time * 2.5) * 0.25 : 0.9;
+    }
+
     // Ceiling lamps flicker, and pulse blood-red in nightmare escape phase!
     for (const lamp of lamps) {
       const t = time + lamp.offset;
@@ -1911,10 +2022,14 @@ export function createWorld(scene, customProps = null) {
 
   // Merge scenery by material
   const dynamic = new Set([
-    ...tapeObjects, ...fuseObjects, powerLever, powerLamp, broadcastBulb, exitLamp,
+    ...tapeObjects, ...fuseObjects, ...keycardObjects, canisterMesh, valveMesh, powerLever, powerLamp, broadcastBulb, exitLamp,
     ...fans, ...monitors.map(m => m.screen),
     ...lockers.map(l => interactables.get(l.id)),
   ]);
+  for (const d of doorObjects.values()) {
+    dynamic.add(d.pivot);
+    dynamic.add(d.led);
+  }
   const batches = new Map(); root.updateMatrixWorld(true);
   root.traverse(object => {
     if (!object.isMesh || Array.isArray(object.material)) return;

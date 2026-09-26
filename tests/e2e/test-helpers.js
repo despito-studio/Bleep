@@ -19,6 +19,7 @@ import {
   propToObstacle,
   doors,
   DOORS,
+  stationDoors,
   getDoorObstacle,
 } from '../../shared/world-data.js';
 import { DEFAULT_PROPS, PROP_CATALOG } from '../../shared/props.js';
@@ -41,6 +42,7 @@ export {
   propToObstacle,
   doors,
   DOORS,
+  stationDoors,
   getDoorObstacle,
   DEFAULT_PROPS,
   PROP_CATALOG,

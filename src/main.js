@@ -3,7 +3,7 @@ import { io } from 'socket.io-client';
 import { createWorld, createCharacter } from './world.js';
 import { createTapeEffect } from './post.js';
 import { HorrorAudio } from './audio.js';
-import { objects, lockers, isWalkable, roomAt, spawn, updateObstacles } from '../shared/world-data.js';
+import { objects, lockers, doors, isWalkable, roomAt, spawn, updateObstacles } from '../shared/world-data.js';
 import { CHARACTER_CLASSES, CLASS_KEYS, DEFAULT_CLASS, getClassData } from '../shared/classes.js';
 import './style.css';
 import './minimal.css';
@@ -62,7 +62,7 @@ let localPos = new THREE.Vector3(spawn.x, 1.65, spawn.z);
 let currentBob = 0, footBob = 0;
 let lastSend = 0, lastHud = 0, lastScare = 0, threat = 0, lastFrame = performance.now(), elapsed = 0;
 let currentInteract = null, subtitleUntil = 0, toastUntil = 0, lobbySignature = '';
-let handlingAction = false, prevTapes = [], lastRadioTime = 0, nextScreamerTime = 0;
+let handlingAction = false, prevTapes = [], prevKeycards = [], prevFuel = false, prevValve = false, prevCalibrated = false, lastRadioTime = 0, nextScreamerTime = 0;
 let lastRoom = '';
 let locationCardTimer = null;
 const keys = new Set();
@@ -422,12 +422,114 @@ function showSettings(){openPanel('settings');panel('Налаштувати си
 }
 function showPause(){if(!playing)return;mode='pause';releasePointer();if(state?.players.length===1)socket.emit('game:pause',{paused:true},()=>{});panel('Запис призупинено.',`${controls}<button class="action primary" id="resume-game"><span>${icon('play')} ПРОДОВЖИТИ ЗАПИС</span>${icon('arrow')}</button><div class="two-columns"><button class="action" id="pause-settings">НАЛАШТУВАННЯ</button><button class="action" id="pause-exit">ДО ГОЛОВНОГО МЕНЮ</button></div><p class="pause-note">${state?.creative?'РЕЖИМ ДОСЛІДЖЕННЯ АКТИВОВАНО.':state?.players.length>1?'Група продовжує гру. Істота не чекає.':'Одиночну гру призупинено.'}</p>`,'КАМЕРА / STANDBY',false);$('resume-game').onclick=resume;$('pause-settings').onclick=showSettings;$('pause-exit').onclick=leaveGame;}
 
+function showCalibration(){
+  openPanel('calibration');
+  let currentFreq = 91.2;
+  const targetFreq = 96.4;
+  const tolerance = 0.15;
+  
+  const updateDial = () => {
+    const diff = Math.abs(currentFreq - targetFreq);
+    const isLocked = diff <= tolerance;
+    const signalPercent = Math.max(0, Math.min(100, Math.round((1 - Math.min(diff, 5) / 5) * 100)));
+    const needlePercent = ((currentFreq - 88.0) / 20.0) * 100;
+    
+    const needle = $('cal-needle');
+    if(needle) needle.style.left = `${needlePercent}%`;
+    const freqDisp = $('cal-freq-display');
+    if(freqDisp){
+      freqDisp.textContent = `${currentFreq.toFixed(1)} МГц`;
+      freqDisp.classList.toggle('locked', isLocked);
+    }
+    const sigFill = $('cal-signal-fill');
+    if(sigFill){
+      sigFill.style.width = `${signalPercent}%`;
+      sigFill.classList.toggle('locked', isLocked);
+    }
+    const statusText = $('cal-status-text');
+    if(statusText){
+      statusText.textContent = isLocked ? 'СИГНАЛ ЗАХОПЛЕНО · 96.4 МГц' : `ПОШУК НЕСУЧОЇ... СИГНАЛ: ${signalPercent}%`;
+      statusText.style.color = isLocked ? '#64dfdf' : '#d5bd77';
+    }
+    const lockBtn = $('cal-lock-btn');
+    if(lockBtn) lockBtn.disabled = !isLocked;
+  };
+
+  const targetPercent = ((targetFreq - 88.0) / 20.0) * 100;
+
+  panel('Калібрування радіопередавача.', `
+    <div class="cal-wrap">
+      <p>Встановіть частоту мовлення BUREAU–9 (<strong>96.4 МГц</strong>) згідно з досьє Артура Коула.</p>
+      <div class="cal-freq-display" id="cal-freq-display">91.2 МГц</div>
+      <div class="cal-dial-track">
+        <div class="cal-target-zone" style="left:${targetPercent}%"></div>
+        <div class="cal-needle" id="cal-needle" style="left:16%"></div>
+      </div>
+      <div class="cal-scale">
+        <span>88.0</span><span>92.0</span><span style="color:#50c878;font-weight:bold">96.4</span><span>100.0</span><span>104.0</span><span>108.0</span>
+      </div>
+      <input type="range" id="cal-slider" min="88.0" max="108.0" step="0.1" value="91.2" style="width:100%;margin:15px 0">
+      <div class="cal-signal-meter"><div class="cal-signal-fill" id="cal-signal-fill"></div></div>
+      <p id="cal-status-text" style="font-size:11px;font-family:monospace;letter-spacing:1px;color:#d5bd77">ПОШУК НЕСУЧОЇ...</p>
+      <div class="two-columns" style="margin-top:16px">
+        <button class="action primary" id="cal-lock-btn" disabled>ЗАКРІПИТИ ЧАСТОТУ 96.4</button>
+        <button class="action" id="cal-cancel-btn">СКАСУВАТИ</button>
+      </div>
+    </div>
+  `, 'ПУЛЬТ АПАРАТНОЇ / ТЮНЕР');
+
+  $('cal-slider').oninput = (e) => {
+    currentFreq = Number(e.target.value);
+    audio.play('click');
+    updateDial();
+  };
+  $('cal-lock-btn').onclick = async () => {
+    try {
+      const res = await emit('game:calibrate', { frequency: 96.4 });
+      if(res.ok){
+        audio.play('radio');
+        toast('ЧАСТОТУ 96.4 МГц ЗАФІКСОВАНО! Пульт готовий до виходу в ефір.');
+        closePanel();
+      } else {
+        toast(res.error || 'Помилка калібрування');
+      }
+    } catch(err) {
+      toast(err.message);
+    }
+  };
+  $('cal-cancel-btn').onclick = closePanel;
+  updateDial();
+}
+
 function showMap(){
   openPanel('map');
+  const doorSvg = (doorId, x, y) => {
+    const d = state?.doors?.[doorId];
+    const isLocked = Boolean(d?.locked);
+    const isOpen = Boolean(d?.open);
+    const color = isLocked ? '#e04434' : isOpen ? '#50c878' : '#d5bd77';
+    if (isOpen) {
+      return `<path d="M${x} ${y}h15" stroke="${color}" stroke-dasharray="3,3" stroke-width="4"/>`;
+    }
+    return `<path d="M${x} ${y}h15" stroke="${color}" stroke-width="6"/>${isLocked ? `<text x="${x + 7.5}" y="${y - 4}" font-size="8" fill="#e04434" text-anchor="middle">🔒</text>` : ''}`;
+  };
+
+  let mapX = 270 + (localPos.x / 12) * 190;
+  let mapY = localPos.z > 6
+    ? 15 - ((localPos.z - 6) / 30) * 75
+    : 30 + ((6 - localPos.z) / 60) * 530;
+  mapX = Math.max(35, Math.min(505, mapX));
+  mapY = Math.max(-65, Math.min(580, mapY));
+
+  const keyStatus = [
+    (state?.keycards||[]).includes('keycard-guard') ? 'Охорона ✓' : 'Охорона ✗',
+    (state?.keycards||[]).includes('keycard-engineer') ? 'Інженер ✓' : 'Інженер ✗'
+  ].join(' · ');
+
   panel('План телестанції.',`
-  <p>Ви зараз: <strong>${roomAt(localPos.x,localPos.z)}</strong>. Знайдіть 3 касети, 2 запобіжники та використовуйте шафи [Ш] для схованки.</p>
+  <p>Ви зараз: <strong>${roomAt(localPos.x,localPos.z)}</strong> · Перепустки: <strong style="color:var(--gold)">${keyStatus}</strong></p>
   <svg viewBox="0 -80 540 700" style="width:100%;max-height:60dvh;stroke:#829071;stroke-width:1;fill:#152016;font-family:monospace">
-    <path d="M30 -70H510V15H30Z" fill="#233024"/><g fill="#cbd2b9" stroke="none" font-size="11"><text x="55" y="-42">ДВІР</text><text x="55" y="-16">ФУРГОН / ЕВАКУАЦІЯ</text></g><path d="M270 15V30" stroke="#d5bd77" stroke-width="6"/>
+    <path d="M30 -70H510V15H30Z" fill="#233024"/><g fill="#cbd2b9" stroke="none" font-size="11"><text x="55" y="-42">ДВІР СТАНЦІЇ</text><text x="55" y="-16">ФУРГОН / ЕВАКУАЦІЯ</text></g><path d="M270 15V30" stroke="#d5bd77" stroke-width="6"/>
     <!-- Центральний довгий коридор -->
     <path d="M220 30h100v560H220Z" fill="#1b251c"/>
     <!-- Сектор 1 (верхній) -->
@@ -436,8 +538,15 @@ function showMap(){
     <path d="M30 320h175v120H30ZM335 320h175v120H335ZM30 460h175v120H30ZM335 460h175v120H335Z"/>
     <!-- Обхідні бічні тунелі (петлі) -->
     <path d="M40 290h30v30H40ZM470 290h30v30H470Z" fill="#2d3b2a" stroke="#d5bd77"/>
-    <!-- Дверні отвори -->
-    <path d="M205 90h15m115 0h15M205 230h15m115 0h15M205 380h15m115 0h15M205 520h15m115 0h15" stroke="#d5bd77" stroke-width="6"/>
+    <!-- Дверні отвори динамічні -->
+    ${doorSvg('door-archive', 205, 90)}
+    <path d="M320 90h15" stroke="#50c878" stroke-dasharray="3,3" stroke-width="4"/>
+    ${doorSvg('door-generator', 205, 230)}
+    ${doorSvg('door-studio', 320, 230)}
+    ${doorSvg('door-vent', 205, 380)}
+    ${doorSvg('door-server', 320, 380)}
+    ${doorSvg('door-tech', 205, 520)}
+    ${doorSvg('door-dispatch', 320, 520)}
     <!-- Підписи -->
     <g fill="#cdd3bb" stroke="none" text-anchor="middle" font-size="11">
       <text x="117" y="75">АРХІВ</text><text x="117" y="98">① КАСЕТА</text>
@@ -452,7 +561,13 @@ function showMap(){
       <text x="55" y="310" font-size="8" fill="#d5bd77">ПЕТЛЯ</text>
       <text x="485" y="310" font-size="8" fill="#d5bd77">ПЕТЛЯ</text>
     </g>
+    <!-- Маркер гравця -->
+    <circle cx="${Math.round(mapX)}" cy="${Math.round(mapY)}" r="6" fill="#ffd05b" stroke="#ffffff" stroke-width="2"/>
+    <text x="${Math.round(mapX)}" y="${Math.round(mapY) - 9}" fill="#ffd05b" font-size="10" font-weight="bold" text-anchor="middle">ВИ</text>
   </svg>
+  <div style="display:flex;justify-content:space-between;margin:8px 0;font-size:10px;color:#8fa082">
+    <span>🔴 🔒 Заблоковано</span><span>🟡 Зачинено</span><span>🟢 Відчинено</span>
+  </div>
   <button class="action primary" id="close-map">ПОВЕРНУТИСЯ ДО ЗАПИСУ ${icon('arrow')}</button>`);
   $('close-map').onclick=resume;
 }
@@ -494,7 +609,7 @@ async function leaveGame(){
   $('lobby-screen').hidden=true;$('arrival').hidden=true;$('countdown-banner').hidden=true;$('radio-menu').hidden=true;
   exterior?.setArrival(1);lobby?.sync([],null,selectedClass,true);
   try{await emit('room:leave');}catch{}
-  state=null;prevTapes=[];world?.setState({tapes:[],fuses:[],power:false,broadcast:false});
+  state=null;prevTapes=[];prevKeycards=[];prevFuel=false;prevValve=false;prevCalibrated=false;world?.setState({tapes:[],fuses:[],keycards:[],doors:{},power:false,broadcast:false});
   $('menu').hidden=false;$('hud').hidden=true;$('overlay').hidden=true;$('locker-overlay').hidden=true;
   $('location-card').hidden=true;$('escape-banner').hidden=true;
   $('damage').style.opacity=0;for(const g of remotePlayers.values())scene.remove(g);remotePlayers.clear();
@@ -507,7 +622,12 @@ function beginGame(){
   localPos.set(spawn.x,1.65,spawn.z);
   const me=state.players.find(p=>p.id===myId);if(me)localPos.set(me.x,1.65,me.z);
   if(me?.characterClass)selectClass(me.characterClass);
-  flashlightOn=true;cameraOn=false;stamina=100;lastScare=state.scare||0;prevTapes=[...state.tapes];
+  flashlightOn=true;cameraOn=false;stamina=100;lastScare=state.scare||0;
+  prevTapes=[...state.tapes];
+  prevKeycards=[...(state.keycards||[])];
+  prevFuel=Boolean(state.canister||state.quest?.fuelAdded);
+  prevValve=Boolean(state.valveOpened||state.quest?.valveOpened);
+  prevCalibrated=Boolean(state.calibrated||state.quest?.calibrated);
   lastRoom=roomAt(localPos.x,localPos.z);
   for(const id of ['menu','hud','overlay','lobby-screen','down-notice','locker-overlay','escape-banner','location-card','radio-menu'])$(id).hidden=true;
   lobby?.update(elapsed,false);
@@ -576,6 +696,7 @@ socket.on('room:state',next=>{
       $('down-notice').hidden=!me.down;
       $('locker-overlay').hidden=!me.hiding;
     }
+    world?.setState(next);
     for(const id of next.tapes.filter(id=>!prevTapes.includes(id))){
       audio.play('pickup');
       const lines={
@@ -586,6 +707,36 @@ socket.on('room:state',next=>{
       subtitle(...(lines[id]||['КАСЕТА','Запис знайдено.']),11000);
     }
     prevTapes=[...next.tapes];
+
+    for(const id of (next.keycards||[]).filter(id=>!prevKeycards.includes(id))){
+      audio.play('pickup');
+      const lines={
+        'keycard-guard':['ПЕРЕПУСТКА ОХОРОНИ','КПП / Двір. Доступ до Архіву та Вентвузла відкрито.'],
+        'keycard-engineer':['ПЕРЕПУСТКА ГОЛОВНОГО ІНЖЕНЕРА','Архів. Доступ до Генераторної, Серверної та Техскладу відкрито.'],
+      };
+      subtitle(...(lines[id]||['ПЕРЕПУСТКА','Картку доступу знайдено.']),10000);
+    }
+    prevKeycards=[...(next.keycards||[])];
+
+    const hasFuel = Boolean(next.canister || next.quest?.fuelAdded);
+    if(hasFuel && !prevFuel){
+      audio.play('pickup');
+      subtitle('КАНІСТРА З ДИЗЕЛЕМ 20Л','Службовий сарай у дворі. Заправте дизель-генератор.',9000);
+      prevFuel = true;
+    }
+    const hasValve = Boolean(next.valveOpened || next.quest?.valveOpened);
+    if(hasValve && !prevValve){
+      audio.play('click');
+      subtitle('АВАРІЙНИЙ ВЕНТИЛЬ ТИСКУ','Вентвузол. Тиск у контурі палива стабілізовано.',9000);
+      prevValve = true;
+    }
+    const isCalibrated = Boolean(next.calibrated || next.quest?.calibrated);
+    if(isCalibrated && !prevCalibrated){
+      audio.play('radio');
+      subtitle('ЧАСТОТУ 96.4 МГц ЗАХОПЛЕНО','Апаратна. Несуча частота мовлення BUREAU–9 зафіксована.',10000);
+      prevCalibrated = true;
+    }
+
     if(next.power&&!oldPower){audio.play('power');toast('Живлення відновлено. Передавач в апаратній готовий.');}
     if(next.broadcast&&!oldBroadcast){
       audio.play('scare');
@@ -647,10 +798,37 @@ function chooseInteraction(){
     }
   }
 
-  // Objectives (tapes, fuses, power, broadcast, exit)
+  // Station doors
+  for(const [doorId, d] of Object.entries(doors)){
+    const dState = state.doors?.[doorId] || { locked: Boolean(d.requires), open: false };
+    const distDoor = Math.hypot(d.x - localPos.x, d.z - localPos.z);
+    if(distDoor < 2.5 && distDoor < dist){
+      const toX = (d.x - localPos.x) / (distDoor || 1), toZ = (d.z - localPos.z) / (distDoor || 1);
+      const dot = forwardX * toX + forwardZ * toZ;
+      if(dot > 0.35 || distDoor < 1.0){
+        dist = distDoor;
+        let label = d.label;
+        if(dState.open){
+          label = `${d.label} [E: Зачинити]`;
+        } else if(dState.locked){
+          const hasKey = (state.keycards || []).includes(d.requires);
+          const keyName = d.requires === 'keycard-guard' ? 'картка охорони' : 'картка інженера';
+          label = hasKey ? `${d.label} [E: Відімкнути карткою]` : `${d.label} 🔒 (потрібна ${keyName})`;
+        } else {
+          label = `${d.label} [E: Відчинити]`;
+        }
+        best = { id: doorId, label, type: 'door', doorState: dState };
+      }
+    }
+  }
+
+  // Objectives (tapes, fuses, keycards, canister, valve, power, broadcast, exit)
   for(const o of objects){
     if(o.type==='tape'&&state.tapes.includes(o.id))continue;
     if(o.type==='fuse'&&(state.fuses||[]).includes(o.id))continue;
+    if(o.type==='keycard'&&(state.keycards||[]).includes(o.id))continue;
+    if(o.id==='fuel-canister'&&(state.canister||state.quest?.fuelAdded))continue;
+    if(o.id==='pressure-valve'&&(state.valveOpened||state.quest?.valveOpened))continue;
     if(o.id==='power'&&state.power)continue;
     if(o.id==='broadcast'&&state.broadcast)continue;
     const d=Math.hypot(o.x-localPos.x,o.z-localPos.z);
@@ -661,12 +839,33 @@ function chooseInteraction(){
         dist=d;
         if(o.id==='power'){
           const fuseCount=(state.fuses||[]).length;
-          best={
-            ...o,
-            label: fuseCount >= 2
-              ? 'Вставити 2 запобіжники та відновити живлення'
-              : `Електрощит: потрібно 2 запобіжники 380В (${fuseCount}/2)`
-          };
+          const hasFuel=Boolean(state.canister||state.quest?.fuelAdded);
+          const hasValve=Boolean(state.valveOpened||state.quest?.valveOpened);
+          if(fuseCount>=2 && hasFuel && hasValve){
+            best={ ...o, label: '⚡ Запустити дизель-генератор та щит 380В [E]' };
+          } else {
+            const parts=[];
+            if(fuseCount<2) parts.push(`запобіжники (${fuseCount}/2)`);
+            if(!hasFuel) parts.push('паливо');
+            if(!hasValve) parts.push('вентиль тиску');
+            best={ ...o, label: `Щит 380В: потрібно ${parts.join(', ')}` };
+          }
+        } else if(o.id==='broadcast'){
+          if(!state.power){
+            best={ ...o, label: 'Пульт трансляції: немає живлення 380В' };
+          } else if(state.tapes.length<3){
+            best={ ...o, label: `Пульт трансляції: потрібні 3 касети (${state.tapes.length}/3)` };
+          } else if(!state.calibrated && !state.quest?.calibrated){
+            best={ ...o, label: 'Пульт трансляції: налаштувати частоту 96.4 МГц [E]', type: 'calibrate' };
+          } else {
+            best={ ...o, label: '📡 Запустити трансляцію на супутники BUREAU–9 [E]' };
+          }
+        } else if(o.type==='keycard'){
+          best={ ...o, label: `Взяти: ${o.label} [E]` };
+        } else if(o.id==='fuel-canister'){
+          best={ ...o, label: 'Взяти: Каністра з дизелем 20л [E]' };
+        } else if(o.id==='pressure-valve'){
+          best={ ...o, label: 'Повернути: Аварійний вентиль палива [E]' };
         } else {
           best=o;
         }
@@ -688,6 +887,35 @@ async function interact(){
   const target=currentInteract;
   handlingAction=true;
   try{
+    if(target.type==='calibrate'){
+      showCalibration();
+      return;
+    }
+    if(target.type==='door'){
+      const res=await emit('game:interact',{id:target.id});
+      audio.play('click');
+      const cleanLabel = (target.label||'Двері').split('[')[0].trim();
+      toast(res.open ? `${cleanLabel}: відчинено.` : `${cleanLabel}: зачинено.`);
+      return;
+    }
+    if(target.type==='keycard'){
+      const res=await emit('game:interact',{id:target.id});
+      audio.play('pickup');
+      toast(target.id === 'keycard-guard' ? 'Отримано: Картка охорони (Архів, Вентвузол)' : 'Отримано: Картка інженера (Генераторна, Серверна, Техсклад)');
+      return;
+    }
+    if(target.id==='fuel-canister'){
+      const res=await emit('game:interact',{id:target.id});
+      audio.play('pickup');
+      toast('Отримано: Каністра солярки 20л. Заправте дизель-генератор.');
+      return;
+    }
+    if(target.id==='pressure-valve'){
+      const res=await emit('game:interact',{id:target.id});
+      audio.play('click');
+      toast('Аварійний вентиль відкрито. Тиск у контурі палива стабілізовано.');
+      return;
+    }
     if(target.type==='locker'){
       const l = activeLockers.find(x => x.id === target.id);
       if(l){
@@ -716,7 +944,7 @@ async function interact(){
       toast(`Запобіжник 380В встановлено в інвентар (${state?.fuses?.length || 1}/2).`);
     }else if(target.type==='power'){
       audio.play('power');
-      toast('Живлення відновлено! Запобіжники 380В замкнули ланцюг.');
+      toast('Живлення відновлено! Дизель-генератор запущено.');
     }else if(target.type==='revive'){
       audio.play('pickup');toast('Напарник знову на зв’язку.');
     }
@@ -803,18 +1031,42 @@ function updateHud(now){
   $('signal').textContent=state.broadcast?'⚠ ТРИВОГА: ЕФІР ВІДКРИТО':threat>.55?'У СИГНАЛІ ХТОСЬ Є':cameraOn?'КАМЕРА / TRACKING':'СИГНАЛ СТАБІЛЬНИЙ';
   $('signal').style.color=state.broadcast||threat>.55?'#d28771':'';
 
+  const stage = state.quest?.stage || 1;
+  const keycards = state.keycards || [];
+  const hasGuardKey = keycards.includes('keycard-guard');
+  const hasEngKey = keycards.includes('keycard-engineer');
+  const hasFuel = Boolean(state.canister || state.quest?.fuelAdded);
+  const hasValve = Boolean(state.valveOpened || state.quest?.valveOpened);
+  const fuseCount = (state.fuses || []).length;
+  const isCalibrated = Boolean(state.calibrated || state.quest?.calibrated);
+
   let objTitle, objDetail;
   if(state.broadcast){
-    objTitle='Повертайтеся до фургона';objDetail='Через головний вхід у двір.';
+    objTitle='ЕВАКУАЦІЯ: БІЖІТЬ ДО ФУРГОНА!';objDetail='Двір станції · Диктор полює!';
     $('escape-banner').hidden=false;
     $('escape-dist').textContent=Math.round(Math.hypot(extraction.x-localPos.x,extraction.z-localPos.z))+' м до фургона';
   }else{
     $('escape-banner').hidden=true;
-    if(localPos.z>6 && state.tapes.length===0 && !(state.fuses||[]).length){objTitle='Увійдіть до телестанції';objDetail='Головний вхід перед вами.';}
-    else if(state.tapes.length<3){objTitle='Знайдіть записи · '+state.tapes.length+'/3';objDetail='Архів / Студія 04 / Техсклад';}
-    else if((state.fuses||[]).length<2){objTitle='Знайдіть запобіжники · '+(state.fuses||[]).length+'/2';objDetail='Вентвузол / Серверна';}
-    else if(!state.power){objTitle='Відновіть живлення';objDetail='Електрощит у генераторній.';}
-    else{objTitle='Передайте останній запис';objDetail='Пульт в апаратній.';}
+    if(localPos.z > 6 && !hasGuardKey){
+      objTitle='Отримайте картку охорони';objDetail='Будка КПП у дворі станції.';
+    }else if(!hasGuardKey){
+      objTitle='Знайдіть картку охорони';objDetail='Будка КПП або роздягальня вахтера.';
+    }else if(!hasEngKey){
+      objTitle='Знайдіть картку інженера';objDetail='Архів станції (потрібна картка охорони).';
+    }else if(!state.power){
+      if(!hasFuel || !hasValve || fuseCount < 2){
+        objTitle='Підготуйте енергоблок';
+        objDetail=`Паливо: ${hasFuel?'✓':'✗'} | Вентиль: ${hasValve?'✓':'✗'} | Запобіжники: ${fuseCount}/2`;
+      } else {
+        objTitle='Увімкніть живлення 380В';objDetail='Електрощит у генераторній.';
+      }
+    }else if(state.tapes.length < 3){
+      objTitle=`Знайдіть касети · ${state.tapes.length}/3`;objDetail='Архів / Студія 04 / Техсклад';
+    }else if(!isCalibrated){
+      objTitle='Налаштуйте частоту 96.4 МГц';objDetail='Пульт мовлення в апаратній.';
+    }else{
+      objTitle='Почніть вихід в ефір!';objDetail='Запустіть трансляцію на пульті.';
+    }
   }
   $('objective').textContent=objTitle;$('objective-detail').textContent=objDetail;
   $('hud').classList.toggle('camera-active',cameraOn);
@@ -822,8 +1074,21 @@ function updateHud(now){
   const tapeIcons = $('inventory').querySelectorAll('.tape-icon');
   tapeIcons.forEach((el, i) => el.classList.toggle('collected', i < state.tapes.length));
   const fuseIcons = $('inventory').querySelectorAll('.fuse-icon');
-  const fuseCount = (state.fuses || []).length;
   fuseIcons.forEach((el, i) => el.classList.toggle('collected', i < fuseCount));
+
+  const keyGuardEl = $('key-guard');
+  if(keyGuardEl) keyGuardEl.classList.toggle('collected', hasGuardKey);
+  const keyEngEl = $('key-engineer');
+  if(keyEngEl) keyEngEl.classList.toggle('collected', hasEngKey);
+  const fuelIconEl = $('fuel-icon');
+  if(fuelIconEl) fuelIconEl.classList.toggle('collected', hasFuel);
+  const valveIconEl = $('valve-icon');
+  if(valveIconEl) valveIconEl.classList.toggle('opened', hasValve);
+  const freqBadgeEl = $('freq-badge');
+  if(freqBadgeEl){
+    freqBadgeEl.textContent = isCalibrated ? '96.4 MHz' : '--- MHz';
+    freqBadgeEl.classList.toggle('calibrated', isCalibrated);
+  }
 
   const me=state.players.find(p=>p.id===myId);
   const san = state.creative ? 100 : (me?.sanity ?? 100);
