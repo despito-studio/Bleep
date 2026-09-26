@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0c100d" />
+  <title>Архів моделей — Поза ефіром</title>
+  <style>
+    :root{color-scheme:dark;font-family:'Courier New',monospace;background:#0c100d;color:#e2e1cf;--gold:#d5bd77;--muted:#858d7b;--line:#b8c4aa29}*{box-sizing:border-box}body{margin:0}button,a,input{font:inherit}button,a{-webkit-tap-highlight-color:transparent}button{cursor:pointer;color:inherit}a{color:inherit;text-decoration:none}button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:4px}header{position:absolute;top:0;left:0;right:0;padding:27px 37px;display:flex;align-items:center;justify-content:space-between;z-index:2;border-bottom:1px solid var(--line);background:#0c100db0}header .brand{font-size:11px;letter-spacing:2px;color:var(--gold)}header a{font-size:11px;color:#b2b8a8}header a:hover{color:var(--gold)}main{height:100dvh;display:grid;grid-template-columns:335px 1fr;padding-top:73px}.sidebar{padding:33px 29px 22px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:27px;background:#10150f;overflow-y:auto}.eyebrow{font-size:9px;color:var(--gold);letter-spacing:2px;margin:0 0 15px}h1{font-family:Impact,'Arial Narrow',sans-serif;font-weight:400;letter-spacing:1px;font-size:38px;line-height:1.04;margin:0 0 13px}h1 span{color:var(--gold);display:block}.intro{color:var(--muted);font-size:11px;line-height:1.8;margin:0}.items{display:flex;flex-direction:column;gap:6px}.item{display:flex;align-items:center;gap:13px;text-align:left;width:100%;background:transparent;border:1px solid transparent;padding:14px 13px;font-size:11px}.item b{font-weight:normal;font-size:9px;color:#677460}.item span{flex:1}.item em{font-size:12px;font-style:normal;color:#718168}.item:hover{background:#b3c49209;border-color:#a0b18728}.item[aria-pressed=true]{border-color:#d5bd7755;background:#d5bd7710;color:var(--gold)}.item[aria-pressed=true] b{color:#a69863}.description{border-top:1px solid var(--line);padding-top:20px;margin-top:auto}.description h2{font-size:12px;font-weight:normal;margin:0 0 10px;color:var(--gold)}.description p{font-size:10px;line-height:1.85;color:#919e86;margin:0}.specs{display:flex;gap:21px;margin-top:18px;font-size:9px;letter-spacing:1px;color:#6d7b62}.specs strong{display:block;margin-bottom:5px;font-weight:normal;font-size:12px;color:#bec7b0}.viewer{position:relative;min-width:0;overflow:hidden;background:radial-gradient(ellipse at 50% 48%,#263328,#0c100d 67%)}canvas{width:100%;height:100%;display:block;touch-action:none;image-rendering:pixelated}.viewer-meta{position:absolute;left:32px;top:29px;pointer-events:none}.viewer-meta p{font-size:9px;letter-spacing:2px;color:#a2ad93;margin:0 0 9px}.viewer-meta small{font-size:9px;color:#52624b}.counter{position:absolute;top:29px;right:32px;font-size:10px;letter-spacing:2px;color:#6e7c62}.counter span{color:var(--gold)}.caption{position:absolute;bottom:110px;left:32px;font-size:9px;letter-spacing:1.1px;color:#718167;pointer-events:none}.toolbar{position:absolute;bottom:30px;left:32px;right:32px;border-top:1px solid var(--line);padding-top:20px;display:flex;justify-content:space-between;align-items:center;gap:16px}.button-group{display:flex;gap:6px}.tool{background:#10170ed9;border:1px solid var(--line);font-size:10px;padding:11px 13px;letter-spacing:.6px}.tool:hover,.tool[aria-pressed=true]{color:var(--gold);border-color:#d5bd7766;background:#d5bd7712}.colors{display:flex;align-items:center;gap:8px;font-size:9px;color:#75856a}.swatch{width:17px;height:17px;padding:0;border:2px solid #0c100d;box-shadow:0 0 0 1px #71816766;background:var(--swatch)}.swatch[aria-pressed=true]{box-shadow:0 0 0 1px var(--gold)}.fallback{position:absolute;inset:0;background:#111910;display:grid;place-items:center;padding:40px;line-height:1.8;font-size:13px}.credit{font-size:8px;color:#506049;line-height:1.7;letter-spacing:1px}.corner{position:absolute;right:32px;bottom:110px;width:25px;height:25px;border-right:1px solid #697c5840;border-bottom:1px solid #697c5840;pointer-events:none}[hidden]{display:none!important}
+    @media(max-width:800px){main{grid-template-columns:250px 1fr}.sidebar{padding:25px 19px;gap:20px}h1{font-size:32px}.item{padding:12px 8px;font-size:10px}.toolbar{left:19px;right:19px;flex-wrap:wrap}.tool{padding:10px 8px;font-size:9px}.viewer-meta,.caption{left:19px}.counter{right:19px}.caption{font-size:8px;max-width:240px;line-height:1.8}.colors{gap:7px}}
+    @media(max-width:570px){header{padding:20px}header .brand{font-size:9px;letter-spacing:1px}header a{font-size:9px}main{padding-top:60px;grid-template-columns:1fr;grid-template-rows:auto 1fr;min-height:100dvh}.sidebar{padding:17px 16px;border-right:0;border-bottom:1px solid var(--line);gap:12px}.sidebar>div:first-child{display:none}.items{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}.item{padding:10px 6px;gap:5px;font-size:9px}.item b,.item em{display:none}.description,.credit{display:none}.viewer{min-height:450px}.viewer-meta{top:20px}.counter{top:20px}.toolbar{bottom:19px;gap:12px}.caption{bottom:105px}.corner{bottom:105px}.colors{font-size:8px}}
+    @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+  </style>
+</head>
+<body>
+  <header><a class="brand" href="/">▣ BUREAU–9 // BLACKPINE ARCHIVES</a><a href="/">← ПОВЕРНУТИСЯ ДО ГРИ</a></header>
+  <main>
+    <aside class="sidebar">
+      <div><p class="eyebrow">МАТЕРІАЛИ СПРАВИ / 004</p><h1>АРХІВ<span>МОДЕЛЕЙ</span></h1><p class="intro">Оперативники BUREAU–9, реквізит, фургон та станція Blackpine.<br>Кожен об’єкт процедурно створено для цієї гри.</p></div>
+      <nav class="items" aria-label="Моделі гри">
+        <button class="item" data-model="engineer" aria-pressed="true"><b>01</b><span>Віктор (Інженер)</span><em>↗</em></button>
+        <button class="item" data-model="operator" aria-pressed="false"><b>02</b><span>Вівіан (Операторка)</span><em>↗</em></button>
+        <button class="item" data-model="journalist" aria-pressed="false"><b>03</b><span>Едґар (Журналіст)</span><em>↗</em></button>
+        <button class="item" data-model="dispatcher" aria-pressed="false"><b>04</b><span>Гейзел (Диспетчерка)</span><em>↗</em></button>
+        <button class="item" data-model="monster" aria-pressed="false"><b>05</b><span>Диктор (Монстр)</span><em>↗</em></button>
+        <button class="item" data-model="monster_bloody" aria-pressed="false"><b>06</b><span>Кривавий Диктор</span><em>↗</em></button>
+        <button class="item" data-model="van" aria-pressed="false"><b>07</b><span>Фургон BUREAU–9</span><em>↗</em></button>
+        <button class="item" data-model="courtyard" aria-pressed="false"><b>08</b><span>Внутрішній двір</span><em>↗</em></button>
+        <button class="item" data-model="facade" aria-pressed="false"><b>09</b><span>Фасад станції 04</span><em>↗</em></button>
+        <button class="item" data-model="camera" aria-pressed="false"><b>10</b><span>Камера ТК–04</span><em>↗</em></button>
+        <button class="item" data-model="tape" aria-pressed="false"><b>11</b><span>Архівна касета</span><em>↗</em></button>
+        <button class="item" data-model="fuse" aria-pressed="false"><b>12</b><span>Запобіжник 380V</span><em>↗</em></button>
+        <button class="item" data-model="monitor" aria-pressed="false"><b>13</b><span>Монітор ефіру</span><em>↗</em></button>
+        <button class="item" data-model="station" aria-pressed="false"><b>14</b><span>Телецентр Blackpine</span><em>↗</em></button>
+        <button class="item" data-model="guardBooth" aria-pressed="false"><b>15</b><span>КПП Охорони</span><em>↗</em></button>
+        <button class="item" data-model="barrier" aria-pressed="false"><b>16</b><span>Шлагбаум в’їзду</span><em>↗</em></button>
+        <button class="item" data-model="floodlightTower" aria-pressed="false"><b>17</b><span>Прожекторна вишка</span><em>↗</em></button>
+        <button class="item" data-model="cableSpool" aria-pressed="false"><b>18</b><span>Кабельна котушка</span><em>↗</em></button>
+        <button class="item" data-model="abandonedCar" aria-pressed="false"><b>19</b><span>Покинутий ГАЗ-66</span><em>↗</em></button>
+        <button class="item" data-model="turnstile" aria-pressed="false"><b>20</b><span>Турнікети входу</span><em>↗</em></button>
+        <button class="item" data-model="archivistDesk" aria-pressed="false"><b>21</b><span>Стіл з лампою</span><em>↗</em></button>
+        <button class="item" data-model="anchorDesk" aria-pressed="false"><b>22</b><span>Дикторський стіл</span><em>↗</em></button>
+        <button class="item" data-model="dieselGenerator" aria-pressed="false"><b>23</b><span>Дизель-генератор</span><em>↗</em></button>
+        <button class="item" data-model="fusePanel" aria-pressed="false"><b>24</b><span>Щит 380В з гніздами</span><em>↗</em></button>
+        <button class="item" data-model="mixingConsole" aria-pressed="false"><b>25</b><span>Пульт прямого ефіру</span><em>↗</em></button>
+        <button class="item" data-model="serverRack" aria-pressed="false"><b>26</b><span>Серверна стійка 90-х</span><em>↗</em></button>
+        <button class="item" data-model="cardCatalog" aria-pressed="false"><b>27</b><span>Каталожна шафа</span><em>↗</em></button>
+        <button class="item" data-model="airDuct" aria-pressed="false"><b>28</b><span>Вентиляційний короб</span><em>↗</em></button>
+        <button class="item" data-model="monitorWall" aria-pressed="false"><b>29</b><span>Стійка відеоконтролю</span><em>↗</em></button>
+        <button class="item" data-model="fireBoard" aria-pressed="false"><b>30</b><span>Пожежний щиток</span><em>↗</em></button>
+      </nav>
+      <div class="description"><h2 id="model-title">Оперативник BUREAU–9</h2><p id="model-description"></p><div class="specs"><div><strong id="model-category">ПЕРСОНАЖ</strong>КАТЕГОРІЯ</div><div><strong id="model-detail">LOW POLY</strong>СТИЛЬ</div></div></div>
+      <div class="credit">ПРОЦЕДУРНІ МОДЕЛІ ТА ТЕКСТУРИ<br>DEAD AIR // BLACKPINE BROADCAST</div>
+    </aside>
+    <section class="viewer" id="viewer" aria-label="Інтерактивний тривимірний перегляд">
+      <canvas id="gallery-canvas" aria-label="3D-модель: оперативник"></canvas>
+      <div class="viewer-meta"><p id="view-label">ОПЕРАТИВНИК / МОДЕЛЬ 001</p><small id="view-subtitle">BLACKPINE BROADCAST · СТАНЦІЯ 04 · 1996</small></div>
+      <div class="counter"><span id="model-number">01</span> / 30</div>
+      <div class="caption" id="view-hint">ПЕРЕТЯГУЙТЕ ДЛЯ ОГЛЯДУ · КОЛЕСО — МАСШТАБ</div><div class="corner"></div>
+      <div class="toolbar"><div class="button-group"><button class="tool" id="animation-toggle" aria-pressed="true">▷ ХОДА</button><button class="tool" id="rotation-toggle" aria-pressed="true">↻ ОБЕРТАННЯ</button><button class="tool" id="reset-view">СКИНУТИ ВИД</button></div><div class="colors" id="operator-colors">ФОРМА <button class="swatch" data-color="#737e60" style="--swatch:#737e60" aria-label="Оливкова форма" aria-pressed="true"></button><button class="swatch" data-color="#657887" style="--swatch:#657887" aria-label="Синя форма" aria-pressed="false"></button><button class="swatch" data-color="#927360" style="--swatch:#927360" aria-label="Руда форма" aria-pressed="false"></button><button class="swatch" data-color="#8c8257" style="--swatch:#8c8257" aria-label="Пісочна форма" aria-pressed="false"></button></div></div>
+    </section>
+  </main>
+  <script type="module" src="/src/models-preview.js"></script>
+</body>
+</html>
