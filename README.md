@@ -4,7 +4,7 @@
 
 ## 🎮 Готовий білд гри для Windows
 
-📦 **[Завантажити Dead Air v1.2.0 для Windows (61.8 МБ)](https://github.com/dorimommy/Dear-air/releases/download/dead-air-windows-v1.2.0/DeadAir-Windows-v1.2.0.zip)**
+📦 **[Завантажити Dead Air v1.2.0 для Windows (44 МБ)](https://github.com/dorimommy/Dear-air/releases/download/dead-air-windows-v1.2.0/DeadAir-Windows-v1.2.0.zip)**
 
 *Розпакуйте zip-архів і запустіть `DeadAir.exe`.*
 
