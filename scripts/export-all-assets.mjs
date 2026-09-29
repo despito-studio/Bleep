@@ -22,7 +22,10 @@ const { OBJExporter } = await import('three/addons/exporters/OBJExporter.js');
 const { createCharacter, createProp, createWorld } = await import('../src/world.js');
 const { createExterior, createVan } = await import('../src/exterior.js');
 
-const outputDir = path.resolve('unity_assets');
+const forUnityProject = process.argv.includes('--unity-project');
+const outputDir = forUnityProject
+  ? path.resolve('DeadAirUnityProject/Assets/Resources/Models')
+  : path.resolve('unity_assets');
 fs.mkdirSync(outputDir, { recursive: true });
 
 const exporter = new OBJExporter();
@@ -85,9 +88,37 @@ for (let i = 0; i < assets.length; i++) {
   const item = assets[i];
   try {
     const mesh = item.get();
-    const objText = exporter.parse(mesh);
+    // OBJExporter consumes matrixWorld; update parents and every child first.
+    mesh.updateMatrixWorld(true);
+    const materials = [];
+    if (forUnityProject) {
+      mesh.traverse((part) => {
+        if (!part.isMesh || !part.material) return;
+        const source = Array.isArray(part.material) ? part.material[0] : part.material;
+        const name = `DA_${String(materials.length).padStart(4, '0')}`;
+        source.name = name;
+        part.name = `${item.name}_${name}`;
+        materials.push({ name, source });
+      });
+    }
+    const objText = `${forUnityProject ? `mtllib ${item.name}.mtl\n` : ''}${exporter.parse(mesh)}`;
     const filePath = path.join(outputDir, `${item.name}.obj`);
     fs.writeFileSync(filePath, objText, 'utf8');
+    if (forUnityProject) {
+      const mtl = materials.map(({ name, source }) => {
+        const color = source.color || new THREE.Color(0xffffff);
+        const emissive = source.emissive || new THREE.Color(0x000000);
+        return [
+          `newmtl ${name}`,
+          `Ka ${color.r.toFixed(5)} ${color.g.toFixed(5)} ${color.b.toFixed(5)}`,
+          `Kd ${color.r.toFixed(5)} ${color.g.toFixed(5)} ${color.b.toFixed(5)}`,
+          `Ke ${emissive.r.toFixed(5)} ${emissive.g.toFixed(5)} ${emissive.b.toFixed(5)}`,
+          'Ks 0.12 0.12 0.12', 'Ns 18',
+          `d ${(source.opacity ?? 1).toFixed(3)}`, 'illum 2', '',
+        ].join('\n');
+      }).join('\n');
+      fs.writeFileSync(path.join(outputDir, `${item.name}.mtl`), mtl);
+    }
     totalBytes += Buffer.byteLength(objText, 'utf8');
     console.log(`[${i + 1}/${assets.length}] ✓ Exported ${item.name}.obj (${(objText.length / 1024).toFixed(1)} KB)`);
   } catch (err) {

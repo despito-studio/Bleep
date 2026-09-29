@@ -1,5 +1,7 @@
 # DEAD AIR // BLACKPINE BROADCAST (BUREAU–9)
 
+> Unity версія гри: [DeadAirUnityProject/README.md](DeadAirUnityProject/README.md) — відкрийте папку `DeadAirUnityProject` у Unity Hub (2023.1.22f1).
+
 > **Атмосферний ретро-хорор від першої особи для 1–4 гравців у сетингу середини 1990-х років.**  
 > Спеціальна оперативна група міжнародного бюро розслідувань **«BUREAU–9»** прибуває на занедбаний ретранслятор **«Blackpine Broadcast / Station 04»** за таємничим сигналом біди.
 

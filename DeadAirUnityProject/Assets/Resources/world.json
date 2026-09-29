@@ -1,0 +1,4187 @@
+{
+  "spawn": {
+    "x": -5,
+    "z": 19
+  },
+  "courtyard": {
+    "minX": -22,
+    "maxX": 22,
+    "minZ": 6,
+    "maxZ": 36
+  },
+  "extraction": {
+    "x": -5.1,
+    "y": 1.2,
+    "z": 23
+  },
+  "exteriorObstacles": [
+    {
+      "id": "crew-van",
+      "minX": -8.35,
+      "maxX": -5.65,
+      "minZ": 20.35,
+      "maxZ": 25.65
+    },
+    {
+      "id": "service-shed",
+      "minX": 15.8,
+      "maxX": 20.8,
+      "minZ": 8.3,
+      "maxZ": 13.7
+    }
+  ],
+  "rooms": [
+    {
+      "name": "ГОЛОВНИЙ КОРИДОР",
+      "minX": -2.5,
+      "maxX": 2.5,
+      "minZ": -54,
+      "maxZ": 6
+    },
+    {
+      "name": "АРХІВ",
+      "minX": -12,
+      "maxX": -2.5,
+      "minZ": -9,
+      "maxZ": 6
+    },
+    {
+      "name": "АПАРАТНА",
+      "minX": 2.5,
+      "maxX": 12,
+      "minZ": -9,
+      "maxZ": 6
+    },
+    {
+      "name": "ГЕНЕРАТОРНА",
+      "minX": -12,
+      "maxX": -2.5,
+      "minZ": -24,
+      "maxZ": -9
+    },
+    {
+      "name": "СТУДІЯ 04",
+      "minX": 2.5,
+      "maxX": 12,
+      "minZ": -24,
+      "maxZ": -9
+    },
+    {
+      "name": "ВЕНТВУЗОЛ",
+      "minX": -12,
+      "maxX": -2.5,
+      "minZ": -39,
+      "maxZ": -24
+    },
+    {
+      "name": "СЕРВЕРНА",
+      "minX": 2.5,
+      "maxX": 12,
+      "minZ": -39,
+      "maxZ": -24
+    },
+    {
+      "name": "ТЕХСКЛАД",
+      "minX": -12,
+      "maxX": -2.5,
+      "minZ": -54,
+      "maxZ": -39
+    },
+    {
+      "name": "ДИСПЕТЧЕРСЬКА",
+      "minX": 2.5,
+      "maxX": 12,
+      "minZ": -54,
+      "maxZ": -39
+    },
+    {
+      "name": "ДВІР СТАНЦІЇ",
+      "minX": -22,
+      "maxX": 22,
+      "minZ": 6,
+      "maxZ": 36
+    }
+  ],
+  "objects": [
+    {
+      "id": "tape-1",
+      "x": -8,
+      "y": 1.1,
+      "z": -3,
+      "type": "tape",
+      "label": "Касета 01 · Нічна зміна"
+    },
+    {
+      "id": "tape-2",
+      "x": 8,
+      "y": 1.1,
+      "z": -16.5,
+      "type": "tape",
+      "label": "Касета 02 · Зайвий голос"
+    },
+    {
+      "id": "tape-3",
+      "x": -8,
+      "y": 1.1,
+      "z": -50.5,
+      "type": "tape",
+      "label": "Касета 03 · Останній ефір"
+    },
+    {
+      "id": "fuse-1",
+      "x": -8,
+      "y": 1.1,
+      "z": -26.5,
+      "type": "fuse",
+      "label": "Запобіжник 380В (Вентвузол)"
+    },
+    {
+      "id": "fuse-2",
+      "x": 10.5,
+      "y": 1.1,
+      "z": -31.5,
+      "type": "fuse",
+      "label": "Запобіжник 380В (Серверна)"
+    },
+    {
+      "id": "power",
+      "x": -11,
+      "y": 1.4,
+      "z": -16.5,
+      "type": "power",
+      "label": "Електрощит генератора"
+    },
+    {
+      "id": "broadcast",
+      "x": 10,
+      "y": 1.2,
+      "z": -2,
+      "type": "broadcast",
+      "label": "Передати запис"
+    },
+    {
+      "id": "exit",
+      "x": -5.1,
+      "y": 1.2,
+      "z": 23,
+      "type": "exit",
+      "label": "Сісти у фургон · покинути станцію"
+    },
+    {
+      "id": "keycard-guard",
+      "x": -15,
+      "y": 1.1,
+      "z": 14,
+      "type": "keycard",
+      "label": "Картка доступу (Охорона)"
+    },
+    {
+      "id": "keycard-engineer",
+      "x": -8,
+      "y": 1.1,
+      "z": 2,
+      "type": "keycard",
+      "label": "Картка доступу (Головний інженер)"
+    },
+    {
+      "id": "fuel-canister",
+      "x": 18,
+      "y": 1.1,
+      "z": 11,
+      "type": "canister",
+      "label": "Каністра з паливом"
+    },
+    {
+      "id": "pressure-valve",
+      "x": -10.5,
+      "y": 1.3,
+      "z": -34.5,
+      "type": "valve",
+      "label": "Вентиль тиску"
+    }
+  ],
+  "doors": [
+    {
+      "id": "door-archive",
+      "x": -2.5,
+      "y": 1.1,
+      "z": -1.5,
+      "requires": "keycard-guard",
+      "label": "Двері: Архів"
+    },
+    {
+      "id": "door-generator",
+      "x": -2.5,
+      "y": 1.1,
+      "z": -16.5,
+      "requires": "keycard-engineer",
+      "label": "Двері: Генераторна"
+    },
+    {
+      "id": "door-studio",
+      "x": 2.5,
+      "y": 1.1,
+      "z": -16.5,
+      "requires": null,
+      "label": "Двері: Студія 04"
+    },
+    {
+      "id": "door-vent",
+      "x": -2.5,
+      "y": 1.1,
+      "z": -31.5,
+      "requires": "keycard-guard",
+      "label": "Двері: Вентвузол"
+    },
+    {
+      "id": "door-server",
+      "x": 2.5,
+      "y": 1.1,
+      "z": -31.5,
+      "requires": "keycard-engineer",
+      "label": "Двері: Серверна"
+    },
+    {
+      "id": "door-tech",
+      "x": -2.5,
+      "y": 1.1,
+      "z": -46.5,
+      "requires": "keycard-engineer",
+      "label": "Двері: Техсклад"
+    },
+    {
+      "id": "door-dispatch",
+      "x": 2.5,
+      "y": 1.1,
+      "z": -46.5,
+      "requires": null,
+      "label": "Двері: Диспетчерська"
+    }
+  ],
+  "lockers": [
+    {
+      "id": "locker-1",
+      "x": -3,
+      "y": 1.1,
+      "z": 5.25,
+      "ry": 3.141592653589793,
+      "exitX": -3,
+      "exitZ": 3.95,
+      "label": "Шафа в архіві"
+    },
+    {
+      "id": "locker-2",
+      "x": -3.25,
+      "y": 1.1,
+      "z": -23.25,
+      "ry": 30.630528372500507,
+      "exitX": -4.17,
+      "exitZ": -22.33,
+      "label": "Шафа в генераторній"
+    },
+    {
+      "id": "locker-3",
+      "x": 3.25,
+      "y": 1.1,
+      "z": -38.25,
+      "ry": 0,
+      "exitX": 3.25,
+      "exitZ": -36.95,
+      "label": "Шафа в серверній"
+    },
+    {
+      "id": "locker-4",
+      "x": -2,
+      "y": 1.1,
+      "z": -12,
+      "ry": 1.5707963267948966,
+      "exitX": -0.7,
+      "exitZ": -12,
+      "label": "Шафа в коридорі"
+    },
+    {
+      "id": "locker-5",
+      "x": -7.75,
+      "y": 1.1,
+      "z": -39.5,
+      "ry": 3.141592653589793,
+      "exitX": -7.75,
+      "exitZ": -40.8,
+      "label": "Шафа на техскладі"
+    },
+    {
+      "id": "locker-6",
+      "x": 11.5,
+      "y": 1.1,
+      "z": -46.5,
+      "ry": -1.5707963267948966,
+      "exitX": 10.2,
+      "exitZ": -46.5,
+      "label": "Шафа в диспетчерській"
+    },
+    {
+      "id": "copy_mui5ftet",
+      "x": 4.25,
+      "y": 1.1,
+      "z": -38.25,
+      "ry": 0,
+      "exitX": 4.25,
+      "exitZ": -36.95,
+      "label": "Шафа в серверній (копія)"
+    },
+    {
+      "id": "copy_mui5fvp2",
+      "x": 5.25,
+      "y": 1.1,
+      "z": -38.25,
+      "ry": 0,
+      "exitX": 5.25,
+      "exitZ": -36.95,
+      "label": "Шафа в серверній (копія) (копія)"
+    }
+  ],
+  "props": [
+    {
+      "id": "locker-1",
+      "type": "locker",
+      "x": -3,
+      "y": 0,
+      "z": 5.25,
+      "rotation": 3.141592653589793,
+      "exitX": -3,
+      "exitZ": 3.95,
+      "label": "Шафа в архіві"
+    },
+    {
+      "id": "locker-2",
+      "type": "locker",
+      "x": -3.25,
+      "y": 0,
+      "z": -23.25,
+      "rotation": 30.630528372500507,
+      "exitX": -4.17,
+      "exitZ": -22.33,
+      "label": "Шафа в генераторній"
+    },
+    {
+      "id": "locker-3",
+      "type": "locker",
+      "x": 3.25,
+      "y": 0,
+      "z": -38.25,
+      "rotation": 0,
+      "exitX": 3.25,
+      "exitZ": -36.95,
+      "label": "Шафа в серверній"
+    },
+    {
+      "id": "locker-4",
+      "type": "locker",
+      "x": -2,
+      "y": 0,
+      "z": -12,
+      "rotation": 1.5707963267948966,
+      "exitX": -0.7,
+      "exitZ": -12,
+      "label": "Шафа в коридорі"
+    },
+    {
+      "id": "locker-5",
+      "type": "locker",
+      "x": -7.75,
+      "y": 0,
+      "z": -39.5,
+      "rotation": 3.141592653589793,
+      "exitX": -7.75,
+      "exitZ": -40.8,
+      "label": "Шафа на техскладі"
+    },
+    {
+      "id": "locker-6",
+      "type": "locker",
+      "x": 11.5,
+      "y": 0,
+      "z": -46.5,
+      "rotation": -1.5707963267948966,
+      "exitX": 10.2,
+      "exitZ": -46.5,
+      "label": "Шафа в диспетчерській"
+    },
+    {
+      "id": "table_archive",
+      "type": "archivistDesk",
+      "x": -8,
+      "y": 0,
+      "z": -3,
+      "w": 2.4,
+      "d": 1.3,
+      "rotation": 0,
+      "label": "Стіл архіваріуса з лампою"
+    },
+    {
+      "id": "table_apparatus",
+      "type": "mixingConsole",
+      "x": 11,
+      "y": 0,
+      "z": -1.75,
+      "w": 2.6,
+      "d": 1.4,
+      "rotation": 1.5707963267948966,
+      "label": "Пульт прямого ефіру"
+    },
+    {
+      "id": "table_studio",
+      "type": "anchorDesk",
+      "x": 6.25,
+      "y": 0,
+      "z": -20,
+      "w": 3.4,
+      "d": 1.4,
+      "rotation": 0,
+      "label": "Дикторський стіл новин"
+    },
+    {
+      "id": "table_vent",
+      "type": "table",
+      "x": -8,
+      "y": 0,
+      "z": -26.5,
+      "w": 2.2,
+      "d": 1.2,
+      "rotation": 0,
+      "label": "Верстак у вентвузлі"
+    },
+    {
+      "id": "table_server",
+      "type": "table",
+      "x": 10.5,
+      "y": 0,
+      "z": -31.5,
+      "w": 2.2,
+      "d": 1.2,
+      "rotation": 1.5707963267948966,
+      "label": "Термінал серверної"
+    },
+    {
+      "id": "table_tech",
+      "type": "table",
+      "x": -8,
+      "y": 0,
+      "z": -50.25,
+      "w": 2.4,
+      "d": 1.3,
+      "rotation": 0,
+      "label": "Стіл техскладу"
+    },
+    {
+      "id": "table_dispatch",
+      "type": "table",
+      "x": 8.75,
+      "y": 0,
+      "z": -40,
+      "w": 3.6,
+      "d": 1.5,
+      "rotation": 3.141592653589793,
+      "label": "Пульт диспетчера"
+    },
+    {
+      "id": "chair_archive",
+      "type": "chair",
+      "x": -8,
+      "y": 0,
+      "z": -1.92,
+      "rotation": 3.141592653589793,
+      "label": "Стілець архіву"
+    },
+    {
+      "id": "chair_studio",
+      "type": "chair",
+      "x": 7,
+      "y": 0,
+      "z": -18.75,
+      "rotation": 3.141592653589793,
+      "label": "Стілець студії"
+    },
+    {
+      "id": "chair_tech",
+      "type": "chair",
+      "x": -8.5,
+      "y": 0,
+      "z": -49.5,
+      "rotation": 3.141592653589793,
+      "label": "Стілець техскладу"
+    },
+    {
+      "id": "shelf_arch_1",
+      "type": "shelf",
+      "x": -11.45,
+      "y": 0,
+      "z": -1.5,
+      "rotation": 1.5707963267948966,
+      "label": "Стелаж архіву 1"
+    },
+    {
+      "id": "shelf_arch_2",
+      "type": "shelf",
+      "x": -11.45,
+      "y": 0,
+      "z": 1.05,
+      "rotation": 1.5707963267948966,
+      "label": "Стелаж архіву 2"
+    },
+    {
+      "id": "shelf_arch_3",
+      "type": "shelf",
+      "x": -6.75,
+      "y": 0,
+      "z": -8.5,
+      "rotation": 0,
+      "label": "Стелаж архіву 3"
+    },
+    {
+      "id": "shelf_arch_4",
+      "type": "shelf",
+      "x": -9,
+      "y": 0,
+      "z": -8.5,
+      "rotation": 0,
+      "label": "Стелаж архіву 4"
+    },
+    {
+      "id": "card_catalog_1",
+      "type": "cardCatalog",
+      "x": -11,
+      "y": 0,
+      "z": -8.5,
+      "rotation": 0,
+      "label": "Каталожна шафа архіву"
+    },
+    {
+      "id": "vhs_stack_1",
+      "type": "vhsStack",
+      "x": -5.25,
+      "y": 0,
+      "z": -8.5,
+      "rotation": 0.1,
+      "label": "Коробки Betacam 1"
+    },
+    {
+      "id": "vhs_stack_2",
+      "type": "vhsStack",
+      "x": -11.25,
+      "y": 0,
+      "z": 5.25,
+      "rotation": -0.15,
+      "label": "Коробки Betacam 2"
+    },
+    {
+      "id": "shelf_tech_1",
+      "type": "shelf",
+      "x": -11.45,
+      "y": 0,
+      "z": -46.5,
+      "rotation": 1.5707963267948966,
+      "label": "Стелаж техскладу 1"
+    },
+    {
+      "id": "shelf_tech_2",
+      "type": "shelf",
+      "x": -11.5,
+      "y": 0,
+      "z": -44.25,
+      "rotation": 1.5707963267948966,
+      "label": "Стелаж техскладу 2"
+    },
+    {
+      "id": "shelf_tech_3",
+      "type": "shelf",
+      "x": -8,
+      "y": 0,
+      "z": -53.25,
+      "rotation": 0,
+      "label": "Стелаж техскладу 3"
+    },
+    {
+      "id": "shelf_tech_4",
+      "type": "shelf",
+      "x": -10,
+      "y": 0,
+      "z": -53.25,
+      "rotation": 0,
+      "label": "Стелаж техскладу 4"
+    },
+    {
+      "id": "rack_1",
+      "type": "serverRack",
+      "x": 6.5,
+      "y": 0,
+      "z": -34.5,
+      "rotation": 0,
+      "label": "Серверна стійка 1"
+    },
+    {
+      "id": "rack_2",
+      "type": "serverRack",
+      "x": 8.7,
+      "y": 0,
+      "z": -34.5,
+      "rotation": 0,
+      "label": "Серверна стійка 2"
+    },
+    {
+      "id": "rack_3",
+      "type": "serverRack",
+      "x": 10.9,
+      "y": 0,
+      "z": -34.5,
+      "rotation": 0,
+      "label": "Серверна стійка 3"
+    },
+    {
+      "id": "rack_4",
+      "type": "serverRack",
+      "x": 6.5,
+      "y": 0,
+      "z": -28.5,
+      "rotation": 3.141592653589793,
+      "label": "Серверна стійка 4"
+    },
+    {
+      "id": "rack_5",
+      "type": "serverRack",
+      "x": 8.7,
+      "y": 0,
+      "z": -28.5,
+      "rotation": 3.141592653589793,
+      "label": "Серверна стійка 5"
+    },
+    {
+      "id": "rack_6",
+      "type": "serverRack",
+      "x": 10.9,
+      "y": 0,
+      "z": -28.5,
+      "rotation": 3.141592653589793,
+      "label": "Серверна стійка 6"
+    },
+    {
+      "id": "cable_bundle_1",
+      "type": "cableBundle",
+      "x": 2.75,
+      "y": 0,
+      "z": -34.25,
+      "rotation": 7.853981633974483,
+      "label": "Кабельні джгути 1"
+    },
+    {
+      "id": "cable_bundle_2",
+      "type": "cableBundle",
+      "x": 8.25,
+      "y": 0,
+      "z": -35.5,
+      "rotation": 0.7853981633974483,
+      "label": "Кабельні джгути 2"
+    },
+    {
+      "id": "punchcards_1",
+      "type": "debris",
+      "x": 10.5,
+      "y": 0,
+      "z": -33,
+      "label": "Перфокарти та документація"
+    },
+    {
+      "id": "chroma_1",
+      "type": "chromakeyBackdrop",
+      "x": 6.25,
+      "y": 0,
+      "z": -23.75,
+      "rotation": 6.283185307179586,
+      "label": "Хромакейний павільйон"
+    },
+    {
+      "id": "cam_1",
+      "type": "camera",
+      "x": 4,
+      "y": 0,
+      "z": -21,
+      "rotation": 14.796901398407933,
+      "label": "Камера ТК-04 №1"
+    },
+    {
+      "id": "cam_2",
+      "type": "camera",
+      "x": 8.25,
+      "y": 0,
+      "z": -20.75,
+      "rotation": 4.0212385965949355,
+      "label": "Камера ТК-04 №2"
+    },
+    {
+      "id": "mic_stand_1",
+      "type": "micStand",
+      "x": 4.25,
+      "y": 0,
+      "z": -19.75,
+      "rotation": 18.06415775814132,
+      "label": "Мікрофонна стійка 1"
+    },
+    {
+      "id": "mic_stand_2",
+      "type": "micStand",
+      "x": 8.25,
+      "y": 0,
+      "z": -19.5,
+      "rotation": 3.9269908169872414,
+      "label": "Мікрофонна стійка 2"
+    },
+    {
+      "id": "spot_1",
+      "type": "ceilingSpotlight",
+      "x": 4,
+      "y": 0,
+      "z": -21.25,
+      "rotation": 2.356194490192345,
+      "label": "Освітлювальний софіт 1"
+    },
+    {
+      "id": "spot_2",
+      "type": "ceilingSpotlight",
+      "x": 8.25,
+      "y": 0,
+      "z": -21.25,
+      "rotation": 3.9269908169872414,
+      "label": "Освітлювальний софіт 2"
+    },
+    {
+      "id": "diesel_gen_1",
+      "type": "dieselGenerator",
+      "x": -7.25,
+      "y": 0,
+      "z": -21.75,
+      "rotation": 0,
+      "label": "Дизель-генератор ДГ-200"
+    },
+    {
+      "id": "fuel_valve_1",
+      "type": "fuelValve",
+      "x": -11.6,
+      "y": 0,
+      "z": -22,
+      "rotation": 1.5707963267948966,
+      "label": "Аварійний вентиль палива"
+    },
+    {
+      "id": "fuel_canister_1",
+      "type": "fuelCanister",
+      "x": -10.5,
+      "y": 0,
+      "z": -12.5,
+      "rotation": 0.3,
+      "label": "Каністра солярки 20л"
+    },
+    {
+      "id": "fuse_panel_1",
+      "type": "fusePanel",
+      "x": -11.75,
+      "y": 0,
+      "z": -16.5,
+      "rotation": 1.5707963267948966,
+      "label": "Щит 380В з гніздами"
+    },
+    {
+      "id": "air_duct_1",
+      "type": "airDuct",
+      "x": -7.25,
+      "y": 0,
+      "z": -33.25,
+      "rotation": 0,
+      "label": "Вентиляційний короб 1"
+    },
+    {
+      "id": "air_duct_2",
+      "type": "airDuct",
+      "x": -4.75,
+      "y": 0,
+      "z": -33.25,
+      "rotation": 0,
+      "label": "Вентиляційний короб 2"
+    },
+    {
+      "id": "oscilloscope_1",
+      "type": "oscilloscope",
+      "x": 11,
+      "y": 0.85,
+      "z": -3.25,
+      "rotation": -1.5707963267948966,
+      "label": "Осцилограф ефіру"
+    },
+    {
+      "id": "monitor_wall_1",
+      "type": "monitorWall",
+      "x": 8.5,
+      "y": 0,
+      "z": -53.5,
+      "rotation": 6.283185307179586,
+      "label": "Стійка відеоконтролю"
+    },
+    {
+      "id": "crt_1",
+      "type": "crt",
+      "x": 7.75,
+      "y": 1.3,
+      "z": -39.75,
+      "scale": 0.9,
+      "rotation": 27.48893571891071,
+      "label": "Монітор диспетчера 1"
+    },
+    {
+      "id": "crt_2",
+      "type": "crt",
+      "x": 10,
+      "y": 1.3,
+      "z": -39.75,
+      "scale": 0.9,
+      "rotation": 10.210176124166829,
+      "label": "Монітор диспетчера 2"
+    },
+    {
+      "id": "acoustic_1",
+      "type": "acousticPanel",
+      "x": 11.82,
+      "y": 0,
+      "z": 1,
+      "rotation": -1.5707963267948966,
+      "label": "Акустична панель 1"
+    },
+    {
+      "id": "acoustic_2",
+      "type": "acousticPanel",
+      "x": 11.82,
+      "y": 0,
+      "z": -5,
+      "rotation": -1.5707963267948966,
+      "label": "Акустична панель 2"
+    },
+    {
+      "id": "acoustic_3",
+      "type": "acousticPanel",
+      "x": 11.75,
+      "y": 0,
+      "z": -43.5,
+      "rotation": -1.5707963267948966,
+      "label": "Акустична панель 3"
+    },
+    {
+      "id": "turnstile_main",
+      "type": "turnstile",
+      "x": 0,
+      "y": 0,
+      "z": 4.2,
+      "rotation": 0,
+      "label": "Турнікети входу"
+    },
+    {
+      "id": "honor_board_1",
+      "type": "honorBoard",
+      "x": -2.36,
+      "y": 0,
+      "z": 1.5,
+      "rotation": 1.5707963267948966,
+      "label": "Дошка пошани працівників"
+    },
+    {
+      "id": "schedule_board_1",
+      "type": "scheduleBoard",
+      "x": 2.36,
+      "y": 0,
+      "z": 1.5,
+      "rotation": -1.5707963267948966,
+      "label": "Сітка мовлення"
+    },
+    {
+      "id": "fire_board_1",
+      "type": "fireBoard",
+      "x": -2.36,
+      "y": 0,
+      "z": -20,
+      "rotation": 1.5707963267948966,
+      "label": "Пожежний щиток"
+    },
+    {
+      "id": "bin_corridor_1",
+      "type": "trashBin",
+      "x": -2,
+      "y": 0,
+      "z": -8,
+      "label": "Смітник коридорний 1"
+    },
+    {
+      "id": "bin_corridor_2",
+      "type": "trashBin",
+      "x": 2,
+      "y": 0,
+      "z": -38,
+      "label": "Смітник коридорний 2"
+    },
+    {
+      "id": "debris_1",
+      "type": "debris",
+      "x": -1.8,
+      "y": 0,
+      "z": -14,
+      "label": "Розбитий посуд"
+    },
+    {
+      "id": "debris_2",
+      "type": "debris",
+      "x": 1.75,
+      "y": 0,
+      "z": -27,
+      "label": "Уламки скла та плитки"
+    },
+    {
+      "id": "tray_1",
+      "type": "cableTray",
+      "x": 0,
+      "y": 0,
+      "z": -1,
+      "rotation": 0,
+      "label": "Стельовий лоток 1"
+    },
+    {
+      "id": "tray_2",
+      "type": "cableTray",
+      "x": 0,
+      "y": 0,
+      "z": -16,
+      "rotation": 0,
+      "label": "Стельовий лоток 2"
+    },
+    {
+      "id": "tray_3",
+      "type": "cableTray",
+      "x": 0,
+      "y": 0,
+      "z": -31,
+      "rotation": 0,
+      "label": "Стельовий лоток 3"
+    },
+    {
+      "id": "tray_4",
+      "type": "cableTray",
+      "x": 0,
+      "y": 0,
+      "z": -46,
+      "rotation": 0,
+      "label": "Стельовий лоток 4"
+    },
+    {
+      "id": "crate_1",
+      "type": "crate",
+      "x": -8.25,
+      "y": 0,
+      "z": -43.25,
+      "size": 0.9,
+      "rotation": 0.1,
+      "label": "Ящик 1"
+    },
+    {
+      "id": "crate_2",
+      "type": "crate",
+      "x": -7.5,
+      "y": 0,
+      "z": -44,
+      "size": 0.85,
+      "rotation": -0.15,
+      "label": "Ящик 2"
+    },
+    {
+      "id": "crate_3",
+      "type": "crate",
+      "x": -8,
+      "y": 0.9,
+      "z": -43.75,
+      "size": 0.8,
+      "rotation": 0.05,
+      "label": "Ящик 3"
+    },
+    {
+      "id": "crate_4",
+      "type": "crate",
+      "x": -3.75,
+      "y": 0,
+      "z": -52.5,
+      "size": 1,
+      "rotation": 0.2,
+      "label": "Ящик 4"
+    },
+    {
+      "id": "barrel_1",
+      "type": "barrel",
+      "x": -5.75,
+      "y": 0,
+      "z": -41.25,
+      "color": "#3d4e42",
+      "rotation": 0,
+      "label": "Бочка 1"
+    },
+    {
+      "id": "barrel_2",
+      "type": "barrel",
+      "x": -5,
+      "y": 0,
+      "z": -41.75,
+      "color": "#6e3d2c",
+      "rotation": 0,
+      "label": "Бочка 2"
+    },
+    {
+      "id": "guard_booth_1",
+      "type": "guardBooth",
+      "x": -12.5,
+      "y": 0,
+      "z": 32,
+      "rotation": 0,
+      "label": "КПП / Будка охорони"
+    },
+    {
+      "id": "barrier_gate_1",
+      "type": "barrier",
+      "x": -7,
+      "y": 0,
+      "z": 34.5,
+      "rotation": 0,
+      "label": "Шлагбаум в’їзду"
+    },
+    {
+      "id": "tower_nw",
+      "type": "floodlightTower",
+      "x": -18.5,
+      "y": 0,
+      "z": 28,
+      "rotation": 0,
+      "label": "Прожекторна вишка Пн-Зх"
+    },
+    {
+      "id": "tower_ne",
+      "type": "floodlightTower",
+      "x": 18.5,
+      "y": 0,
+      "z": 28,
+      "rotation": 0,
+      "label": "Прожекторна вишка Пн-Сх"
+    },
+    {
+      "id": "spool_1",
+      "type": "cableSpool",
+      "x": 14.5,
+      "y": 0,
+      "z": 18,
+      "rotation": 0,
+      "label": "Кабельна котушка 1"
+    },
+    {
+      "id": "spool_2",
+      "type": "cableSpool",
+      "x": 16.2,
+      "y": 0,
+      "z": 19.5,
+      "rotation": 0.5,
+      "label": "Кабельна котушка 2"
+    },
+    {
+      "id": "wreckage_truck",
+      "type": "abandonedCar",
+      "x": 15.25,
+      "y": 0,
+      "z": 31.75,
+      "rotation": 3.561592653589793,
+      "label": "Покинутий транспорт ГАЗ-66"
+    },
+    {
+      "id": "barrel_yard_1",
+      "type": "barrel",
+      "x": 16.1,
+      "y": 0,
+      "z": 15,
+      "color": "#6e3d2c",
+      "label": "Бочка на подвір’ї 1"
+    },
+    {
+      "id": "barrel_yard_2",
+      "type": "barrel",
+      "x": 17,
+      "y": 0,
+      "z": 15.2,
+      "color": "#3d4e42",
+      "label": "Бочка на подвір’ї 2"
+    },
+    {
+      "id": "barrel_yard_3",
+      "type": "barrel",
+      "x": 18.7,
+      "y": 0,
+      "z": 14.3,
+      "color": "#6e3d2c",
+      "label": "Бочка на подвір’ї 3"
+    },
+    {
+      "id": "crate_yard_1",
+      "type": "crate",
+      "x": 17.7,
+      "y": 0,
+      "z": 17,
+      "size": 0.95,
+      "label": "Ящик на подвір’ї 1"
+    },
+    {
+      "id": "crate_yard_2",
+      "type": "crate",
+      "x": 19,
+      "y": 0,
+      "z": 17,
+      "size": 0.95,
+      "label": "Ящик на подвір’ї 2"
+    },
+    {
+      "id": "crate_yard_3",
+      "type": "crate",
+      "x": -14.5,
+      "y": 0,
+      "z": 31,
+      "size": 0.9,
+      "label": "Ящик біля КПП"
+    },
+    {
+      "id": "barrel_yard_4",
+      "type": "barrel",
+      "x": -14.8,
+      "y": 0,
+      "z": 32.5,
+      "color": "#3d4e42",
+      "label": "Бочка біля КПП"
+    },
+    {
+      "id": "copy_mui4y8xh",
+      "type": "chair",
+      "x": -7.75,
+      "y": 0,
+      "z": -51.5,
+      "rotation": 6.283185307179586,
+      "label": "Стілець техскладу (копія)"
+    },
+    {
+      "id": "custom_trashBin_mui4z6s6",
+      "type": "trashBin",
+      "x": -3,
+      "y": 0,
+      "z": -44.75,
+      "rotation": 0,
+      "label": "Смітник коридорний",
+      "w": 0.5,
+      "d": 0.5
+    },
+    {
+      "id": "custom_vhsStack_mui4zayt",
+      "type": "vhsStack",
+      "x": -3,
+      "y": 0,
+      "z": -41.75,
+      "rotation": 1.5707963267948966,
+      "label": "Стопка касет Betacam",
+      "w": 0.75,
+      "d": 0.55
+    },
+    {
+      "id": "custom_vhsStack_mui4zeua",
+      "type": "vhsStack",
+      "x": -4.25,
+      "y": 0,
+      "z": -39.5,
+      "rotation": 15.707963267948973,
+      "label": "Стопка касет Betacam",
+      "w": 0.75,
+      "d": 0.55
+    },
+    {
+      "id": "custom_vhsStack_mui4zeys",
+      "type": "vhsStack",
+      "x": -3.25,
+      "y": 0,
+      "z": -39.5,
+      "rotation": 0,
+      "label": "Стопка касет Betacam",
+      "w": 0.75,
+      "d": 0.55
+    },
+    {
+      "id": "custom_vhsStack_mui4zf3d",
+      "type": "vhsStack",
+      "x": -5.5,
+      "y": 0,
+      "z": -39.5,
+      "rotation": 9.42477796076938,
+      "label": "Стопка касет Betacam",
+      "w": 0.75,
+      "d": 0.55
+    },
+    {
+      "id": "custom_vhsStack_mui4zf7p",
+      "type": "vhsStack",
+      "x": -3,
+      "y": 0,
+      "z": -40.75,
+      "rotation": 1.5707963267948966,
+      "label": "Стопка касет Betacam",
+      "w": 0.75,
+      "d": 0.55
+    },
+    {
+      "id": "custom_micStand_mui50qcj",
+      "type": "micStand",
+      "x": -3.5,
+      "y": 0,
+      "z": -51,
+      "rotation": 3.9269908169872414,
+      "label": "Мікрофонна стійка",
+      "w": 0.4,
+      "d": 0.4
+    },
+    {
+      "id": "custom_micStand_mui50ynf",
+      "type": "micStand",
+      "x": -4.5,
+      "y": 0,
+      "z": -53.25,
+      "rotation": 6.283185307179586,
+      "label": "Мікрофонна стійка",
+      "w": 0.4,
+      "d": 0.4
+    },
+    {
+      "id": "custom_micStand_mui50yrr",
+      "type": "micStand",
+      "x": -4.5,
+      "y": 0,
+      "z": -52.5,
+      "rotation": 0.7853981633974483,
+      "label": "Мікрофонна стійка",
+      "w": 0.4,
+      "d": 0.4
+    },
+    {
+      "id": "custom_micStand_mui50ywd",
+      "type": "micStand",
+      "x": -5,
+      "y": 0,
+      "z": -53.25,
+      "rotation": 2.356194490192345,
+      "label": "Мікрофонна стійка",
+      "w": 0.4,
+      "d": 0.4
+    },
+    {
+      "id": "custom_fuelValve_mui51a7m",
+      "type": "fuelValve",
+      "x": -11.75,
+      "y": 0,
+      "z": -50.75,
+      "rotation": 0,
+      "label": "Аварійний вентиль",
+      "w": 0.6,
+      "d": 0.5
+    },
+    {
+      "id": "custom_cableBundle_mui51h8c",
+      "type": "cableBundle",
+      "x": -10,
+      "y": 0,
+      "z": -43.75,
+      "rotation": 0.7853981633974483,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui51j1l",
+      "type": "cableBundle",
+      "x": -7.25,
+      "y": 0,
+      "z": -46.75,
+      "rotation": 1.5707963267948966,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui51j63",
+      "type": "cableBundle",
+      "x": -4,
+      "y": 0,
+      "z": -49.75,
+      "rotation": 0.7853981633974483,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui51ja9",
+      "type": "cableBundle",
+      "x": -4.5,
+      "y": 0,
+      "z": -49,
+      "rotation": 0,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui51je1",
+      "type": "cableBundle",
+      "x": -9.75,
+      "y": 0,
+      "z": -50,
+      "rotation": 2.356194490192345,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui51jhx",
+      "type": "cableBundle",
+      "x": -3.25,
+      "y": 0,
+      "z": -44.5,
+      "rotation": 0.7853981633974483,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui51jlw",
+      "type": "cableBundle",
+      "x": -3.25,
+      "y": 0,
+      "z": -44.25,
+      "rotation": 2.356194490192345,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableSpool_mui52s9a",
+      "type": "cableSpool",
+      "x": -10.5,
+      "y": 0,
+      "z": -39.75,
+      "rotation": 1.5707963267948966,
+      "label": "Кабельна котушка",
+      "w": 1.2,
+      "d": 1.2
+    },
+    {
+      "id": "copy_mui54z6h",
+      "type": "crt",
+      "x": 8.75,
+      "y": 1.3,
+      "z": -39.5,
+      "scale": 0.9,
+      "rotation": 21.991148575128566,
+      "label": "Монітор диспетчера 1 (копія)"
+    },
+    {
+      "id": "copy_mui55ge4",
+      "type": "monitorWall",
+      "x": 6,
+      "y": 0,
+      "z": -53.5,
+      "rotation": 6.283185307179586,
+      "label": "Стійка відеоконтролю (копія)"
+    },
+    {
+      "id": "copy_mui55hkd",
+      "type": "monitorWall",
+      "x": 3,
+      "y": 0,
+      "z": -51.25,
+      "rotation": 7.853981633974483,
+      "label": "Стійка відеоконтролю (копія) (копія)"
+    },
+    {
+      "id": "copy_mui55iyu",
+      "type": "monitorWall",
+      "x": 3.75,
+      "y": 0,
+      "z": -53.5,
+      "rotation": 6.283185307179586,
+      "label": "Стійка відеоконтролю (копія) (копія)"
+    },
+    {
+      "id": "copy_mui55kgv",
+      "type": "monitorWall",
+      "x": 3,
+      "y": 0,
+      "z": -49,
+      "rotation": 7.853981633974483,
+      "label": "Стійка відеоконтролю (копія) (копія) (копія)"
+    },
+    {
+      "id": "copy_mui55l5z",
+      "type": "monitorWall",
+      "x": 5.5,
+      "y": 0,
+      "z": -51.25,
+      "rotation": 10.995574287564278,
+      "label": "Стійка відеоконтролю (копія) (копія) (копія) (копія)"
+    },
+    {
+      "id": "copy_mui55x5n",
+      "type": "monitorWall",
+      "x": 5.5,
+      "y": 0,
+      "z": -49,
+      "rotation": 10.995574287564278,
+      "label": "Стійка відеоконтролю (копія) (копія) (копія) (копія) (копія)"
+    },
+    {
+      "id": "copy_mui56308",
+      "type": "monitorWall",
+      "x": 6,
+      "y": 0,
+      "z": -51.25,
+      "rotation": 7.853981633974483,
+      "label": "Стійка відеоконтролю (копія) (копія) (копія)"
+    },
+    {
+      "id": "copy_mui5650s",
+      "type": "monitorWall",
+      "x": 6,
+      "y": 0,
+      "z": -49,
+      "rotation": 7.853981633974483,
+      "label": "Стійка відеоконтролю (копія) (копія) (копія)"
+    },
+    {
+      "id": "copy_mui569i7",
+      "type": "monitorWall",
+      "x": 8.5,
+      "y": 0,
+      "z": -51.25,
+      "rotation": 10.995574287564278,
+      "label": "Стійка відеоконтролю (копія) (копія) (копія) (копія) (копія)"
+    },
+    {
+      "id": "copy_mui56br5",
+      "type": "monitorWall",
+      "x": 8.5,
+      "y": 0,
+      "z": -49,
+      "rotation": 10.995574287564278,
+      "label": "Стійка відеоконтролю (копія) (копія) (копія) (копія) (копія)"
+    },
+    {
+      "id": "copy_mui56f6r",
+      "type": "monitorWall",
+      "x": 9,
+      "y": 0,
+      "z": -51.25,
+      "rotation": 7.853981633974483,
+      "label": "Стійка відеоконтролю (копія) (копія) (копія) (копія)"
+    },
+    {
+      "id": "copy_mui56h2k",
+      "type": "monitorWall",
+      "x": 9,
+      "y": 0,
+      "z": -49,
+      "rotation": 7.853981633974483,
+      "label": "Стійка відеоконтролю (копія) (копія) (копія) (копія) (копія)"
+    },
+    {
+      "id": "copy_mui56lmn",
+      "type": "monitorWall",
+      "x": 11.5,
+      "y": 0,
+      "z": -51.25,
+      "rotation": 10.995574287564278,
+      "label": "Стійка відеоконтролю (копія) (копія) (копія) (копія) (копія) (копія)"
+    },
+    {
+      "id": "copy_mui56olh",
+      "type": "monitorWall",
+      "x": 11.5,
+      "y": 0,
+      "z": -49,
+      "rotation": 10.995574287564278,
+      "label": "Стійка відеоконтролю (копія) (копія) (копія) (копія) (копія) (копія) (копія)"
+    },
+    {
+      "id": "copy_mui56rjn",
+      "type": "monitorWall",
+      "x": 10.75,
+      "y": 0,
+      "z": -53.5,
+      "rotation": 6.283185307179586,
+      "label": "Стійка відеоконтролю (копія)"
+    },
+    {
+      "id": "copy_mui59bh2",
+      "type": "acousticPanel",
+      "x": 11.75,
+      "y": 0,
+      "z": -42.25,
+      "rotation": -1.5707963267948966,
+      "label": "Акустична панель 3 (копія)"
+    },
+    {
+      "id": "copy_mui59dnk",
+      "type": "acousticPanel",
+      "x": 11.75,
+      "y": 0,
+      "z": -41,
+      "rotation": -1.5707963267948966,
+      "label": "Акустична панель 3 (копія) (копія)"
+    },
+    {
+      "id": "copy_mui59g35",
+      "type": "acousticPanel",
+      "x": 11.75,
+      "y": 0,
+      "z": -39.75,
+      "rotation": -1.5707963267948966,
+      "label": "Акустична панель 3 (копія) (копія) (копія)"
+    },
+    {
+      "id": "custom_crate_mui59pq7",
+      "type": "crate",
+      "x": 3.25,
+      "y": 0,
+      "z": -39.5,
+      "rotation": 0,
+      "label": "Дерев’яний ящик",
+      "size": 0.9
+    },
+    {
+      "id": "custom_crate_mui59pvo",
+      "type": "crate",
+      "x": 3.25,
+      "y": 0,
+      "z": -40.5,
+      "rotation": 0,
+      "label": "Дерев’яний ящик",
+      "size": 0.9
+    },
+    {
+      "id": "custom_crate_mui59q0b",
+      "type": "crate",
+      "x": 3.25,
+      "y": 0,
+      "z": -41.5,
+      "rotation": 0,
+      "label": "Дерев’яний ящик",
+      "size": 0.9
+    },
+    {
+      "id": "custom_crate_mui59q4k",
+      "type": "crate",
+      "x": 4.25,
+      "y": 0,
+      "z": -39.5,
+      "rotation": 1.5707963267948966,
+      "label": "Дерев’яний ящик",
+      "size": 0.9
+    },
+    {
+      "id": "custom_crate_mui59q8f",
+      "type": "crate",
+      "x": 4.25,
+      "y": 0,
+      "z": -40.5,
+      "rotation": 3.141592653589793,
+      "label": "Дерев’яний ящик",
+      "size": 0.9
+    },
+    {
+      "id": "copy_mui5ago1",
+      "type": "crate",
+      "x": 5.25,
+      "y": 0,
+      "z": -39.5,
+      "rotation": 3.141592653589793,
+      "label": "Дерев’яний ящик (копія)",
+      "size": 0.9
+    },
+    {
+      "id": "copy_mui5azma",
+      "type": "crate",
+      "x": 3.5,
+      "y": 0.9,
+      "z": -39.75,
+      "size": 0.8,
+      "rotation": 0.05,
+      "label": "Ящик 3 (копія)"
+    },
+    {
+      "id": "copy_mui5b3i8",
+      "type": "crate",
+      "x": 4.25,
+      "y": 0.9,
+      "z": -39.5,
+      "size": 0.8,
+      "rotation": 0.05,
+      "label": "Ящик 3 (копія) (копія)"
+    },
+    {
+      "id": "copy_mui5b6a1",
+      "type": "crate",
+      "x": 3.25,
+      "y": 0.9,
+      "z": -40.75,
+      "size": 0.8,
+      "rotation": 0.8353981633974483,
+      "label": "Ящик 3 (копія) (копія) (копія)"
+    },
+    {
+      "id": "custom_scheduleBoard_mui5ccgd",
+      "type": "scheduleBoard",
+      "x": 2.75,
+      "y": 0,
+      "z": -43.5,
+      "rotation": 1.5707963267948966,
+      "label": "Сітка мовлення",
+      "w": 2.4,
+      "d": 0.1
+    },
+    {
+      "id": "custom_abandonedCar_mui5ckfj",
+      "type": "abandonedCar",
+      "x": 8.75,
+      "y": 0,
+      "z": -43.5,
+      "rotation": 11.780972450961727,
+      "label": "Покинутий транспорт",
+      "w": 2.1,
+      "d": 4.2
+    },
+    {
+      "id": "custom_fireBoard_mui5d141",
+      "type": "fireBoard",
+      "x": 6.25,
+      "y": 0,
+      "z": -39.25,
+      "rotation": 3.141592653589793,
+      "label": "Пожежний щиток",
+      "w": 1.3,
+      "d": 0.25
+    },
+    {
+      "id": "custom_debris_mui5dgg7",
+      "type": "debris",
+      "x": 2.75,
+      "y": 0,
+      "z": -44.25,
+      "rotation": 2.356194490192345,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5dhfz",
+      "type": "debris",
+      "x": 7.75,
+      "y": 0,
+      "z": -50.75,
+      "rotation": 0.7853981633974483,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5dhk8",
+      "type": "debris",
+      "x": 10,
+      "y": 0,
+      "z": -48.25,
+      "rotation": 1.5707963267948966,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5dhpe",
+      "type": "debris",
+      "x": 4,
+      "y": 0,
+      "z": -52.75,
+      "rotation": 1.5707963267948966,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5dhss",
+      "type": "debris",
+      "x": 3.5,
+      "y": 0,
+      "z": -49.75,
+      "rotation": 0,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5dtkx",
+      "type": "debris",
+      "x": 6.25,
+      "y": 0,
+      "z": -48,
+      "rotation": 0.7853981633974483,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5dtp7",
+      "type": "debris",
+      "x": 6.5,
+      "y": 0,
+      "z": -45.25,
+      "rotation": 0,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5dttq",
+      "type": "debris",
+      "x": 7.75,
+      "y": 0,
+      "z": -43.75,
+      "rotation": 0.7853981633974483,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5dtye",
+      "type": "debris",
+      "x": 11,
+      "y": 0,
+      "z": -50,
+      "rotation": 1.5707963267948966,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5du32",
+      "type": "debris",
+      "x": 11.25,
+      "y": 0,
+      "z": -52.5,
+      "rotation": 2.356194490192345,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5du7u",
+      "type": "debris",
+      "x": 10.5,
+      "y": 0,
+      "z": -52.25,
+      "rotation": 1.5707963267948966,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_fuelCanister_mui5ek2a",
+      "type": "fuelCanister",
+      "x": 5.25,
+      "y": 0,
+      "z": -42.25,
+      "rotation": 0.7853981633974483,
+      "label": "Каністра солярки",
+      "w": 0.5,
+      "d": 0.35
+    },
+    {
+      "id": "custom_fuelCanister_mui5ekqx",
+      "type": "fuelCanister",
+      "x": 5,
+      "y": 0,
+      "z": -43,
+      "rotation": 3.9269908169872414,
+      "label": "Каністра солярки",
+      "w": 0.5,
+      "d": 0.35
+    },
+    {
+      "id": "custom_fuelCanister_mui5ekuo",
+      "type": "fuelCanister",
+      "x": 4.75,
+      "y": 0,
+      "z": -42.5,
+      "rotation": 1.5707963267948966,
+      "label": "Каністра солярки",
+      "w": 0.5,
+      "d": 0.35
+    },
+    {
+      "id": "custom_fuelCanister_mui5ekza",
+      "type": "fuelCanister",
+      "x": 5.5,
+      "y": 0,
+      "z": -42.75,
+      "rotation": 1.5707963267948966,
+      "label": "Каністра солярки",
+      "w": 0.5,
+      "d": 0.35
+    },
+    {
+      "id": "copy_mui5ftet",
+      "type": "locker",
+      "x": 4.25,
+      "y": 0,
+      "z": -38.25,
+      "rotation": 0,
+      "exitX": 4.25,
+      "exitZ": -36.95,
+      "label": "Шафа в серверній (копія)"
+    },
+    {
+      "id": "copy_mui5fvp2",
+      "type": "locker",
+      "x": 5.25,
+      "y": 0,
+      "z": -38.25,
+      "rotation": 0,
+      "exitX": 5.25,
+      "exitZ": -36.95,
+      "label": "Шафа в серверній (копія) (копія)"
+    },
+    {
+      "id": "custom_shelf_mui5ga9t",
+      "type": "shelf",
+      "x": 7.5,
+      "y": 0,
+      "z": -24.5,
+      "rotation": 3.141592653589793,
+      "label": "Стелаж архіву"
+    },
+    {
+      "id": "copy_mui5giti",
+      "type": "shelf",
+      "x": 5.25,
+      "y": 0,
+      "z": -24.5,
+      "rotation": 3.141592653589793,
+      "label": "Стелаж архіву (копія)"
+    },
+    {
+      "id": "custom_crate_mui5h1xv",
+      "type": "crate",
+      "x": -11.5,
+      "y": 0,
+      "z": -38.5,
+      "rotation": 0,
+      "label": "Дерев’яний ящик",
+      "size": 0.9
+    },
+    {
+      "id": "custom_crate_mui5h22h",
+      "type": "crate",
+      "x": -4.5,
+      "y": 0,
+      "z": -36.25,
+      "rotation": 3.141592653589793,
+      "label": "Дерев’яний ящик",
+      "size": 0.9
+    },
+    {
+      "id": "custom_crate_mui5h26o",
+      "type": "crate",
+      "x": -10,
+      "y": 0,
+      "z": -37.75,
+      "rotation": 2.356194490192345,
+      "label": "Дерев’яний ящик",
+      "size": 0.9
+    },
+    {
+      "id": "custom_crate_mui5h2ax",
+      "type": "crate",
+      "x": -3.5,
+      "y": 0,
+      "z": -38.25,
+      "rotation": 0.7853981633974483,
+      "label": "Дерев’яний ящик",
+      "size": 0.9
+    },
+    {
+      "id": "custom_crate_mui5h2f1",
+      "type": "crate",
+      "x": -3.25,
+      "y": 0,
+      "z": -35.75,
+      "rotation": 2.356194490192345,
+      "label": "Дерев’яний ящик",
+      "size": 0.9
+    },
+    {
+      "id": "custom_crate_mui5h2j7",
+      "type": "crate",
+      "x": -7.75,
+      "y": 0,
+      "z": -38.5,
+      "rotation": 0,
+      "label": "Дерев’яний ящик",
+      "size": 0.9
+    },
+    {
+      "id": "custom_crate_mui5h2nf",
+      "type": "crate",
+      "x": -6.75,
+      "y": 0,
+      "z": -38.5,
+      "rotation": 0,
+      "label": "Дерев’яний ящик",
+      "size": 0.9
+    },
+    {
+      "id": "custom_crate_mui5h2rl",
+      "type": "crate",
+      "x": -11.5,
+      "y": 0,
+      "z": -37.25,
+      "rotation": 1.5707963267948966,
+      "label": "Дерев’яний ящик",
+      "size": 0.9
+    },
+    {
+      "id": "custom_vhsStack_mui5hntc",
+      "type": "vhsStack",
+      "x": -4,
+      "y": 0,
+      "z": -35.25,
+      "rotation": 2.356194490192345,
+      "label": "Стопка касет Betacam",
+      "w": 0.75,
+      "d": 0.55
+    },
+    {
+      "id": "custom_ceilingSpotlight_mui5hqml",
+      "type": "ceilingSpotlight",
+      "x": -4.25,
+      "y": 0,
+      "z": -37.5,
+      "rotation": 6.283185307179586,
+      "label": "Освітлювальний софіт",
+      "w": 0.5,
+      "d": 0.5
+    },
+    {
+      "id": "copy_mui5itj7",
+      "type": "airDuct",
+      "x": -4.75,
+      "y": 0,
+      "z": -29.75,
+      "rotation": 0,
+      "label": "Вентиляційний короб 2 (копія) (копія)"
+    },
+    {
+      "id": "copy_mui5izgi",
+      "type": "airDuct",
+      "x": -7.25,
+      "y": 0,
+      "z": -29.75,
+      "rotation": 0,
+      "label": "Вентиляційний короб 2 (копія) (копія) (копія) (копія)"
+    },
+    {
+      "id": "copy_mui5j3dm",
+      "type": "airDuct",
+      "x": -9.75,
+      "y": 0,
+      "z": -29.75,
+      "rotation": 0,
+      "label": "Вентиляційний короб 2 (копія) (копія) (копія) (копія) (копія) (копія)"
+    },
+    {
+      "id": "copy_mui5jgqf",
+      "type": "airDuct",
+      "x": -9.75,
+      "y": 0,
+      "z": -33.25,
+      "rotation": 0,
+      "label": "Вентиляційний короб 1 (копія)"
+    },
+    {
+      "id": "custom_ventGrate_mui5jlni",
+      "type": "ventGrate",
+      "x": -9.75,
+      "y": 0,
+      "z": -33.75,
+      "rotation": 9.42477796076938,
+      "label": "Вентиляційна решітка",
+      "w": 1.2,
+      "d": 0.1
+    },
+    {
+      "id": "custom_debris_mui5keo4",
+      "type": "debris",
+      "x": -9,
+      "y": 0,
+      "z": -38,
+      "rotation": 0.7853981633974483,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5kesr",
+      "type": "debris",
+      "x": -11,
+      "y": 0,
+      "z": -37.5,
+      "rotation": 2.356194490192345,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5kex2",
+      "type": "debris",
+      "x": -9,
+      "y": 0,
+      "z": -33.75,
+      "rotation": 0,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5kf1j",
+      "type": "debris",
+      "x": -6.75,
+      "y": 0,
+      "z": -34.5,
+      "rotation": 1.5707963267948966,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5kf5t",
+      "type": "debris",
+      "x": -6,
+      "y": 0,
+      "z": -38.25,
+      "rotation": 1.5707963267948966,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5kf9t",
+      "type": "debris",
+      "x": -5.5,
+      "y": 0,
+      "z": -32.5,
+      "rotation": 1.5707963267948966,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5krer",
+      "type": "debris",
+      "x": -5.25,
+      "y": 0,
+      "z": -24.5,
+      "rotation": 0.7853981633974483,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5krj5",
+      "type": "debris",
+      "x": -8.5,
+      "y": 0,
+      "z": -27.5,
+      "rotation": 0.7853981633974483,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5krnl",
+      "type": "debris",
+      "x": -9.75,
+      "y": 0,
+      "z": -24.25,
+      "rotation": 2.356194490192345,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5krrr",
+      "type": "debris",
+      "x": -3,
+      "y": 0,
+      "z": -29,
+      "rotation": 1.5707963267948966,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5krw3",
+      "type": "debris",
+      "x": -11,
+      "y": 0,
+      "z": -31.25,
+      "rotation": 0,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_trashBin_mui5kz71",
+      "type": "trashBin",
+      "x": -3,
+      "y": 0,
+      "z": -24.5,
+      "rotation": 0,
+      "label": "Смітник коридорний",
+      "w": 0.5,
+      "d": 0.5
+    },
+    {
+      "id": "custom_barrel_mui5l50p",
+      "type": "barrel",
+      "x": -4,
+      "y": 0,
+      "z": -25,
+      "rotation": 0,
+      "label": "Металева бочка"
+    },
+    {
+      "id": "custom_barrel_mui5l7f4",
+      "type": "barrel",
+      "x": -3.5,
+      "y": 0,
+      "z": -25.75,
+      "rotation": 0,
+      "label": "Металева бочка"
+    },
+    {
+      "id": "custom_barrel_mui5l7ku",
+      "type": "barrel",
+      "x": -4.75,
+      "y": 0,
+      "z": -25.5,
+      "rotation": 0,
+      "label": "Металева бочка"
+    },
+    {
+      "id": "custom_debris_mui5lxof",
+      "type": "debris",
+      "x": -6.5,
+      "y": 0,
+      "z": -41,
+      "rotation": 2.356194490192345,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5lxt0",
+      "type": "debris",
+      "x": -9,
+      "y": 0,
+      "z": -44.5,
+      "rotation": 3.141592653589793,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5lxxg",
+      "type": "debris",
+      "x": -5.5,
+      "y": 0,
+      "z": -46.5,
+      "rotation": 2.356194490192345,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5ly5u",
+      "type": "debris",
+      "x": -9.75,
+      "y": 0,
+      "z": -49.5,
+      "rotation": 2.356194490192345,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5lyf8",
+      "type": "debris",
+      "x": -3.75,
+      "y": 0,
+      "z": -49.5,
+      "rotation": 1.5707963267948966,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_camera_mui5m7rq",
+      "type": "camera",
+      "x": -3.25,
+      "y": 0,
+      "z": -42.75,
+      "rotation": 3.141592653589793,
+      "label": "Камера ТК–04"
+    },
+    {
+      "id": "custom_camera_mui5m8gb",
+      "type": "camera",
+      "x": -6.75,
+      "y": 0,
+      "z": -39.75,
+      "rotation": 3.9269908169872414,
+      "label": "Камера ТК–04"
+    },
+    {
+      "id": "custom_camera_mui5m8k9",
+      "type": "camera",
+      "x": -11,
+      "y": 0,
+      "z": -48.25,
+      "rotation": 7.0685834705770345,
+      "label": "Камера ТК–04"
+    },
+    {
+      "id": "custom_camera_mui5m8o7",
+      "type": "camera",
+      "x": -4.5,
+      "y": 0,
+      "z": -43.5,
+      "rotation": 0,
+      "label": "Камера ТК–04"
+    },
+    {
+      "id": "custom_camera_mui5meax",
+      "type": "camera",
+      "x": -7.25,
+      "y": 0,
+      "z": -42.5,
+      "rotation": 3.9269908169872414,
+      "label": "Камера ТК–04"
+    },
+    {
+      "id": "custom_camera_mui5mef3",
+      "type": "camera",
+      "x": -11.25,
+      "y": 0,
+      "z": -41.75,
+      "rotation": 2.356194490192345,
+      "label": "Камера ТК–04"
+    },
+    {
+      "id": "custom_debris_mui5morh",
+      "type": "debris",
+      "x": -11.25,
+      "y": 0,
+      "z": -52.5,
+      "rotation": 2.356194490192345,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5movr",
+      "type": "debris",
+      "x": -5.75,
+      "y": 0,
+      "z": -53.25,
+      "rotation": 2.356194490192345,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5mp09",
+      "type": "debris",
+      "x": -4,
+      "y": 0,
+      "z": -51.75,
+      "rotation": 1.5707963267948966,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_trashBin_mui5n4nl",
+      "type": "trashBin",
+      "x": 3,
+      "y": 0,
+      "z": -29.75,
+      "rotation": 5.497787143782138,
+      "label": "Смітник коридорний",
+      "w": 0.5,
+      "d": 0.5
+    },
+    {
+      "id": "custom_fusePanel_mui5nd0s",
+      "type": "fusePanel",
+      "x": 2.75,
+      "y": 0,
+      "z": -27.25,
+      "rotation": 1.5707963267948966,
+      "label": "Щит 380В з гніздами",
+      "w": 1.1,
+      "d": 0.35
+    },
+    {
+      "id": "custom_airDuct_mui5njun",
+      "type": "airDuct",
+      "x": 3.25,
+      "y": 0,
+      "z": -23.25,
+      "rotation": 0,
+      "label": "Вентиляційний короб",
+      "w": 1.1,
+      "d": 1.1
+    },
+    {
+      "id": "custom_airDuct_mui5nq99",
+      "type": "airDuct",
+      "x": 11.25,
+      "y": 0,
+      "z": -38,
+      "rotation": 0,
+      "label": "Вентиляційний короб",
+      "w": 1.1,
+      "d": 1.1
+    },
+    {
+      "id": "custom_cableBundle_mui5o2s6",
+      "type": "cableBundle",
+      "x": -3.5,
+      "y": 0,
+      "z": -36.75,
+      "rotation": 0.7853981633974483,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui5o8yq",
+      "type": "cableBundle",
+      "x": -3.75,
+      "y": 0,
+      "z": -27.25,
+      "rotation": 1.5707963267948966,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui5o935",
+      "type": "cableBundle",
+      "x": -9.25,
+      "y": 0,
+      "z": -32.5,
+      "rotation": 0.7853981633974483,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui5o97q",
+      "type": "cableBundle",
+      "x": -11.25,
+      "y": 0,
+      "z": -26.5,
+      "rotation": 2.356194490192345,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui5o9bq",
+      "type": "cableBundle",
+      "x": -11.25,
+      "y": 0,
+      "z": -29.25,
+      "rotation": 4.71238898038469,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui5o9fl",
+      "type": "cableBundle",
+      "x": -4.75,
+      "y": 0,
+      "z": -27,
+      "rotation": 0.7853981633974483,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui5o9k3",
+      "type": "cableBundle",
+      "x": -3,
+      "y": 0,
+      "z": -30.5,
+      "rotation": 2.356194490192345,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_airDuct_mui5oytr",
+      "type": "airDuct",
+      "x": -4.75,
+      "y": 0,
+      "z": -21.5,
+      "rotation": 0,
+      "label": "Вентиляційний короб",
+      "w": 1.1,
+      "d": 1.1
+    },
+    {
+      "id": "custom_airDuct_mui5oyxx",
+      "type": "airDuct",
+      "x": -3.5,
+      "y": 0,
+      "z": -21.5,
+      "rotation": 0,
+      "label": "Вентиляційний короб",
+      "w": 1.1,
+      "d": 1.1
+    },
+    {
+      "id": "custom_airDuct_mui5oz2c",
+      "type": "airDuct",
+      "x": -11,
+      "y": 0,
+      "z": -10,
+      "rotation": 2.356194490192345,
+      "label": "Вентиляційний короб",
+      "w": 1.1,
+      "d": 1.1
+    },
+    {
+      "id": "custom_airDuct_mui5oz6b",
+      "type": "airDuct",
+      "x": -3.5,
+      "y": 0,
+      "z": -10,
+      "rotation": 2.356194490192345,
+      "label": "Вентиляційний короб",
+      "w": 1.1,
+      "d": 1.1
+    },
+    {
+      "id": "custom_cableBundle_mui5qedv",
+      "type": "cableBundle",
+      "x": -9,
+      "y": 0,
+      "z": -20.5,
+      "rotation": 0.7853981633974483,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui5qei9",
+      "type": "cableBundle",
+      "x": -10.25,
+      "y": 0,
+      "z": -19.25,
+      "rotation": 0.7853981633974483,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui5qemw",
+      "type": "cableBundle",
+      "x": -11,
+      "y": 0,
+      "z": -17.75,
+      "rotation": 1.5707963267948966,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui5qeqw",
+      "type": "cableBundle",
+      "x": -11.5,
+      "y": 0,
+      "z": -16.5,
+      "rotation": 0.7853981633974483,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui5qev0",
+      "type": "cableBundle",
+      "x": -5.25,
+      "y": 0,
+      "z": -21.5,
+      "rotation": 0,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui5qezu",
+      "type": "cableBundle",
+      "x": -3.5,
+      "y": 0,
+      "z": -21.5,
+      "rotation": 0,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui5qf4q",
+      "type": "cableBundle",
+      "x": -6.25,
+      "y": 0,
+      "z": -20,
+      "rotation": 1.5707963267948966,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui5qf91",
+      "type": "cableBundle",
+      "x": -6.25,
+      "y": 0,
+      "z": -18.25,
+      "rotation": 1.5707963267948966,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui5qfd5",
+      "type": "cableBundle",
+      "x": -7,
+      "y": 0,
+      "z": -17,
+      "rotation": 0.7853981633974483,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui5qfh2",
+      "type": "cableBundle",
+      "x": -7.75,
+      "y": 0,
+      "z": -15.5,
+      "rotation": 1.5707963267948966,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui5qfl0",
+      "type": "cableBundle",
+      "x": -7.75,
+      "y": 0,
+      "z": -14,
+      "rotation": 1.5707963267948966,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui5qfrb",
+      "type": "cableBundle",
+      "x": -7.75,
+      "y": 0,
+      "z": -12.75,
+      "rotation": 1.5707963267948966,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui5rnkr",
+      "type": "cableBundle",
+      "x": -8.5,
+      "y": 0,
+      "z": -11.5,
+      "rotation": 0.7853981633974483,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui5rnp1",
+      "type": "cableBundle",
+      "x": -9.75,
+      "y": 0,
+      "z": -11,
+      "rotation": 3.141592653589793,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui5rnsv",
+      "type": "cableBundle",
+      "x": -11.25,
+      "y": 0,
+      "z": -10.5,
+      "rotation": 0.7853981633974483,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui5rnxa",
+      "type": "cableBundle",
+      "x": -7.25,
+      "y": 0,
+      "z": -12.75,
+      "rotation": 2.356194490192345,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui5ro15",
+      "type": "cableBundle",
+      "x": -6,
+      "y": 0,
+      "z": -11.5,
+      "rotation": 2.356194490192345,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui5s49w",
+      "type": "cableBundle",
+      "x": -4.5,
+      "y": 0,
+      "z": -10.75,
+      "rotation": 9.42477796076938,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_barrel_mui5sx8d",
+      "type": "barrel",
+      "x": -3.5,
+      "y": 0,
+      "z": -13.5,
+      "rotation": 0,
+      "label": "Металева бочка"
+    },
+    {
+      "id": "custom_barrel_mui5sxcl",
+      "type": "barrel",
+      "x": -2.75,
+      "y": 0,
+      "z": -13.25,
+      "rotation": 0,
+      "label": "Металева бочка"
+    },
+    {
+      "id": "custom_barrel_mui5sxgc",
+      "type": "barrel",
+      "x": -6,
+      "y": 0,
+      "z": -9.5,
+      "rotation": 0,
+      "label": "Металева бочка"
+    },
+    {
+      "id": "custom_barrel_mui5sxle",
+      "type": "barrel",
+      "x": -6.75,
+      "y": 0,
+      "z": -9.5,
+      "rotation": 0,
+      "label": "Металева бочка"
+    },
+    {
+      "id": "custom_barrel_mui5sxpk",
+      "type": "barrel",
+      "x": -6.5,
+      "y": 0,
+      "z": -10,
+      "rotation": 0,
+      "label": "Металева бочка"
+    },
+    {
+      "id": "custom_barrel_mui5sxtr",
+      "type": "barrel",
+      "x": -3,
+      "y": 0,
+      "z": -14,
+      "rotation": 0,
+      "label": "Металева бочка"
+    },
+    {
+      "id": "custom_crate_mui5tasf",
+      "type": "crate",
+      "x": -5.25,
+      "y": 0,
+      "z": -17,
+      "rotation": 0,
+      "label": "Дерев’яний ящик",
+      "size": 0.9
+    },
+    {
+      "id": "custom_crate_mui5tawm",
+      "type": "crate",
+      "x": -4.75,
+      "y": 0,
+      "z": -16,
+      "rotation": 0,
+      "label": "Дерев’яний ящик",
+      "size": 0.9
+    },
+    {
+      "id": "custom_crate_mui5tb0r",
+      "type": "crate",
+      "x": -6,
+      "y": 0,
+      "z": -16,
+      "rotation": 0.7853981633974483,
+      "label": "Дерев’яний ящик",
+      "size": 0.9
+    },
+    {
+      "id": "custom_crate_mui5tb4l",
+      "type": "crate",
+      "x": -5.5,
+      "y": 0,
+      "z": -15,
+      "rotation": 0.7853981633974483,
+      "label": "Дерев’яний ящик",
+      "size": 0.9
+    },
+    {
+      "id": "custom_crate_mui5tbcj",
+      "type": "crate",
+      "x": -8.25,
+      "y": 0,
+      "z": -18.5,
+      "rotation": 0,
+      "label": "Дерев’яний ящик",
+      "size": 0.9
+    },
+    {
+      "id": "custom_crate_mui5tgju",
+      "type": "crate",
+      "x": -9,
+      "y": 0,
+      "z": -17.5,
+      "rotation": 0.7853981633974483,
+      "label": "Дерев’яний ящик",
+      "size": 0.9
+    },
+    {
+      "id": "custom_cableSpool_mui5tkvx",
+      "type": "cableSpool",
+      "x": -11.5,
+      "y": 0,
+      "z": -20,
+      "rotation": 3.141592653589793,
+      "label": "Кабельна котушка",
+      "w": 1.2,
+      "d": 1.2
+    },
+    {
+      "id": "copy_mui5vibs",
+      "type": "chair",
+      "x": 5.5,
+      "y": 0,
+      "z": -18.75,
+      "rotation": 3.141592653589793,
+      "label": "Стілець студії (копія)"
+    },
+    {
+      "id": "custom_archivistDesk_mui5wae8",
+      "type": "archivistDesk",
+      "x": 7.25,
+      "y": 0,
+      "z": -9.75,
+      "rotation": 0,
+      "label": "Стіл з лампою",
+      "w": 2.2,
+      "d": 1.2
+    },
+    {
+      "id": "custom_acousticPanel_mui5wrzx",
+      "type": "acousticPanel",
+      "x": 2.75,
+      "y": 0,
+      "z": -22,
+      "rotation": 1.5707963267948966,
+      "label": "Акустична панель",
+      "w": 1.2,
+      "d": 0.1
+    },
+    {
+      "id": "copy_mui5wust",
+      "type": "acousticPanel",
+      "x": 2.75,
+      "y": 0,
+      "z": -20.75,
+      "rotation": 1.5707963267948966,
+      "label": "Акустична панель (копія)",
+      "w": 1.2,
+      "d": 0.1
+    },
+    {
+      "id": "copy_mui5wwd1",
+      "type": "acousticPanel",
+      "x": 2.75,
+      "y": 0,
+      "z": -19.5,
+      "rotation": 1.5707963267948966,
+      "label": "Акустична панель (копія) (копія)",
+      "w": 1.2,
+      "d": 0.1
+    },
+    {
+      "id": "custom_acousticPanel_mui5x6ox",
+      "type": "acousticPanel",
+      "x": 11.75,
+      "y": 0,
+      "z": -22.75,
+      "rotation": 1.5707963267948966,
+      "label": "Акустична панель",
+      "w": 1.2,
+      "d": 0.1
+    },
+    {
+      "id": "copy_mui5xau7",
+      "type": "acousticPanel",
+      "x": 11.75,
+      "y": 0,
+      "z": -21.5,
+      "rotation": 1.5707963267948966,
+      "label": "Акустична панель (копія)",
+      "w": 1.2,
+      "d": 0.1
+    },
+    {
+      "id": "copy_mui5xcjc",
+      "type": "acousticPanel",
+      "x": 11.75,
+      "y": 0,
+      "z": -20.25,
+      "rotation": 1.5707963267948966,
+      "label": "Акустична панель (копія) (копія)",
+      "w": 1.2,
+      "d": 0.1
+    },
+    {
+      "id": "copy_mui5xfzg",
+      "type": "acousticPanel",
+      "x": 11.75,
+      "y": 0,
+      "z": -19,
+      "rotation": 1.5707963267948966,
+      "label": "Акустична панель (копія) (копія) (копія)",
+      "w": 1.2,
+      "d": 0.1
+    },
+    {
+      "id": "copy_mui5xhsy",
+      "type": "acousticPanel",
+      "x": 11.75,
+      "y": 0,
+      "z": -17.75,
+      "rotation": 1.5707963267948966,
+      "label": "Акустична панель (копія) (копія) (копія) (копія)",
+      "w": 1.2,
+      "d": 0.1
+    },
+    {
+      "id": "custom_acousticPanel_mui5xmcq",
+      "type": "acousticPanel",
+      "x": 7.25,
+      "y": 0,
+      "z": -9.25,
+      "rotation": 0,
+      "label": "Акустична панель",
+      "w": 1.2,
+      "d": 0.1
+    },
+    {
+      "id": "copy_mui5xnlq",
+      "type": "acousticPanel",
+      "x": 8.5,
+      "y": 0,
+      "z": -9.25,
+      "rotation": 0,
+      "label": "Акустична панель (копія)",
+      "w": 1.2,
+      "d": 0.1
+    },
+    {
+      "id": "copy_mui5xp44",
+      "type": "acousticPanel",
+      "x": 6,
+      "y": 0,
+      "z": -9.25,
+      "rotation": 0,
+      "label": "Акустична панель (копія) (копія)",
+      "w": 1.2,
+      "d": 0.1
+    },
+    {
+      "id": "copy_mui5xrnp",
+      "type": "acousticPanel",
+      "x": 9.75,
+      "y": 0,
+      "z": -9.25,
+      "rotation": 0,
+      "label": "Акустична панель (копія) (копія) (копія)",
+      "w": 1.2,
+      "d": 0.1
+    },
+    {
+      "id": "copy_mui5xtdk",
+      "type": "acousticPanel",
+      "x": 4.75,
+      "y": 0,
+      "z": -9.25,
+      "rotation": 0,
+      "label": "Акустична панель (копія) (копія) (копія) (копія)",
+      "w": 1.2,
+      "d": 0.1
+    },
+    {
+      "id": "custom_trashBin_mui5yhbt",
+      "type": "trashBin",
+      "x": 8.75,
+      "y": 0,
+      "z": -9.5,
+      "rotation": 3.141592653589793,
+      "label": "Смітник коридорний",
+      "w": 0.5,
+      "d": 0.5
+    },
+    {
+      "id": "copy_mui5ykh4",
+      "type": "chair",
+      "x": 7.25,
+      "y": 0,
+      "z": -10.75,
+      "rotation": 6.283185307179586,
+      "label": "Стілець студії (копія)"
+    },
+    {
+      "id": "custom_cardCatalog_mui5ypt9",
+      "type": "cardCatalog",
+      "x": 11,
+      "y": 0,
+      "z": -9.75,
+      "rotation": 3.141592653589793,
+      "label": "Каталожна шафа",
+      "w": 1.6,
+      "d": 0.7
+    },
+    {
+      "id": "copy_mui5ytv2",
+      "type": "cardCatalog",
+      "x": 3.5,
+      "y": 0,
+      "z": -9.75,
+      "rotation": 3.141592653589793,
+      "label": "Каталожна шафа (копія)",
+      "w": 1.6,
+      "d": 0.7
+    },
+    {
+      "id": "custom_debris_mui5z0bn",
+      "type": "debris",
+      "x": 6.5,
+      "y": 0,
+      "z": -10.75,
+      "rotation": 0.7853981633974483,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5z0gc",
+      "type": "debris",
+      "x": 8,
+      "y": 0,
+      "z": -10.25,
+      "rotation": 1.5707963267948966,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5z0ki",
+      "type": "debris",
+      "x": 5.75,
+      "y": 0,
+      "z": -9.75,
+      "rotation": 2.356194490192345,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5z0oi",
+      "type": "debris",
+      "x": 7.25,
+      "y": 0,
+      "z": -10.25,
+      "rotation": 1.5707963267948966,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5z0s8",
+      "type": "debris",
+      "x": 7.75,
+      "y": 0,
+      "z": -11.25,
+      "rotation": 1.5707963267948966,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5z0w4",
+      "type": "debris",
+      "x": 9.75,
+      "y": 0,
+      "z": -9.5,
+      "rotation": 1.5707963267948966,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5z0zo",
+      "type": "debris",
+      "x": 10,
+      "y": 0,
+      "z": -14.5,
+      "rotation": 1.5707963267948966,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5z13j",
+      "type": "debris",
+      "x": 4.25,
+      "y": 0,
+      "z": -18.75,
+      "rotation": 1.5707963267948966,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5z182",
+      "type": "debris",
+      "x": 8.5,
+      "y": 0,
+      "z": -20.25,
+      "rotation": 2.356194490192345,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5zgzm",
+      "type": "debris",
+      "x": 3.75,
+      "y": 0,
+      "z": -22.75,
+      "rotation": 1.5707963267948966,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5zh3v",
+      "type": "debris",
+      "x": 6.75,
+      "y": 0,
+      "z": -22.25,
+      "rotation": 1.5707963267948966,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui5zh8g",
+      "type": "debris",
+      "x": 6,
+      "y": 0,
+      "z": -18.25,
+      "rotation": 1.5707963267948966,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "copy_mui62pxn",
+      "type": "shelf",
+      "x": 5.25,
+      "y": 0,
+      "z": -15,
+      "rotation": 9.42477796076938,
+      "label": "Стелаж техскладу 2 (копія)"
+    },
+    {
+      "id": "copy_mui62zn4",
+      "type": "shelf",
+      "x": 7.5,
+      "y": 0,
+      "z": -15,
+      "rotation": 9.42477796076938,
+      "label": "Стелаж техскладу 2 (копія) (копія)"
+    },
+    {
+      "id": "copy_mui630s1",
+      "type": "shelf",
+      "x": 9.75,
+      "y": 0,
+      "z": -15,
+      "rotation": 9.42477796076938,
+      "label": "Стелаж техскладу 2 (копія) (копія) (копія)"
+    },
+    {
+      "id": "copy_mui63277",
+      "type": "shelf",
+      "x": 9.75,
+      "y": 0,
+      "z": -14.25,
+      "rotation": 12.566370614359176,
+      "label": "Стелаж техскладу 2 (копія) (копія) (копія) (копія)"
+    },
+    {
+      "id": "copy_mui634pd",
+      "type": "shelf",
+      "x": 7.5,
+      "y": 0,
+      "z": -14.25,
+      "rotation": 12.566370614359176,
+      "label": "Стелаж техскладу 2 (копія) (копія) (копія) (копія) (копія)"
+    },
+    {
+      "id": "copy_mui635yl",
+      "type": "shelf",
+      "x": 5.25,
+      "y": 0,
+      "z": -14.25,
+      "rotation": 12.566370614359176,
+      "label": "Стелаж техскладу 2 (копія) (копія) (копія) (копія) (копія) (копія)"
+    },
+    {
+      "id": "custom_debris_mui63d01",
+      "type": "debris",
+      "x": 11.5,
+      "y": 0,
+      "z": -12.5,
+      "rotation": 2.356194490192345,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui63d4i",
+      "type": "debris",
+      "x": 5.25,
+      "y": 0,
+      "z": -12.75,
+      "rotation": 1.5707963267948966,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui63d8p",
+      "type": "debris",
+      "x": 10.5,
+      "y": 0,
+      "z": -17.5,
+      "rotation": 2.356194490192345,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui63ddb",
+      "type": "debris",
+      "x": 7.5,
+      "y": 0,
+      "z": -17.25,
+      "rotation": 1.5707963267948966,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_vhsStack_mui64ghn",
+      "type": "vhsStack",
+      "x": -11.25,
+      "y": 0,
+      "z": 3.25,
+      "rotation": 0.7853981633974483,
+      "label": "Стопка касет Betacam",
+      "w": 0.75,
+      "d": 0.55
+    },
+    {
+      "id": "custom_vhsStack_mui64glv",
+      "type": "vhsStack",
+      "x": -10.75,
+      "y": 0,
+      "z": 4.75,
+      "rotation": 3.9269908169872414,
+      "label": "Стопка касет Betacam",
+      "w": 0.75,
+      "d": 0.55
+    },
+    {
+      "id": "custom_vhsStack_mui64gq1",
+      "type": "vhsStack",
+      "x": -10.25,
+      "y": 0,
+      "z": 5.25,
+      "rotation": 3.9269908169872414,
+      "label": "Стопка касет Betacam",
+      "w": 0.75,
+      "d": 0.55
+    },
+    {
+      "id": "custom_vhsStack_mui64gtt",
+      "type": "vhsStack",
+      "x": -11.25,
+      "y": 0,
+      "z": 4.25,
+      "rotation": 1.5707963267948966,
+      "label": "Стопка касет Betacam",
+      "w": 0.75,
+      "d": 0.55
+    },
+    {
+      "id": "custom_vhsStack_mui64gxm",
+      "type": "vhsStack",
+      "x": -10,
+      "y": 0,
+      "z": 4.5,
+      "rotation": 2.356194490192345,
+      "label": "Стопка касет Betacam",
+      "w": 0.75,
+      "d": 0.55
+    },
+    {
+      "id": "custom_vhsStack_mui64h4j",
+      "type": "vhsStack",
+      "x": -9.5,
+      "y": 0,
+      "z": 5.25,
+      "rotation": 0.7853981633974483,
+      "label": "Стопка касет Betacam",
+      "w": 0.75,
+      "d": 0.55
+    },
+    {
+      "id": "custom_vhsStack_mui64h8p",
+      "type": "vhsStack",
+      "x": -10.5,
+      "y": 0,
+      "z": 3.75,
+      "rotation": 1.5707963267948966,
+      "label": "Стопка касет Betacam",
+      "w": 0.75,
+      "d": 0.55
+    },
+    {
+      "id": "custom_cardCatalog_mui64p5p",
+      "type": "cardCatalog",
+      "x": -6.25,
+      "y": 0,
+      "z": 5.25,
+      "rotation": 3.141592653589793,
+      "label": "Каталожна шафа",
+      "w": 1.6,
+      "d": 0.7
+    },
+    {
+      "id": "custom_cardCatalog_mui64pas",
+      "type": "cardCatalog",
+      "x": -4.5,
+      "y": 0,
+      "z": 5.25,
+      "rotation": 9.42477796076938,
+      "label": "Каталожна шафа",
+      "w": 1.6,
+      "d": 0.7
+    },
+    {
+      "id": "custom_cardCatalog_mui64pff",
+      "type": "cardCatalog",
+      "x": -8,
+      "y": 0,
+      "z": 5.25,
+      "rotation": 3.141592653589793,
+      "label": "Каталожна шафа",
+      "w": 1.6,
+      "d": 0.7
+    },
+    {
+      "id": "custom_cardCatalog_mui64pji",
+      "type": "cardCatalog",
+      "x": -4.5,
+      "y": 0,
+      "z": 3.25,
+      "rotation": 0,
+      "label": "Каталожна шафа",
+      "w": 1.6,
+      "d": 0.7
+    },
+    {
+      "id": "custom_cardCatalog_mui64pp9",
+      "type": "cardCatalog",
+      "x": -6.25,
+      "y": 0,
+      "z": 3.25,
+      "rotation": 0,
+      "label": "Каталожна шафа",
+      "w": 1.6,
+      "d": 0.7
+    },
+    {
+      "id": "custom_cardCatalog_mui64ptr",
+      "type": "cardCatalog",
+      "x": -8,
+      "y": 0,
+      "z": 3.25,
+      "rotation": 0,
+      "label": "Каталожна шафа",
+      "w": 1.6,
+      "d": 0.7
+    },
+    {
+      "id": "copy_mui65hnx",
+      "type": "cardCatalog",
+      "x": -8,
+      "y": 0,
+      "z": 2.75,
+      "rotation": 3.141592653589793,
+      "label": "Каталожна шафа (копія)",
+      "w": 1.6,
+      "d": 0.7
+    },
+    {
+      "id": "copy_mui65jpu",
+      "type": "cardCatalog",
+      "x": -6.25,
+      "y": 0,
+      "z": 2.75,
+      "rotation": 3.141592653589793,
+      "label": "Каталожна шафа (копія) (копія)",
+      "w": 1.6,
+      "d": 0.7
+    },
+    {
+      "id": "copy_mui65l60",
+      "type": "cardCatalog",
+      "x": -4.5,
+      "y": 0,
+      "z": 2.75,
+      "rotation": 3.141592653589793,
+      "label": "Каталожна шафа (копія) (копія) (копія)",
+      "w": 1.6,
+      "d": 0.7
+    },
+    {
+      "id": "copy_mui65qr8",
+      "type": "cardCatalog",
+      "x": -4.5,
+      "y": 0,
+      "z": 1,
+      "rotation": 0,
+      "label": "Каталожна шафа (копія)",
+      "w": 1.6,
+      "d": 0.7
+    },
+    {
+      "id": "copy_mui661zv",
+      "type": "cardCatalog",
+      "x": -6.25,
+      "y": 0,
+      "z": 1,
+      "rotation": 0,
+      "label": "Каталожна шафа (копія) (копія)",
+      "w": 1.6,
+      "d": 0.7
+    },
+    {
+      "id": "copy_mui6636z",
+      "type": "cardCatalog",
+      "x": -8,
+      "y": 0,
+      "z": 1,
+      "rotation": 0,
+      "label": "Каталожна шафа (копія) (копія) (копія)",
+      "w": 1.6,
+      "d": 0.7
+    },
+    {
+      "id": "copy_mui665et",
+      "type": "cardCatalog",
+      "x": -4.5,
+      "y": 0,
+      "z": 0.5,
+      "rotation": 3.141592653589793,
+      "label": "Каталожна шафа (копія) (копія) (копія) (копія)",
+      "w": 1.6,
+      "d": 0.7
+    },
+    {
+      "id": "copy_mui6674x",
+      "type": "cardCatalog",
+      "x": -6.25,
+      "y": 0,
+      "z": 0.5,
+      "rotation": 3.141592653589793,
+      "label": "Каталожна шафа (копія) (копія) (копія) (копія) (копія)",
+      "w": 1.6,
+      "d": 0.7
+    },
+    {
+      "id": "copy_mui6699z",
+      "type": "cardCatalog",
+      "x": -8,
+      "y": 0,
+      "z": 0.5,
+      "rotation": 9.42477796076938,
+      "label": "Каталожна шафа (копія) (копія) (копія) (копія) (копія) (копія)",
+      "w": 1.6,
+      "d": 0.7
+    },
+    {
+      "id": "custom_cableBundle_mui66onw",
+      "type": "cableBundle",
+      "x": -8.75,
+      "y": 0,
+      "z": 4.75,
+      "rotation": 2.356194490192345,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui66osg",
+      "type": "cableBundle",
+      "x": -9.25,
+      "y": 0,
+      "z": 3.75,
+      "rotation": 1.5707963267948966,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui66own",
+      "type": "cableBundle",
+      "x": -10.5,
+      "y": 0,
+      "z": 1.25,
+      "rotation": 3.141592653589793,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui66p0u",
+      "type": "cableBundle",
+      "x": -8.75,
+      "y": 0,
+      "z": 2,
+      "rotation": 1.5707963267948966,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui66p50",
+      "type": "cableBundle",
+      "x": -4.25,
+      "y": 0,
+      "z": -4,
+      "rotation": 2.356194490192345,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui67grr",
+      "type": "cableBundle",
+      "x": -3.25,
+      "y": 0,
+      "z": -8,
+      "rotation": 2.356194490192345,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui67gvy",
+      "type": "cableBundle",
+      "x": -11.75,
+      "y": 0,
+      "z": -4.25,
+      "rotation": 1.5707963267948966,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui67h05",
+      "type": "cableBundle",
+      "x": -11.25,
+      "y": 0,
+      "z": -4.25,
+      "rotation": 7.853981633974483,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_shelf_mui67tap",
+      "type": "shelf",
+      "x": -5.75,
+      "y": 0,
+      "z": -6.5,
+      "rotation": 3.141592653589793,
+      "label": "Стелаж архіву"
+    },
+    {
+      "id": "custom_shelf_mui67vup",
+      "type": "shelf",
+      "x": -8,
+      "y": 0,
+      "z": -6.5,
+      "rotation": 3.141592653589793,
+      "label": "Стелаж архіву"
+    },
+    {
+      "id": "custom_shelf_mui67xd4",
+      "type": "shelf",
+      "x": -11.5,
+      "y": 0,
+      "z": -6.25,
+      "rotation": 1.5707963267948966,
+      "label": "Стелаж архіву"
+    },
+    {
+      "id": "custom_shelf_mui67z8w",
+      "type": "shelf",
+      "x": -7.5,
+      "y": 0,
+      "z": -5.75,
+      "rotation": 0,
+      "label": "Стелаж архіву"
+    },
+    {
+      "id": "copy_mui68b73",
+      "type": "shelf",
+      "x": -5.25,
+      "y": 0,
+      "z": -5.75,
+      "rotation": 0,
+      "label": "Стелаж архіву (копія)"
+    },
+    {
+      "id": "custom_crate_mui68k5a",
+      "type": "crate",
+      "x": -9,
+      "y": 0,
+      "z": -5.25,
+      "rotation": 3.9269908169872414,
+      "label": "Дерев’яний ящик",
+      "size": 0.9
+    },
+    {
+      "id": "custom_crate_mui68kb3",
+      "type": "crate",
+      "x": -3.25,
+      "y": 0,
+      "z": -8.25,
+      "rotation": 1.5707963267948966,
+      "label": "Дерев’яний ящик",
+      "size": 0.9
+    },
+    {
+      "id": "custom_crate_mui68kgh",
+      "type": "crate",
+      "x": -9.75,
+      "y": 0,
+      "z": -6.25,
+      "rotation": 4.71238898038469,
+      "label": "Дерев’яний ящик",
+      "size": 0.9
+    },
+    {
+      "id": "custom_crate_mui694xg",
+      "type": "crate",
+      "x": -4.25,
+      "y": 0,
+      "z": -8.25,
+      "rotation": 0,
+      "label": "Дерев’яний ящик",
+      "size": 0.9
+    },
+    {
+      "id": "custom_crate_mui696j2",
+      "type": "crate",
+      "x": -5.25,
+      "y": 0,
+      "z": -3.75,
+      "rotation": 0.7853981633974483,
+      "label": "Дерев’яний ящик",
+      "size": 0.9
+    },
+    {
+      "id": "custom_fuelValve_mui6a5hr",
+      "type": "fuelValve",
+      "x": 9,
+      "y": 0,
+      "z": 5.5,
+      "rotation": 0,
+      "label": "Аварійний вентиль",
+      "w": 0.6,
+      "d": 0.5
+    },
+    {
+      "id": "custom_fuelValve_mui6a5ma",
+      "type": "fuelValve",
+      "x": 9.75,
+      "y": 0,
+      "z": 5.75,
+      "rotation": 0,
+      "label": "Аварійний вентиль",
+      "w": 0.6,
+      "d": 0.5
+    },
+    {
+      "id": "custom_dieselGenerator_mui6a63i",
+      "type": "dieselGenerator",
+      "x": 7,
+      "y": 0,
+      "z": 5,
+      "rotation": 3.141592653589793,
+      "label": "Дизель-генератор",
+      "w": 3.2,
+      "d": 1.8
+    },
+    {
+      "id": "custom_fuelCanister_mui6a6ds",
+      "type": "fuelCanister",
+      "x": 5.25,
+      "y": 0,
+      "z": 5.5,
+      "rotation": 9.42477796076938,
+      "label": "Каністра солярки",
+      "w": 0.5,
+      "d": 0.35
+    },
+    {
+      "id": "custom_monitorWall_mui6akud",
+      "type": "monitorWall",
+      "x": 4.5,
+      "y": 0,
+      "z": -8.5,
+      "rotation": 0,
+      "label": "Стійка відеоконтролю",
+      "w": 2.2,
+      "d": 0.7
+    },
+    {
+      "id": "custom_monitorWall_mui6amux",
+      "type": "monitorWall",
+      "x": 6.75,
+      "y": 0,
+      "z": -8.5,
+      "rotation": 0,
+      "label": "Стійка відеоконтролю",
+      "w": 2.2,
+      "d": 0.7
+    },
+    {
+      "id": "custom_monitorWall_mui6aoy9",
+      "type": "monitorWall",
+      "x": 9,
+      "y": 0,
+      "z": -8.5,
+      "rotation": 0,
+      "label": "Стійка відеоконтролю",
+      "w": 2.2,
+      "d": 0.7
+    },
+    {
+      "id": "custom_debris_mui6aw1h",
+      "type": "debris",
+      "x": 4,
+      "y": 0,
+      "z": -7,
+      "rotation": 2.356194490192345,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui6aw7f",
+      "type": "debris",
+      "x": 8.5,
+      "y": 0,
+      "z": -4.25,
+      "rotation": 1.5707963267948966,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui6awba",
+      "type": "debris",
+      "x": 3.75,
+      "y": 0,
+      "z": 1.75,
+      "rotation": 1.5707963267948966,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui6awgq",
+      "type": "debris",
+      "x": 9.5,
+      "y": 0,
+      "z": 2,
+      "rotation": 1.5707963267948966,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_debris_mui6awld",
+      "type": "debris",
+      "x": 2.75,
+      "y": 0,
+      "z": -1.25,
+      "rotation": 1.5707963267948966,
+      "label": "Уламки та сміття",
+      "w": 1,
+      "d": 1
+    },
+    {
+      "id": "custom_cableBundle_mui6b33m",
+      "type": "cableBundle",
+      "x": 3.5,
+      "y": 0,
+      "z": -3.5,
+      "rotation": 0.7853981633974483,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui6b5o9",
+      "type": "cableBundle",
+      "x": 4.25,
+      "y": 0,
+      "z": -3.25,
+      "rotation": 1.5707963267948966,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui6b5se",
+      "type": "cableBundle",
+      "x": 9.75,
+      "y": 0,
+      "z": 0.25,
+      "rotation": 3.141592653589793,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui6b5w1",
+      "type": "cableBundle",
+      "x": 4.5,
+      "y": 0,
+      "z": 1.75,
+      "rotation": 3.9269908169872414,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui6b5zv",
+      "type": "cableBundle",
+      "x": 11,
+      "y": 0,
+      "z": -8.5,
+      "rotation": 6.283185307179586,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui6b63y",
+      "type": "cableBundle",
+      "x": 6,
+      "y": 0,
+      "z": -7.5,
+      "rotation": 2.356194490192345,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui6b67p",
+      "type": "cableBundle",
+      "x": 7,
+      "y": 0,
+      "z": -6.5,
+      "rotation": 2.356194490192345,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui6b6bv",
+      "type": "cableBundle",
+      "x": 8,
+      "y": 0,
+      "z": -5.5,
+      "rotation": 2.356194490192345,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui6b6g2",
+      "type": "cableBundle",
+      "x": 9,
+      "y": 0,
+      "z": -4.25,
+      "rotation": 2.356194490192345,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui6b6kc",
+      "type": "cableBundle",
+      "x": 10,
+      "y": 0,
+      "z": -3.25,
+      "rotation": 2.356194490192345,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui6b6ov",
+      "type": "cableBundle",
+      "x": 3.75,
+      "y": 0,
+      "z": -4.25,
+      "rotation": 2.356194490192345,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui6b6t4",
+      "type": "cableBundle",
+      "x": 4.5,
+      "y": 0,
+      "z": -3.75,
+      "rotation": 3.141592653589793,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui6b6x0",
+      "type": "cableBundle",
+      "x": 4.25,
+      "y": 0,
+      "z": -4.5,
+      "rotation": 2.356194490192345,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_cableBundle_mui6b71f",
+      "type": "cableBundle",
+      "x": 5,
+      "y": 0,
+      "z": 2,
+      "rotation": 3.141592653589793,
+      "label": "Кабельні джгути",
+      "w": 2,
+      "d": 0.8
+    },
+    {
+      "id": "custom_trashBin_mui6cen4",
+      "type": "trashBin",
+      "x": 2.75,
+      "y": 0,
+      "z": 0,
+      "rotation": 0,
+      "label": "Смітник коридорний",
+      "w": 0.5,
+      "d": 0.5
+    },
+    {
+      "id": "custom_fireBoard_mui6cgvi",
+      "type": "fireBoard",
+      "x": 2.75,
+      "y": 0,
+      "z": 1.5,
+      "rotation": 1.5707963267948966,
+      "label": "Пожежний щиток",
+      "w": 1.3,
+      "d": 0.25
+    },
+    {
+      "id": "custom_cableSpool_mui6cnrq",
+      "type": "cableSpool",
+      "x": 11.5,
+      "y": 0,
+      "z": 3.75,
+      "rotation": 0,
+      "label": "Кабельна котушка",
+      "w": 1.2,
+      "d": 1.2
+    },
+    {
+      "id": "custom_cableSpool_mui6cypj",
+      "type": "cableSpool",
+      "x": 11.5,
+      "y": 0,
+      "z": -6.75,
+      "rotation": 0,
+      "label": "Кабельна котушка",
+      "w": 1.2,
+      "d": 1.2
+    },
+    {
+      "id": "custom_airDuct_mui6d5xt",
+      "type": "airDuct",
+      "x": 11,
+      "y": 0,
+      "z": 0.25,
+      "rotation": 0,
+      "label": "Вентиляційний короб",
+      "w": 1.1,
+      "d": 1.1
+    },
+    {
+      "id": "custom_airDuct_mui6dguo",
+      "type": "airDuct",
+      "x": 3.25,
+      "y": 0,
+      "z": 5.25,
+      "rotation": 0,
+      "label": "Вентиляційний короб",
+      "w": 1.1,
+      "d": 1.1
+    },
+    {
+      "id": "custom_abandonedCar_mui6dveu",
+      "type": "abandonedCar",
+      "x": 12.25,
+      "y": 0,
+      "z": 24.75,
+      "rotation": 3.141592653589793,
+      "label": "Покинутий транспорт",
+      "w": 2.1,
+      "d": 4.2
+    },
+    {
+      "id": "custom_abandonedCar_mui6dvj3",
+      "type": "abandonedCar",
+      "x": 6.25,
+      "y": 0,
+      "z": 32.75,
+      "rotation": 3.9269908169872414,
+      "label": "Покинутий транспорт",
+      "w": 2.1,
+      "d": 4.2
+    },
+    {
+      "id": "custom_abandonedCar_mui6dvr2",
+      "type": "abandonedCar",
+      "x": 11.25,
+      "y": 0,
+      "z": 32.75,
+      "rotation": 3.9269908169872414,
+      "label": "Покинутий транспорт",
+      "w": 2.1,
+      "d": 4.2
+    },
+    {
+      "id": "custom_abandonedCar_mui6dvw5",
+      "type": "abandonedCar",
+      "x": 8.25,
+      "y": 0,
+      "z": 24.75,
+      "rotation": 3.141592653589793,
+      "label": "Покинутий транспорт",
+      "w": 2.1,
+      "d": 4.2
+    },
+    {
+      "id": "custom_trashBin_mui6eccu",
+      "type": "trashBin",
+      "x": -12.25,
+      "y": 0,
+      "z": 6.5,
+      "rotation": 0,
+      "label": "Смітник коридорний",
+      "w": 0.5,
+      "d": 0.5
+    },
+    {
+      "id": "custom_cardCatalog_mui6egfz",
+      "type": "cardCatalog",
+      "x": -4.5,
+      "y": 0,
+      "z": 6.5,
+      "rotation": 0,
+      "label": "Каталожна шафа",
+      "w": 1.6,
+      "d": 0.7
+    }
+  ],
+  "classes": [
+    {
+      "id": "engineer",
+      "name": "Victor",
+      "title": "Охоронець станції",
+      "role": "ОХОРОНЕЦЬ",
+      "gender": "male",
+      "genderLabel": "Чоловік",
+      "color": "#1e423f",
+      "badge": "ОХОРОНЕЦЬ",
+      "perk": "Потужний ліхтар (+25% дальність) та швидка витривалість",
+      "description": "Офіцер безпеки станції у фірмовій темно-бірюзовій формі з золотими ґудзиками та кашкетом із зіркою. Потужний ліхтар пробиває темряву на 30 метрів.",
+      "bonuses": {
+        "flashlightDist": 30,
+        "flashlightAngle": 0.5416539057913436,
+        "staminaRecovery": 1.25,
+        "speedMultiplier": 1,
+        "stunBonus": 1,
+        "sanityResistance": 1,
+        "radioCooldown": 3000
+      }
+    },
+    {
+      "id": "operator",
+      "name": "Vivian",
+      "title": "Телеоператорка",
+      "role": "ОПЕРАТОРКА",
+      "gender": "female",
+      "genderLabel": "Жінка",
+      "color": "#4a1824",
+      "badge": "ОПЕРАТОРКА",
+      "perk": "Світловий шок (+35% стан диктора) та стійкий розсудок",
+      "description": "Хронікерка телецентру з платиновим каре, золотими сережками-кільцями, перлинним кольє та сигаретою. Її спалах камери довше стримує диктора.",
+      "bonuses": {
+        "flashlightDist": 24,
+        "flashlightAngle": 0.483321946706122,
+        "staminaRecovery": 1,
+        "speedMultiplier": 1,
+        "stunBonus": 1.35,
+        "sanityResistance": 0.75,
+        "radioCooldown": 3000
+      }
+    },
+    {
+      "id": "journalist",
+      "name": "Edgar",
+      "title": "Репортер розслідувань",
+      "role": "ЖУРНАЛІСТ",
+      "gender": "male",
+      "genderLabel": "Чоловік",
+      "color": "#242726",
+      "badge": "РЕПОРТЕР",
+      "perk": "Швидкий спринт (+15% швидкість) та нічне чуття касет",
+      "description": "Згорблений спецкор у масивному твідовому піджаку з наддовгою вінтажною краваткою з орнаментом. Швидкий у бігу та помічає золотаве сяйво касет.",
+      "bonuses": {
+        "flashlightDist": 24,
+        "flashlightAngle": 0.483321946706122,
+        "staminaRecovery": 1,
+        "speedMultiplier": 1.15,
+        "stunBonus": 1,
+        "sanityResistance": 1,
+        "radioCooldown": 3000
+      }
+    },
+    {
+      "id": "dispatcher",
+      "name": "Hazel",
+      "title": "Чергова радіовежі",
+      "role": "ДИСПЕТЧЕРКА",
+      "gender": "female",
+      "genderLabel": "Жінка",
+      "color": "#d95328",
+      "badge": "ДИСПЕТЧЕРКА",
+      "perk": "Акустичний слух (чує ворога з 22м) та рація 1.5 сек",
+      "description": "Диспетчерка вежі у вінтажній психоделічній сукні з хвилястим візерунком, довгим волоссям та крилатим чубчиком. Рація перезаряджається вдвічі швидше.",
+      "bonuses": {
+        "flashlightDist": 24,
+        "flashlightAngle": 0.483321946706122,
+        "staminaRecovery": 1,
+        "speedMultiplier": 1,
+        "stunBonus": 1,
+        "sanityResistance": 1,
+        "radioCooldown": 1500,
+        "monsterHearingRange": 22
+      }
+    }
+  ]
+}

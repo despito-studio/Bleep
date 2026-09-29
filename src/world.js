@@ -1327,6 +1327,7 @@ export function createWorld(scene, customProps = null) {
           pivot: doorPivot,
           side,
           ledMat,
+          led,
           ledLight,
         });
         interactables.set(doorId, doorPivot);
@@ -1641,7 +1642,9 @@ export function createWorld(scene, customProps = null) {
     geometries.forEach(g => g.dispose());
   }
   setState(current);
-  return { root, interactables, update, setState, rooms: [] };
+  return { root, interactables, update, setState, rooms: [],
+    // Native export keeps movable objects separate from the static scenery.
+    exportData: { doorObjects, lamps, fans, monitors, powerLever, powerLamp, broadcastBulb, exitLamp } };
 }
 
 export {

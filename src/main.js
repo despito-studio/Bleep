@@ -57,6 +57,7 @@ audio.play = (kind, options = {}) => {
 };
 let audioOn = false;
 let state = null, myId = null, playing = false, mode = 'menu', returnMode = 'menu';
+let acceptingRoomState = true;
 let yaw = 0, pitch = 0, flashlightOn = true, cameraOn = false, stamina = 100, moving = false, sprinting = false;
 let localPos = new THREE.Vector3(spawn.x, 1.65, spawn.z);
 let currentBob = 0, footBob = 0;
@@ -230,7 +231,13 @@ $('overlay').addEventListener('click',e=>{
     }
   }
 });
-async function lockPointer(){try{await $('viewport').requestPointerLock();}catch{toast('Клацніть у грі для огляду мишею. Стрілки також повертають камеру.');}}
+async function lockPointer(){
+  if(!playing||mode!=='game'||state?.phase!=='playing')return;
+  try{
+    await $('viewport').requestPointerLock();
+    if(!playing||mode!=='game'||state?.phase!=='playing')releasePointer();
+  }catch{if(playing&&mode==='game')toast('Клацніть у грі для огляду мишею. Стрілки також повертають камеру.');}
+}
 async function resume(){if(!playing||state?.phase!=='playing')return;mode='game';$('overlay').hidden=true;keys.clear();gameLog('ACTION','Сеанс відновлено з паузи');await enableAudio();if(state?.players.length===1)socket.emit('game:pause',{paused:false},()=>{});await lockPointer();}
 
 $('sound-button').onclick=async()=>{if(!audioOn)await enableAudio();else{audioOn=false;audio.setMuted(true);$('sound-button').innerHTML=icon('mute');$('sound-button').setAttribute('aria-label','Увімкнути звук');}};
@@ -241,6 +248,7 @@ $('solo-button').onclick=async()=>{
   try{
     await enableAudio();
     const charName = getClassData(selectedClass).name;
+    acceptingRoomState=true;
     const r=await emit('room:create',{name:charName,solo:true,creative:isCreative,characterClass:selectedClass});
     myId=r.playerId||socket.id;
     await emit('game:start');
@@ -273,6 +281,7 @@ function showCoop(){
       localStorage.setItem('dead-air-name',name);
       await enableAudio();
       const isCreative=Boolean($('coop-creative')?.checked);
+      acceptingRoomState=true;
       const result=await emit(join?'room:join':'room:create',join?{name,code,characterClass:selectedClass}:{name,solo:false,creative:isCreative,characterClass:selectedClass});
       myId=result.playerId||socket.id;
       showLobby();
@@ -605,15 +614,19 @@ function showLocationTitle(name, detail = '') {
 }
 
 async function leaveGame(){
+  acceptingRoomState=false;
   playing=false;mode='menu';releasePointer();
   $('lobby-screen').hidden=true;$('arrival').hidden=true;$('countdown-banner').hidden=true;$('radio-menu').hidden=true;
   exterior?.setArrival(1);lobby?.sync([],null,selectedClass,true);
-  try{await emit('room:leave');}catch{}
   state=null;prevTapes=[];prevKeycards=[];prevFuel=false;prevValve=false;prevCalibrated=false;world?.setState({tapes:[],fuses:[],keycards:[],doors:{},power:false,broadcast:false});
   $('menu').hidden=false;$('hud').hidden=true;$('overlay').hidden=true;$('locker-overlay').hidden=true;
+  $('overlay').innerHTML='';$('down-notice').hidden=true;
   $('location-card').hidden=true;$('escape-banner').hidden=true;
   $('damage').style.opacity=0;for(const g of remotePlayers.values())scene.remove(g);remotePlayers.clear();
   enemyModel.visible=false;bloodyEnemyModel.visible=false;phantomModel.visible=false;
+  $('solo-button').focus();
+  // Returning to the menu must not depend on a live server or its acknowledgment.
+  try{await emit('room:leave');}catch{}
 }
 
 function beginGame(){
@@ -647,13 +660,15 @@ $('skip-arrival').onclick=finishArrival;
 
 function showEnding(won){
   playing=false;mode='ending';$('arrival').hidden=true;$('lobby-screen').hidden=true;$('radio-menu').hidden=true;releasePointer();audio.play(won?'win':'lose');$('hud').hidden=true;$('locker-overlay').hidden=true;$('escape-banner').hidden=true;
+  $('down-notice').hidden=true;$('location-card').hidden=true;$('countdown-banner').hidden=true;$('damage').style.opacity=0;
   panel(won?'BUREAU–9: СИГНАЛ ПЕРЕХОПЛЕНО':'BUREAU–9: ЗВ’ЯЗОК ВТРАЧЕНО',`
     <div class="end-number">${won?'03:00':'NO SIGNAL'}</div>
     <p>${won?'Службовий фургон подолав ворота станції Blackpine Broadcast. Усі 3 майстер-касети Артура Коула передано на супутники штабу BUREAU–9. Проте на аналітичному екрані фургона в останніх секундах запису чути... як хтось із групи продовжує говорити голосом Диктора.':'Службовий фургон знайдено порожнім із відчиненими дверима. На частоті 96.4 MHz диктор Blackpine оголошує імена членів оперативної групи як чергових дикторів нічного ефіру. Справа 004 засекречена.'}</p>
     <p>Тривалість операції: ${stamp(state.elapsed||0)} &nbsp; · &nbsp; Зібрано касет: ${state.tapes.length}/3</p>
     <button class="action primary" id="restart-game" ${state.hostId===myId?'':'disabled'}>${state.hostId===myId?'ПОВТОРИТИ ОПЕРАЦІЮ':'ЧЕКАЄМО НА ХОСТА'} ${icon('arrow')}</button>
-    <button class="action" id="end-menu">ДО ГОЛОВНОГО МЕНЮ</button>`,'КІНЕЦЬ ЗАПИСУ / СПРАВА 004',false);
+    <button class="action" id="end-menu">ДО ГОЛОВНОГО МЕНЮ <kbd>ESC</kbd></button>`,'КІНЕЦЬ ЗАПИСУ / СПРАВА 004',false);
   $('restart-game').onclick=async()=>{try{await emit('game:restart');}catch(e){toast(e.message);}};$('end-menu').onclick=leaveGame;
+  requestAnimationFrame(()=>{if(mode==='ending')$('end-menu')?.focus();});
 }
 
 // Socket Network Handlers
@@ -673,6 +688,7 @@ socket.on('disconnect',()=>{
 });
 
 socket.on('room:state',next=>{
+  if(!acceptingRoomState)return;
   const oldPhase=state?.phase;const oldPower=state?.power;const oldBroadcast=state?.broadcast;const oldHost=state?.hostId;
   const oldRadioTime=state?.radioTransmission?.time;
   state=next;myId ||= socket.id;
@@ -975,6 +991,7 @@ document.addEventListener('keydown',e=>{
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab'].includes(e.code)&&playing)e.preventDefault();
   if(mode==='arrival' && (e.code==='Space'||e.code==='Escape')){e.preventDefault();finishArrival();return;}
   if(e.code==='Escape'){
+    if(mode==='ending'){e.preventDefault();leaveGame();return;}
     if(!$('radio-menu').hidden){$('radio-menu').hidden=true;return;}
     if(mode==='game')showPause();
     else if(mode==='pause')resume();
