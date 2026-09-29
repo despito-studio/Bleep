@@ -43,7 +43,11 @@ namespace DeadAir
             ColorUtility.TryParseHtmlString("#0a100a",out var night);
             RenderSettings.fogColor = night;
             RenderSettings.fogDensity = .032f;
-            QualitySettings.pixelLightCount = 8;
+            QualitySettings.pixelLightCount = 4;
+            QualitySettings.vSyncCount = 0;
+            QualitySettings.shadowDistance = 45f;
+            QualitySettings.shadowCascades = 2;
+            QualitySettings.shadowResolution = ShadowResolution.Medium;
             if(root.Find("station")==null) Instantiate("station").name="station";
             if(root.Find("exterior")==null) Instantiate("exterior").name="exterior";
             CalibrateExteriorLighting(root.Find("exterior"));
@@ -76,9 +80,15 @@ namespace DeadAir
             foreach(var light in exterior.GetComponentsInChildren<Light>(true))
             {
                 if(light.type==LightType.Spot && light.range>25)
+                {
                     light.intensity=100f*.045f*.55f;
+                    light.renderMode = LightRenderMode.Auto;
+                }
                 else if(light.type==LightType.Point && light.range>25)
+                {
                     light.intensity=73f*.045f*.45f;
+                    light.renderMode = LightRenderMode.Auto;
+                }
             }
         }
 

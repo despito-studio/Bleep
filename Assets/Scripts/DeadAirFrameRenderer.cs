@@ -63,7 +63,7 @@ namespace DeadAir
 
             if (SceneFrame == null || SceneFrame.width != width || SceneFrame.height != height)
             {
-                var next = new RenderTexture(width, height, 24, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear)
+                var next = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear)
                 {
                     name = "DEAD AIR scene frame",
                     filterMode = FilterMode.Point,

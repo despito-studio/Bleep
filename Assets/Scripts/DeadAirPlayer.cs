@@ -56,7 +56,7 @@ namespace DeadAir
             flashlight.range = 24; flashlight.spotAngle = 55.4f; flashlight.innerSpotAngle = 22;
             flashlight.color = new Color32(255, 233, 183, 255);
             flashlight.intensity = 1.44f;
-            flashlight.shadows = LightShadows.Soft;
+            flashlight.shadows = LightShadows.Hard;
             flashlight.shadowStrength = .8f; flashlight.shadowBias = .025f;
             flashlight.shadowNormalBias = .08f; flashlight.renderMode = LightRenderMode.ForcePixel;
             flashlight.transform.localPosition = new Vector3(.16f, -.12f, .15f);

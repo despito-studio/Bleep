@@ -136,18 +136,9 @@ namespace DeadAir
                 }
             }
 
-            // 3. Batch statically PER SECTOR for optimal frustum culling & draw calls
             var sectorList = new List<Sector>();
             foreach (var s in sectorNames)
             {
-                var staticList = sectorStaticObjects[s];
-                if (staticList.Count > 0)
-                {
-                    var sectorContainer = new GameObject("_sector_batch_" + s);
-                    sectorContainer.transform.SetParent(station != null ? station : exterior, false);
-                    StaticBatchingUtility.Combine(staticList.ToArray(), sectorContainer);
-                }
-
                 var sector = new Sector
                 {
                     name = s,

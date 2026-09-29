@@ -236,7 +236,7 @@ namespace DeadAir
             moonLight.type = LightType.Directional;
             moonLight.color = new Color(0.55f, 0.65f, 0.78f);
             moonLight.intensity = 0.32f;
-            moonLight.shadows = LightShadows.Soft;
+            moonLight.shadows = LightShadows.Hard;
             moonLight.shadowStrength = 0.65f;
             moonLight.shadowBias = 0.05f;
             moonLight.shadowNormalBias = 0.08f;
