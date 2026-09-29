@@ -2,6 +2,12 @@
 
 Ігровий проєкт для **Unity 6 (6000.6.3f1)** з підтримкою **Unity Editor Pipeline** та системи інвентарю. Відкрийте цю папку в Unity Hub через **Add → Add project from disk** і запустіть сцену `Assets/Scenes/Blackpine.unity` кнопкою **Play**.
 
+## 🎮 Готовий білд гри для Windows
+
+📦 **[Завантажити Dead Air v1.1.0 для Windows (44 МБ)](https://github.com/dorimommy/Dear-air/releases/download/dead-air-windows-v1.1.0/DeadAir-Windows-v1.1.0.zip)**
+
+*Розпакуйте zip-архів і запустіть `DeadAir.exe`.*
+
 ## Що перенесено та покращено
 
 - 3D локація Blackpine: подвір’я, станція, 8 секторів, двері, освітлення, 367 об’єктів із кастомної мапи.
