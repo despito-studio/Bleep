@@ -44,8 +44,8 @@ namespace DeadAir
             view.tag = "MainCamera";
             view.transform.SetParent(transform, false);
             view.transform.localPosition = new Vector3(0, 1.65f, 0);
-            view.fieldOfView = 68; view.nearClipPlane = .08f; view.farClipPlane = 85;
-            view.clearFlags = CameraClearFlags.SolidColor;
+            view.fieldOfView = 68; view.nearClipPlane = .08f; view.farClipPlane = 250;
+            view.clearFlags = CameraClearFlags.Depth;
             view.backgroundColor = new Color32(10, 16, 10, 255);
             view.allowHDR = true;
             view.gameObject.AddComponent<AudioListener>();

@@ -23,6 +23,8 @@ namespace DeadAir
         readonly List<string> droppedToRemove = new List<string>();
         Vector3 lastEnemyPosition;
         bool lastPower, lastBroadcast;
+        readonly DeadAirSky sky;
+        readonly DeadAirCulling culling;
         sealed class Practical { public Light light; public float intensity; public Color color; }
 
         public DeadAirWorld(WorldData data)
@@ -60,20 +62,8 @@ namespace DeadAir
                     var l=t.GetComponent<Light>();lamps.Add(new Practical {light=l,intensity=l.intensity,color=l.color});
                 }
             }
-            var staticObjects = new List<GameObject>();
-            foreach(var r in root.GetComponentsInChildren<MeshRenderer>(true))
-            {
-                bool isDynamic = false;
-                for(var curr = r.transform; curr != null && curr != root; curr = curr.parent)
-                {
-                    if(dynamicRoots.Contains(curr)) { isDynamic = true; break; }
-                }
-                if(!isDynamic) staticObjects.Add(r.gameObject);
-            }
-            if(staticObjects.Count > 0)
-            {
-                StaticBatchingUtility.Combine(staticObjects.ToArray(), root.gameObject);
-            }
+            sky = new DeadAirSky(root);
+            culling = new DeadAirCulling(root.Find("station"), root.Find("exterior"), dynamicRoots);
             anchor=Instantiate("monster");bloodyAnchor=Instantiate("monster_bloody");
             anchor.SetActive(false);bloodyAnchor.SetActive(false);
         }
@@ -151,6 +141,10 @@ namespace DeadAir
                 lastEnemyPosition=position;
             }
             ApplyDropped(state);
+            var cam = Camera.main;
+            var camPos = cam != null ? cam.transform.position : new Vector3(5f, 1.65f, 19f);
+            if (sky != null) sky.UpdatePosition(camPos);
+            if (culling != null) culling.Update(state, camPos);
         }
 
         void ApplyDropped(RoomState state)
