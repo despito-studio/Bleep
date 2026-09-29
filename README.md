@@ -2,6 +2,12 @@
 
 > Unity версія гри: [DeadAirUnityProject/README.md](DeadAirUnityProject/README.md) — відкрийте папку `DeadAirUnityProject` у Unity Hub (2023.1.22f1).
 
+## Готовий білд для Windows
+
+[Завантажити Dead Air для Windows (36 МБ)](https://github.com/dorimommy/Dear-air/releases/download/dead-air-windows-v1.0.0/DeadAir-Windows-v1.0.0.zip)
+
+Розпакуйте архів повністю та запустіть `DeadAir/DeadAir.exe`. Проєкт Unity перенесено на `D:\DeadAirUnityProject`; редактор — Unity 2023.1.22f1.
+
 > **Атмосферний ретро-хорор від першої особи для 1–4 гравців у сетингу середини 1990-х років.**  
 > Спеціальна оперативна група міжнародного бюро розслідувань **«BUREAU–9»** прибуває на занедбаний ретранслятор **«Blackpine Broadcast / Station 04»** за таємничим сигналом біди.
 
