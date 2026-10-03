@@ -23,7 +23,7 @@ namespace DeadAir.Editor
         static GameObject station, exterior;
         static int meshSerial;
         static Font signFont;
-        static Material plaster, brick, trim, floor, carpet, ceilingPanel, metal, wood, asphalt, grass, glass, lightSurface, paper, black, signLetters;
+        static Material plaster, brick, trim, floor, carpet, ceilingPanel, metal, wood, asphalt, grass, glass, lightSurface, paper, black, signLetters, cobwebSilk, wastePaper;
 
         [MenuItem("Dead Air/Build Expanded Office")]
         public static void Build()
@@ -55,6 +55,7 @@ namespace DeadAir.Editor
                 foreach (var door in world.doors) BuildDoor(door);
                 foreach (var locker in world.lockers) BuildLocker(locker);
                 foreach (var objective in world.objects) BuildObjective(objective);
+                BuildOfficeDressing();
                 BuildLighting();
                 BatchStaticGeometry(station.transform.Find("shell"), "station-shell");
                 BatchStaticGeometry(exterior.transform.Find("shell"), "exterior-shell");
@@ -253,6 +254,8 @@ namespace DeadAir.Editor
             lightSurface = Surface("light-panel",new Color(.79f,.83f,.68f),0, new Color(.5f,.54f,.39f));
             paper = Surface("sign-board",new Color(.8f,.78f,.62f),0);
             black = Surface("dark-detail",new Color(.07f,.09f,.08f),0);
+            cobwebSilk = Surface("cobweb-silk",new Color(.28f,.30f,.26f),0);
+            wastePaper = Surface("waste-paper",new Color(.57f,.54f,.43f),0);
             string signPath=Folder+"/Materials/sign-font.mat";
             signLetters=AssetDatabase.LoadAssetAtPath<Material>(signPath);
             var signShader=Shader.Find("Dead Air/World Sign");
@@ -550,6 +553,7 @@ namespace DeadAir.Editor
             Fence(shell,-30,38,-5,38);Fence(shell,5,38,30,38);
             for(int side=-1;side<=1;side+=2)for(int i=0;i<10;i++)Tree(shell,side*(32+(i%3)), -72+i*11);
             for(int i=0;i<8;i++)Tree(shell,-28+i*8,-80);
+            BuildBeyondFence();
             Sign(shell,"BLACKPINE  /  STAFF PARKING",new Vector3(19,1.9f,35.2f),Quaternion.identity,3.2f,.5f);
             foreach(float x in new[]{18.1f,19.9f})Block(shell,"Parking sign post",new Vector3(x,1.025f,35.165f),new Vector3(.07f,2.05f,.07f),metal,true);
         }
@@ -569,9 +573,228 @@ namespace DeadAir.Editor
 
         static void Tree(Transform parent,float x,float z)
         {
-            var t=Group(parent,"Courtyard birch");t.localPosition=DeadAirOfficeLayout.Position(x,0,z);
+            var t=Group(parent,"Courtyard birch");t.localPosition=DeadAirOfficeLayout.Position(x,-.03f,z);
             Block(t,"Tree trunk",new Vector3(0,2.4f,0),new Vector3(.26f,4.8f,.26f),wood,false);
             for(int i=0;i<3;i++)Block(t,"Tree crown",new Vector3((i-1)*.5f,4.6f+i*.75f,.15f*(i%2)),new Vector3(3.2f-i*.55f,1.6f,3.1f-i*.6f),grass,false);
+        }
+
+        static void BuildBeyondFence()
+        {
+            var background=Group(exterior.transform,"Beyond the fence");
+            // These continuous, embedded slabs close every edge of the lot. They
+            // are scenery only; the existing fence and authoritative bounds stay put.
+            Box(background,"Distant ground west",-125,-.21f,-20,190,.36f,500,grass,false);
+            Box(background,"Distant ground east",125,-.21f,-20,190,.36f,500,grass,false);
+            Box(background,"Distant ground rear",0,-.21f,-173,60,.36f,194,grass,false);
+            Box(background,"Distant ground front",0,-.21f,134,60,.36f,192,grass,false);
+            Box(background,"Access road",0,-.06f,49,330,.12f,8,asphalt,false);
+            Box(background,"Arrival road",0,-.06f,41.5f,9,.12f,7,asphalt,false);
+            for(int i=-13;i<=13;i++)Box(background,"Faded road centre dash",i*12,.006f,49,4,.012f,.11f,wastePaper,false);
+            // Irregular rows overlap in depth so the skyline is visible from both
+            // storeys without a flat billboard edge or a hole under the near trees.
+            for(int side=-1;side<=1;side+=2)for(int i=0;i<13;i++)
+            {
+                float x=side*(42+(i%4)*7),z=-102+i*13;
+                Tree(background,x,z);
+                if(i%3==0)Tree(background,side*(79+(i%2)*12),z+7);
+            }
+            for(int i=0;i<16;i++)
+            {
+                Tree(background,-79+i*10,-99-(i%3)*13);
+                if(i%2==0)Tree(background,-65+i*9,69+(i%3)*12);
+            }
+            DistantBuilding(background,-68,-62,18,10,17);
+            DistantBuilding(background,72,-31,20,13,24);
+            DistantBuilding(background,-52,83,28,8,16);
+            DistantBuilding(background,54,90,23,11,20);
+            DistantBuilding(background,0,-129,38,6,19);
+            var tower=Group(background,"Distant transmission mast");
+            tower.localPosition=DeadAirOfficeLayout.Position(44,-.03f,-91);
+            foreach(float x in new[]{-.7f,.7f})
+                Beam(tower,"Mast leg",new Vector3(x,0,0),new Vector3(x*.1f,22,0),.12f,metal);
+            for(int i=0;i<6;i++)
+            {
+                float y=2+i*3.1f;
+                Beam(tower,"Mast brace",new Vector3(-.7f*(1-y/23),y,0),new Vector3(.7f*(1-(y+3)/23),y+3,0),.075f,metal);
+            }
+            Block(tower,"Mast aerial",new Vector3(0,20.5f,0),new Vector3(5.5f,.13f,.13f),metal,false);
+            BatchStaticGeometry(background,"outside-background");
+            foreach(var renderer in background.GetComponentsInChildren<Renderer>(true))renderer.shadowCastingMode=ShadowCastingMode.Off;
+        }
+
+        static void DistantBuilding(Transform parent,float x,float z,float width,float height,float depth)
+        {
+            var root=Group(parent,"Distant service building");root.localPosition=DeadAirOfficeLayout.Position(x,-.03f,z);
+            Block(root,"Distant building body",new Vector3(0,height/2,0),new Vector3(width,height,depth),brick,false);
+            Block(root,"Distant building roof",new Vector3(0,height+.14f,0),new Vector3(width+.5f,.28f,depth+.5f),black,false);
+            for(int row=0;row<Mathf.FloorToInt(height/3);row++)for(int column=0;column<Mathf.FloorToInt(width/4);column++)
+                Block(root,"Distant dark window",new Vector3(-width/2+2+column*4,1.7f+row*3,depth/2+.014f),new Vector3(1.4f,1.15f,.025f),glass,false);
+        }
+
+        static void BuildOfficeDressing()
+        {
+            var random=new System.Random(96403);
+            int webIndex=0,litterIndex=0;
+            foreach(var room in world.rooms.Where(DeadAirOfficeLayout.IsInterior))
+            {
+                var parent=sectors[SectorKey(room)];
+                bool circulation=DeadAirOfficeLayout.IsCirculation(room);
+                if(!circulation)
+                {
+                    // The web sits just inside the two real wall faces, under the
+                    // acoustic ceiling. It is a strand mesh, never a filled plane.
+                    float xInset=Mathf.Abs(room.minX)==18?.175f:.11f;
+                    float zInset=room.minZ==-54?.175f:.11f;
+                    float ceilingY=room.floorY+(room.floorY<1?Storey-.37f:Ceiling-.05f);
+                    var corner=DeadAirOfficeLayout.Position(room.minX+xInset+.009f,ceilingY-.009f,room.minZ+zInset+.009f);
+                    var web=Cobweb(parent,"Cobweb:wall:"+(webIndex++),corner,Quaternion.Euler(0,180,0),new Vector2(.85f+(webIndex%3)*.17f,.72f+(webIndex%2)*.18f));
+                    WebAnchor(web,"Web anchor ceiling",new Vector3(1,0,0));
+                    WebAnchor(web,"Web anchor wall",new Vector3(0,-1,0));
+                }
+                int count=circulation?3:5;
+                for(int i=0;i<count;i++)
+                {
+                    for(int attempt=0;attempt<45;attempt++)
+                    {
+                        float x=Mathf.Lerp(room.minX+.60f,room.maxX-.60f,(float)random.NextDouble());
+                        float z=Mathf.Lerp(room.minZ+.60f,room.maxZ-.60f,(float)random.NextDouble());
+                        if(!ClearDressingFloor(x,room.floorY,z))continue;
+                        FloorLitter(parent,"Floor litter:"+(litterIndex++),x,room.floorY+(circulation?0:.016f),z,
+                            random.Next(4),(float)random.NextDouble()*360);
+                        break;
+                    }
+                }
+            }
+            foreach(var room in world.rooms.Where(r=>!DeadAirOfficeLayout.IsInterior(r)))
+            {
+                var parent=sectors[SectorKey(room)];
+                for(int i=0;i<5;i++)for(int attempt=0;attempt<30;attempt++)
+                {
+                    float x=Mathf.Lerp(room.minX+.8f,room.maxX-.8f,(float)random.NextDouble());
+                    float z=Mathf.Lerp(room.minZ+.8f,room.maxZ-.8f,(float)random.NextDouble());
+                    if(!ClearDressingFloor(x,0,z)||Mathf.Abs(x)<4.7f&&z>6&&z<25)continue;
+                    FloorLitter(parent,"Floor litter:"+(litterIndex++),x,0,z,random.Next(4),(float)random.NextDouble()*360);
+                    break;
+                }
+            }
+        }
+
+        static bool ClearDressingFloor(float x,float y,float z)
+        {
+            if(world.stairs.Any(s=>(Mathf.Abs(s.lowerY-y)<.1f||Mathf.Abs(s.upperY-y)<.1f)&&
+                x>s.minX-.45f&&x<s.maxX+.45f&&z>s.minZ-.5f&&z<s.maxZ+.5f))return false;
+            if(world.doors.Any(d=>Mathf.Abs(d.y-1.4f-y)<.1f&&Mathf.Abs(x-d.x)<1.6f&&Mathf.Abs(z-d.z)<1.6f))return false;
+            if(world.objects.Any(o=>Mathf.Abs(o.y-y)<2&&Mathf.Abs(x-o.x)<.7f&&Mathf.Abs(z-o.z)<.7f))return false;
+            foreach(var prop in world.props)
+            {
+                if(Mathf.Abs(prop.y-y)>.1f||new[]{"corkboard","toolboard","whiteboard","mirror","directory","fan","yardLamp","generatorShelter"}.Contains(prop.type))continue;
+                float dx=x-prop.x,dz=z-prop.z,c=Mathf.Cos(prop.rotation),s=Mathf.Sin(prop.rotation);
+                if(Mathf.Abs(dx*c-dz*s)<prop.w/2+.3f&&Mathf.Abs(dx*s+dz*c)<prop.d/2+.3f)return false;
+            }
+            return true;
+        }
+
+        static void FloorLitter(Transform parent,string name,float x,float floorY,float z,int type,float rotation)
+        {
+            var root=Group(parent,name);root.localPosition=DeadAirOfficeLayout.Position(x,floorY+.001f,z);
+            root.localRotation=Quaternion.Euler(0,rotation,0);
+            // All lowest vertices rest on the floor finish. No collision envelopes
+            // are introduced, so a sheet cannot catch the player or an opening door.
+            switch(type)
+            {
+                case 0:
+                    Block(root,"Discarded page",new Vector3(0,.002f,0),new Vector3(.31f,.004f,.22f),wastePaper,false);
+                    for(int i=0;i<4;i++)Block(root,"Page print",new Vector3(-.018f,.0047f,-.06f+i*.03f),new Vector3(.19f,.0014f,.004f),black,false);
+                    break;
+                case 1:
+                    Block(root,"Flattened cardboard",new Vector3(0,.003f,0),new Vector3(.48f,.006f,.31f),wood,false);
+                    Block(root,"Cardboard crease",new Vector3(0,.0068f,0),new Vector3(.011f,.0016f,.28f),black,false);
+                    Block(root,"Torn paper label",new Vector3(-.13f,.007f,.02f),new Vector3(.12f,.002f,.08f),wastePaper,false);
+                    break;
+                case 2:
+                    var cup=Group(root,"Tipped paper cup");
+                    cup.localRotation=Quaternion.Euler(0,0,70);
+                    var cupMesh=PaperCupMesh();
+                    cup.localPosition=new Vector3(0,-cupMesh.vertices.Min(v=>(cup.localRotation*v).y),0);
+                    cup.gameObject.AddComponent<MeshFilter>().sharedMesh=cupMesh;
+                    var renderer=cup.gameObject.AddComponent<MeshRenderer>();renderer.sharedMaterial=wastePaper;
+                    renderer.shadowCastingMode=ShadowCastingMode.Off;renderer.receiveShadows=true;
+                    break;
+                default:
+                    Block(root,"Abandoned file cover",new Vector3(0,.003f,0),new Vector3(.37f,.006f,.25f),trim,false);
+                    Block(root,"Loose file page",new Vector3(.025f,.008f,.012f),new Vector3(.28f,.004f,.20f),wastePaper,false);
+                    break;
+            }
+        }
+
+        static Mesh PaperCupMesh()
+        {
+            const string key="paper-cup";
+            if(meshes.TryGetValue(key,out var cached))return cached;
+            var vertices=new List<Vector3>();var uv=new List<Vector2>();var triangles=new List<int>();
+            for(int i=0;i<10;i++)
+            {
+                float a=i*Mathf.PI*.2f,b=(i+1)*Mathf.PI*.2f;
+                Vector3 bottomA=new Vector3(Mathf.Cos(a)*.044f,-.086f,Mathf.Sin(a)*.044f),bottomB=new Vector3(Mathf.Cos(b)*.044f,-.086f,Mathf.Sin(b)*.044f);
+                Vector3 topA=new Vector3(Mathf.Cos(a)*.067f,.086f,Mathf.Sin(a)*.067f),topB=new Vector3(Mathf.Cos(b)*.067f,.086f,Mathf.Sin(b)*.067f);
+                MeshQuad(vertices,uv,triangles,bottomA,bottomB,topB,topA);
+                MeshQuad(vertices,uv,triangles,topA,topB,topB*.90f+Vector3.up*.0086f,topA*.90f+Vector3.up*.0086f);
+                MeshQuad(vertices,uv,triangles,Vector3.down*.086f,bottomB,bottomA,Vector3.down*.086f);
+            }
+            return SavedDressingMesh(key,vertices,uv,triangles);
+        }
+
+        static Transform Cobweb(Transform parent,string name,Vector3 position,Quaternion rotation,Vector2 size)
+        {
+            var root=Group(parent,name);root.localPosition=position;root.localRotation=rotation;root.localScale=new Vector3(size.x,size.y,1);
+            var strands=Group(root,"Web strands");strands.gameObject.AddComponent<MeshFilter>().sharedMesh=CobwebMesh();
+            var renderer=strands.gameObject.AddComponent<MeshRenderer>();renderer.sharedMaterial=cobwebSilk;
+            renderer.shadowCastingMode=ShadowCastingMode.Off;renderer.receiveShadows=true;
+            WebAnchor(root,"Web anchor corner",Vector3.zero);
+            return root;
+        }
+
+        static void WebAnchor(Transform web,string name,Vector3 point)=>Group(web,name).localPosition=point;
+
+        static Mesh CobwebMesh()
+        {
+            const string key="cobweb-strands";
+            if(meshes.TryGetValue(key,out var cached))return cached;
+            var vertices=new List<Vector3>();var uv=new List<Vector2>();var triangles=new List<int>();
+            const int spokes=8;
+            Vector3 Point(int spoke,float amount)
+            {
+                float angle=spoke*Mathf.PI*.5f/(spokes-1),x=Mathf.Cos(angle),y=Mathf.Sin(angle);
+                float radius=1/(x+y);return new Vector3(x,-y,0)*radius*amount;
+            }
+            void Strand(Vector3 a,Vector3 b)
+            {
+                // Dust-coated strands need to survive the game's 360p sampling.
+                var side=Vector3.Cross(b-a,Vector3.forward).normalized*.0085f;
+                MeshQuad(vertices,uv,triangles,a-side,b-side,b+side,a+side);
+            }
+            for(int spoke=0;spoke<spokes;spoke++)Strand(Vector3.zero,Point(spoke,1));
+            foreach(float amount in new[]{.24f,.45f,.68f,.86f,1})
+                for(int spoke=0;spoke<spokes-1;spoke++)Strand(Point(spoke,amount),Point(spoke+1,amount));
+            return SavedDressingMesh(key,vertices,uv,triangles);
+        }
+
+        static void MeshQuad(List<Vector3> vertices,List<Vector2> uv,List<int> indices,Vector3 a,Vector3 b,Vector3 c,Vector3 d)
+        {
+            int first=vertices.Count;
+            vertices.AddRange(new[]{a,b,c,d});uv.AddRange(new[]{Vector2.zero,Vector2.right,Vector2.one,Vector2.up});
+            indices.AddRange(new[]{first,first+1,first+2,first,first+2,first+3});
+            vertices.AddRange(new[]{a,b,c,d});uv.AddRange(new[]{Vector2.zero,Vector2.right,Vector2.one,Vector2.up});
+            indices.AddRange(new[]{first+4,first+6,first+5,first+4,first+7,first+6});
+        }
+
+        static Mesh SavedDressingMesh(string key,List<Vector3> vertices,List<Vector2> uv,List<int> triangles)
+        {
+            string path=Folder+"/Meshes/"+key+".asset";
+            var mesh=AssetDatabase.LoadAssetAtPath<Mesh>(path);
+            if(mesh==null){mesh=new Mesh();AssetDatabase.CreateAsset(mesh,path);}
+            mesh.Clear();mesh.name=key;mesh.SetVertices(vertices);mesh.SetUVs(0,uv);mesh.SetTriangles(triangles,0);
+            mesh.RecalculateNormals();mesh.RecalculateBounds();EditorUtility.SetDirty(mesh);meshes[key]=mesh;return mesh;
         }
 
         static Transform PropRoot(PropData p)
@@ -592,8 +815,23 @@ namespace DeadAir.Editor
                 // The source export batched the shared desk body outside this decoration group.
                 if(p.type=="archivistDesk")Table(root,p.w>0?p.w:2.4f,p.d>0?p.d:1.3f);
                 var visual=UnityEngine.Object.Instantiate(template,root,false);visual.name=p.label;
+                if(p.type=="van")
+                    foreach(var obsoleteCone in visual.GetComponentsInChildren<Renderer>(true)
+                        .Where(renderer=>renderer.sharedMaterials.Any(material=>material!=null&&material.name=="surface_697")).ToArray())
+                        // The browser export faked headlights with translucent cone
+                        // meshes. Real lights inside those shells would be shadowed.
+                        UnityEngine.Object.DestroyImmediate(obsoleteCone.gameObject);
                 if(p.type=="dieselGenerator")ApplyGeneratorMaterials(visual);
                 foreach(var r in visual.GetComponentsInChildren<Renderer>(true)){r.shadowCastingMode=ShadowCastingMode.On;r.receiveShadows=true;}
+                if(p.type=="van")
+                {
+                    // Retain only the two glass lenses as individual renderers.
+                    // The rest of the van still joins the exterior's static batches.
+                    foreach(var lens in visual.GetComponentsInChildren<Renderer>(true))
+                        if(lens.sharedMaterials.Any(material=>material!=null&&material.name=="surface_677"))
+                            lens.name="headlamp-lens:"+(root.InverseTransformPoint(lens.bounds.center).x<0?"left":"right");
+                    DeadAirWorld.InstallVanHeadlamps(root);
+                }
                 // Keep furniture's original proportions and UVs. Dimensions in data describe collision footprint only.
                 return;
             }
@@ -852,6 +1090,11 @@ namespace DeadAir.Editor
             for(int i=0;i<6;i++)Block(pivot,"Open grille slat "+i,new Vector3(leaf/2,1.32f+i*.12f,0),new Vector3(leaf-.08f,.034f,.045f),metal,false);
             Block(pivot,"Locker handle",new Vector3(leaf-.14f,1.10f,.075f),new Vector3(.035f,.19f,.045f),metal,false);
             Block(root,"Locker shelf",new Vector3(0,2.04f,-.08f),new Vector3(w-.1f,.03f,d-.12f),metal,false);
+            // Keep strands behind the eye/grille so hiding and its forward view
+            // remain clear. The web is fixed to the back and side, not the leaf.
+            var web=Cobweb(root,"Cobweb:locker:"+l.id,new Vector3(-w/2+.04f,2.01f,-d/2+.037f),Quaternion.identity,new Vector2(.33f,.27f));
+            WebAnchor(web,"Web anchor ceiling",new Vector3(1,0,0));
+            WebAnchor(web,"Web anchor wall",new Vector3(0,-1,0));
             Sign(pivot,l.id.Replace("locker-","LOCKER "),new Vector3(leaf/2,.89f,.034f),Quaternion.identity,.6f,.15f);
         }
 
@@ -1014,7 +1257,8 @@ namespace DeadAir.Editor
             while(t!=null&&t!=boundary)
             {
                 if(t.name.StartsWith("interactive:")||t.name.StartsWith("door:")||t.name.StartsWith("door-led:")||
-                   t.name.StartsWith("locker-door:")||t.name.StartsWith("state:")||t.name.StartsWith("fan:")||t.name.StartsWith("monitor:")) return true;
+                   t.name.StartsWith("locker-door:")||t.name.StartsWith("state:")||t.name.StartsWith("fan:")||t.name.StartsWith("monitor:")||
+                   t.name.StartsWith("headlamp-lens:")) return true;
                 t=t.parent;
             }
             return false;

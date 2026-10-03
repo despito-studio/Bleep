@@ -210,6 +210,9 @@ namespace DeadAir
             Add("error", b => { b.Tone(0, 132, 113, .1f, .048f, Wave.Triangle); b.Tone(.14f, 132, 113, .1f, .048f, Wave.Triangle); }, .3f);
             Add("scare", b => { b.Noise(0, .9f, .22f, 1100, .045f); b.Tone(0, 115, 36, 1.4f, .19f, Wave.Triangle, .04f); b.Tone(.07f, 340, 140, .75f, .075f, Wave.Sine, .04f); b.Tone(.12f, 360, 150, .85f, .062f, Wave.Sine, .04f); }, 1.7f);
             Add("screamer", b => { b.Noise(0, .35f, .3f, 2800, .005f); b.Tone(0, 720, 85, .45f, .25f, Wave.Saw, .005f); }, .6f);
+            Add("spider", b => { b.Noise(0, .16f, .12f, 3500, .008f); b.Tone(.015f, 950, 145, .22f, .09f, Wave.Saw, .01f); for (int i = 0; i < 5; i++) b.Knock(.18f + i * .05f, .18f); }, .55f);
+            Add("listening", b => { b.Noise(0, .6f, .035f, 620, .12f); b.Tone(.1f, 72, 49, .8f, .04f, Wave.Triangle, .12f); }, 1.1f);
+            Add("vanish", b => { b.Noise(0, .2f, .065f, 1700, .02f); b.Tone(.015f, 210, 38, .35f, .06f, Wave.Triangle, .025f); }, .5f);
             Add("radio", b => { b.Noise(0, .04f, .08f, 3200); b.Tone(.03f, 1240, 1100, .08f, .05f); b.Noise(.09f, .25f, .07f, 1800, .02f); }, .45f);
             Add("locker", b => { b.Knock(0, .7f); b.Tone(.03f, 180, 75, .15f, .06f, Wave.Triangle); }, .4f);
             Add("door", b => { b.Noise(0, .3f, .05f, 850, .015f); b.Tone(.02f, 170, 95, .3f, .025f, Wave.Triangle); b.Knock(.3f, .7f); }, .7f);

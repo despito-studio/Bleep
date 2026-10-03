@@ -119,13 +119,57 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1001 &262361705
+--- !u!1 &389016467
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 389016469}
+  - component: {fileID: 389016468}
+  m_Layer: 0
+  m_Name: Dead Air / Runtime bootstrap
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &389016468
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 389016467}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 35830149db6321843b19c62fb4dbed51, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DeadAir.DeadAirBootstrap
+--- !u!4 &389016469
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 389016467}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &446935000
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 364717994}
+    m_TransformParent: {fileID: 561357955}
     m_Modifications:
     - target: {fileID: 889691949831359314, guid: 00041916e044a874c8c7669ee935e07a, type: 3}
       propertyPath: m_Name
@@ -176,12 +220,12 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 00041916e044a874c8c7669ee935e07a, type: 3}
---- !u!4 &262361706 stripped
+--- !u!4 &446935001 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1725637845640156341, guid: 00041916e044a874c8c7669ee935e07a, type: 3}
-  m_PrefabInstance: {fileID: 262361705}
+  m_PrefabInstance: {fileID: 446935000}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &364717993
+--- !u!1 &561357954
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -189,7 +233,7 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 364717994}
+  - component: {fileID: 561357955}
   m_Layer: 0
   m_Name: BLACKPINE / original web scene
   m_TagString: Untagged
@@ -197,30 +241,30 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &364717994
+--- !u!4 &561357955
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 364717993}
+  m_GameObject: {fileID: 561357954}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 262361706}
-  - {fileID: 658648824}
+  - {fileID: 446935001}
+  - {fileID: 1967993601}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1001 &658648823
+--- !u!1001 &1967993600
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 364717994}
+    m_TransformParent: {fileID: 561357955}
     m_Modifications:
     - target: {fileID: 6228223698660395323, guid: 3a26e77b13d5bf847817d8d0038e9ebe, type: 3}
       propertyPath: m_LocalPosition.x
@@ -271,58 +315,14 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 3a26e77b13d5bf847817d8d0038e9ebe, type: 3}
---- !u!4 &658648824 stripped
+--- !u!4 &1967993601 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 6228223698660395323, guid: 3a26e77b13d5bf847817d8d0038e9ebe, type: 3}
-  m_PrefabInstance: {fileID: 658648823}
+  m_PrefabInstance: {fileID: 1967993600}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &1487722132
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1487722134}
-  - component: {fileID: 1487722133}
-  m_Layer: 0
-  m_Name: Dead Air / Runtime bootstrap
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1487722133
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1487722132}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 35830149db6321843b19c62fb4dbed51, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::DeadAir.DeadAirBootstrap
---- !u!4 &1487722134
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1487722132}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 1487722134}
-  - {fileID: 364717994}
+  - {fileID: 389016469}
+  - {fileID: 561357955}

@@ -2,6 +2,12 @@
 const fs = require('fs');
 const file = 'Assets/Resources/world.json';
 const old = JSON.parse(fs.readFileSync(file, 'utf8'));
+// Role copy describes implemented mechanics; light cannot stun the blind enemy.
+const vivian = old.classes.find(role => role.id === 'operator');
+if (vivian) {
+  vivian.perk = 'Стійкий розсудок (на 25% повільніша втрата) та пачка сигарет';
+  vivian.description = 'Хронікерка телецентру з платиновим каре, золотими сережками-кільцями, перлинним кольє та сигаретою. Повільніше втрачає розсудок; у її інвентарі є пачка з 12 сигарет.';
+}
 const pi = Math.PI, H = 4.2;
 const rooms = [], doors = [], props = [], objects = [], lockers = [];
 let serial = 0;

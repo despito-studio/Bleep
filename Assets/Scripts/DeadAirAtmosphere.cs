@@ -9,13 +9,17 @@ namespace DeadAir
         DeadAirPlayer player;
         DeadAirAudio audioEngine;
         DeadAirTapeEffect tape;
+        DeadAirScarePresentation scares;
         GameObject phantom;
+        DeadAirMonsterMotion phantomMotion;
         readonly Dictionary<string, bool> doorStates = new Dictionary<string, bool>();
-        int lastScare, lastCollectibles, lastRadioSequence;
+        int lastScare, lastCollectibles, lastRadioSequence, lastSpider, lastEncounter;
+        bool lastEnemyActive;
+        string lastEnemyBehaviour;
         bool lastBroadcast, lastPower, lastCanister, lastValve, lastCalibrated, wasDown;
         string lastPhase, lastHiding;
         Vector3 previousPosition;
-        float nextPhantom, phantomUntil, nextFlash, flashUntil;
+        float nextPhantom, phantomUntil, nextFlash, flashUntil, nextVisualScare;
 
         public void Initialize(DeadAirSession game, DeadAirPlayer actor)
         {
@@ -28,12 +32,16 @@ namespace DeadAir
             {
                 view.allowHDR = true;
                 tape = view.gameObject.AddComponent<DeadAirFrameRenderer>().Initialize(view);
+                scares = new GameObject("Horror camera props").AddComponent<DeadAirScarePresentation>();
+                scares.Initialize(view);
             }
             var prefab = Resources.Load<GameObject>("World/monster");
             if (prefab != null)
             {
                 phantom = Instantiate(prefab, transform);
                 phantom.name = "Low sanity peripheral hallucination";
+                phantomMotion = phantom.AddComponent<DeadAirMonsterMotion>();
+                phantomMotion.Initialize();
                 phantom.SetActive(false);
                 foreach (var collider in phantom.GetComponentsInChildren<Collider>())
                     if (Application.isPlaying) Destroy(collider); else DestroyImmediate(collider);
@@ -57,6 +65,7 @@ namespace DeadAir
                     CaptureState(state, me);
                     float now = Time.unscaledTime;
                     nextPhantom = now + 24; nextFlash = now + 32;
+                    nextVisualScare = now + 5;
                     previousPosition = player.transform.position;
                 }
                 else if (phase == "won" || phase == "lost") DeadAirAudio.Play(phase == "won" ? "win" : "lose");
@@ -64,13 +73,19 @@ namespace DeadAir
             }
             bool playing = phase == "playing" && me != null;
             bool paused = !playing || state.paused || player.LocalPaused || player.ModalOpen;
+            if (scares != null)
+            {
+                if (!playing) scares.Clear();
+                scares.SetPaused(paused);
+            }
             bool hiding = playing && !string.IsNullOrEmpty(me.hiding);
             var movement = player.transform.position - previousPosition;
             previousPosition = player.transform.position;
             bool moving = playing && !paused && !me.down && !hiding && new Vector2(movement.x, movement.z).sqrMagnitude > .000004f && movement.sqrMagnitude < 1;
             float distance = playing ? Vector3.Distance(new Vector3(me.x,me.y,me.z), new Vector3(state.enemy.x,state.enemy.y,state.enemy.z)) : 100;
-            float threat = playing && state.enemy.active ? Mathf.Clamp01(1 - distance / 16) : 0;
-            Vector3? enemyPosition = playing && state.enemy.active ? new Vector3(-state.enemy.x, state.enemy.y+1.2f, state.enemy.z) : (Vector3?)null;
+            bool enemyPresent = playing && state.enemy.active && state.enemy.behaviour != "vanished";
+            float threat = enemyPresent ? Mathf.Clamp01(1 - distance / 16) : 0;
+            Vector3? enemyPosition = enemyPresent ? new Vector3(-state.enemy.x, state.enemy.y+1.2f, state.enemy.z) : (Vector3?)null;
             audioEngine.Tick(paused, moving, playing && player.Sprinting, hiding, player.Stamina, playing ? me.sanity : 100,
                 threat, playing && player.CameraUp, playing && state.power, playing && state.broadcast, enemyPosition, distance);
             if (tape != null)
@@ -98,6 +113,22 @@ namespace DeadAir
             if (state.valveOpened && !lastValve) DeadAirAudio.Play("click");
             if (state.calibrated && !lastCalibrated) DeadAirAudio.Play("radio");
             if (state.scare > lastScare || state.broadcast && !lastBroadcast) DeadAirAudio.Play("scare");
+            if (me.spiderScareSerial > lastSpider && state.elapsed * 1000 - me.spiderScareAt < 1800)
+            {
+                scares?.Spider();
+                audioEngine.Emit("spider", .85f);
+            }
+            if (state.enemy.encounterSerial > lastEncounter && state.enemy.behaviour == "peek")
+                audioEngine.Emit("listening", .65f, 0, new Vector3(-state.enemy.x, state.enemy.y + 1.5f, state.enemy.z));
+            if (lastEnemyBehaviour == "peek" && state.enemy.behaviour == "vanished")
+                audioEngine.Emit("vanish", .55f, 0, new Vector3(-state.enemy.x, state.enemy.y + 1.3f, state.enemy.z));
+            bool visualBreach = state.scare > lastScare && (!lastEnemyActive && state.enemy.active || me.sanity < 45);
+            if (visualBreach && !state.creative && !me.down && string.IsNullOrEmpty(me.hiding) && Time.unscaledTime >= nextVisualScare)
+            {
+                scares?.Signal();
+                audioEngine.Emit("screamer", .6f);
+                nextVisualScare = Time.unscaledTime + 32;
+            }
             if (me.hiding != lastHiding) DeadAirAudio.Play("locker");
             if (!me.down && wasDown) DeadAirAudio.Play("pickup");
             foreach (var door in state.doors)
@@ -114,6 +145,10 @@ namespace DeadAir
             lastCanister = state.canister; lastValve = state.valveOpened; lastCalibrated = state.calibrated;
             lastHiding = me == null ? null : me.hiding; wasDown = me != null && me.down;
             lastRadioSequence = state.radioSequence;
+            lastSpider = me == null ? 0 : me.spiderScareSerial;
+            lastEncounter = state.enemy.encounterSerial;
+            lastEnemyActive = state.enemy.active;
+            lastEnemyBehaviour = state.enemy.behaviour;
             doorStates.Clear();
             foreach (var door in state.doors) doorStates[door.id] = door.open;
         }
@@ -131,6 +166,7 @@ namespace DeadAir
             }
             if (phantom != null && phantom.activeSelf)
             {
+                phantomMotion?.SetPreviewPose("search", now);
                 var target = player.transform.position;
                 target.y = phantom.transform.position.y;
                 phantom.transform.LookAt(target);

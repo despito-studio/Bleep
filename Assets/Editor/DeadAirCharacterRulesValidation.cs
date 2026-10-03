@@ -17,7 +17,7 @@ namespace DeadAir.Editor
             ValidateInventoryAndSerialization(world);
             ValidateCameraFlashlightStun(world);
             ValidatePausedMapAndLateJoin(world);
-            Debug.Log("DEAD AIR CHARACTER RULES PASSED: objective retries, role items, cooldowns, depletion, restart, cancellation, restrictions, inventory, network serialization, camera illumination, paused maps and late joins.");
+            Debug.Log("DEAD AIR CHARACTER RULES PASSED: objective retries, role items, cooldowns, depletion, restart, cancellation, restrictions, inventory, network serialization, blind enemy ignores camera/light, explicit timed engineer defence, paused maps and late joins.");
         }
 
         static DeadAirRules Started(WorldData world, string role)
@@ -267,13 +267,12 @@ namespace DeadAir.Editor
             Require(actor.camera && !actor.flashlight && !rules.State.enemy.stunned, "A dark camera must not stun the enemy.");
             AimEnemyAt(rules, actor);
             CameraMove(rules, actor, true, true);
-            var before = new Vector2(rules.State.enemy.x, rules.State.enemy.z);
             rules.Tick(.1f);
-            Require(rules.State.enemy.stunned && before == new Vector2(rules.State.enemy.x, rules.State.enemy.z),
-                "An illuminated camera aimed at a nearby enemy must stop its movement.");
+            Require(!rules.State.enemy.stunned&&rules.State.enemy.heardUntil==0,
+                "A blind enemy must neither see the camera beam nor gain a target from stationary equipment packets.");
             CameraMove(rules, actor, false, true);
             rules.Tick(.1f);
-            Require(!rules.State.enemy.stunned, "Switching the flashlight off must release the camera stun.");
+            Require(!rules.State.enemy.stunned, "Light toggles must not stun a blind enemy.");
             AimEnemyAt(rules, actor);
             CameraMove(rules, actor, true, true, Mathf.PI);
             rules.Tick(.1f);
@@ -285,12 +284,24 @@ namespace DeadAir.Editor
             AimEnemyAt(rules, actor);
             CameraMove(rules, actor, true, true);
             rules.Tick(.1f);
-            Require(rules.State.enemy.stunned, "Stun setup before dropping the flashlight failed.");
+            Require(!rules.State.enemy.stunned, "A blind enemy must ignore a nearby camera and light.");
             Require(rules.Drop(actor.id, "flashlight") == null && !actor.flashlight, "Dropping the flashlight must turn it off.");
             CameraMove(rules, actor, true, true);
             rules.Tick(.1f);
             Require(actor.camera && !actor.flashlight && !rules.State.enemy.stunned,
                 "A client cannot relight a lost flashlight or stun with an unlit camera.");
+
+            var engineer=Started(world,"engineer");
+            var defender=engineer.State.Player("host");defender.invulnerableUntil=9999;
+            AimEnemyAt(engineer,defender,1.5f);
+            engineer.EquipUnique(defender.id,true);
+            Require(engineer.UseUnique(defender.id)==null,"Engineer defence action should be accepted.");
+            var before=new Vector2(engineer.State.enemy.x,engineer.State.enemy.z);
+            engineer.Tick(.1f);
+            Require(engineer.State.enemy.stunned&&before==new Vector2(engineer.State.enemy.x,engineer.State.enemy.z),
+                "An explicit close-range engineer action must apply a timed stun.");
+            for(int tick=0;tick<30;tick++)engineer.Tick(.1f);
+            Require(!engineer.State.enemy.stunned,"An engineer stun must expire without camera/light toggles.");
         }
 
         static void ValidatePausedMapAndLateJoin(WorldData world)

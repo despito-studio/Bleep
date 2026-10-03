@@ -201,6 +201,7 @@ namespace DeadAir.Editor
             float furthestSide=0;
             for(int tick=0;tick<320;tick++)
             {
+                if(tick%60==0)rules.Radio(target.id,0);
                 rules.Tick(.1f);furthestSide=Mathf.Max(furthestSide,Mathf.Abs(enemy.x));
                 Require(!(Mathf.Abs(enemy.x)<5.7f&&enemy.z>-23.7f&&enemy.z<-11.3f),
                     "The enemy crossed the central room's walls instead of following its branch.");

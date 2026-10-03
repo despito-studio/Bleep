@@ -4,11 +4,11 @@ _Color("Color",Color)=(1,1,1,1) _MainTex("Canvas texture",2D)="white"{}
 _Glossiness("Smoothness",Range(0,1))=0.06 _Metallic("Metallic",Range(0,1))=0
 _EmissionColor("Emission",Color)=(0,0,0,0) _EmissionMap("Emission map",2D)="white"{}
 _Cutoff("Alpha cutoff",Range(0,1))=0 _Cull("Cull",Float)=2
-_SrcBlend("Source blend",Float)=1 _DstBlend("Destination blend",Float)=0 _ZWrite("Depth write",Float)=1
+_SrcBlend("Source blend",Float)=1 _DstBlend("Destination blend",Float)=0 _ZWrite("Depth write",Float)=1 _ZTest("Depth test",Float)=4
 }
 SubShader {
 Tags {"RenderType"="Opaque"} LOD 150
-Cull [_Cull] Blend [_SrcBlend] [_DstBlend] ZWrite [_ZWrite]
+Cull [_Cull] Blend [_SrcBlend] [_DstBlend] ZWrite [_ZWrite] ZTest [_ZTest]
 CGPROGRAM
 #pragma surface surf BlinnPhong keepalpha fullforwardshadows addshadow
 #pragma multi_compile_instancing

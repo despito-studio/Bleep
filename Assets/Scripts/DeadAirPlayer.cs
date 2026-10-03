@@ -45,7 +45,7 @@ namespace DeadAir
         {
             world = data; session = game; ui = gameUI;
             foreach(var argument in Environment.GetCommandLineArgs())
-                if(argument=="-deadAirCapture"||argument=="-deadAirOfficeCapture"||argument=="-deadAirMenuCapture"||argument=="-deadAirRepairCapture"||argument=="-deadAirLightingCapture"||argument=="-deadAirMovementVerification")verificationAllowed=true;
+                if(argument=="-deadAirCapture"||argument=="-deadAirOfficeCapture"||argument=="-deadAirMenuCapture"||argument=="-deadAirRepairCapture"||argument=="-deadAirLightingCapture"||argument=="-deadAirHorrorCapture"||argument=="-deadAirMovementVerification")verificationAllowed=true;
             controller = gameObject.AddComponent<CharacterController>();
             controller.height = 1.7f; controller.radius = .22f; controller.center = new Vector3(0, .85f, 0);
             controller.stepOffset = .28f; controller.slopeLimit = 48; controller.skinWidth = .035f;

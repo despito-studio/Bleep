@@ -1,0 +1,16 @@
+lamp:van-headlamp-right enabled=True active=True range=18 intensity=3,6 origin=(10.815, 1.000, 23.470) forward=(0.032, -0.425, -0.905) road=(10.889, 0.010, 21.364)
+  travel 2,35 angle=0,2017412 sample=(10.889, 0.010, 21.344)
+  hit=Front yard distance=2,370 point=(10.890, 0.000, 21.323) normal=(0.000, 1.000, 0.000)
+  travel 5 angle=12,82071 sample=(10.973, 0.010, 18.947)
+  hit=Front yard distance=4,679 point=(10.975, 0.000, 18.901) normal=(0.000, 1.000, 0.000)
+  nearby=headlamp-lens:right closest=(10.815, 1.000, 23.470)
+lamp:van-headlamp-left enabled=True active=True range=18 intensity=3,6 origin=(9.185, 1.000, 23.470) forward=(-0.032, -0.425, -0.905) road=(9.111, 0.010, 21.364)
+  travel 2,35 angle=0,2017412 sample=(9.111, 0.010, 21.344)
+  hit=Front yard distance=2,370 point=(9.110, 0.000, 21.323) normal=(0.000, 1.000, 0.000)
+  travel 5 angle=12,82071 sample=(9.027, 0.010, 18.947)
+  hit=Front yard distance=4,679 point=(9.025, 0.000, 18.901) normal=(0.000, 1.000, 0.000)
+  nearby=headlamp-lens:left closest=(9.185, 1.000, 23.470)
+Ground renderer=Batched surfaces / asphalt enabled=True active=True receiveShadows=True material=asphalt / lit shader=Dead Air/Source Surface
+Ground renderer=Batched surfaces / grass enabled=True active=True receiveShadows=True material=grass / lit shader=Dead Air/Source Surface
+Ground renderer=Batched surfaces / surface_697 enabled=True active=True receiveShadows=True material=surface_697 / lit shader=Dead Air/Source Surface
+Ground renderer=Distant night sky enabled=True active=True receiveShadows=False material=Cold night / distant moon shader=Dead Air/Night Sky

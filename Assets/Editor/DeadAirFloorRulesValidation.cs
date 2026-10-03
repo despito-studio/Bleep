@@ -148,15 +148,52 @@ namespace DeadAir.Editor
             actor.camera = actor.flashlight = false;
             actor.invulnerableUntil = 9999;
             rules.State.enemy.x = 0; rules.State.enemy.y = 0; rules.State.enemy.z = -34;
-            for (int tick = 0; tick < 320; tick++) rules.Tick(.1f);
+            for (int tick = 0; tick < 320; tick++) { if(tick%60==0)rules.Radio(actor.id,0); rules.Tick(.1f); }
             Require(Mathf.Abs(rules.State.enemy.y - 4.2f) < .25f &&
                 Vector2.Distance(new Vector2(actor.x, actor.z), new Vector2(rules.State.enemy.x, rules.State.enemy.z)) < 2.5f,
-                "An enemy must complete the stair flight and reach the upper corridor over repeated simulation ticks.");
-            actor.y = 0;
-            for (int tick = 0; tick < 320; tick++) rules.Tick(.1f);
+                "A blind enemy must follow repeated radio sounds up the stair flight to the upper corridor.");
+            // The lower corridor is separated from the upper stair entrance by a
+            // long detour. A fixed radio downstairs legitimately falls outside the
+            // attenuated hearing radius midway down. Lead the enemy with actual
+            // audible calls from supported floor/step positions instead of relying
+            // on the old omniscient live-player target to complete that detour.
+            var stair = world.stairs[0];
+            float centerX = (stair.minX + stair.maxX) * .5f;
+            LureTo(rules, actor, new Vector3(centerX, stair.upperY, stair.maxZ + 2), "upper stair approach");
+            LureTo(rules, actor, new Vector3(centerX, stair.upperY, stair.minZ - 1), "upper landing");
+            float middleZ = (stair.minZ + stair.maxZ) * .5f;
+            LureTo(rules, actor, new Vector3(centerX, stair.HeightAt(middleZ), middleZ), "middle stair tread");
+            Require(rules.State.enemy.y > stair.lowerY + .5f && rules.State.enemy.y < stair.upperY - .5f,
+                "The descending enemy must occupy the actual stair flight between the two floors.");
+            LureTo(rules, actor, new Vector3(centerX, stair.lowerY, stair.maxZ + 1), "lower landing");
+            LureTo(rules, actor, new Vector3(0, 0, -28), "lower corridor");
             Require(Mathf.Abs(rules.State.enemy.y) < .25f &&
                 Vector2.Distance(new Vector2(actor.x, actor.z), new Vector2(rules.State.enemy.x, rules.State.enemy.z)) < 2.5f,
-                "An enemy must find the upper landing by the side passage and descend to the lower corridor.");
+                "A blind enemy must follow repeated radio sounds via the upper landing and descend to the lower corridor.");
+        }
+
+        static void LureTo(DeadAirRules rules, PlayerState actor, Vector3 sound, string stage)
+        {
+            actor.x = sound.x; actor.y = sound.y; actor.z = sound.z;
+            var enemy = rules.State.enemy;
+            for (int tick = 0; tick < 320; tick++)
+            {
+                if (tick % 10 == 0)
+                {
+                    rules.Radio(actor.id, 0);
+                    Require(enemy.heardUntil > rules.State.elapsed &&
+                        Vector3.Distance(new Vector3(enemy.heardX, enemy.heardY, enemy.heardZ), sound) < .01f,
+                        "The radio lure must be genuinely audible at " + stage + "; enemy=" +
+                        new Vector3(enemy.x, enemy.y, enemy.z) + ", sound=" + sound + ".");
+                }
+                float previousY = enemy.y;
+                rules.Tick(.1f);
+                Require(Mathf.Abs(enemy.y - previousY) <= .4f,
+                    "The enemy must traverse the stair surface without skipping a floor at " + stage + ".");
+                if (Vector3.Distance(new Vector3(enemy.x, enemy.y, enemy.z), sound) < .8f) return;
+            }
+            Require(false, "The audible stair lure was not reached at " + stage + "; enemy=" +
+                new Vector3(enemy.x, enemy.y, enemy.z) + ", sound=" + sound + ".");
         }
     }
 }

@@ -20,7 +20,7 @@ namespace DeadAir
         RenderTexture captureFrame;
         DeadAirFrameRenderer frameRenderer;
         DeadAirWorld captureWorld;
-        bool officeCapture, menuCapture, repairCapture, lightingCapture, captureWithoutEquipment;
+        bool officeCapture, menuCapture, repairCapture, lightingCapture, horrorCapture, captureWithoutEquipment;
         bool preferencesCaptured, hadPlayerName, hadChapter;
         string originalPlayerName, originalChapter;
         readonly Dictionary<string,float> originalSliders = new Dictionary<string,float>();
@@ -33,12 +33,12 @@ namespace DeadAir
             ui = FindFirstObjectByType<DeadAirUI>();
             var args = Environment.GetCommandLineArgs();
             for (int i = 0; i + 1 < args.Length; i++)
-                if (args[i] == "-deadAirCapture" || args[i] == "-deadAirOfficeCapture" || args[i] == "-deadAirMenuCapture" || args[i] == "-deadAirRepairCapture" || args[i] == "-deadAirLightingCapture")
-                { output = args[i + 1];officeCapture=args[i]=="-deadAirOfficeCapture";menuCapture=args[i]=="-deadAirMenuCapture";repairCapture=args[i]=="-deadAirRepairCapture";lightingCapture=args[i]=="-deadAirLightingCapture"; }
+                if (args[i] == "-deadAirCapture" || args[i] == "-deadAirOfficeCapture" || args[i] == "-deadAirMenuCapture" || args[i] == "-deadAirRepairCapture" || args[i] == "-deadAirLightingCapture" || args[i] == "-deadAirHorrorCapture")
+                { output = args[i + 1];officeCapture=args[i]=="-deadAirOfficeCapture";menuCapture=args[i]=="-deadAirMenuCapture";repairCapture=args[i]=="-deadAirRepairCapture";lightingCapture=args[i]=="-deadAirLightingCapture";horrorCapture=args[i]=="-deadAirHorrorCapture"; }
             if (string.IsNullOrEmpty(output)) { enabled = false; return; }
             if (!Path.IsPathRooted(output)) throw new ArgumentException("-deadAirCapture requires an absolute output folder.");
             Directory.CreateDirectory(output);
-            if(menuCapture||repairCapture||lightingCapture)
+            if(menuCapture||repairCapture||lightingCapture||horrorCapture)
             {
                 hadPlayerName=PlayerPrefs.HasKey("DeadAir.PlayerName");originalPlayerName=PlayerPrefs.GetString("DeadAir.PlayerName");
                 hadChapter=PlayerPrefs.HasKey("DeadAir.Chapter");originalChapter=PlayerPrefs.GetString("DeadAir.Chapter");
@@ -49,7 +49,138 @@ namespace DeadAir
                 preferencesCaptured=true;
             }
             if(Application.isBatchMode)InitializeOffscreenCapture();
-            StartCoroutine(lightingCapture?CaptureLighting():repairCapture?CaptureRepairs():menuCapture?CaptureMenu():officeCapture?CaptureOffice():Capture());
+            StartCoroutine(horrorCapture?CaptureHorror():lightingCapture?CaptureLighting():repairCapture?CaptureRepairs():menuCapture?CaptureMenu():officeCapture?CaptureOffice():Capture());
+        }
+
+        DeadAirRules CaptureRules()
+        {
+            Require(horrorCapture, "Horror controls require the explicit capture argument.");
+            return (DeadAirRules)typeof(DeadAirSession).GetField("rules", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).GetValue(session);
+        }
+
+        IEnumerator CaptureHorror()
+        {
+            QualitySettings.vSyncCount = 0; Application.targetFrameRate = 30;
+            yield return new WaitForSecondsRealtime(1.5f);
+            ui.ReturnToMenu();
+            session.Host("Horror verifier", "engineer", true, true);
+            session.Command(new NetPacket { type = "start" });
+            yield return Until(() => session.State?.phase == "playing", "Horror chapter start");
+            var data = WorldData.Load(); var checks = new List<string>();
+            DeadAirSettings.Grain = false; DeadAirSettings.Flicker = false;
+            InspectToward(0, -9, 0, -15, 1.2f, -9); player.SetVerificationFlashlight(false);
+            yield return Save("horror-01-dressed-cross-hall");
+            var web = Array.Find(FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None), t => t.name == "Cobweb:wall:0");
+            Require(web != null, "The actual reception corner web is missing.");
+            Vector3 webView = web.TransformPoint(new Vector3(.35f, 0, -2.5f));
+            Vector3 webTarget = web.TransformPoint(new Vector3(.3f, -.3f, 0));
+            InspectToward(-webView.x, webView.z, 0, -webTarget.x, webTarget.y, webTarget.z);
+            yield return Save("horror-02-anchored-web");
+            InspectToward(-22, 18, 0, -32, 1.5f, 43); player.SetVerificationFlashlight(false);
+            yield return Save("horror-03-beyond-front-fence");
+            InspectToward(23, -68, 0, 42, 2, -90); player.SetVerificationFlashlight(false);
+            yield return Save("horror-04-beyond-rear-fence");
+            var beams = FindObjectsByType<Light>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var headlamps = Array.FindAll(beams, b => b.name.StartsWith("lamp:van-headlamp-"));
+            Require(headlamps.Length == 2, "Both van lenses need actual light emitters.");
+            Vector3 direction = (headlamps[0].transform.forward + headlamps[1].transform.forward).normalized;
+            Require(Array.TrueForAll(headlamps, lamp => lamp.enabled && lamp.gameObject.activeInHierarchy && lamp.transform.forward.y < -.1f),
+                "The actual van beams must be enabled and point down towards the road.");
+            Vector3 road = Vector3.zero;
+            foreach (var lamp in headlamps)
+                road += lamp.transform.position + lamp.transform.forward * ((lamp.transform.position.y - .025f) / -lamp.transform.forward.y);
+            road *= .5f;
+            direction.y = 0; direction.Normalize();
+            Vector3 eye = road + Vector3.Cross(Vector3.up, direction).normalized * 3 - direction * 4;
+            InspectToward(-eye.x, eye.z, 0, -road.x, .1f, road.z); player.SetVerificationFlashlight(false);
+            yield return Save("horror-05-two-headlamp-road-pools");
+            var roadSample = new Rect(.28f, .27f, .44f, .33f);
+            float roadLit = DisplayLuminance(roadSample);
+            foreach (var lamp in headlamps) lamp.gameObject.SetActive(false);
+            yield return Save("horror-05b-same-road-headlamps-disabled");
+            float roadDark = DisplayLuminance(roadSample);
+            foreach (var lamp in headlamps) lamp.gameObject.SetActive(true);
+            Require(roadLit > roadDark + .01f, "The real van beams do not illuminate their road surfaces: lit=" + roadLit + ", disabled=" + roadDark + ".");
+            checks.Add("PASSED: GPU office dressing and continuous front/rear scenery frames; lens-mounted road beams, flashlight OFF; lit=" + roadLit.ToString("F4", System.Globalization.CultureInfo.InvariantCulture) + ", disabled=" + roadDark.ToString("F4", System.Globalization.CultureInfo.InvariantCulture) + " display luminance.");
+
+            var locker = data.lockers[0]; var rules = CaptureRules();
+            session.State.creative = false; session.State.spawnCountdown = 9999;
+            session.State.Player(session.LocalId).invulnerableUntil = 9999;
+            Require(rules.ConfigureLockerRollForVerification(0), "Deterministic locker verification hook rejected explicit capture.");
+            player.SetInspectionPose(locker.exitX, locker.exitZ, locker.FacingYaw + Mathf.PI, 0, false, locker.ExitFloorY);
+            player.EndInspection(); yield return null;
+            var me = session.State.Player(session.LocalId); me.sanity = 80;
+            session.Command(new NetPacket { type = "interact", id = locker.id });
+            Require(me.hiding == locker.id && Mathf.Abs(me.sanity - 40) < .01f && !me.down, "A spider must halve current sanity and keep the locker functional.");
+            yield return new WaitForSecondsRealtime(.15f);
+            var scare = FindFirstObjectByType<DeadAirScarePresentation>();
+            Require(scare.SpiderActive, "The actual locker event did not present its spider.");
+            yield return Save("horror-06-locker-spider", false);
+            yield return new WaitForSecondsRealtime(1.3f);
+            Require(!scare.SpiderActive && me.hiding == locker.id, "Spider animation must end while normal hiding remains active.");
+            yield return Save("horror-07-normal-hidden-grille");
+            int serial = me.spiderScareSerial;
+            session.Command(new NetPacket { type = "interact", id = "exit-locker" });
+            yield return new WaitForSecondsRealtime(1.3f);
+            session.Command(new NetPacket { type = "interact", id = locker.id });
+            Require(me.hiding == locker.id && me.spiderScareSerial == serial, "Re-entering one locker must not farm another spider penalty.");
+            session.Command(new NetPacket { type = "interact", id = "exit-locker" });
+            yield return new WaitForSecondsRealtime(1.3f);
+            checks.Add("PASSED: real successful locker interaction loses half CURRENT sanity, visible eight-leg spider, normal grille view/hiding/exit and protected re-entry.");
+
+            foreach (string id in new[] { "door-reception", "door-security" })
+            {
+                var door = data.Door(id); if (door == null || session.State.Door(id).locked) continue;
+                InspectToward(door.x - Mathf.Cos(door.rotation) * 1.2f, door.z + Mathf.Sin(door.rotation) * 1.2f, door.y - 1.4f, door.x, door.y, door.z);
+                if (!session.State.Door(id).open) session.Command(new NetPacket { type = "interact", id = id });
+            }
+            yield return new WaitForSecondsRealtime(.75f);
+            player.SetInspectionPose(0, 4, 0, 0);
+            Require(rules.TryStartPeekForVerification(session.LocalId), "No actual partial-cover lobby peek could be placed.");
+            var enemy = session.State.enemy;
+            InspectToward(0, 4, 0, enemy.x, enemy.y + 2.5f, enemy.z); player.SetVerificationFlashlight(true);
+            yield return Save("horror-08-corner-peek");
+            float ex = enemy.x, ez = enemy.z;
+            Vector2 approach = new Vector2(-ex, 4 - ez).normalized;
+            InspectToward(ex + approach.x * 2.6f, ez + approach.y * 2.6f, enemy.y, ex, enemy.y + 2.5f, ez);
+            yield return Until(() => enemy.behaviour == "vanished", "Approaching the corner makes the encounter vanish");
+            yield return Save("horror-09-approached-empty-corner");
+            checks.Add("PASSED: actual office partial-cover peek, articulated lean and disappearance on approach.");
+            enemy.active = false;
+            session.State.creative = false; session.State.spawnCountdown = 9999;
+            InspectToward(0, -9, 0, -15, 1.4f, -9);
+            me.sanity = 35; session.State.scare++;
+            yield return new WaitForSecondsRealtime(.06f);
+            Require(scare.SignalActive, "The paced signal event did not present its visual scare.");
+            yield return Save("horror-10-signal-apparition", false);
+            yield return new WaitForSecondsRealtime(.5f);
+            Require(!scare.SignalActive, "A signal scare must release the camera view.");
+            checks.Add("PASSED: paced transient blind monster apparition releases the view without input changes.");
+
+            session.Host("Horror host", "engineer", false, false);
+            var guestObject = new GameObject("Horror loopback guest");
+            var guest = guestObject.AddComponent<DeadAirSession>(); guest.Initialize(data);
+            guest.Join("127.0.0.1", session.State.code, "Horror guest", "operator");
+            yield return Until(() => guest.State != null && !string.IsNullOrEmpty(guest.LocalId) && session.State.players.Count == 2, "Horror LAN join");
+            session.Command(new NetPacket { type = "start" });
+            yield return Until(() => guest.State?.phase == "playing", "Horror LAN chapter start");
+            session.State.spawnCountdown = 9999;
+            rules = CaptureRules(); Require(rules.ConfigureLockerRollForVerification(0), "Host chance hook missing.");
+            var remote = session.State.Player(guest.LocalId);
+            remote.x = locker.exitX; remote.y = locker.ExitFloorY; remote.z = locker.exitZ; remote.sanity = 80;
+            guest.Command(new NetPacket { type = "interact", id = locker.id });
+            yield return Until(() => guest.State.Player(guest.LocalId).hiding == locker.id, "Guest authoritative locker entry");
+            var received = guest.State.Player(guest.LocalId);
+            Require(Mathf.Abs(received.sanity - 40) < .5f && received.spiderScareSerial == 1 && !received.down,
+                "Guest snapshot must receive the host's single spider penalty and event.");
+            Require(session.State.Player(session.LocalId).spiderScareSerial == 0, "Guest spider event leaked to the host player.");
+            guest.Command(new NetPacket { type = "interact", id = "exit-locker" });
+            yield return Until(() => string.IsNullOrEmpty(guest.State.Player(guest.LocalId).hiding), "Guest normal locker exit");
+            guest.Leave(); Destroy(guestObject); session.Leave(); ui.ReturnToMenu();
+            checks.Add("PASSED: actual loopback guest locker interaction is host-authoritative; half sanity/event reaches only its target; normal guest exit.");
+            File.WriteAllLines(Path.Combine(output, "horror-runtime-report.txt"), checks);
+            Debug.Log("DEAD AIR HORROR RUNTIME PASSED: practical headlights, scene dressing, real locker spider, cover peek/vanish, transient scares and LAN authority.");
+            Application.Quit(0);
         }
 
         IEnumerator CaptureLighting()

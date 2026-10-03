@@ -22,10 +22,10 @@ namespace DeadAir
         readonly List<Renderer> monitors = new List<Renderer>();
         readonly List<Practical> lamps = new List<Practical>();
         readonly GameObject anchor, bloodyAnchor;
+        readonly DeadAirMonsterMotion anchorMotion, bloodyAnchorMotion;
         readonly Dictionary<string, GameObject> droppedViews = new Dictionary<string, GameObject>();
         readonly HashSet<string> activeDropped = new HashSet<string>();
         readonly List<string> droppedToRemove = new List<string>();
-        Vector3 lastEnemyPosition;
         bool lastPower, lastBroadcast;
         readonly DeadAirSky sky;
         readonly DeadAirCulling culling;
@@ -63,6 +63,7 @@ namespace DeadAir
             QualitySettings.shadowResolution = ShadowResolution.Medium;
             if(root.Find("station")==null) Instantiate("station").name="station";
             if(root.Find("exterior")==null) Instantiate("exterior").name="exterior";
+            DiscardOriginalVanBeams(root.Find("exterior"));
             CalibratePhysicalMaterials(root.Find("station"));
             CalibratePhysicalMaterials(root.Find("exterior"));
             CalibrateExteriorLighting(root.Find("exterior"));
@@ -103,6 +104,9 @@ namespace DeadAir
             sky = new DeadAirSky(root);
             culling = new DeadAirCulling(data,root.Find("station"),root.Find("exterior"),dynamicRoots,doorAnimations);
             anchor=Instantiate("monster");bloodyAnchor=Instantiate("monster_bloody");
+            anchorMotion=anchor.AddComponent<DeadAirMonsterMotion>();
+            bloodyAnchorMotion=bloodyAnchor.AddComponent<DeadAirMonsterMotion>();
+            anchorMotion.Initialize();bloodyAnchorMotion.Initialize();
             anchor.SetActive(false);bloodyAnchor.SetActive(false);
         }
 
@@ -155,15 +159,14 @@ namespace DeadAir
 
         static void CalibrateExteriorLighting(Transform exterior)
         {
-            // The source's broad yard and van lamps use distance^1.5 attenuation.
-            // Unity's built-in falloff retains much more light across their ranges;
-            // keep these two lamps local and leave the interior practicals unchanged.
+            if(exterior==null)return;
             foreach(var light in exterior.GetComponentsInChildren<Light>(true))
             {
                 if(light.type==LightType.Spot && light.range>25)
                 {
-                    light.intensity=100f*.045f*.55f;
-                    light.renderMode = LightRenderMode.Auto;
+                    // An older export used one broad spotlight between both lenses.
+                    // The pair below replaces it with emitters on the actual glass.
+                    light.enabled=false;
                 }
                 else if(light.type==LightType.Point && light.range>25)
                 {
@@ -171,6 +174,60 @@ namespace DeadAir
                     light.renderMode = LightRenderMode.Auto;
                 }
             }
+            foreach(var transform in exterior.GetComponentsInChildren<Transform>(true))
+            {
+                if(!transform.name.StartsWith("prop:van-") && transform.name!="van" &&
+                    !transform.name.StartsWith("Broadcast service van"))continue;
+                InstallVanHeadlamps(transform);
+            }
+        }
+
+        static void DiscardOriginalVanBeams(Transform exterior)
+        {
+            if(exterior==null)return;
+            foreach(var renderer in exterior.GetComponentsInChildren<Renderer>(true))
+                foreach(var material in renderer.sharedMaterials)
+                    if(material!=null && material.name.Split(' ')[0]=="surface_697")
+                    {
+                        // Compatibility for a saved scene built before the old
+                        // translucent browser cones were removed from the prefab.
+                        renderer.gameObject.SetActive(false);break;
+                    }
+        }
+
+        public static void InstallVanHeadlamps(Transform van)
+        {
+            int count=0;
+            foreach(var lens in van.GetComponentsInChildren<Renderer>(true))
+            {
+                bool headlamp=false;
+                foreach(var material in lens.sharedMaterials)
+                    if(material!=null && material.name=="surface_677"){headlamp=true;break;}
+                if(!headlamp)continue;
+                var local=van.InverseTransformPoint(lens.bounds.center);
+                float side=Mathf.Sign(local.x);
+                string name=side<0?"lamp:van-headlamp-left":"lamp:van-headlamp-right";
+                var emitter=van.Find(name);
+                if(emitter==null){emitter=new GameObject(name).transform;emitter.SetParent(van,false);}
+                // Start ahead of the outer glass, so the housing cannot shadow its
+                // own beam. The upper edge stays below the horizon.
+                emitter.localPosition=new Vector3(local.x,local.y,local.z-.065f);
+                emitter.localRotation=Quaternion.LookRotation(new Vector3(side*.035f,-.47f,-1));
+                var light=emitter.GetComponent<Light>();
+                if(light==null)light=emitter.gameObject.AddComponent<Light>();
+                light.type=LightType.Spot;light.range=18;light.intensity=3.6f;
+                light.spotAngle=36;light.innerSpotAngle=23;
+                light.color=new Color(1,.87f,.66f);
+                light.renderMode=LightRenderMode.ForcePixel;
+                light.shadows=LightShadows.Hard;light.shadowCustomResolution=512;
+                light.shadowBias=.012f;light.shadowNormalBias=.025f;light.shadowNearPlane=.06f;
+                var block=new MaterialPropertyBlock();lens.GetPropertyBlock(block);
+                block.SetColor("_EmissionColor",new Color(.62f,.48f,.28f));
+                block.SetColor("_Color",new Color(.76f,.68f,.5f));
+                lens.SetPropertyBlock(block);
+                count++;
+            }
+            if(count!=2)Debug.LogWarning("Expected two physical service-van headlamp lenses; found "+count+".");
         }
 
         GameObject Instantiate(string id)
@@ -233,16 +290,13 @@ namespace DeadAir
                 foreach(var monitor in monitors)SetTint(monitor,state.power?Color.white:new Color(.39f,.47f,.41f));
                 lastPower=state.power;lastBroadcast=state.broadcast;
             }
-            anchor.SetActive(state.enemy.active&&!state.broadcast);
-            bloodyAnchor.SetActive(state.enemy.active&&state.broadcast);
-            if(state.enemy.active)
+            bool enemyVisible=state.enemy.active&&state.enemy.behaviour!="vanished";
+            anchor.SetActive(enemyVisible&&!state.broadcast);
+            bloodyAnchor.SetActive(enemyVisible&&state.broadcast);
+            if(enemyVisible)
             {
-                var monster=state.broadcast?bloodyAnchor:anchor;
-                var position=new Vector3(-state.enemy.x,state.enemy.y,state.enemy.z);
-                var direction=position-lastEnemyPosition;
-                if(direction.sqrMagnitude>.0001f)monster.transform.rotation=Quaternion.LookRotation(direction);
-                monster.transform.position=position;
-                lastEnemyPosition=position;
+                var motion=state.broadcast?bloodyAnchorMotion:anchorMotion;
+                motion.Present(state.enemy,state.elapsed,state.paused);
             }
             ApplyDropped(state);
             var cam=renderCamera!=null?renderCamera:Camera.main;

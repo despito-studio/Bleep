@@ -120,6 +120,8 @@ namespace DeadAir
         public bool flashlight = true, camera, sprinting, down, mapOpen, uniqueItemEquipped;
         public bool uniqueActionCancelled = true;
         public int uniqueActionSequence, cigarettesRemaining;
+        // Host-authored event counters survive skipped snapshots without repeating a scare.
+        public int spiderScareSerial, spiderScareAt;
         public float uniqueActionAt = -100;
         public List<string> inventory = new List<string>();
         public int selectedSlot;
@@ -137,11 +139,16 @@ namespace DeadAir
     {
         public string id, requiredKey;
         public bool locked, open;
+        public float openedAt = -100;
     }
     [Serializable] public class EnemyState
     {
         public float x, y, z, stunnedUntil, radioUntil, radioX, radioY, radioZ;
         public bool active, stunned, bloody;
+        public string behaviour = "patrol", watchingPlayerId, doorId;
+        public float yaw, peekLean;
+        public float heardX, heardY, heardZ, heardUntil;
+        public int encounterSerial, encounterAt;
     }
     [Serializable] public class QuestState
     {

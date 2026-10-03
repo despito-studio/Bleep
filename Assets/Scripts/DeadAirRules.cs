@@ -19,6 +19,14 @@ namespace DeadAir
         int enemyRouteCursor;
         Vector3 routeTarget;
         float nextRouteAttempt;
+        readonly System.Collections.Generic.HashSet<string> inspectedLockers = new System.Collections.Generic.HashSet<string>();
+        readonly System.Collections.Generic.Dictionary<string, float> spiderCooldowns = new System.Collections.Generic.Dictionary<string, float>();
+        float nextPeek = 35, encounterEnds, verificationLockerRoll = -1;
+        Vector3 encounterReturnPosition;
+        Vector3 patrolDestination;
+        float nextPatrol;
+        readonly System.Collections.Generic.Dictionary<string,float> footstepsAt = new System.Collections.Generic.Dictionary<string,float>();
+        const float DoorPassageDelay = .6f, SpiderChance = .25f, SpiderCooldown = 45;
         public bool Dirty { get; private set; }
 
         public DeadAirRules(WorldData world, string hostId, string name, string classId, bool solo, bool creative,
@@ -71,6 +79,9 @@ namespace DeadAir
         {
             State.players.RemoveAll(p => p.id == id);
             movementBudgets.Remove(id);
+            inspectedLockers.RemoveWhere(key => key.StartsWith(id + "\0", StringComparison.Ordinal));
+            spiderCooldowns.Remove(id);
+            footstepsAt.Remove(id);
             if (State.hostId == id && State.players.Count > 0) State.hostId = State.players[0].id;
             CheckDefeat();
             Dirty = true;
@@ -142,6 +153,11 @@ namespace DeadAir
             player.uniqueActionAt = State.elapsed;
             player.uniqueActionSequence++;
             player.uniqueActionCancelled = false;
+            if(!cigarettes)HearNoise(player.x,player.y,player.z,player.characterClass=="journalist"?10:6,5);
+            if(player.characterClass=="engineer"&&State.enemy.active&&State.enemy.behaviour!="vanished"&&
+                SameFloor(player.y,State.enemy.y)&&Dist(player.x,player.z,State.enemy.x,State.enemy.z)<2.2f&&
+                !SegmentBlocked(player.x,player.y,player.z,State.enemy.x,State.enemy.y,State.enemy.z))
+                State.enemy.stunnedUntil=State.elapsed+1.75f*world.GetClass(player.characterClass).bonuses.stunBonus;
             Dirty = true;
             return null;
         }
@@ -193,7 +209,8 @@ namespace DeadAir
             State.quest = new QuestState();
             State.enemy = new EnemyState { x = 0, y = 0, z = -34 };
             enemyRoute.Clear();enemyRouteCursor=0;nextRouteAttempt=0;
-            foreach (var door in State.doors) { door.open = false; door.locked = !string.IsNullOrEmpty(door.requiredKey); }
+            inspectedLockers.Clear();spiderCooldowns.Clear();footstepsAt.Clear();nextPeek=35;encounterEnds=0;nextPatrol=0;
+            foreach (var door in State.doors) { door.open = false; door.openedAt=-100; door.locked = !string.IsNullOrEmpty(door.requiredKey); }
             State.elapsed = 0;
             State.scare = 0;
             State.radioSequence = 0;
@@ -218,6 +235,7 @@ namespace DeadAir
                 p.invulnerableUntil = 8;
                 ResetRoleItem(p);
                 p.moveSequence = 0;
+                p.spiderScareSerial=p.spiderScareAt=0;
                 ResetMovementBudget(p);
             }
             nextScare = 35;
@@ -253,11 +271,20 @@ namespace DeadAir
             if (string.IsNullOrEmpty(p.hiding))
             {
                 var delta = Vector3.Distance(new Vector3(p.x, p.y, p.z), new Vector3(input.x, input.y, input.z));
+                float moveSeconds=movementBudgets.TryGetValue(id,out var lastBudget)?Mathf.Max(.04f,(float)(movementTime()-lastBudget.at)):.1f;
                 if (!MovementWithinBudget(p, delta) || !Walkable(input.x, input.y, input.z) ||
                     SegmentBlocked(p.x, p.y, p.z, input.x, input.y, input.z)) return;
                 movementBudgets[id].distance=Mathf.Max(0,movementBudgets[id].distance-delta);
                 p.x = input.x; p.y = input.y; p.z = input.z;
                 p.yaw = input.yaw; p.pitch = Mathf.Clamp(input.pitch, -1.35f, 1.35f);
+                if(delta>.025f&&(!footstepsAt.TryGetValue(id,out float footstepAt)||State.elapsed>=footstepAt))
+                {
+                    // monsterHearingRange is the operator's listening perk; using it
+                    // here would accidentally make the dispatcher louder to enemies.
+                    float radius=16*(input.sprinting ? 1.4f : delta/moveSeconds<1.3f ? .12f : .28f);
+                    HearNoise(p.x,p.y,p.z,radius,input.sprinting?8:5);
+                    footstepsAt[id]=State.elapsed+(input.sprinting ? .32f : .55f);
+                }
             }
             else
             {
@@ -429,6 +456,8 @@ namespace DeadAir
                     p.flashlight = p.camera = p.sprinting = p.mapOpen = p.uniqueItemEquipped = false;
                     p.uniqueActionCancelled = true;
                     State.message = p.name + " сховався в шафу."; Dirty = true;
+                    TryLockerSpider(p, objectId);
+                    HearNoise(locker.exitX,locker.ExitFloorY,locker.exitZ,9,5);
                 }
                 else return "Підійдіть ближче до шафи.";
                 return null;
@@ -451,6 +480,8 @@ namespace DeadAir
                     }
                 }
                 door.open = !door.open;
+                if(door.open)door.openedAt=State.elapsed;
+                HearNoise(doorData.x,doorData.y-1.4f,doorData.z,18,7);
                 State.message = doorData.label + (door.open ? ": відчинено." : ": зачинено.");
                 Dirty = true; return null;
             }
@@ -470,6 +501,7 @@ namespace DeadAir
                 if (!p.inventory.Contains(objectId)) p.inventory.Add(objectId);
                 State.scare++;
                 if (!State.creative) { State.enemy.active = true; State.spawnCountdown = Mathf.Min(3, State.spawnCountdown); }
+                HearNoise(obj.x,p.y,obj.z,50,15);
                 State.message = "КАСЕТУ ЗНАЙДЕНО (" + State.tapes.Count + "/3). Диктор чує ваші голоси.";
             }
             else if (objectId.StartsWith("fuse-"))
@@ -499,7 +531,10 @@ namespace DeadAir
                 if (!State.calibrated) return "Налаштуйте частоту 96.4 МГц.";
                 State.broadcast = State.quest.broadcast = true;
                 State.enemy.active = !State.creative; State.enemy.bloody = true;
+                State.enemy.behaviour="pursuit";State.enemy.doorId=State.enemy.watchingPlayerId=null;
+                enemyRoute.Clear();enemyRouteCursor=0;
                 State.enemy.x = 0; State.enemy.y = p.y; State.enemy.z = -22;
+                HearNoise(obj.x,p.y,obj.z,60,20);
                 p.invulnerableUntil = State.elapsed + 5;
                 State.message = "ЗАПИС У ЕФІРІ. ПОВЕРТАЙТЕСЯ ДО ФУРГОНА!";
             }
@@ -576,12 +611,12 @@ namespace DeadAir
         public void Radio(string id, int phrase)
         {
             var p = State.Player(id);
-            if (p == null || p.down || !string.IsNullOrEmpty(p.hiding)) return;
+            if (State.phase!="playing"||State.paused||p == null || p.down || !string.IsNullOrEmpty(p.hiding)) return;
             var phrases = new[] { "Я тут! До мене!", "ОБЕРЕЖНО! ДИКТОР ПОРУЧ!", "Касету знайдено!", "ПОТРІБНА ДОПОМОГА!" };
             State.radioSequence++;
             State.radioSenderId = id;
             State.message = "РАЦІЯ [" + p.name + "]: " + phrases[Mathf.Clamp(phrase, 0, 3)];
-            if (State.enemy.active && Dist(p.x, p.z, State.enemy.x, State.enemy.z) < 18)
+            if (HearNoise(p.x,p.y,p.z,32,9))
             {
                 State.enemy.radioX = p.x; State.enemy.radioY = p.y; State.enemy.radioZ = p.z; State.enemy.radioUntil = State.elapsed + 9;
                 State.scare++; State.message += " — ДИКТОР ПОЧУВ РАЦІЮ!";
@@ -593,7 +628,7 @@ namespace DeadAir
         {
             var locker = world.Locker(p.hiding);
             p.hiding = null;
-            if (locker != null) { p.x = locker.exitX; p.y = locker.ExitFloorY; p.z = locker.exitZ; p.yaw = locker.FacingYaw; p.pitch = 0; }
+            if (locker != null) { p.x = locker.exitX; p.y = locker.ExitFloorY; p.z = locker.exitZ; p.yaw = locker.FacingYaw; p.pitch = 0; HearNoise(p.x,p.y,p.z,9,5); }
             State.message = p.name + " вийшов із шафи."; Dirty = true;
         }
 
@@ -645,7 +680,7 @@ namespace DeadAir
                 if (!string.IsNullOrEmpty(p.hiding)) { p.sanity = Mathf.Min(100, p.sanity + 2.5f * dt); continue; }
                 float drain = p.flashlight ? 0 : 1.4f;
                 float d = Dist(p.x, p.z, State.enemy.x, State.enemy.z);
-                if (State.enemy.active && SameFloor(p.y, State.enemy.y)) drain += d < 5 ? 5 : d < 11 ? 2 : 0;
+                if (State.enemy.active && State.enemy.behaviour!="vanished" && SameFloor(p.y, State.enemy.y)) drain += d < 5 ? 5 : d < 11 ? 2 : 0;
                 if (p.sprinting) drain += .9f;
                 if (p.camera && State.enemy.stunned) drain += 2.5f;
                 var recover = p.flashlight && !p.sprinting ? .6f : 0;
@@ -666,10 +701,9 @@ namespace DeadAir
         void UpdateEnemy(float dt)
         {
             var enemy = State.enemy;
+            if(UpdateEncounter())return;
             bool hasLiving = false;
-            bool isStunned = false;
-            PlayerState target = null;
-            float nearestDist = float.MaxValue;
+            PlayerState encounterPlayer = null;
 
             for (int i = 0; i < State.players.Count; i++)
             {
@@ -677,54 +711,51 @@ namespace DeadAir
                 if (p.down) continue;
                 hasLiving = true;
 
-                if (!isStunned && p.flashlight && p.camera && string.IsNullOrEmpty(p.hiding))
-                {
-                    var d = Dist(p.x, p.z, enemy.x, enemy.z);
-                    if (SameFloor(p.y, enemy.y) && d <= 9 && d >= .02f)
-                    {
-                        var forward = new Vector2(-Mathf.Sin(p.yaw), -Mathf.Cos(p.yaw));
-                        var toward = new Vector2(enemy.x - p.x, enemy.z - p.z).normalized;
-                        if (Vector2.Dot(forward, toward) > .9f) isStunned = true;
-                    }
-                }
-
-                if (string.IsNullOrEmpty(p.hiding))
-                {
-                    float d = Vector3.Distance(new Vector3(p.x, p.y, p.z), new Vector3(enemy.x, enemy.y, enemy.z));
-                    if (d < nearestDist)
-                    {
-                        nearestDist = d;
-                        target = p;
-                    }
-                }
+                if(string.IsNullOrEmpty(p.hiding)&&SameFloor(p.y,enemy.y)&&encounterPlayer==null)encounterPlayer=p;
             }
 
             if (!hasLiving) { CheckDefeat(); return; }
-            enemy.stunned = isStunned;
+            enemy.stunned = State.elapsed<enemy.stunnedUntil;
             if (enemy.stunned) return;
-            if (target == null && State.elapsed >= enemy.radioUntil) return;
-
-            float targetX = State.elapsed < enemy.radioUntil ? enemy.radioX : target.x;
-            float targetY = State.elapsed < enemy.radioUntil ? enemy.radioY : target.y;
-            float targetZ = State.elapsed < enemy.radioUntil ? enemy.radioZ : target.z;
+            bool investigating=State.elapsed<enemy.heardUntil;
+            if(!State.creative&&!State.broadcast&&!investigating&&State.elapsed>=nextPeek&&encounterPlayer!=null&&TryBeginPeek(encounterPlayer,false))return;
+            Vector3 heard=new Vector3(enemy.heardX,enemy.heardY,enemy.heardZ);
+            if(investigating&&Vector3.Distance(new Vector3(enemy.x,enemy.y,enemy.z),heard)<.7f)
+            {
+                enemy.behaviour="search";enemy.doorId=null;
+                enemy.yaw+=dt*.4f;
+                AttackNearbyPlayers(.7f);
+                return;
+            }
+            if(!investigating&&(State.elapsed>=nextPatrol||Vector3.Distance(new Vector3(enemy.x,enemy.y,enemy.z),patrolDestination)<.7f))
+                SelectPatrolDestination();
+            Vector3 destinationPoint=investigating?heard:patrolDestination;
+            float targetX=destinationPoint.x,targetY=destinationPoint.y,targetZ=destinationPoint.z;
             var destination = EnemyWaypoint(enemy, targetX, targetY, targetZ);
             var current = new Vector2(enemy.x, enemy.z);
-            foreach (var doorData in world.doors)
-            {
-                var door = State.Door(doorData.id);
-                if (door != null && !door.locked && !door.open && Mathf.Abs(enemy.y + 1.4f - doorData.y) < 1 &&
-                    Dist(enemy.x, enemy.z, doorData.x, doorData.z) < 1.5f) { door.open = true; Dirty = true; }
-            }
-            var step = Vector2.MoveTowards(current, destination, (State.broadcast ? 4.15f : 2.5f) * dt);
+            if(WaitForDoor(enemy,destination))return;
+            enemy.behaviour=investigating?"investigate":"patrol";enemy.doorId=null;
+            var step = Vector2.MoveTowards(current, destination, (investigating ? (State.broadcast ? 4.15f : 2.5f) : .85f) * dt);
             float stepY = EnemyFloorHeight(step.x, step.y, enemy.y);
             if (Walkable(step.x, stepY, step.y) && !SegmentBlocked(enemy.x, enemy.y, enemy.z, step.x, stepY, step.y))
-            { enemy.x = step.x; enemy.y = stepY; enemy.z = step.y; }
+            {
+                var movement=step-current;
+                if(movement.sqrMagnitude>.00001f)enemy.yaw=Mathf.Atan2(-movement.x,movement.y);
+                enemy.x = step.x; enemy.y = stepY; enemy.z = step.y;
+            }
 
+            AttackNearbyPlayers(investigating ? 1.15f : .65f);
+        }
+
+        void AttackNearbyPlayers(float range)
+        {
+            var enemy=State.enemy;
             for (int i = 0; i < State.players.Count; i++)
             {
                 var p = State.players[i];
                 if (p.down || !string.IsNullOrEmpty(p.hiding) || State.elapsed < p.invulnerableUntil) continue;
-                if (SameFloor(p.y, enemy.y) && Dist(p.x, p.z, enemy.x, enemy.z) < 1.15f)
+                if (SameFloor(p.y, enemy.y) && Dist(p.x, p.z, enemy.x, enemy.z) < range &&
+                    !SegmentBlocked(enemy.x,enemy.y,enemy.z,p.x,p.y,p.z))
                 {
                     p.down = true; p.sanity = 0; State.scare++;
                     p.camera = p.flashlight = p.sprinting = p.mapOpen = p.uniqueItemEquipped = false;
@@ -733,6 +764,210 @@ namespace DeadAir
                 }
             }
             CheckDefeat();
+        }
+
+        // A blind enemy remembers noise positions, never an operator's live position.
+        bool HearNoise(float x,float y,float z,float radius,float memory)
+        {
+            var enemy=State.enemy;
+            if(!enemy.active||State.phase!="playing"||State.paused)return false;
+            Vector3 sound=new Vector3(x,y,z),origin=new Vector3(enemy.x,enemy.y,enemy.z);
+            if(!SameFloor(y,enemy.y))radius*=.4f;
+            if(PhysicalSegmentBlocked(new Vector3(-x,y+1.1f,z),new Vector3(-enemy.x,enemy.y+1.1f,enemy.z)))radius*=.72f;
+            if(Vector3.Distance(origin,sound)>radius)return false;
+            enemy.heardX=x;enemy.heardY=y;enemy.heardZ=z;enemy.heardUntil=State.elapsed+memory;
+            enemyRoute.Clear();enemyRouteCursor=0;nextRouteAttempt=0;
+            if(enemy.behaviour!="peek"&&enemy.behaviour!="vanished")enemy.behaviour="investigate";
+            Dirty=true;return true;
+        }
+
+        static readonly Collider[] enemyOverlaps=new Collider[48];
+        static bool EnemyPointClear(Vector3 source)
+        {
+            Vector3 position=new Vector3(-source.x,source.y,source.z);
+            int count=Physics.OverlapCapsuleNonAlloc(position+Vector3.up*.54f,position+Vector3.up*1.48f,.22f,
+                enemyOverlaps,~0,QueryTriggerInteraction.Ignore);
+            for(int index=0;index<count;index++)
+            {
+                var collider=enemyOverlaps[index];
+                if(collider is CharacterController||collider.GetComponentInParent<DeadAirPlayer>()!=null||
+                    collider.GetComponentInParent<DeadAirCharacterMotion>()!=null)continue;
+                return false;
+            }
+            return count<enemyOverlaps.Length;
+        }
+
+        void SelectPatrolDestination()
+        {
+            var enemy=State.enemy;var origin=new Vector3(enemy.x,enemy.y,enemy.z);
+            patrolDestination=origin;
+            int chosen=-1,candidates=0;
+            if(world.navigationNodes!=null)
+                for(int index=random.Next(7);index<world.navigationNodes.Length;index+=7)
+                {
+                    Vector3 node=NavigationPosition(index);
+                    float distance=(node-origin).sqrMagnitude;
+                    if(!SameFloor(node.y,enemy.y)||distance<9||distance>100||!EnemyPointClear(node))continue;
+                    if(random.Next(++candidates)==0)chosen=index;
+                }
+            if(chosen>=0)patrolDestination=NavigationPosition(chosen);
+            nextPatrol=State.elapsed+random.Next(9,16);
+            enemyRoute.Clear();enemyRouteCursor=0;nextRouteAttempt=0;
+        }
+
+        static bool EnemySightline(PlayerState actor,Vector3 source)
+        {
+            return !PhysicalSegmentBlocked(new Vector3(-actor.x,actor.y+1.4f,actor.z),
+                new Vector3(-source.x,source.y+1.35f,source.z));
+        }
+
+        bool WaitForDoor(EnemyState enemy,Vector2 destination)
+        {
+            Vector3 origin=new Vector3(enemy.x,enemy.y,enemy.z);
+            Vector3 target=new Vector3(destination.x,enemy.y,destination.y);
+            foreach(var data in world.doors)
+            {
+                if(Mathf.Abs(enemy.y+1.4f-data.y)>1||Dist(enemy.x,enemy.z,data.x,data.z)>1.7f)continue;
+                var door=State.Door(data.id);
+                if(door==null||door.locked||!CrossesDoor(origin,target,data,.28f))continue;
+                if(!door.open){door.open=true;door.openedAt=State.elapsed;Dirty=true;}
+                if(State.elapsed-door.openedAt<DoorPassageDelay)
+                {
+                    enemy.behaviour="door";enemy.doorId=door.id;
+                    var toward=new Vector2(data.x-enemy.x,data.z-enemy.z);
+                    if(toward.sqrMagnitude>.0001f)enemy.yaw=Mathf.Atan2(-toward.x,toward.y);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        static bool CrossesDoor(Vector3 a,Vector3 b,DoorData door,float clearance)
+        {
+            var normal=new Vector2(Mathf.Cos(door.rotation),-Mathf.Sin(door.rotation));
+            var tangent=new Vector2(-normal.y,normal.x);
+            var av=new Vector2(a.x-door.x,a.z-door.z);var bv=new Vector2(b.x-door.x,b.z-door.z);
+            float da=Vector2.Dot(av,normal),db=Vector2.Dot(bv,normal);
+            if(da*db>0||Mathf.Abs(da-db)<.0001f)return false;
+            return Mathf.Abs(Vector2.Dot(Vector2.Lerp(av,bv,da/(da-db)),tangent))<door.w*.5f+clearance;
+        }
+
+        void TryLockerSpider(PlayerState actor,string lockerId)
+        {
+            if(State.creative||!inspectedLockers.Add(actor.id+"\0"+lockerId)||
+                spiderCooldowns.TryGetValue(actor.id,out float until)&&State.elapsed<until)return;
+            double roll=verificationLockerRoll>=0?verificationLockerRoll:random.NextDouble();
+            if(roll>=SpiderChance)return;
+            actor.sanity=Mathf.Clamp(actor.sanity*.5f,0,100);
+            actor.spiderScareSerial++;actor.spiderScareAt=Mathf.RoundToInt(State.elapsed*1000);
+            spiderCooldowns[actor.id]=State.elapsed+SpiderCooldown;
+            Dirty=true;
+        }
+
+        static bool HorrorVerificationAllowed => Application.isEditor||
+            Environment.GetCommandLineArgs().Contains("-deadAirHorrorCapture");
+
+        // There is no network command for either verification hook.
+        public bool ConfigureLockerRollForVerification(float roll)
+        {
+            if(!HorrorVerificationAllowed||float.IsNaN(roll)||float.IsInfinity(roll))return false;
+            verificationLockerRoll=Mathf.Clamp01(roll);return true;
+        }
+
+        public bool TryStartPeekForVerification(string playerId)
+        {
+            if(!HorrorVerificationAllowed||State.phase!="playing"||State.paused)return false;
+            var actor=State.Player(playerId);
+            return actor!=null&&!actor.down&&string.IsNullOrEmpty(actor.hiding)&&TryBeginPeek(actor,true);
+        }
+
+        bool UpdateEncounter()
+        {
+            var enemy=State.enemy;
+            if(enemy.behaviour=="peek")
+            {
+                bool approached=State.players.Any(actor=>!actor.down&&string.IsNullOrEmpty(actor.hiding)&&
+                    SameFloor(actor.y,enemy.y)&&Dist(actor.x,actor.z,enemy.x,enemy.z)<3.2f);
+                if(approached||State.elapsed>=encounterEnds)
+                {
+                    enemy.behaviour="vanished";enemy.stunned=false;encounterEnds=State.elapsed+3;
+                    Dirty=true;
+                }
+                return true;
+            }
+            if(enemy.behaviour!="vanished")return false;
+            if(State.elapsed<encounterEnds)return true;
+            enemy.x=encounterReturnPosition.x;enemy.y=encounterReturnPosition.y;enemy.z=encounterReturnPosition.z;
+            enemy.behaviour=State.elapsed<enemy.heardUntil?"investigate":"patrol";
+            enemy.watchingPlayerId=null;enemy.peekLean=0;
+            enemyRoute.Clear();enemyRouteCursor=0;nextRouteAttempt=0;nextPatrol=0;
+            Dirty=true;return false;
+        }
+
+        bool TryBeginPeek(PlayerState actor,bool verification)
+        {
+            var enemy=State.enemy;
+            if(enemy.behaviour=="peek"||enemy.behaviour=="vanished")return false;
+            var origin=new Vector3(enemy.x,enemy.y,enemy.z);
+            if(!verification&&Dist(actor.x,actor.z,enemy.x,enemy.z)<12&&EnemySightline(actor,origin))
+            {nextPeek=State.elapsed+4;return false;}
+            Vector3 chosen=Vector3.zero,leanDirection=Vector3.zero;
+            float best=float.PositiveInfinity;
+            foreach(var door in world.doors)
+            {
+                if(!SameFloor(actor.y,door.y-1.4f)||State.Door(door.id)?.locked==true)continue;
+                var normal=new Vector3(Mathf.Cos(door.rotation),0,-Mathf.Sin(door.rotation));
+                var tangent=new Vector3(-normal.z,0,normal.x);
+                var center=new Vector3(door.x,door.y-1.4f,door.z);
+                float behind=Vector3.Dot(new Vector3(actor.x,actor.y,actor.z)-center,normal)>0?-1:1;
+                for(int side=-1;side<=1;side+=2)
+                {
+                    var position=center+tangent*side*(door.w*.5f+.1f)+normal*behind*.52f;
+                    ConsiderPeek(actor,position,-tangent*side,ref chosen,ref leanDirection,ref best);
+                }
+            }
+            // Junctions beside the central archive and side rooms can be used even
+            // when every nearby door is closed. Actual cover and clearance are required.
+            foreach(var room in world.rooms)
+            {
+                if(!SameFloor(room.floorY,actor.y))continue;
+                for(int cornerX=0;cornerX<2;cornerX++)for(int cornerZ=0;cornerZ<2;cornerZ++)
+                for(int sideX=-1;sideX<=1;sideX+=2)for(int sideZ=-1;sideZ<=1;sideZ+=2)
+                {
+                    var corner=new Vector3(cornerX==0?room.minX:room.maxX,room.floorY,cornerZ==0?room.minZ:room.maxZ);
+                    var position=corner+new Vector3(sideX*.52f,0,sideZ*.52f);
+                    ConsiderPeek(actor,position,new Vector3(-sideX,0,0),ref chosen,ref leanDirection,ref best);
+                    ConsiderPeek(actor,position,new Vector3(0,0,-sideZ),ref chosen,ref leanDirection,ref best);
+                }
+            }
+            nextPeek=State.elapsed+(float)(38+random.NextDouble()*17);
+            if(float.IsPositiveInfinity(best))return false;
+            encounterReturnPosition=origin;
+            enemy.x=chosen.x;enemy.y=chosen.y;enemy.z=chosen.z;
+            enemy.yaw=Mathf.Atan2(-(actor.x-chosen.x),actor.z-chosen.z);
+            Vector3 localRight=Quaternion.Euler(0,enemy.yaw*Mathf.Rad2Deg,0)*Vector3.right;
+            enemy.peekLean=Vector3.Dot(new Vector3(-leanDirection.x,0,leanDirection.z),localRight)>=0?1:-1;
+            enemy.behaviour="peek";enemy.watchingPlayerId=actor.id;enemy.doorId=null;enemy.active=true;enemy.stunned=false;
+            enemy.encounterSerial++;enemy.encounterAt=Mathf.RoundToInt(State.elapsed*1000);
+            encounterEnds=State.elapsed+8;
+            enemyRoute.Clear();enemyRouteCursor=0;Dirty=true;return true;
+        }
+
+        void ConsiderPeek(PlayerState actor,Vector3 position,Vector3 leanDirection,ref Vector3 chosen,ref Vector3 lean,ref float best)
+        {
+            float distance=Dist(actor.x,actor.z,position.x,position.z);
+            if(distance<6||distance>17||!Walkable(position.x,position.y,position.z)||!EnemyPointClear(position))return;
+            Vector2 toward=new Vector2(position.x-actor.x,position.z-actor.z).normalized;
+            Vector2 forward=new Vector2(-Mathf.Sin(actor.yaw),-Mathf.Cos(actor.yaw));
+            if(Vector2.Dot(toward,forward)<.25f||EnemySightline(actor,position))return;
+            float yaw=Mathf.Atan2(-(actor.x-position.x),actor.z-position.z);
+            Vector3 right=Quaternion.Euler(0,yaw*Mathf.Rad2Deg,0)*Vector3.right;
+            float side=Vector3.Dot(new Vector3(-leanDirection.x,0,leanDirection.z),right)>=0?1:-1;
+            Vector3 exposed=new Vector3(-position.x,position.y+2.48f,position.z)+right*side*.41f;
+            if(PhysicalSegmentBlocked(new Vector3(-actor.x,actor.y+1.4f,actor.z),exposed))return;
+            float score=Mathf.Abs(distance-9);
+            if(score>=best)return;
+            best=score;chosen=position;lean=leanDirection;
         }
 
         RoomData SideRoom(float x, float y, float z)
