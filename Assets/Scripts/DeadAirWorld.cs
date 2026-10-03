@@ -29,7 +29,8 @@ namespace DeadAir
         bool lastPower, lastBroadcast;
         readonly DeadAirSky sky;
         readonly DeadAirCulling culling;
-        sealed class Practical { public Light light; public float intensity; public Color color; }
+        Camera renderCamera;
+        sealed class Practical { public Light light; public float intensity; public Color color; public bool interior; }
 
         public DeadAirWorld(WorldData data)
         {
@@ -37,23 +38,33 @@ namespace DeadAir
             var sceneRoot=GameObject.Find("BLACKPINE / original web scene");
             root = sceneRoot!=null?sceneRoot.transform:new GameObject("BLACKPINE / original web scene").transform;
             RenderSettings.skybox = null;
-            RenderSettings.ambientMode = AmbientMode.Trilight;
+            RenderSettings.ambientMode = AmbientMode.Custom;
             RenderSettings.ambientSkyColor = new Color(.095f,.12f,.165f);
             RenderSettings.ambientEquatorColor = new Color(.045f,.052f,.067f);
             RenderSettings.ambientGroundColor = new Color(.025f,.026f,.033f);
+            // No skybox is assigned, so there is no baked sky probe to refresh.
+            // Supply a small real diffuse ambient term for unlit ceiling faces.
+            var ambientProbe=new SphericalHarmonicsL2();
+            ambientProbe.AddAmbientLight(new Color(.018f,.021f,.027f));
+            RenderSettings.ambientIntensity=1;
+            RenderSettings.ambientProbe=ambientProbe;
             RenderSettings.reflectionIntensity = 0;
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.ExponentialSquared;
             ColorUtility.TryParseHtmlString("#101621",out var night);
             RenderSettings.fogColor = night;
             RenderSettings.fogDensity = .014f;
-            QualitySettings.pixelLightCount = 4;
+            // Practical lamps must shade the middle of the room, rather than only
+            // the corners of the large floor meshes used by the office.
+            QualitySettings.pixelLightCount = 8;
             QualitySettings.vSyncCount = 0;
             QualitySettings.shadowDistance = 45f;
             QualitySettings.shadowCascades = 2;
             QualitySettings.shadowResolution = ShadowResolution.Medium;
             if(root.Find("station")==null) Instantiate("station").name="station";
             if(root.Find("exterior")==null) Instantiate("exterior").name="exterior";
+            CalibratePhysicalMaterials(root.Find("station"));
+            CalibratePhysicalMaterials(root.Find("exterior"));
             CalibrateExteriorLighting(root.Find("exterior"));
             var dynamicRoots = new HashSet<Transform>();
             foreach(var t in root.GetComponentsInChildren<Transform>(true))
@@ -84,13 +95,62 @@ namespace DeadAir
                 else if(t.name.StartsWith("monitor:")) monitors.Add(t.GetComponent<Renderer>());
                 else if(t.name.StartsWith("lamp:"))
                 {
-                    var l=t.GetComponent<Light>();lamps.Add(new Practical {light=l,intensity=l.intensity,color=l.color});
+                    var l=t.GetComponent<Light>();
+                    if(l!=null)lamps.Add(new Practical {light=l,intensity=l.intensity,color=l.color,
+                        interior=t.IsChildOf(root.Find("station"))});
                 }
             }
             sky = new DeadAirSky(root);
             culling = new DeadAirCulling(data,root.Find("station"),root.Find("exterior"),dynamicRoots,doorAnimations);
             anchor=Instantiate("monster");bloodyAnchor=Instantiate("monster_bloody");
             anchor.SetActive(false);bloodyAnchor.SetActive(false);
+        }
+
+        static bool IsMonitorMaterial(Material material)
+        {
+            // The export contains CRT canvases as flat, unlit screen surfaces.
+            // They are the only source canvases that should emit their image.
+            if(!material.name.StartsWith("surface_"))return false;
+            if(!int.TryParse(material.name.Substring(8),out int id))return false;
+            return id>=298&&id<=308 || id>=328&&id<=463 || id>=496&&id<=513;
+        }
+
+        static bool IsLampMaterial(Material material)
+        {
+            if(material.name=="light-panel")return true;
+            // Headlamps, indicators and tail lamps on the saved service van.
+            return material.name=="surface_677" || material.name=="surface_678" ||
+                material.name=="surface_679" || material.name=="surface_684" ||
+                material.name=="surface_685" || material.name=="surface_696";
+        }
+
+        static void CalibratePhysicalMaterials(Transform content)
+        {
+            if(content==null)return;
+            var litShader=Shader.Find("Dead Air/Source Surface");
+            if(litShader==null)throw new InvalidOperationException("The lit world surface shader is missing.");
+            var copies=new Dictionary<Material,Material>();
+            foreach(var renderer in content.GetComponentsInChildren<Renderer>(true))
+            {
+                var slots=renderer.sharedMaterials;
+                bool changed=false;
+                for(int i=0;i<slots.Length;i++)
+                {
+                    var source=slots[i];if(source==null)continue;
+                    string shaderName=source.shader.name;
+                    if(shaderName!="Dead Air/Source Surface" && shaderName!="Dead Air/Source Unlit")continue;
+                    if(IsLampMaterial(source))continue;
+                    if(!copies.TryGetValue(source,out var material))
+                    {
+                        material=new Material(source) {name=source.name+" / lit",hideFlags=HideFlags.DontSave};
+                        material.shader=litShader;
+                        material.SetColor("_EmissionColor",IsMonitorMaterial(source)?new Color(.12f,.16f,.13f):Color.black);
+                        copies.Add(source,material);
+                    }
+                    slots[i]=material;changed=true;
+                }
+                if(changed)renderer.sharedMaterials=slots;
+            }
         }
 
         static void CalibrateExteriorLighting(Transform exterior)
@@ -153,9 +213,14 @@ namespace DeadAir
             for(int i=0;i<lamps.Count;i++)
             {
                 var lamp=lamps[i];float time=Time.time+i*3.77f;
-                lamp.light.color=state.broadcast?new Color(1,.082f,.02f):lamp.color;
+                lamp.light.color=state.broadcast&&lamp.interior?new Color(1,.36f,.19f):lamp.color;
                 float wave=flicker?Mathf.Sin(time*1.7f)*Mathf.Sin(time*13.6f):0;
-                lamp.light.intensity=lamp.intensity*(state.broadcast?(flicker?.7f+Mathf.Sin(Time.time*3)*.2f:.8f):wave>.94f?.15f:.91f);
+                float supply=lamp.interior?(state.power?1f:.6f):1f;
+                // Battery lighting remains usable before the generator is repaired.
+                // Faulty tubes dip briefly; they no longer black out the entire room.
+                float flutter=wave>.94f?.72f:1f;
+                if(state.broadcast&&lamp.interior)flutter*=flicker?.86f+Mathf.Sin(Time.time*3)*.08f:.9f;
+                lamp.light.intensity=lamp.intensity*supply*flutter;
             }
             if(state.power)
                 foreach(var fan in fans)fan.Rotate(0,0,-Time.deltaTime*14*Mathf.Rad2Deg,Space.Self);
@@ -180,10 +245,28 @@ namespace DeadAir
                 lastEnemyPosition=position;
             }
             ApplyDropped(state);
-            var cam = Camera.main;
-            var camPos = cam != null ? cam.transform.position : new Vector3(5f, 1.65f, 19f);
-            if (sky != null) sky.UpdatePosition(camPos);
-            if (culling != null) culling.Update(state, camPos);
+            var cam=renderCamera!=null?renderCamera:Camera.main;
+            if(cam==null)
+            {
+                var player=UnityEngine.Object.FindAnyObjectByType<DeadAirPlayer>();
+                if(player!=null)cam=player.ViewCamera;
+            }
+            if(cam!=null)
+            {
+                renderCamera=cam;
+                sky?.UpdatePosition(cam.transform.position);
+                culling?.Update(state,cam);
+            }
+        }
+
+        // Manual GPU captures disable automatic camera rendering. Their lighting
+        // and sky must still use the camera that will actually render the frame.
+        public void PrepareRender(Camera camera)
+        {
+            if(camera==null)return;
+            renderCamera=camera;
+            sky?.UpdatePosition(camera.transform.position);
+            culling?.Update(null,camera,true);
         }
 
         void ApplyDropped(RoomState state)

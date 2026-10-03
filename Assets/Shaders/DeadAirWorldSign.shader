@@ -4,6 +4,7 @@ Shader "Dead Air/World Sign"
     {
         _MainTex ("Font atlas", 2D) = "white" {}
         _Color ("Tint", Color) = (1,1,1,1)
+        _Cutoff ("Glyph cutoff", Range(0,1)) = 0.15
     }
     SubShader
     {
@@ -11,36 +12,27 @@ Shader "Dead Air/World Sign"
         Cull Back
         ZTest LEqual
         ZWrite On
-        Blend SrcAlpha OneMinusSrcAlpha
-        Pass
+        CGPROGRAM
+        // Painted letters receive the same spot, point and ambient light as their board.
+        // The font atlas supplies only coverage, never self illumination.
+        #pragma surface surf Lambert vertex:vert alphatest:_Cutoff fullforwardshadows
+        #pragma target 3.0
+        sampler2D _MainTex;
+        fixed4 _Color;
+        struct Input { float2 uv_MainTex; fixed4 vertexColor; };
+        void vert(inout appdata_full vertex,out Input output)
         {
-            CGPROGRAM
-            #pragma vertex vert
-            #pragma fragment frag
-            #pragma multi_compile_fog
-            #include "UnityCG.cginc"
-            sampler2D _MainTex;
-            fixed4 _Color;
-            struct vertexInput { float4 vertex:POSITION; float2 uv:TEXCOORD0; fixed4 color:COLOR; };
-            struct vertexOutput { float4 position:SV_POSITION; float2 uv:TEXCOORD0; fixed4 color:COLOR; UNITY_FOG_COORDS(1) };
-            vertexOutput vert(vertexInput input)
-            {
-                vertexOutput output;
-                output.position=UnityObjectToClipPos(input.vertex);
-                output.uv=input.uv;
-                output.color=input.color*_Color;
-                UNITY_TRANSFER_FOG(output,output.position);
-                return output;
-            }
-            fixed4 frag(vertexOutput input):SV_Target
-            {
-                fixed4 color=input.color;
-                color.a*=tex2D(_MainTex,input.uv).a;
-                clip(color.a-.15);
-                UNITY_APPLY_FOG(input.fogCoord,color);
-                return color;
-            }
-            ENDCG
+            UNITY_INITIALIZE_OUTPUT(Input,output);
+            output.vertexColor=vertex.color;
         }
+        void surf(Input input,inout SurfaceOutput output)
+        {
+            fixed4 ink=input.vertexColor*_Color;
+            output.Albedo=ink.rgb;
+            output.Alpha=tex2D(_MainTex,input.uv_MainTex).a*ink.a;
+            output.Emission=0;
+        }
+        ENDCG
     }
+    Fallback "Diffuse"
 }

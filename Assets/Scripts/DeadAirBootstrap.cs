@@ -7,6 +7,7 @@ namespace DeadAir
         WorldData data;
         DeadAirWorld world;
         DeadAirSession session;
+        public DeadAirWorld World => world;
 
         void Awake()
         {

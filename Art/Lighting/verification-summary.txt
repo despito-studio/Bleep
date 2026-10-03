@@ -1,0 +1,26 @@
+Dead Air Windows v1.3.1 — final verification, 2026-10-03
+
+Editor build: succeeded, Unity 6000.6.3f1, Windows x64.
+Editor checks: mounted geometry (63 window openings), practical lighting,
+ambient radiance, material emission, emergency/powered/alarm states,
+solid-wall light occlusion, eight local shadow maps, physical navigation,
+floor rules, hinges, chapter authority, objective route, inventory, native fullscreen.
+Canvas texture audit: 382 textures, 220 NPOT; no settings mismatches,
+resizing or missing files.
+
+FinalRuntime: 13 GPU captures; flashlight OFF for room lighting comparison.
+Same displayed sample region: emergency=0.1457, lamps disabled=0.0054,
+powered=0.3105 (mean display luminance, 0–1).
+Real interaction from the generator panel's front approach restores power.
+Actual chapter card clicks, locked chapter, keyboard focus, preparation and start pass.
+Rear-yard manual rendering uses the real camera for sky and culling.
+Captured scene timings: 28.9–29.9 FPS on GeForce GT 730, capture cap 30 FPS.
+
+Menu: actual UI raycast clicks, chapter selection, preparation/solo start,
+settings/dossier/network/join, loopback lobby and guest authority, HUD/inventory,
+nested modal pause, keyboard focus, item equip, calibration confirmation,
+solo/cooperative final-report exit/navigation all pass.
+Both final Windows capture processes exited with code 0.
+
+Detailed reports: editor-verification.txt,
+FinalRuntime/lighting-runtime-report.txt, Menu/menu-runtime-report.txt.

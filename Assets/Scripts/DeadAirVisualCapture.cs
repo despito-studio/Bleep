@@ -19,7 +19,8 @@ namespace DeadAir
         Canvas captureCanvas;
         RenderTexture captureFrame;
         DeadAirFrameRenderer frameRenderer;
-        bool officeCapture, menuCapture, repairCapture;
+        DeadAirWorld captureWorld;
+        bool officeCapture, menuCapture, repairCapture, lightingCapture, captureWithoutEquipment;
         bool preferencesCaptured, hadPlayerName, hadChapter;
         string originalPlayerName, originalChapter;
         readonly Dictionary<string,float> originalSliders = new Dictionary<string,float>();
@@ -32,12 +33,12 @@ namespace DeadAir
             ui = FindFirstObjectByType<DeadAirUI>();
             var args = Environment.GetCommandLineArgs();
             for (int i = 0; i + 1 < args.Length; i++)
-                if (args[i] == "-deadAirCapture" || args[i] == "-deadAirOfficeCapture" || args[i] == "-deadAirMenuCapture" || args[i] == "-deadAirRepairCapture")
-                { output = args[i + 1];officeCapture=args[i]=="-deadAirOfficeCapture";menuCapture=args[i]=="-deadAirMenuCapture";repairCapture=args[i]=="-deadAirRepairCapture"; }
+                if (args[i] == "-deadAirCapture" || args[i] == "-deadAirOfficeCapture" || args[i] == "-deadAirMenuCapture" || args[i] == "-deadAirRepairCapture" || args[i] == "-deadAirLightingCapture")
+                { output = args[i + 1];officeCapture=args[i]=="-deadAirOfficeCapture";menuCapture=args[i]=="-deadAirMenuCapture";repairCapture=args[i]=="-deadAirRepairCapture";lightingCapture=args[i]=="-deadAirLightingCapture"; }
             if (string.IsNullOrEmpty(output)) { enabled = false; return; }
             if (!Path.IsPathRooted(output)) throw new ArgumentException("-deadAirCapture requires an absolute output folder.");
             Directory.CreateDirectory(output);
-            if(menuCapture||repairCapture)
+            if(menuCapture||repairCapture||lightingCapture)
             {
                 hadPlayerName=PlayerPrefs.HasKey("DeadAir.PlayerName");originalPlayerName=PlayerPrefs.GetString("DeadAir.PlayerName");
                 hadChapter=PlayerPrefs.HasKey("DeadAir.Chapter");originalChapter=PlayerPrefs.GetString("DeadAir.Chapter");
@@ -48,7 +49,87 @@ namespace DeadAir
                 preferencesCaptured=true;
             }
             if(Application.isBatchMode)InitializeOffscreenCapture();
-            StartCoroutine(repairCapture?CaptureRepairs():menuCapture?CaptureMenu():officeCapture?CaptureOffice():Capture());
+            StartCoroutine(lightingCapture?CaptureLighting():repairCapture?CaptureRepairs():menuCapture?CaptureMenu():officeCapture?CaptureOffice():Capture());
+        }
+
+        IEnumerator CaptureLighting()
+        {
+            QualitySettings.vSyncCount=0;Application.targetFrameRate=30;
+            yield return new WaitForSecondsRealtime(1.5f);
+            ui.ReturnToMenu();yield return null;
+            ClickUiButton("Chapters","Main menu");yield return null;
+            Require(!UiButton("Select coming-soon","Chapter selection card").IsInteractable(),"An unfinished chapter is playable.");
+            yield return VerifyKeyboardFocus("Chapter selection");
+            yield return Save("lighting-01-chapter-cards");
+            ClickUiButton("Select blackpine","Chapter selection card");
+            ClickUiButton("Begin chapter","Chapter selection card");yield return null;
+            ClickUiButton("Choose engineer","Prepare operation card");ClickUiButton("Explore","Prepare operation card");
+            yield return Until(()=>session.State?.phase=="playing","Lighting capture starts actual chapter");
+            bool grain=DeadAirSettings.Grain,flicker=DeadAirSettings.Flicker;
+            DeadAirSettings.Grain=false;DeadAirSettings.Flicker=false;
+            var checks=new List<string>();
+            // Look below the fluorescent diffuser and away from the HUD/hand.
+            // This comparison measures surfaces lit by the fixtures, rather than
+            // accepting the brightness of an emissive panel as room lighting.
+            InspectToward(-11.3f,-16.1f,4.2f,-15,5.3f,-13);player.SetVerificationFlashlight(false);
+            yield return Save("lighting-02-meeting-emergency-torch-off");
+            var sample=new Rect(.23f,.24f,.38f,.37f);
+            float emergency=DisplayLuminance(sample);
+            Require(!player.FlashlightOn&&!player.ViewCamera.transform.Find("Flashlight").GetComponent<Light>().enabled,"The practical-light capture secretly enabled the flashlight.");
+            var practicals=new List<GameObject>();
+            foreach(var light in GameObject.Find("BLACKPINE / original web scene").GetComponentsInChildren<Light>(true))
+                if(light.name.StartsWith("lamp:")&&light.gameObject.activeSelf){practicals.Add(light.gameObject);light.gameObject.SetActive(false);}
+            Require(practicals.Count>20,"The office practical lamps are absent.");
+            yield return Save("lighting-03-same-room-practicals-disabled");
+            float ambient=DisplayLuminance(sample);
+            foreach(var light in practicals)light.SetActive(true);
+            Require(emergency>.035f&&emergency>ambient+.018f&&emergency>ambient*1.25f,
+                "Ceiling lights do not visibly illuminate room surfaces without a flashlight: emergency="+emergency+" ambient="+ambient);
+            var data=WorldData.Load();var power=data.Objective("power");
+            InspectToward(power.x,power.z+2,0,power.x,power.y,power.z);player.SetVerificationFlashlight(false);
+            session.State.fuses.Add("fuse-1");session.State.fuses.Add("fuse-2");
+            session.Command(new NetPacket{type="interact",id="power"});
+            Require(session.State.power&&session.State.quest.power,"The mounted generator panel cannot be used from its physical front approach.");
+            InspectToward(-11.3f,-16.1f,4.2f,-15,5.3f,-13);player.SetVerificationFlashlight(false);
+            yield return Save("lighting-04-meeting-powered-torch-off");
+            float powered=DisplayLuminance(sample);
+            Require(powered>emergency+.01f,"Restoring generator power did not increase practical illumination.");
+            checks.Add("PASSED: GPU diffuse-room comparison, flashlight OFF; emergency="+emergency.ToString("F4")+", lamps disabled="+ambient.ToString("F4")+", powered="+powered.ToString("F4")+" (display luminance).");
+            InspectToward(0,-9,0,-15,1.3f,-9);player.SetVerificationFlashlight(false);yield return Save("lighting-05-cross-hall-torch-off");
+            InspectToward(-8,-13,0,-8,1.45f,-24);player.SetVerificationFlashlight(false);yield return Save("lighting-06-side-gallery-torch-off");
+            InspectToward(0,-12.1f,4.2f,0,5.5f,-22);player.SetVerificationFlashlight(false);yield return Save("lighting-07-newsroom-torch-off");
+            InspectToward(-7.1f,3.8f,0,-13,1.2f,-1);player.SetVerificationFlashlight(false);yield return Save("lighting-08-reception-torch-off");
+            InspectToward(14.5f,-15.8f,0,18,2.18f,-14);player.SetVerificationFlashlight(false);yield return Save("lighting-09-window-room-junction");
+            InspectToward(14,-30,4.2f,18,6,-34);player.SetVerificationFlashlight(false);yield return Save("lighting-10-upper-window");
+            InspectToward(power.x+1.5f,power.z+4.8f,0,power.x,power.y,power.z);player.SetVerificationFlashlight(false);yield return Save("lighting-11-generator-attached-panel");
+            var sky=GameObject.Find("Distant night sky");
+            Require(sky!=null&&Vector3.Distance(sky.transform.position,player.ViewCamera.transform.position)<.05f,"The captured rear-yard sky did not follow the real camera.");
+            checks.Add("PASSED: rear-yard manual render uses real camera for sky and room culling.");
+            checks.Add("PASSED: real interact command restores generator power from the mounted panel's front approach.");
+            InspectToward(7,20,0,0,4,-11);player.SetVerificationFlashlight(false);yield return Save("lighting-12-front-facade");
+            InspectToward(-11.3f,-16.1f,4.2f,-15,5.3f,-13);player.SetVerificationFlashlight(false);
+            captureWithoutEquipment=true;captureCanvas.enabled=false;
+            yield return Save("lighting-13-chapter-office-photo");
+            captureCanvas.enabled=true;captureWithoutEquipment=false;
+            checks.Add("PASSED: actual chapter card clicks, locked chapter, keyboard focus, character preparation and chapter start.");
+            DeadAirSettings.Grain=grain;DeadAirSettings.Flicker=flicker;
+            player.EndInspection();ui.ReturnToMenu();yield return null;RequireMenu("Lighting capture returns to menu");
+            File.WriteAllLines(Path.Combine(output,"lighting-runtime-report.txt"),checks);
+            Debug.Log("DEAD AIR LIGHTING RUNTIME PASSED: real GPU practical lights, power states, torch OFF, chapter cards, rear camera.");
+            Application.Quit(0);
+        }
+
+        float DisplayLuminance(Rect area)
+        {
+            Require(captureFrame!=null,"Lighting verification requires an actual rendered GPU target.");
+            var previous=RenderTexture.active;RenderTexture.active=captureFrame;
+            var pixels=new Texture2D(captureFrame.width,captureFrame.height,TextureFormat.RGB24,false);
+            pixels.ReadPixels(new Rect(0,0,captureFrame.width,captureFrame.height),0,0);pixels.Apply();RenderTexture.active=previous;
+            var colors=pixels.GetPixels32();float sum=0;int count=0;
+            for(int y=(int)(area.yMin*pixels.height);y<(int)(area.yMax*pixels.height);y+=2)
+                for(int x=(int)(area.xMin*pixels.width);x<(int)(area.xMax*pixels.width);x+=2)
+                {var color=colors[y*pixels.width+x];sum+=(color.r*.2126f+color.g*.7152f+color.b*.0722f)/255;count++;}
+            Destroy(pixels);return sum/Mathf.Max(1,count);
         }
 
         IEnumerator CaptureRepairs()
@@ -499,6 +580,8 @@ namespace DeadAir
             captureUI.targetTexture=captureFrame;
             captureCanvas.renderMode=RenderMode.ScreenSpaceCamera;captureCanvas.worldCamera=captureUI;captureCanvas.planeDistance=1;
             player.ViewCamera.enabled=false;player.ViewCamera.cullingMask&=~(1<<5);
+            player.ViewCamera.clearFlags=CameraClearFlags.SolidColor;
+            captureWorld=FindFirstObjectByType<DeadAirBootstrap>().World;
             frameRenderer=player.ViewCamera.GetComponent<DeadAirFrameRenderer>();
             frameRenderer.OutputCamera.enabled=false;frameRenderer.OutputCamera.targetTexture=captureFrame;
         }
@@ -508,7 +591,8 @@ namespace DeadAir
             if(captureFrame==null)return;
             Canvas.ForceUpdateCanvases();
             frameRenderer.EnsureTargets();
-            player.ViewCamera.Render();frameRenderer.RenderEquipment();frameRenderer.OutputCamera.Render();captureUI.Render();
+            captureWorld.PrepareRender(player.ViewCamera);
+            player.ViewCamera.Render();if(!captureWithoutEquipment)frameRenderer.RenderEquipment();frameRenderer.OutputCamera.Render();captureUI.Render();
         }
 
         IEnumerator Capture()

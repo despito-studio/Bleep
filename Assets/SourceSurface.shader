@@ -10,7 +10,7 @@ SubShader {
 Tags {"RenderType"="Opaque"} LOD 150
 Cull [_Cull] Blend [_SrcBlend] [_DstBlend] ZWrite [_ZWrite]
 CGPROGRAM
-#pragma surface surf BlinnPhong keepalpha
+#pragma surface surf BlinnPhong keepalpha fullforwardshadows addshadow
 #pragma multi_compile_instancing
 sampler2D _MainTex,_EmissionMap;
 fixed4 _Color; half _Glossiness,_Metallic,_Cutoff; half4 _EmissionColor;

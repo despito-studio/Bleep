@@ -14,6 +14,8 @@ namespace DeadAir
         Text inventoryPageLabel;
         Image inventoryPreview;
         Button chapterContinue;
+        Text chapterDescription;
+        readonly List<KeyValuePair<string,DeadAirChapterCard>> chapterCards = new List<KeyValuePair<string,DeadAirChapterCard>>();
         readonly List<Image> quickIcons = new List<Image>();
         readonly List<Button> bagSlots = new List<Button>();
         readonly List<Image> bagIcons = new List<Image>();
@@ -110,32 +112,78 @@ namespace DeadAir
 
         void BuildChapters()
         {
-            chapterPanel=Modal("Chapter selection","ВИБІР ГЛАВИ",1120,830,out var p);
+            chapterPanel=FullScreen("Chapter selection",new Color(.012f,.012f,.015f,1));
+            var p=Rect(chapterPanel.transform,"Chapter selection card",0,0,1920,1080);
+            var backdrop=Rect(p,"Chapter office backdrop",0,0,1920,1080).gameObject.AddComponent<RawImage>();
+            backdrop.texture=Resources.Load<Texture2D>("UI/ChapterBlackpine");backdrop.color=Color.white;backdrop.raycastTarget=false;
+            if(backdrop.texture!=null)
+            {
+                float aspect=(float)backdrop.texture.width/backdrop.texture.height;
+                float width=Mathf.Min(1,(16f/9)/aspect),height=Mathf.Min(1,aspect/(16f/9));
+                backdrop.uvRect=new Rect((1-width)/2,(1-height)/2,width,height);
+            }
+            Fill(p,"Chapter scene shade",-1920,-1080,5760,3240,new Color(.012f,.012f,.015f,.64f));
+            Text(p,"Title","ГЛАВИ",46,460,89,1000,70,TextAnchor.MiddleCenter,true);
             int index=0;
             foreach(var chapter in DeadAirChapters.Catalog)
             {
-                var item=chapter;float x=42+index*536;
-                var card=Fill(p,"Chapter "+item.id,x,238,500,384,new Color(.10f,.087f,.083f,.98f)).transform;
+                var item=chapter;float x=488+index*504;
+                const float cardWidth=440,cardHeight=578;
+                Fill(p,"Chapter shadow "+item.id,x+13,235,cardWidth,cardHeight,new Color(0,0,0,.55f));
+                var choose=Button(p,"Select "+item.id,"",x,214,cardWidth,cardHeight,()=>SelectChapter(item.id));
+                choose.transition=Selectable.Transition.None;choose.GetComponent<Image>().color=Color.clear;
+                choose.transform.Find("Scratched edge").gameObject.SetActive(false);
+                choose.interactable=item.playable;
+                var card=Rect(choose.transform,"Chapter "+item.id,0,0,cardWidth,cardHeight);
+                card.pivot=new Vector2(.5f,.5f);card.anchoredPosition=new Vector2(cardWidth/2,-cardHeight/2);
+                var border=Fill(card,"Card border",0,0,cardWidth,cardHeight,new Color(.35f,.29f,.25f));
+                Fill(card,"Card stock",4,4,cardWidth-8,cardHeight-8,new Color(.065f,.059f,.055f));
                 if(item.playable)
                 {
-                    var image=Rect(card,"Office photograph",0,0,500,206).gameObject.AddComponent<RawImage>();
-                    image.texture=Resources.Load<Texture2D>("UI/ChapterBlackpine");image.uvRect=new Rect(0,.134f,1,.732f);image.color=new Color(.88f,.80f,.73f);image.raycastTarget=false;
-                    Fill(card,"Photo tint",0,0,500,206,new Color(.17f,.04f,.025f,.12f));
+                    var image=Rect(card,"Office photograph",7,7,cardWidth-14,cardHeight-14).gameObject.AddComponent<RawImage>();
+                    image.texture=Resources.Load<Texture2D>("UI/ChapterBlackpine");
+                    float aspect=image.texture!=null?(float)image.texture.width/image.texture.height:16f/9;
+                    float cropWidth=(cardWidth-14)/(cardHeight-14)/aspect;
+                    image.uvRect=new Rect(.56f-cropWidth/2,0,cropWidth,1);image.color=new Color(.95f,.91f,.85f);image.raycastTarget=false;
+                    ChapterPhotoShade(card,cardWidth,cardHeight);
                 }
                 else
                 {
-                    Art(card,"Sealed chapter","lock",220,64,60,72,Muted);
+                    Art(card,"Sealed chapter","lock",176,252,88,88,new Color(.44f,.43f,.42f));
+                    Text(card,"Unavailable","НЕДОСТУПНО",19,26,377,388,37,TextAnchor.MiddleCenter).color=new Color(.43f,.42f,.40f);
                 }
-                Text(card,"Chapter number","ГЛАВА "+item.number,14,24,223,448,29).color=item.playable?Gold:Muted;
-                Text(card,"Chapter name",item.title,36,22,261,458,53,title:true).color=item.playable?Ink:Muted;
-                var choose=Button(p,"Select "+item.id,item.playable?"ОБРАНО":"НЕДОСТУПНО",x,641,500,52,()=>SelectChapter(item.id),item.playable);
-                choose.interactable=item.playable;
+                Text(card,"Chapter number","ГЛАВА "+item.number,17,25,26,390,29,TextAnchor.MiddleCenter).color=item.playable?Ink:new Color(.45f,.43f,.41f);
+                Text(card,"Chapter name",item.title,item.playable?46:31,25,62,390,94,TextAnchor.UpperCenter,true).color=item.playable?Ink:new Color(.58f,.55f,.52f);
+                var marker=Art(card,"Chapter mark",item.playable?"chapter":"lock",194,493,52,52,item.playable?Ink:new Color(.38f,.37f,.35f));
+                var motion=choose.gameObject.AddComponent<DeadAirChapterCard>();motion.Initialize(card,border,marker,item.playable);
+                chapterCards.Add(new KeyValuePair<string,DeadAirChapterCard>(item.id,motion));
                 index++;
             }
-            chapterContinue=Button(p,"Begin chapter","ДАЛІ",42,729,1036,58,()=>{
+            var description=Fill(p,"Chapter description panel",580,827,760,135,new Color(.043f,.039f,.037f,.94f)).transform;
+            chapterDescription=Text(description,"Chapter description","",19,32,25,696,88,TextAnchor.MiddleCenter);
+            Button(p,"Close","НАЗАД",110,971,260,58,()=>Close(chapterPanel));
+            chapterContinue=Button(p,"Begin chapter","ДАЛІ",1550,971,260,58,()=>{
                 if(chapterFromLobby){session.Command(new NetPacket{type="chapter",chapterId=selectedChapter});Close(chapterPanel);}
                 else {Close(chapterPanel);ShowPreparation(false);}
             },true);
+            chapterPanel.SetActive(false);
+            RefreshChapterLabels();
+        }
+
+        void ChapterPhotoShade(Transform parent,float width,float height)
+        {
+            var texture=new Texture2D(2,64,TextureFormat.RGBA32,false){wrapMode=TextureWrapMode.Clamp};
+            for(int y=0;y<64;y++)for(int x=0;x<2;x++)
+            {
+                float t=y/63f;
+                float alpha=Mathf.Lerp(.16f,.82f,Mathf.SmoothStep(0,1,Mathf.InverseLerp(.62f,1,t)));
+                if(t<.20f)alpha=Mathf.Lerp(.67f,.16f,t/.20f);
+                texture.SetPixel(x,y,new Color(.015f,.012f,.011f,alpha));
+            }
+            texture.Apply();
+            var image=Rect(parent,"Photograph shade",7,7,width-14,height-14).gameObject.AddComponent<RawImage>();
+            image.texture=texture;image.raycastTarget=false;
+            image.gameObject.AddComponent<DeadAirUITextureOwner>().texture=texture;
         }
 
         public void ShowChapters()
@@ -143,6 +191,7 @@ namespace DeadAir
             chapterFromLobby=session.State?.phase=="lobby";
             if(chapterFromLobby&&!session.IsHost){Toast("Главу обирає хост сеансу.");return;}
             chapterContinue.GetComponentInChildren<Text>().text=chapterFromLobby?"ОБРАТИ":"ДАЛІ";
+            RefreshChapterLabels();
             Open(chapterPanel);
         }
 
@@ -158,6 +207,8 @@ namespace DeadAir
             if(preparationChapter!=null)preparationChapter.text="Глава "+chapter.number+" — "+chapter.title;
             var current=DeadAirChapters.Find(session.State?.chapterId??selectedChapter)??chapter;
             if(lobbyChapter!=null)lobbyChapter.text="Глава "+current.number+" — "+current.title;
+            if(chapterDescription!=null)chapterDescription.text=chapter.description;
+            foreach(var pair in chapterCards)pair.Value.SetChosen(pair.Key==selectedChapter);
         }
 
         void BuildNetwork()
@@ -388,6 +439,41 @@ namespace DeadAir
             // within an active menu, leaving the gameplay keyboard untouched.
             if(EventSystem.current!=null&&Active(focusedPanel)&&!HasPanelFocus(focusedPanel))FocusPanel(focusedPanel);
         }
+    }
+
+    public sealed class DeadAirChapterCard : MonoBehaviour,IPointerEnterHandler,IPointerExitHandler,ISelectHandler,IDeselectHandler
+    {
+        RectTransform card;Image border,marker;Vector2 restingPosition;
+        bool playable,chosen,pointer,focused;
+
+        public void Initialize(RectTransform visual,Image edge,Image mark,bool available)
+        {
+            card=visual;border=edge;marker=mark;playable=available;
+            restingPosition=card.anchoredPosition;Paint(true);
+        }
+
+        public void SetChosen(bool selected){chosen=selected&&playable;Paint(!isActiveAndEnabled);}
+        void Update(){Paint(false);}
+        void OnEnable(){pointer=focused=false;Paint(true);}
+        void OnDisable(){pointer=focused=false;}
+        void Paint(bool snap)
+        {
+            if(card==null)return;
+            bool hover=playable&&(pointer||focused);
+            float blend=snap?1:1-Mathf.Exp(-Time.unscaledDeltaTime*14);
+            Vector2 target=restingPosition+Vector2.up*(chosen?23:0)+Vector2.up*(hover?5:0);
+            card.anchoredPosition=Vector2.Lerp(card.anchoredPosition,target,blend);
+            float size=(chosen?1.035f:1)*(hover?1.012f:1);
+            card.localScale=Vector3.Lerp(card.localScale,Vector3.one*size,blend);
+            Quaternion rotation=Quaternion.Euler(0,0,chosen?1.1f:-1.25f);
+            card.localRotation=Quaternion.Slerp(card.localRotation,rotation,blend);
+            border.color=chosen?new Color(.65f,.38f,.28f):new Color(.26f,.23f,.21f);
+            marker.color=chosen?new Color(.85f,.70f,.55f):new Color(.38f,.37f,.35f);
+        }
+        public void OnPointerEnter(PointerEventData e){pointer=true;}
+        public void OnPointerExit(PointerEventData e){pointer=false;}
+        public void OnSelect(BaseEventData e){focused=true;}
+        public void OnDeselect(BaseEventData e){focused=false;}
     }
 
     public sealed class DeadAirMenuHover : MonoBehaviour,IPointerEnterHandler,IPointerExitHandler,ISelectHandler,IDeselectHandler

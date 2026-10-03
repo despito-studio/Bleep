@@ -137,10 +137,38 @@ namespace DeadAir.Editor
             const string name="lamp:generator-service";
             var lamp=shelter.Find(name);
             if(lamp==null)lamp=Group(shelter,name);
-            lamp.localPosition=new Vector3(0,2.85f,1.4f);
+            lamp.localPosition=new Vector3(0,3.15f,1.4f);lamp.localRotation=Quaternion.Euler(90,0,0);
             var light=lamp.GetComponent<Light>();if(light==null)light=lamp.gameObject.AddComponent<Light>();
-            light.type=LightType.Point;light.color=new Color(.90f,.78f,.57f);light.range=5;
-            light.intensity=.75f;light.renderMode=LightRenderMode.Auto;light.shadows=LightShadows.None;
+            light.type=LightType.Spot;light.color=new Color(.95f,.82f,.63f);light.range=5.5f;
+            light.spotAngle=115;light.innerSpotAngle=80;light.intensity=2.1f;light.renderMode=LightRenderMode.ForcePixel;
+            light.shadows=LightShadows.Hard;light.shadowBias=.02f;light.shadowNormalBias=.10f;
+            if(shelter.Find("Generator service lamp housing")==null)
+            {
+                var housingMaterial=metal??AssetDatabase.LoadAssetAtPath<Material>(Folder+"/Materials/steel.mat");
+                var diffuserMaterial=lightSurface??AssetDatabase.LoadAssetAtPath<Material>(Folder+"/Materials/light-panel.mat");
+                Block(shelter,"Generator service lamp housing",new Vector3(0,3.35f,1.4f),new Vector3(.6f,.10f,.34f),housingMaterial,false);
+                Block(shelter,"Generator service lamp diffuser",new Vector3(0,3.285f,1.4f),new Vector3(.50f,.03f,.26f),diffuserMaterial,false);
+            }
+            const string floodName="lamp:generator-front-service";
+            var flood=shelter.Find(floodName);
+            if(flood==null)
+            {
+                var housingMaterial=metal??AssetDatabase.LoadAssetAtPath<Material>(Folder+"/Materials/steel.mat");
+                var diffuserMaterial=lightSurface??AssetDatabase.LoadAssetAtPath<Material>(Folder+"/Materials/light-panel.mat");
+                // A real front-beam work light illuminates the vertical controls/casing.
+                // The overhead light remains useful on the cover and the service floor.
+                Block(shelter,"Shelter front mounting beam",new Vector3(0,3.25f,3.3f),new Vector3(7.6f,.14f,.14f),housingMaterial,false);
+                Block(shelter,"Generator flood mounting bracket",new Vector3(0,3.22f,3.22f),new Vector3(.12f,.23f,.23f),housingMaterial,false);
+                flood=Group(shelter,floodName);
+                flood.localPosition=new Vector3(0,3.015f,3.075f);
+                flood.localRotation=Quaternion.LookRotation(new Vector3(0,-1.85f,-2.28f));
+                Block(flood,"Service flood housing",new Vector3(0,0,-.14f),new Vector3(.55f,.32f,.20f),housingMaterial,false);
+                Block(flood,"Service flood diffuser",new Vector3(0,0,-.026f),new Vector3(.45f,.24f,.02f),diffuserMaterial,false);
+            }
+            var fill=flood.GetComponent<Light>();if(fill==null)fill=flood.gameObject.AddComponent<Light>();
+            fill.type=LightType.Spot;fill.color=new Color(.99f,.91f,.73f);fill.range=7;
+            fill.spotAngle=90;fill.innerSpotAngle=62;fill.intensity=3.2f;fill.renderMode=LightRenderMode.ForcePixel;
+            fill.shadows=LightShadows.Hard;fill.shadowBias=.02f;fill.shadowNormalBias=.10f;
         }
 
         static void CacheFurniture()
@@ -315,15 +343,18 @@ namespace DeadAir.Editor
                 EndFacade(shell,6,y,f==0?"door-front":null);
                 EndFacade(shell,-54,y,f==0?"door-rear":null);
                 BuildRoomPartitions(shell,y);
-                Sign(shell,"WEST OFFICES  <  /  >  EAST OFFICES",new Vector3(0,y+3.2f,-7.3f),Quaternion.identity,4.3f,.43f);
-                Sign(shell,"STAIRS  /  SERVICE ROOMS",new Vector3(0,y+3.2f,-25.2f),Quaternion.identity,3.8f,.43f);
+                HangingSign(shell,"WEST OFFICES  <  /  >  EAST OFFICES",new Vector3(0,y+3.2f,-8.9f),4.3f,.43f,y+Ceiling);
+                HangingSign(shell,"STAIRS  /  SERVICE ROOMS",new Vector3(0,y+3.2f,-26),3.8f,.43f,y+Ceiling);
             }
             BuildStair(shell);
             // Entrance canopy is above the route rather than intersecting its signs or doorway.
             Box(shell,"Entrance canopy",0,3.3f,8.2f,7,.18f,4.2f,metal);
+            Box(shell,"Entrance lamp housing",0,3.16f,8.2f,.65f,.10f,.40f,metal,false);
+            Box(shell,"Entrance lamp diffuser",0,3.09f,8.2f,.55f,.03f,.30f,lightSurface,false);
             foreach(float x in new[]{-3.2f,3.2f}) Box(shell,"Canopy column",x,1.55f,9.6f,.14f,3.1f,.14f,metal);
-            Sign(shell,"BLACKPINE\nBROADCAST CENTRE",new Vector3(0,6.15f,6.29f),Quaternion.identity,6,1.15f);
-            Sign(shell,"SERVICE / GENERATOR",new Vector3(5.5f,2.3f,-54.29f),Quaternion.Euler(0,180,0),3,.42f);
+            // Lettering is in front of a physical backing fixed flush to the brick face.
+            Sign(shell,"BLACKPINE\nBROADCAST CENTRE",new Vector3(0,7.68f,6.19f),Quaternion.identity,6,.48f);
+            Sign(shell,"SERVICE / GENERATOR",new Vector3(5.5f,2.9f,-54.19f),Quaternion.Euler(0,180,0),3,.30f);
         }
 
         sealed class PartitionRun
@@ -398,16 +429,12 @@ namespace DeadAir.Editor
 
         static void SideFacade(Transform shell,float x,float baseY)
         {
-            for(int row=0;row<4;row++)
-            {
-                float z=-1.5f-row*15;
-                Box(shell,"Facade sill",x,baseY+.62f,z,.35f,1.24f,15,brick);
-                Box(shell,"Facade head",x,baseY+3.52f,z,.35f,.8f,15,brick);
-                foreach(float dz in new[]{-6.375f,-2.125f,2.125f,6.375f})
-                    Box(shell,"Window pier",x,baseY+2.18f,z+dz,.35f,1.88f,1.9f,brick);
-                foreach(float dz in new[]{-4.25f,0,4.25f})
-                    Window(shell,new Vector3(-x,baseY+2.18f,z+dz),Quaternion.Euler(0,90,0),2.28f,1.88f);
-            }
+            Box(shell,"Facade sill",x,baseY+.62f,-24,.35f,1.24f,60,brick);
+            Box(shell,"Facade head",x,baseY+3.52f,-24,.35f,.8f,60,brick);
+            // Bays follow the adjacent room edges. Every internal partition meets a full
+            // brick pier, instead of cutting through the old repeating window grid.
+            var breaks=FacadeBreaks(true,x,baseY);
+            for(int i=0;i<breaks.Length-1;i++)FacadeBay(shell,true,x,baseY,breaks[i],breaks[i+1]);
         }
 
         static void EndFacade(Transform shell,float z,float y,string doorway)
@@ -423,23 +450,61 @@ namespace DeadAir.Editor
             {
                 Box(shell,"End sill",0,y+.62f,z,36,1.24f,.35f,brick);
                 Box(shell,"End head",0,y+3.52f,z,36,.8f,.35f,brick);
-                for(float x=-16.5f;x<=16.5f;x+=3)
-                {
-                    Box(shell,"End window pier",x,y+2.18f,z,.55f,1.88f,.35f,brick);
-                    if(x<16.5f)Window(shell,new Vector3(-(x+1.5f),y+2.18f,z),Quaternion.identity,2.42f,1.88f);
-                }
-                Box(shell,"End corner infill",-17.63f,y+2.18f,z,.75f,1.88f,.35f,brick);
-                Box(shell,"End corner infill",17.63f,y+2.18f,z,.75f,1.88f,.35f,brick);
+                var breaks=FacadeBreaks(false,z,y);
+                for(int i=0;i<breaks.Length-1;i++)FacadeBay(shell,false,z,y,breaks[i],breaks[i+1]);
+            }
+        }
+
+        static float[] FacadeBreaks(bool side,float coordinate,float floorY)
+        {
+            var breaks=new SortedSet<float>{side?-54:-18,side?6:18};
+            foreach(var room in world.rooms.Where(r=>DeadAirOfficeLayout.IsInterior(r)&&Mathf.Abs(r.floorY-floorY)<.01f))
+            {
+                bool touches=side?Mathf.Abs(room.minX-coordinate)<.01f||Mathf.Abs(room.maxX-coordinate)<.01f:
+                    Mathf.Abs(room.minZ-coordinate)<.01f||Mathf.Abs(room.maxZ-coordinate)<.01f;
+                if(!touches)continue;
+                breaks.Add(side?room.minZ:room.minX);breaks.Add(side?room.maxZ:room.maxX);
+            }
+            return breaks.ToArray();
+        }
+
+        static void FacadeBay(Transform shell,bool side,float coordinate,float floorY,float from,float to)
+        {
+            float length=to-from;
+            int windows=Mathf.Max(1,Mathf.FloorToInt((length-.7f)/3.8f));
+            float spacing=length/windows,width=Mathf.Min(2.45f,spacing-1.0f),cursor=from;
+            for(int i=0;i<windows;i++)
+            {
+                float center=from+spacing*(i+.5f),left=center-width/2,right=center+width/2;
+                Pier(cursor,left);
+                Window(shell,side?new Vector3(-coordinate,floorY+2.18f,center):new Vector3(-center,floorY+2.18f,coordinate),
+                    side?Quaternion.Euler(0,90,0):Quaternion.identity,width,1.88f);
+                cursor=right;
+            }
+            Pier(cursor,to);
+            void Pier(float a,float b)
+            {
+                if(b-a<.001f)return;
+                Box(shell,"Aligned window pier",side?coordinate:(a+b)/2,floorY+2.18f,side?(a+b)/2:coordinate,
+                    side?.35f:b-a,1.88f,side?b-a:.35f,brick);
             }
         }
 
         static void Window(Transform shell,Vector3 position,Quaternion rotation,float width,float height)
         {
             var root=Group(shell,"Window");root.localPosition=position;root.localRotation=rotation;
-            Block(root,"Recessed glass",Vector3.zero,new Vector3(width,height,.07f),glass,true);
-            foreach(float x in new[]{-width/2,width/2})Block(root,"Window side",new Vector3(x,0,0),new Vector3(.06f,height+.08f,.18f),trim,false);
-            foreach(float y in new[]{-height/2,height/2})Block(root,"Window horizontal",new Vector3(0,y,0),new Vector3(width+.06f,.06f,.18f),trim,false);
-            Block(root,"Mullion",Vector3.zero,new Vector3(.035f,height,.14f),trim,false);
+            // A full-depth reveal bridges the brick opening to the recessed glazing.
+            // Both interior and exterior have a frame; the glass never floats at the wall face.
+            Block(root,"Recessed glass",Vector3.zero,new Vector3(width-.08f,height-.08f,.035f),glass,true);
+            foreach(float x in new[]{-width/2+.025f,width/2-.025f})Block(root,"Window reveal side",new Vector3(x,0,0),new Vector3(.05f,height,.35f),trim,false);
+            foreach(float y in new[]{-height/2+.025f,height/2-.025f})Block(root,"Window reveal horizontal",new Vector3(0,y,0),new Vector3(width,.05f,.35f),trim,false);
+            foreach(float face in new[]{-.185f,.185f})
+            {
+                foreach(float x in new[]{-width/2,width/2})Block(root,"Window frame side",new Vector3(x,0,face),new Vector3(.075f,height+.08f,.055f),trim,false);
+                foreach(float y in new[]{-height/2,height/2})Block(root,"Window frame horizontal",new Vector3(0,y,face),new Vector3(width+.075f,.075f,.055f),trim,false);
+            }
+            Block(root,"Mullion",Vector3.zero,new Vector3(.045f,height,.35f),trim,false);
+            Block(root,"Interior sill",new Vector3(0,-height/2-.045f,0),new Vector3(width+.15f,.08f,.46f),trim,false);
         }
 
         static void BuildStair(Transform shell)
@@ -464,8 +529,7 @@ namespace DeadAir.Editor
                     Beam(shell,"Upper opening rail",DeadAirOfficeLayout.Position(x,Storey+1.05f,stair.maxZ),DeadAirOfficeLayout.Position(x,Storey+1.05f,stair.minZ),.055f,metal);
                 for(int i=0;i<7;i++) foreach(float x in new[]{stair.minX-.08f,stair.maxX+.08f})
                     Box(shell,"Upper guard post",x,Storey+.52f,stair.minZ+i*2,.05f,1.04f,.05f,metal);
-                Sign(shell,"2 FLOOR  /  STUDIO + CONTROL",new Vector3(0,3.36f,-37.9f),Quaternion.identity,3.4f,.4f);
-                foreach(float x in new[]{-1.4f,1.4f})Box(shell,"Stair sign hanger",x,3.68f,-37.9f,.025f,.25f,.025f,metal,false);
+                HangingSign(shell,"2 FLOOR  /  STUDIO + CONTROL",new Vector3(0,3.36f,-37.9f),3.4f,.4f,Storey-.355f);
             }
         }
 
@@ -487,6 +551,7 @@ namespace DeadAir.Editor
             for(int side=-1;side<=1;side+=2)for(int i=0;i<10;i++)Tree(shell,side*(32+(i%3)), -72+i*11);
             for(int i=0;i<8;i++)Tree(shell,-28+i*8,-80);
             Sign(shell,"BLACKPINE  /  STAFF PARKING",new Vector3(19,1.9f,35.2f),Quaternion.identity,3.2f,.5f);
+            foreach(float x in new[]{18.1f,19.9f})Block(shell,"Parking sign post",new Vector3(x,1.025f,35.165f),new Vector3(.07f,2.05f,.07f),metal,true);
         }
 
         static void Fence(Transform parent,float x1,float z1,float x2,float z2)
@@ -520,7 +585,8 @@ namespace DeadAir.Editor
         {
             if(p.type=="locker")return; // The animated locker is generated once from LockerData.
             var root=PropRoot(p);
-            bool generated=p.type=="table"||p.type=="archivistDesk"||p.type=="chair"||p.type=="shelf"||p.type=="cardCatalog"||p.type=="serverRack"||p.type=="crt";
+            bool generated=p.type=="table"||p.type=="archivistDesk"||p.type=="chair"||p.type=="shelf"||p.type=="cardCatalog"||p.type=="serverRack"||p.type=="crt"||
+                p.type=="dieselGenerator"||p.type=="fusePanel"||p.type=="monitorWall"||p.type=="mixingConsole"||p.type=="anchorDesk";
             if(!generated&&templates.TryGetValue(p.type,out var template))
             {
                 // The source export batched the shared desk body outside this decoration group.
@@ -545,7 +611,7 @@ namespace DeadAir.Editor
                 case "yardLamp":
                     Block(root,"Lamp pole",new Vector3(0,2.25f,0),new Vector3(.14f,4.5f,.14f),metal,true);
                     Block(root,"Lamp head",new Vector3(0,4.5f,0),new Vector3(.5f,.18f,.5f),lightSurface,false);
-                    Practical(root,"lamp:yard-"+p.id,new Vector3(0,4.25f,0),10,.65f,new Color(.72f,.78f,.55f));break;
+                    Practical(root,"lamp:yard-"+p.id,new Vector3(0,4.25f,0),10,1.2f,new Color(.90f,.91f,.76f));break;
                 case "generatorShelter":
                     Block(root,"Weather roof",new Vector3(0,3.5f,0),new Vector3(w,.2f,d),metal,true);
                     foreach(float x in new[]{-w/2+.2f,w/2-.2f})foreach(float z in new[]{-d/2+.2f,d/2-.2f})Block(root,"Shelter column",new Vector3(x,1.7f,z),new Vector3(.12f,3.4f,.12f),metal,true);
@@ -635,7 +701,11 @@ namespace DeadAir.Editor
                     foreach(float x in new[]{-w/2,w/2})Block(root,"Backdrop support",new Vector3(x,1.6f,0),new Vector3(.08f,3.2f,.1f),metal,true);break;
                 case "fan":
                     var fan=Group(root,"fan:"+p.id);fan.localPosition=new Vector3(0,1.8f,0);
-                    for(int i=0;i<4;i++){var blade=Block(fan,"Fan blade",new Vector3(0,.35f,0),new Vector3(.17f,.65f,.04f),metal,false);blade.transform.RotateAround(fan.position,fan.forward,i*90);}
+                    Block(root,"Fan mounting plate",new Vector3(0,1.8f,-.035f),new Vector3(1.2f,1.2f,.05f),black,false);
+                    foreach(float x in new[]{-.6f,.6f})Block(root,"Fan side frame",new Vector3(x,1.8f,.035f),new Vector3(.08f,1.28f,.17f),metal,false);
+                    foreach(float y in new[]{1.2f,2.4f})Block(root,"Fan horizontal frame",new Vector3(0,y,.035f),new Vector3(1.28f,.08f,.17f),metal,false);
+                    for(int i=0;i<4;i++){var blade=Block(fan,"Fan blade",new Vector3(0,.28f,.015f),new Vector3(.16f,.55f,.04f),metal,false);blade.transform.RotateAround(fan.position,fan.forward,i*90);}
+                    for(int i=0;i<7;i++)Block(root,"Fan safety grille",new Vector3(-.48f+i*.16f,1.8f,.135f),new Vector3(.015f,1.05f,.018f),metal,false);
                     break;
                 case "gateBarrier":
                     Block(root,"Barrier control box",new Vector3(-3,.65f,0),new Vector3(.6f,1.3f,.5f),trim,true);
@@ -649,8 +719,45 @@ namespace DeadAir.Editor
                 case "archivistDesk":
                     Table(root,w,d);Paperwork(root,new Vector3(-w*.33f,.83f,-d*.20f));
                     Block(root,"Desk telephone",new Vector3(w*.32f,.88f,-d*.24f),new Vector3(.32f,.12f,.25f),black,false);break;
-                case "table":case "mixingConsole":case "anchorDesk":
+                case "table":case "anchorDesk":
                     Table(root,w,d);break;
+                case "mixingConsole":
+                    Table(root,w,d);
+                    Block(root,"Control console body",new Vector3(0,.975f,0),new Vector3(w-.15f,.30f,d*.70f),metal,true);
+                    for(int i=0;i<8;i++)
+                    {
+                        Block(root,"Mixer channel",new Vector3(-w*.35f+i*w*.1f,1.13f,d*.16f),new Vector3(.018f,.012f,.22f),black,false);
+                        Block(root,"Mixer fader",new Vector3(-w*.35f+i*w*.1f,1.15f,d*.14f),new Vector3(.06f,.035f,.04f),paper,false);
+                    }
+                    break;
+                case "fusePanel":
+                    Block(root,"Mounted fuse cabinet",new Vector3(0,1.65f,0),new Vector3(w,1.15f,.22f),metal,false);
+                    Block(root,"Fuse cabinet face",new Vector3(0,1.65f,.12f),new Vector3(w-.08f,1.07f,.025f),trim,false);
+                    for(int i=0;i<4;i++)Block(root,"Fuse switch",new Vector3((i%2-.5f)*w*.45f,1.48f+(i/2)*.32f,.15f),new Vector3(.10f,.17f,.055f),black,false);
+                    Sign(root,"380 V",new Vector3(0,2.01f,.15f),Quaternion.identity,w*.70f,.14f);break;
+                case "monitorWall":
+                    // The source export contained screen faces while their cabinet was
+                    // batched elsewhere. Give each bank a complete floor-supported rack.
+                    Block(root,"Monitor bank cabinet",new Vector3(0,1.20f,0),new Vector3(w,2.40f,.58f),metal,true);
+                    for(int i=0;i<3;i++)for(int j=0;j<2;j++)
+                    {
+                        float x=(j-.5f)*w*.46f,y=.44f+i*.74f;
+                        Block(root,"CRT surround",new Vector3(x,y,.31f),new Vector3(w*.44f,.63f,.12f),trim,false);
+                        Block(root,"monitor:screen "+i+"-"+j,new Vector3(x,y,.378f),new Vector3(w*.36f,.46f,.022f),glass,false);
+                    }
+                    break;
+                case "dieselGenerator":
+                    // Build complete solids; the original source group held isolated
+                    // radiator faces, fan and a luminous floating hazard label.
+                    Block(root,"Generator skid",new Vector3(0,.12f,0),new Vector3(w+.12f,.24f,d+.12f),metal,true);
+                    Block(root,"Generator enclosure",new Vector3(0,1.00f,0),new Vector3(w,1.76f,d),trim,true);
+                    Block(root,"Generator top cover",new Vector3(0,1.90f,0),new Vector3(w+.08f,.12f,d+.08f),metal,true);
+                    Block(root,"Radiator recess",new Vector3(w*.28f,.98f,d/2+.012f),new Vector3(w*.35f,1.10f,.035f),black,false);
+                    for(int i=0;i<8;i++)Block(root,"Radiator louvre",new Vector3(w*.28f,.51f+i*.135f,d/2+.045f),new Vector3(w*.33f,.045f,.06f),metal,false);
+                    Block(root,"Generator service door",new Vector3(w*.20f,.95f,-d/2-.012f),new Vector3(w*.52f,1.34f,.03f),metal,false);
+                    foreach(float x in new[]{-w*.42f,w*.42f})Block(root,"Generator lifting eye",new Vector3(x,2.0f,0),new Vector3(.13f,.12f,.18f),metal,false);
+                    Block(root,"Exhaust stack",new Vector3(-w*.34f,2.10f,-d*.28f),new Vector3(.16f,.42f,.16f),metal,false);
+                    Sign(root,"DIESEL / 380 V",new Vector3(w*.28f,1.68f,d/2+.025f),Quaternion.identity,w*.37f,.20f);break;
                 case "chair":
                     Block(root,"Chair seat",new Vector3(0,.48f,0),new Vector3(.6f,.1f,.6f),trim,true);
                     Block(root,"Chair back",new Vector3(0,.87f,-.27f),new Vector3(.6f,.65f,.08f),trim,true);
@@ -716,13 +823,15 @@ namespace DeadAir.Editor
             Block(pivot,"Door leaf",new Vector3(0,1.37f,width/2),new Vector3(.10f,2.74f,width-.08f),wood,true);
             Block(pivot,"Door inset",new Vector3(.065f,1.55f,width/2),new Vector3(.02f,.78f,width*.48f),metal,false);
             foreach(float x in new[]{-.10f,.10f})Block(pivot,"Door handle",new Vector3(x,1.17f,width-.28f),new Vector3(.08f,.045f,.26f),metal,false);
-            var led=Block(casing,"door-led:"+d.id,new Vector3(.18f,1.48f,-width/2-.28f),new Vector3(.055f,.07f,.12f),lightSurface,false);
+            float ledFace=d.id=="door-front"||d.id=="door-rear"?.204f:.140f;
+            var led=Block(casing,"door-led:"+d.id,new Vector3(ledFace,1.48f,-width/2-.28f),new Vector3(.055f,.07f,.12f),lightSurface,false);
             var lamp=Group(casing,"door-light:"+d.id);lamp.localPosition=led.transform.localPosition+Vector3.right*.05f;
             var light=lamp.gameObject.AddComponent<Light>();light.type=LightType.Point;light.range=.7f;light.intensity=.07f;light.shadows=LightShadows.None;
             string text=d.label.Replace("Двері: ","");
             // Signs fit above the casing, with their board proud of the wall. Both corridor sides can be read.
-            Sign(casing,text,new Vector3(.175f,3.15f,0),Quaternion.Euler(0,90,0),2.25f,.4f);
-            Sign(casing,text,new Vector3(-.175f,3.15f,0),Quaternion.Euler(0,-90,0),2.25f,.4f);
+            float signFace=d.id=="door-front"||d.id=="door-rear"?.188f:.123f;
+            Sign(casing,text,new Vector3(signFace,3.15f,0),Quaternion.Euler(0,90,0),2.25f,.4f);
+            Sign(casing,text,new Vector3(-signFace,3.15f,0),Quaternion.Euler(0,-90,0),2.25f,.4f);
         }
 
         static void BuildLocker(LockerData l)
@@ -769,17 +878,21 @@ namespace DeadAir.Editor
                     // A wheel and pipe assembly faces back into the room, away from the outside wall.
                     root.localRotation=Quaternion.Euler(0,90,0);
                     Block(root,"Valve housing",new Vector3(0,0,-.08f),new Vector3(.4f,.4f,.16f),metal,false);
+                    Block(root,"Wall-mounted pressure pipe",new Vector3(0,0,-.12f),new Vector3(.10f,2.2f,.10f),metal,false);
+                    foreach(float y in new[]{-.80f,.80f})Block(root,"Pressure pipe wall bracket",new Vector3(0,y,-.15f),new Vector3(.30f,.07f,.18f),metal,false);
                     for(int i=0;i<8;i++){float a=i*Mathf.PI/4;Block(root,"Valve wheel",new Vector3(Mathf.Sin(a)*.23f,Mathf.Cos(a)*.23f,.07f),new Vector3(.12f,.12f,.06f),trim,false);}break;
                 case "power":
                     root.localRotation=Quaternion.Euler(0,0,0);
-                    Block(root,"Power control cabinet",Vector3.zero,new Vector3(1,.85f,.22f),metal,true);
+                    Block(root,"Power control cabinet",new Vector3(0,.10f,0),new Vector3(1,1.25f,.22f),metal,true);
                     var lever=Group(root,"state:powerLever");lever.localPosition=new Vector3(0,-.17f,.18f);
+                    Block(root,"Power switch axle",new Vector3(0,.01f,.135f),new Vector3(.16f,.16f,.07f),black,false);
                     Block(lever,"Main switch handle",new Vector3(0,.18f,0),new Vector3(.08f,.38f,.08f),wood,false);
                     Block(root,"state:powerLamp",new Vector3(.3f,.22f,.135f),new Vector3(.1f,.1f,.035f),lightSurface,false);
-                    Sign(root,"GENERATOR / 380 V",new Vector3(0,.59f,.145f),Quaternion.identity,1.2f,.23f);break;
+                    Sign(root,"GENERATOR / 380 V",new Vector3(0,.59f,.123f),Quaternion.identity,.86f,.23f);break;
                 case "broadcast":
                     Block(root,"Broadcast terminal",new Vector3(0,0,0),new Vector3(.7f,.15f,.45f),metal,false);
                     Block(root,"state:broadcastBulb",new Vector3(.22f,.105f,0),new Vector3(.07f,.07f,.07f),lightSurface,false);
+                    foreach(float x in new[]{-.25f,.25f})Block(root,"Terminal sign bracket",new Vector3(x,.16f,.21f),new Vector3(.025f,.18f,.025f),metal,false);
                     Sign(root,"96.4 MHz / TRANSMIT",new Vector3(0,.19f,.235f),Quaternion.identity,.75f,.12f);break;
                 case "exit":
                     Block(root,"state:exitLamp",new Vector3(0,.25f,0),new Vector3(.12f,.08f,.03f),lightSurface,false);break;
@@ -799,25 +912,38 @@ namespace DeadAir.Editor
                 {
                     float x=room.minX+width*(ix+.5f)/across,z=room.minZ+depth*(iz+.5f)/along;
                     if(room.floorY<1&&world.stairs.Any(stair=>stair.Contains(x,z)))continue;
-                    Fixture(parent,"zone-"+SectorKey(room)+"-"+ix+"-"+iz,x,room.floorY,z,circulation?.36f:.52f);
+                    Fixture(parent,"zone-"+SectorKey(room)+"-"+ix+"-"+iz,x,room.floorY,z,circulation?2.4f:3.0f);
                 }
             }
-            Practical(exterior.transform,"lamp:front-entry",new Vector3(0,2.85f,8.2f),8,.75f,new Color(.8f,.86f,.65f));
-            Practical(exterior.transform,"lamp:rear-service",new Vector3(12,3.15f,-67),9,.85f,new Color(.87f,.73f,.46f));
+            Practical(exterior.transform,"lamp:front-entry",new Vector3(0,2.85f,8.2f),8,1.2f,new Color(.94f,.95f,.82f));
+            // The service shelter supplies the visible rear fixture and its light.
         }
 
         static void Fixture(Transform parent,string id,float x,float floorY,float z,float intensity)
         {
             Box(parent,"Fluorescent housing",x,floorY+Ceiling-.14f,z,1.7f,.12f,.45f,metal,false);
             Box(parent,"Fluorescent diffuser",x,floorY+Ceiling-.22f,z,1.52f,.04f,.30f,lightSurface,false);
-            Practical(parent,"lamp:"+id,DeadAirOfficeLayout.Position(x,floorY+Ceiling-.38f,z),10,intensity,new Color(.78f,.84f,.68f));
+            var light=Practical(parent,"lamp:"+id,DeadAirOfficeLayout.Position(x,floorY+Ceiling-.38f,z),7.5f,intensity,new Color(.94f,.95f,.82f));
+            light.type=LightType.Spot;light.transform.localRotation=Quaternion.Euler(90,0,0);
+            light.spotAngle=120;light.innerSpotAngle=85;light.renderMode=LightRenderMode.ForcePixel;
+            light.shadows=LightShadows.Hard;light.shadowBias=.02f;light.shadowNormalBias=.1f;
         }
 
-        static void Practical(Transform parent,string name,Vector3 position,float range,float intensity,Color color)
+        static Light Practical(Transform parent,string name,Vector3 position,float range,float intensity,Color color)
         {
             var root=Group(parent,name);root.localPosition=position;
             var light=root.gameObject.AddComponent<Light>();light.type=LightType.Point;light.color=color;
-            light.range=range;light.intensity=intensity;light.renderMode=LightRenderMode.Auto;light.shadows=LightShadows.None;
+            light.range=range;light.intensity=intensity;light.renderMode=LightRenderMode.ForcePixel;light.shadows=LightShadows.None;
+            return light;
+        }
+
+        static void HangingSign(Transform parent,string text,Vector3 position,float width,float height,float ceilingY)
+        {
+            Sign(parent,text,position,Quaternion.identity,width,height);
+            Sign(parent,text,position-new Vector3(0,0,.03f),Quaternion.Euler(0,180,0),width,height);
+            float top=position.y+height/2,length=ceilingY-top;
+            foreach(float x in new[]{-width*.36f,width*.36f})
+                Block(parent,"Wayfinding sign hanger",new Vector3(position.x+x,top+length/2,position.z),new Vector3(.026f,length,.026f),metal,false);
         }
 
         static void Sign(Transform parent,string text,Vector3 position,Quaternion rotation,float width,float height)

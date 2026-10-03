@@ -64,13 +64,13 @@ obj('tape-2','tape','Касета 02 · Зайвий голос',14,5.07,-14.5);
 obj('tape-3','tape','Касета 03 · Останній ефір',-14,5.065,-20.5);
 obj('fuse-1','fuse','Запобіжник 380В · Інженерна',-14,.855,-14.5);
 obj('fuse-2','fuse','Запобіжник 380В · Серверна',14,5.055,-20.5);
-obj('power','power','Електрощит генератора · задній двір',-10,1.4,-67);
+obj('power','power','Електрощит генератора · задній двір',-11,.95,-65.985);
 obj('broadcast','broadcast','Передати запис · Апаратна, 2 поверх',11,5.4,-2);
 obj('exit','exit','Сісти у фургон · покинути станцію',-8.1,1.2,26);
 obj('keycard-guard','keycard','Картка доступу · Охорона',11,.83,-2);
 obj('keycard-engineer','keycard','Картка головного інженера · Рецепція',-11,.83,-2.4);
 obj('fuel-canister','canister','Каністра з паливом · задній двір',-14,.7,-62);
-obj('pressure-valve','valve','Вентиль тиску · Вентвузол, 2 поверх',16,5.5,-35);
+obj('pressure-valve','valve','Вентиль тиску · Вентвузол, 2 поверх',17.66,5.5,-35);
 locker('locker-1','Шафа в архіві',-4.8,0,-21.5,pi/2);
 locker('locker-2','Шафа в інженерній',-16.9,0,-12.4,pi/2);
 locker('locker-3','Шафа в серверній',16.9,H,-22.5,-pi/2);
@@ -149,6 +149,20 @@ prop('fuelStore',-15,0,-61.5,0,3,1.5,'Паливо і сервісний інв�
 for(const x of [11,14,17])prop('crate',x,0,-62,0,1.1,1.1,'Вантажний майданчик');
 prop('dumpster',21,0,-70,0,2.4,1.7,'Сервісний контейнер');
 prop('cableSpool',8,0,-70,0,1.2,1.2);
+// Board backs meet the actual wall face. The source plan used a generic .18 m
+// offset for decorations with different depths, leaving paper panels suspended.
+const mountedDepth={corkboard:.09,toolboard:.09,directory:.09,mirror:.08,whiteboard:.06,fusePanel:.22,fan:.10};
+for(const p of props)if(mountedDepth[p.type]) {
+  const half=mountedDepth[p.type]/2;
+  const nx=Math.sin(p.rotation),nz=Math.cos(p.rotation);
+  const candidates=[];
+  for(const r of rooms.filter(r=>r.floorY===p.y&&r.minX>=-18&&r.maxX<=18&&r.minZ>=-54&&r.maxZ<=6&&!r.mapLabel.startsWith('HALL'))){
+    if(Math.abs(nx)>.99&&p.z>=r.minZ&&p.z<=r.maxZ)for(const x of [r.minX,r.maxX])candidates.push({distance:Math.abs(x-p.x),x:x+nx*(.11+half),z:p.z});
+    if(Math.abs(nz)>.99&&p.x>=r.minX&&p.x<=r.maxX)for(const z of [r.minZ,r.maxZ])candidates.push({distance:Math.abs(z-p.z),x:p.x,z:z+nz*(.11+half)});
+  }
+  candidates.sort((a,b)=>a.distance-b.distance);
+  if(candidates[0]&&candidates[0].distance<.6){p.x=candidates[0].x;p.z=candidates[0].z;}
+}
 // Portable navigation grid uses the same rectangular zones, door apertures and
 // furniture footprints as this authored plan. The flight supplies intermediate Y.
 const stairs=[{minX:-1.8,maxX:1.8,minZ:-51,maxZ:-39,lowerY:0,upperY:H,steps:24}];
@@ -163,6 +177,12 @@ function inFurniture(x,y,z){
     const dx=x-p.x,dz=z-p.z,c=Math.cos(p.rotation),s=Math.sin(p.rotation);
     // A conservative capsule allowance leaves the space around desks usable.
     const px=dx*c-dz*s,pz=dx*s+dz*c;
+    if(p.type==='generatorShelter') {
+      // The roof is above the player's body. Its floor is walkable; only the
+      // real weather wall and four support posts obstruct a route to the controls.
+      if(Math.abs(pz+p.d/2)<.07+.28&&Math.abs(px)<p.w/2+.28)return true;
+      return Math.abs(Math.abs(px)-(p.w/2-.2))<.06+.28&&Math.abs(Math.abs(pz)-(p.d/2-.2))<.06+.28;
+    }
     return Math.abs(px)<p.w/2+.28&&Math.abs(pz)<p.d/2+.28;
   });
 }
