@@ -88,11 +88,14 @@ namespace DeadAir
 
         public void Initialize(WorldData data) { world = data; }
 
-        public void Host(string name, string classId, bool solo, bool creative)
+        public void Host(string name, string classId, bool solo, bool creative, string chapterId = DeadAirChapters.DefaultId)
         {
+            string chapterError = DeadAirChapters.SelectionError(chapterId);
+            if (chapterError != null) { Report(chapterError); return; }
             Leave();
+            LastError = null;
             LocalId = "host";
-            rules = new DeadAirRules(world, LocalId, name, classId, solo, creative);
+            rules = new DeadAirRules(world, LocalId, name, classId, solo, creative, chapterId);
             State = rules.State;
             if (!solo)
             {
@@ -167,7 +170,7 @@ namespace DeadAir
                     peer.Send(new NetPacket { type = "error", error = "Не вдалося приєднатися." });
                     peer.Dispose(); return;
                 }
-                peer.Send(new NetPacket { type = "welcome", playerId = peer.id, code = State.code });
+                peer.Send(new NetPacket { type = "welcome", playerId = peer.id, code = State.code, chapterId = State.chapterId });
                 Publish();
                 return;
             }
@@ -187,6 +190,9 @@ namespace DeadAir
                 try
                 {
                     State = JsonUtility.FromJson<RoomState>(packet.stateJson);
+                    // Older room snapshots predate chapters; retain the playable original office.
+                    if (State != null && string.IsNullOrEmpty(State.chapterId))
+                        State.chapterId = string.IsNullOrEmpty(packet.chapterId) ? DeadAirChapters.DefaultId : packet.chapterId;
                     StateChanged?.Invoke();
                 }
                 catch (Exception ex) { Report("Не вдалося прочитати стан кімнати: " + ex.Message); }
@@ -220,8 +226,9 @@ namespace DeadAir
             string error = null;
             switch (packet.type)
             {
-                case "start": rules.Start(id); break;
-                case "restart": rules.Restart(id); break;
+                case "chapter": error = rules.SelectChapter(id, packet.chapterId); break;
+                case "start": error = rules.Start(id, packet.chapterId); break;
+                case "restart": error = rules.Restart(id); break;
                 case "pause": rules.Pause(id, packet.paused); break;
                 case "class": rules.SetClass(id, packet.classId); break;
                 case "move": rules.Move(id, packet); break;
@@ -230,6 +237,9 @@ namespace DeadAir
                 case "calibrate": error = rules.Calibrate(id, packet.frequency); break;
                 case "drop": error = rules.Drop(id, packet.id); break;
                 case "slot": rules.SelectSlot(id, packet.phrase); break;
+                case "unique-equip": rules.EquipUnique(id, packet.uniqueEquipped); break;
+                case "map-equip": rules.EquipMap(id, packet.mapOpen); break;
+                case "unique-use": error = rules.UseUnique(id); break;
             }
             if (error != null)
             {
@@ -251,7 +261,7 @@ namespace DeadAir
         {
             if (rules == null) return;
             State = rules.State;
-            var packet = new NetPacket { type = "state", stateJson = JsonUtility.ToJson(State) };
+            var packet = new NetPacket { type = "state", stateJson = JsonUtility.ToJson(State), chapterId = State.chapterId };
             foreach (var peer in guests) if (!string.IsNullOrEmpty(peer.id)) peer.Send(packet);
             rules.ClearDirty();
             StateChanged?.Invoke();
@@ -274,6 +284,13 @@ namespace DeadAir
             StateChanged?.Invoke();
         }
 
-        void OnDestroy() { Leave(); }
+        void OnDestroy()
+        {
+            // Scene teardown may destroy the UI before the session. Close the
+            // connections without notifying views that are being destroyed.
+            StateChanged = null;
+            Error = null;
+            Leave();
+        }
     }
 }

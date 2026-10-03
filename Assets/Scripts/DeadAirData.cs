@@ -6,14 +6,43 @@ namespace DeadAir
 {
     [Serializable] public class PointData { public float x, y, z; }
     [Serializable] public class BoundsData { public float minX, maxX, minZ, maxZ; }
-    [Serializable] public class RoomData { public string name; public float minX, maxX, minZ, maxZ; }
+    [Serializable] public class RoomData { public string name, mapLabel; public float minX, maxX, minZ, maxZ, floorY; }
+    [Serializable] public class StairData
+    {
+        public float minX, maxX, minZ, maxZ, lowerY, upperY;
+        public int steps = 20;
+        // The flight rises from maxZ (lower landing) toward minZ (upper landing).
+        public bool Contains(float x, float z, float margin = 0) =>
+            x >= minX + margin && x <= maxX - margin && z >= minZ && z <= maxZ;
+        public float HeightAt(float z) => Mathf.Lerp(lowerY, upperY, Mathf.InverseLerp(maxZ, minZ, z));
+    }
     [Serializable] public class ObjectiveData { public string id, type, label; public float x, y, z; }
-    [Serializable] public class DoorData { public string id, label, requires; public float x, y, z; }
-    [Serializable] public class LockerData { public string id, label; public float x, y, z, ry, exitX, exitZ; }
+    [Serializable] public class DoorData
+    {
+        public string id, label, requires;
+        public float x, y, z, rotation, w = 2.2f, openAngle = 90;
+    }
+    [Serializable] public class LockerData
+    {
+        public string id, label;
+        public float x, y, z, ry, exitX, exitY, exitZ;
+        public float FacingYaw => Mathf.Atan2(-(exitX - x), -(exitZ - z));
+        public float ExitFloorY => exitY == 0 && y > 1 ? y : exitY;
+    }
     [Serializable] public class PropData
     {
         public string id, type, label, color;
         public float x, y, z, w, d, size, rotation, exitX, exitZ;
+    }
+    [Serializable] public class NavigationNodeData { public float x, y, z; }
+    [Serializable] public class NavigationLinkData { public int a, b; }
+    public static class DeadAirRoleItems
+    {
+        public static string ForClass(string classId) => classId == "operator" ? "cigarette-pack" :
+            classId == "engineer" ? "wrench" : classId == "journalist" ? "recorder" : classId == "dispatcher" ? "compass" : null;
+        public static bool IsRoleItem(string id) => id == "cigarette-pack" || id == "wrench" || id == "recorder" || id == "compass";
+        public static string Label(string id) => id == "cigarette-pack" ? "Пачка сигарет" : id == "wrench" ? "Гайковий ключ" :
+            id == "recorder" ? "Диктофон" : id == "compass" ? "Маятник-компас" : id;
     }
     [Serializable] public class ClassBonuses
     {
@@ -32,6 +61,9 @@ namespace DeadAir
         public BoundsData courtyard;
         public BoundsData[] exteriorObstacles;
         public RoomData[] rooms;
+        public StairData[] stairs;
+        public NavigationNodeData[] navigationNodes;
+        public NavigationLinkData[] navigationLinks;
         public ObjectiveData[] objects;
         public DoorData[] doors;
         public LockerData[] lockers;
@@ -69,10 +101,13 @@ namespace DeadAir
             return null;
         }
 
-        public string RoomAt(float x, float z)
+        public string RoomAt(float x, float z, float y = 0)
         {
+            if (stairs != null)
+                foreach (var stair in stairs)
+                    if (stair.Contains(x, z) && Mathf.Abs(y - stair.HeightAt(z)) < .75f) return "СХОДИ / 1–2 ПОВЕРХ";
             foreach (var room in rooms)
-                if (x >= room.minX && x <= room.maxX && z >= room.minZ && z <= room.maxZ)
+                if (Mathf.Abs(y - room.floorY) < 1 && x >= room.minX && x <= room.maxX && z >= room.minZ && z <= room.maxZ)
                     return room.name;
             return "ПОЗА СТАНЦІЄЮ";
         }
@@ -81,16 +116,22 @@ namespace DeadAir
     [Serializable] public class PlayerState
     {
         public string id, name, characterClass, hiding;
-        public float x, z, yaw, pitch, sanity = 100, stamina = 100, invulnerableUntil;
-        public bool flashlight = true, camera, sprinting, down;
+        public float x, y, z, yaw, pitch, sanity = 100, stamina = 100, invulnerableUntil;
+        public bool flashlight = true, camera, sprinting, down, mapOpen, uniqueItemEquipped;
+        public bool uniqueActionCancelled = true;
+        public int uniqueActionSequence, cigarettesRemaining;
+        public float uniqueActionAt = -100;
         public List<string> inventory = new List<string>();
         public int selectedSlot;
+        public int moveSequence;
+        public string SelectedItem => inventory != null && selectedSlot >= 0 && selectedSlot < inventory.Count ? inventory[selectedSlot] : null;
+        public bool HasSelectedRoleItem => SelectedItem != null && SelectedItem == DeadAirRoleItems.ForClass(characterClass);
         public bool HasItem(string itemId) { return inventory != null && inventory.Contains(itemId); }
     }
     [Serializable] public class DroppedItem
     {
         public string id, itemId, label;
-        public float x, z;
+        public float x, y, z;
     }
     [Serializable] public class DoorState
     {
@@ -99,7 +140,7 @@ namespace DeadAir
     }
     [Serializable] public class EnemyState
     {
-        public float x, z, stunnedUntil, radioUntil, radioX, radioZ;
+        public float x, y, z, stunnedUntil, radioUntil, radioX, radioY, radioZ;
         public bool active, stunned, bloody;
     }
     [Serializable] public class QuestState
@@ -110,6 +151,7 @@ namespace DeadAir
     [Serializable] public class RoomState
     {
         public string code, hostId, phase = "lobby", message, radioSenderId;
+        public string chapterId = DeadAirChapters.DefaultId;
         public bool solo, creative, paused, canister, valveOpened, calibrated, power, broadcast;
         public float spawnCountdown = 35, elapsed;
         public int scare, radioSequence;
@@ -128,9 +170,9 @@ namespace DeadAir
 
     [Serializable] public class NetPacket
     {
-        public string type, id, name, classId, code, playerId, stateJson, error;
-        public bool solo, creative, flashlight, camera, sprinting, paused, ok;
-        public int phrase, slot;
-        public float x, z, yaw, pitch, frequency;
+        public string type, id, name, classId, code, playerId, stateJson, error, chapterId;
+        public bool solo, creative, flashlight, camera, sprinting, paused, ok, mapOpen, uniqueEquipped;
+        public int phrase, slot, moveSequence;
+        public float x, y, z, yaw, pitch, frequency;
     }
 }

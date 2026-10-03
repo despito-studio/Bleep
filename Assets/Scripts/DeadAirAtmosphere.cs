@@ -68,9 +68,9 @@ namespace DeadAir
             var movement = player.transform.position - previousPosition;
             previousPosition = player.transform.position;
             bool moving = playing && !paused && !me.down && !hiding && new Vector2(movement.x, movement.z).sqrMagnitude > .000004f && movement.sqrMagnitude < 1;
-            float distance = playing ? Vector2.Distance(new Vector2(me.x, me.z), new Vector2(state.enemy.x, state.enemy.z)) : 100;
+            float distance = playing ? Vector3.Distance(new Vector3(me.x,me.y,me.z), new Vector3(state.enemy.x,state.enemy.y,state.enemy.z)) : 100;
             float threat = playing && state.enemy.active ? Mathf.Clamp01(1 - distance / 16) : 0;
-            Vector3? enemyPosition = playing && state.enemy.active ? new Vector3(-state.enemy.x, 1.2f, state.enemy.z) : (Vector3?)null;
+            Vector3? enemyPosition = playing && state.enemy.active ? new Vector3(-state.enemy.x, state.enemy.y+1.2f, state.enemy.z) : (Vector3?)null;
             audioEngine.Tick(paused, moving, playing && player.Sprinting, hiding, player.Stamina, playing ? me.sanity : 100,
                 threat, playing && player.CameraUp, playing && state.power, playing && state.broadcast, enemyPosition, distance);
             if (tape != null)

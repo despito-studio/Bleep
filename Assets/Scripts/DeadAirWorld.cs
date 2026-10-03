@@ -11,7 +11,11 @@ namespace DeadAir
         readonly Transform root;
         readonly Dictionary<string, Transform> interactables = new Dictionary<string, Transform>();
         readonly Dictionary<string, Transform> doorViews = new Dictionary<string, Transform>();
+        readonly Dictionary<string, DeadAirHingedDoor> doorAnimations = new Dictionary<string, DeadAirHingedDoor>();
+        readonly Dictionary<string, DeadAirHingedDoor> lockerAnimations = new Dictionary<string, DeadAirHingedDoor>();
+        readonly HashSet<string> occupiedLockers = new HashSet<string>();
         readonly Dictionary<string, Transform> stateViews = new Dictionary<string, Transform>();
+        readonly Dictionary<string, Quaternion> interactionRotations = new Dictionary<string, Quaternion>();
         readonly Dictionary<string, Renderer> doorLeds = new Dictionary<string, Renderer>();
         readonly Dictionary<string, Light> doorLights = new Dictionary<string, Light>();
         readonly List<Transform> fans = new List<Transform>();
@@ -34,15 +38,15 @@ namespace DeadAir
             root = sceneRoot!=null?sceneRoot.transform:new GameObject("BLACKPINE / original web scene").transform;
             RenderSettings.skybox = null;
             RenderSettings.ambientMode = AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(.15f,.17f,.135f);
-            RenderSettings.ambientEquatorColor = new Color(.075f,.085f,.055f);
-            RenderSettings.ambientGroundColor = new Color(.042f,.033f,.018f);
+            RenderSettings.ambientSkyColor = new Color(.095f,.12f,.165f);
+            RenderSettings.ambientEquatorColor = new Color(.045f,.052f,.067f);
+            RenderSettings.ambientGroundColor = new Color(.025f,.026f,.033f);
             RenderSettings.reflectionIntensity = 0;
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.ExponentialSquared;
-            ColorUtility.TryParseHtmlString("#0a100a",out var night);
+            ColorUtility.TryParseHtmlString("#101621",out var night);
             RenderSettings.fogColor = night;
-            RenderSettings.fogDensity = .032f;
+            RenderSettings.fogDensity = .014f;
             QualitySettings.pixelLightCount = 4;
             QualitySettings.vSyncCount = 0;
             QualitySettings.shadowDistance = 45f;
@@ -54,8 +58,25 @@ namespace DeadAir
             var dynamicRoots = new HashSet<Transform>();
             foreach(var t in root.GetComponentsInChildren<Transform>(true))
             {
-                if(t.name.StartsWith("interactive:")) { interactables[t.name.Substring(12)] = t; dynamicRoots.Add(t); }
-                else if(t.name.StartsWith("door:")) { doorViews[t.name.Substring(5)] = t; dynamicRoots.Add(t); }
+                if(t.name.StartsWith("interactive:"))
+                {
+                    string id=t.name.Substring(12);interactables[id]=t;interactionRotations[id]=t.localRotation;dynamicRoots.Add(t);
+                }
+                else if(t.name.StartsWith("door:"))
+                {
+                    string id=t.name.Substring(5);
+                    doorViews[id] = t; dynamicRoots.Add(t);
+                    var hinge=t.GetComponent<DeadAirHingedDoor>()??t.gameObject.AddComponent<DeadAirHingedDoor>();
+                    var specification=data.Door(id);
+                    hinge.Initialize(specification!=null&&Mathf.Abs(specification.openAngle)>.1f?specification.openAngle:90);
+                    doorAnimations[id]=hinge;
+                }
+                else if(t.name.StartsWith("locker-door:"))
+                {
+                    string id=t.name.Substring(12);dynamicRoots.Add(t);
+                    var hinge=t.GetComponent<DeadAirHingedDoor>()??t.gameObject.AddComponent<DeadAirHingedDoor>();
+                    hinge.Initialize(-105);lockerAnimations[id]=hinge;
+                }
                 else if(t.name.StartsWith("door-led:")) doorLeds[t.name.Substring(9)] = t.GetComponent<Renderer>();
                 else if(t.name.StartsWith("door-light:")) doorLights[t.name.Substring(11)] = t.GetComponent<Light>();
                 else if(t.name.StartsWith("state:")) { stateViews[t.name.Substring(6)] = t; dynamicRoots.Add(t); }
@@ -67,7 +88,7 @@ namespace DeadAir
                 }
             }
             sky = new DeadAirSky(root);
-            culling = new DeadAirCulling(root.Find("station"), root.Find("exterior"), dynamicRoots);
+            culling = new DeadAirCulling(data,root.Find("station"),root.Find("exterior"),dynamicRoots,doorAnimations);
             anchor=Instantiate("monster");bloodyAnchor=Instantiate("monster_bloody");
             anchor.SetActive(false);bloodyAnchor.SetActive(false);
         }
@@ -104,21 +125,29 @@ namespace DeadAir
             if(state==null) return;
             foreach(var door in state.doors)
             {
-                if(doorViews.TryGetValue(door.id,out var pivot))
-                {
-                    float side=pivot.localPosition.x<0?-1:1;
-                    pivot.localRotation=Quaternion.Euler(0,door.open ? -side*180f/2.2f : 0,0);
-                }
+                if(doorAnimations.TryGetValue(door.id,out var animation))animation.SetOpen(door.open);
                 var color=door.locked?new Color(.88f,.27f,.20f):door.open?new Color(.31f,.78f,.47f):new Color(.84f,.74f,.47f);
                 if(doorLeds.TryGetValue(door.id,out var led)&&led!=null) SetTint(led,color);
                 if(doorLights.TryGetValue(door.id,out var light)&&light!=null)light.color=color;
+            }
+            float animationDelta=state.paused?0:Time.deltaTime;
+            foreach(var animation in doorAnimations.Values)animation.Advance(animationDelta);
+            foreach(var entry in lockerAnimations)
+            {
+                bool occupied=state.players.Exists(p=>p.hiding==entry.Key);
+                if(occupied!=occupiedLockers.Contains(entry.Key))
+                {
+                    entry.Value.PlayAccessCycle();
+                    if(occupied)occupiedLockers.Add(entry.Key);else occupiedLockers.Remove(entry.Key);
+                }
+                entry.Value.Advance(animationDelta);
             }
             foreach(var obj in data.objects)
             {
                 if(!interactables.TryGetValue(obj.id,out var view))continue;
                 if(obj.type=="tape"||obj.type=="fuse"||obj.type=="keycard")view.gameObject.SetActive(!state.Collected(obj.id));
                 if(obj.id=="fuel-canister")view.gameObject.SetActive(!state.canister&&!state.quest.fuelAdded);
-                if(obj.id=="pressure-valve")view.localRotation=Quaternion.Euler(0,state.valveOpened?180:0,0);
+                if(obj.id=="pressure-valve")view.localRotation=interactionRotations[obj.id]*Quaternion.Euler(0,0,state.valveOpened?180:0);
             }
             bool flicker=DeadAirSettings.Flicker;
             for(int i=0;i<lamps.Count;i++)
@@ -144,7 +173,7 @@ namespace DeadAir
             if(state.enemy.active)
             {
                 var monster=state.broadcast?bloodyAnchor:anchor;
-                var position=new Vector3(-state.enemy.x,0,state.enemy.z);
+                var position=new Vector3(-state.enemy.x,state.enemy.y,state.enemy.z);
                 var direction=position-lastEnemyPosition;
                 if(direction.sqrMagnitude>.0001f)monster.transform.rotation=Quaternion.LookRotation(direction);
                 monster.transform.position=position;
@@ -173,7 +202,7 @@ namespace DeadAir
                     }
                     if (view != null)
                     {
-                        view.transform.position = new Vector3(-item.x, 0.15f, item.z);
+                        view.transform.position = new Vector3(-item.x, item.y + 0.15f, item.z);
                     }
                 }
             }
@@ -209,10 +238,14 @@ namespace DeadAir
                 var lightObj = new GameObject("dropped_light");
                 lightObj.transform.SetParent(view.transform, false);
                 var l = lightObj.AddComponent<Light>();
-                l.type = LightType.Point;
-                l.range = 5.5f;
-                l.intensity = 1.2f;
-                l.color = new Color(1f, 0.95f, 0.82f);
+                lightObj.transform.localPosition=new Vector3(0,1.05f,0);
+                lightObj.transform.localRotation=Quaternion.Euler(-90,0,0);
+                l.type = LightType.Spot;
+                l.range = 15;
+                l.spotAngle=48;l.innerSpotAngle=23;
+                l.intensity = 1.55f;
+                l.shadows=LightShadows.Hard;l.shadowBias=.015f;l.shadowNormalBias=.025f;
+                l.color = new Color(1f, .96f, .88f);
             }
             else if (interactables.TryGetValue(type, out var orig) && orig != null)
             {

@@ -8,6 +8,7 @@ namespace DeadAir
     public sealed class DeadAirFrameRenderer : MonoBehaviour
     {
         Camera worldCamera;
+        DeadAirFirstPersonRig equipment;
         DeadAirTapeEffect tape;
         RenderTexture previousTarget;
         bool previousMsaa;
@@ -27,6 +28,7 @@ namespace DeadAir
             }
 
             worldCamera = camera;
+            equipment = camera.GetComponentInParent<DeadAirFirstPersonRig>();
             previousTarget = camera.targetTexture;
             previousMsaa = camera.allowMSAA;
             previousAspect = camera.aspect;
@@ -63,7 +65,11 @@ namespace DeadAir
 
             if (SceneFrame == null || SceneFrame.width != width || SceneFrame.height != height)
             {
-                var next = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear)
+                // Keep lamp and flashlight highlights until the final tone map.
+                // An 8-bit scene target clipped them before exposure was applied.
+                var format = SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.ARGBHalf)
+                    ? RenderTextureFormat.ARGBHalf : RenderTextureFormat.ARGB32;
+                var next = new RenderTexture(width, height, 24, format, RenderTextureReadWrite.Linear)
                 {
                     name = "DEAD AIR scene frame",
                     filterMode = FilterMode.Point,
@@ -88,9 +94,15 @@ namespace DeadAir
 
             worldCamera.targetTexture = SceneFrame;
             worldCamera.aspect = aspect;
+            if (equipment != null) equipment.ConfigureRenderer(SceneFrame);
             OutputCamera.aspect = aspect;
             OutputCamera.depth = worldCamera.depth + 1;
             tape.SourceFrame = SceneFrame;
+        }
+
+        public void RenderEquipment()
+        {
+            if (equipment != null) equipment.RenderEquipment(SceneFrame);
         }
 
         static void DestroyTexture(RenderTexture texture)

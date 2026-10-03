@@ -11,6 +11,7 @@ namespace DeadAir
         void Awake()
         {
             Application.targetFrameRate = 60;
+            DeadAirSettings.ApplyDisplay();
             data = WorldData.Load();
             world = new DeadAirWorld(data);
             var game = new GameObject("Dead Air gameplay");

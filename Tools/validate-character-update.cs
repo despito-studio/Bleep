@@ -1,0 +1,10 @@
+DeadAir.Editor.DeadAirCharacterImporter.ImportAll();
+DeadAir.Editor.DeadAirCharacterRulesValidation.Validate();
+DeadAir.Editor.DeadAirFirstPersonPreview.RenderAll();
+DeadAir.Editor.DeadAirThirdPersonGripPreview.RenderAll();
+DeadAir.Editor.DeadAirCharacterPreview.RenderLineup();
+DeadAir.Editor.DeadAirEditorSetup.ValidateMigration();
+DeadAir.Editor.DeadAirEditorSetup.ValidateInventory();
+DeadAir.Editor.DeadAirEditorSetup.ValidateLan();
+UnityEditor.SceneManagement.EditorSceneManager.OpenScene("Assets/Scenes/Blackpine.unity");
+UnityEngine.Debug.Log("DEAD AIR CHARACTER UPDATE VALIDATION COMPLETE");

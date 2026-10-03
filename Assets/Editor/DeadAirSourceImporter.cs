@@ -37,14 +37,7 @@ namespace DeadAir.Editor
             {
                 string path = "Assets/SourceExport/Textures/texture_" + t.id + ".png";
                 var importer = (TextureImporter)AssetImporter.GetAtPath(path);
-                importer.textureType = TextureImporterType.Default;
-                importer.sRGBTexture = true;
-                importer.mipmapEnabled = true;
-                importer.alphaSource = TextureImporterAlphaSource.FromInput;
-                importer.alphaIsTransparency = true;
-                importer.wrapMode = t.wrap ? TextureWrapMode.Repeat : TextureWrapMode.Clamp;
-                importer.filterMode = t.nearest ? FilterMode.Point : FilterMode.Bilinear;
-                importer.textureCompression = TextureImporterCompression.Uncompressed;
+                DeadAirTextureAudit.Configure(importer, t.wrap, t.nearest);
                 importer.SaveAndReimport();
                 textures[t.id] = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
             }
@@ -65,6 +58,9 @@ namespace DeadAir.Editor
                 mat.SetColor("_EmissionColor", Parse(m.emissive) * m.emission);
                 mat.SetFloat("_FogEnabled",m.fog ? 1 : 0);
                 mat.SetFloat("_Cutoff",m.alphaTest);
+                mat.SetTexture("_MainTex", null);
+                mat.SetTextureScale("_MainTex", Vector2.one);
+                mat.SetTextureOffset("_MainTex", Vector2.zero);
                 if (m.map >= 0)
                 {
                     mat.SetTexture("_MainTex", textures[m.map]);
@@ -72,7 +68,19 @@ namespace DeadAir.Editor
                     mat.SetTextureScale("_MainTex", V2(t.repeat));
                     mat.SetTextureOffset("_MainTex", V2(t.offset));
                 }
-                if (m.emissiveMap >= 0) mat.SetTexture("_EmissionMap", textures[m.emissiveMap]);
+                if (mat.HasProperty("_EmissionMap"))
+                {
+                    mat.SetTexture("_EmissionMap", null);
+                    mat.SetTextureScale("_EmissionMap", Vector2.one);
+                    mat.SetTextureOffset("_EmissionMap", Vector2.zero);
+                    if (m.emissiveMap >= 0)
+                    {
+                        var t = export.textures[m.emissiveMap];
+                        mat.SetTexture("_EmissionMap", textures[m.emissiveMap]);
+                        mat.SetTextureScale("_EmissionMap", V2(t.repeat));
+                        mat.SetTextureOffset("_EmissionMap", V2(t.offset));
+                    }
+                }
                 mat.SetInt("_SrcBlend",(int)(m.transparent ? BlendMode.SrcAlpha : BlendMode.One));
                 mat.SetInt("_DstBlend",(int)(m.additive ? BlendMode.One : m.transparent ? BlendMode.OneMinusSrcAlpha : BlendMode.Zero));
                 mat.SetInt("_ZWrite",m.transparent && !m.depthWrite ? 0 : 1);
@@ -105,6 +113,8 @@ namespace DeadAir.Editor
             }
             foreach(var root in export.roots)
             {
+                // Blender characters have their own editable source, rig and clips.
+                if (root.name.StartsWith("character_") && File.Exists("Assets/Resources/Characters/" + root.name + ".fbx")) continue;
                 bool scenery = root.name == "station" || root.name == "exterior";
                 var go = Create(root.node,null,scenery);
                 go.name = root.name;

@@ -1,0 +1,139 @@
+{
+  "coordinate_system": "Blender Z up -Y forward; FBX Y up -Z forward setting (Unity +Z facing)",
+  "units": "metres",
+  "style": "Faceted PSX, shared flat palette, no subdivision",
+  "characters": [
+    {
+      "class": "operator",
+      "name": "Vivian",
+      "triangles": 2807,
+      "vertices": 1559,
+      "bones": 18,
+      "materials": 20,
+      "height_m": 1.897,
+      "clips": [
+        {
+          "name": "Idle",
+          "frames": 49,
+          "fps": 24
+        },
+        {
+          "name": "Walk",
+          "frames": 33,
+          "fps": 24
+        },
+        {
+          "name": "Run",
+          "frames": 25,
+          "fps": 24
+        },
+        {
+          "name": "UseItem",
+          "frames": 49,
+          "fps": 24
+        }
+      ],
+      "source": "Art/Characters/character_operator.blend",
+      "runtime": "Assets/Resources/Characters/character_operator.fbx"
+    },
+    {
+      "class": "engineer",
+      "name": "Victor",
+      "triangles": 2868,
+      "vertices": 1672,
+      "bones": 18,
+      "materials": 17,
+      "height_m": 1.803,
+      "clips": [
+        {
+          "name": "Idle",
+          "frames": 49,
+          "fps": 24
+        },
+        {
+          "name": "Walk",
+          "frames": 33,
+          "fps": 24
+        },
+        {
+          "name": "Run",
+          "frames": 25,
+          "fps": 24
+        },
+        {
+          "name": "UseItem",
+          "frames": 49,
+          "fps": 24
+        }
+      ],
+      "source": "Art/Characters/character_engineer.blend",
+      "runtime": "Assets/Resources/Characters/character_engineer.fbx"
+    },
+    {
+      "class": "journalist",
+      "name": "Edgar",
+      "triangles": 2570,
+      "vertices": 1428,
+      "bones": 18,
+      "materials": 20,
+      "height_m": 2.172,
+      "clips": [
+        {
+          "name": "Idle",
+          "frames": 49,
+          "fps": 24
+        },
+        {
+          "name": "Walk",
+          "frames": 33,
+          "fps": 24
+        },
+        {
+          "name": "Run",
+          "frames": 25,
+          "fps": 24
+        },
+        {
+          "name": "UseItem",
+          "frames": 49,
+          "fps": 24
+        }
+      ],
+      "source": "Art/Characters/character_journalist.blend",
+      "runtime": "Assets/Resources/Characters/character_journalist.fbx"
+    },
+    {
+      "class": "dispatcher",
+      "name": "Hazel",
+      "triangles": 3337,
+      "vertices": 1898,
+      "bones": 18,
+      "materials": 18,
+      "height_m": 2.054,
+      "clips": [
+        {
+          "name": "Idle",
+          "frames": 49,
+          "fps": 24
+        },
+        {
+          "name": "Walk",
+          "frames": 33,
+          "fps": 24
+        },
+        {
+          "name": "Run",
+          "frames": 25,
+          "fps": 24
+        },
+        {
+          "name": "UseItem",
+          "frames": 49,
+          "fps": 24
+        }
+      ],
+      "source": "Art/Characters/character_dispatcher.blend",
+      "runtime": "Assets/Resources/Characters/character_dispatcher.fbx"
+    }
+  ]
+}
