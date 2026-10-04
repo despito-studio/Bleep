@@ -19,8 +19,9 @@ namespace DeadAir
         Canvas captureCanvas;
         RenderTexture captureFrame;
         DeadAirFrameRenderer frameRenderer;
+        DeadAirScarePresentation captureScare;
         DeadAirWorld captureWorld;
-        bool officeCapture, menuCapture, repairCapture, lightingCapture, horrorCapture, captureWithoutEquipment;
+        bool officeCapture, menuCapture, repairCapture, lightingCapture, horrorCapture, characterCapture, captureWithoutEquipment;
         bool preferencesCaptured, hadPlayerName, hadChapter;
         string originalPlayerName, originalChapter;
         readonly Dictionary<string,float> originalSliders = new Dictionary<string,float>();
@@ -33,23 +34,93 @@ namespace DeadAir
             ui = FindFirstObjectByType<DeadAirUI>();
             var args = Environment.GetCommandLineArgs();
             for (int i = 0; i + 1 < args.Length; i++)
-                if (args[i] == "-deadAirCapture" || args[i] == "-deadAirOfficeCapture" || args[i] == "-deadAirMenuCapture" || args[i] == "-deadAirRepairCapture" || args[i] == "-deadAirLightingCapture" || args[i] == "-deadAirHorrorCapture")
-                { output = args[i + 1];officeCapture=args[i]=="-deadAirOfficeCapture";menuCapture=args[i]=="-deadAirMenuCapture";repairCapture=args[i]=="-deadAirRepairCapture";lightingCapture=args[i]=="-deadAirLightingCapture";horrorCapture=args[i]=="-deadAirHorrorCapture"; }
+                if (args[i] == "-deadAirCapture" || args[i] == "-deadAirOfficeCapture" || args[i] == "-deadAirMenuCapture" || args[i] == "-deadAirRepairCapture" || args[i] == "-deadAirLightingCapture" || args[i] == "-deadAirHorrorCapture" || args[i] == "-deadAirCharacterCapture")
+                { output = args[i + 1];officeCapture=args[i]=="-deadAirOfficeCapture";menuCapture=args[i]=="-deadAirMenuCapture";repairCapture=args[i]=="-deadAirRepairCapture";lightingCapture=args[i]=="-deadAirLightingCapture";horrorCapture=args[i]=="-deadAirHorrorCapture";characterCapture=args[i]=="-deadAirCharacterCapture"; }
             if (string.IsNullOrEmpty(output)) { enabled = false; return; }
             if (!Path.IsPathRooted(output)) throw new ArgumentException("-deadAirCapture requires an absolute output folder.");
             Directory.CreateDirectory(output);
-            if(menuCapture||repairCapture||lightingCapture||horrorCapture)
+            if(menuCapture||repairCapture||lightingCapture||horrorCapture||characterCapture)
             {
                 hadPlayerName=PlayerPrefs.HasKey("DeadAir.PlayerName");originalPlayerName=PlayerPrefs.GetString("DeadAir.PlayerName");
                 hadChapter=PlayerPrefs.HasKey("DeadAir.Chapter");originalChapter=PlayerPrefs.GetString("DeadAir.Chapter");
                 foreach(string key in new[]{"DeadAir.Volume","DeadAir.AmbienceVolume","DeadAir.EffectsVolume","DeadAir.MouseSensitivity"})
                     originalSliders[key]=PlayerPrefs.HasKey(key)?PlayerPrefs.GetFloat(key):float.NaN;
-                foreach(string key in new[]{"DeadAir.Fullscreen","DeadAir.Muted","DeadAir.Grain","DeadAir.Flicker","DeadAir.Quality"})
+                foreach(string key in new[]{"DeadAir.Fullscreen","DeadAir.Muted","DeadAir.FilmGrain","DeadAir.Flicker","DeadAir.Quality"})
                     originalToggles[key]=PlayerPrefs.HasKey(key)?(int?)PlayerPrefs.GetInt(key):null;
                 preferencesCaptured=true;
             }
             if(Application.isBatchMode)InitializeOffscreenCapture();
-            StartCoroutine(horrorCapture?CaptureHorror():lightingCapture?CaptureLighting():repairCapture?CaptureRepairs():menuCapture?CaptureMenu():officeCapture?CaptureOffice():Capture());
+            StartCoroutine(characterCapture?CaptureImportedCharacters():horrorCapture?CaptureHorror():lightingCapture?CaptureLighting():repairCapture?CaptureRepairs():menuCapture?CaptureMenu():officeCapture?CaptureOffice():Capture());
+        }
+
+        IEnumerator CaptureImportedCharacters()
+        {
+            QualitySettings.vSyncCount = 0; Application.targetFrameRate = 30;
+            yield return new WaitForSecondsRealtime(1.5f);
+            ui.ReturnToMenu();
+            yield return Save("imported-character-menu");
+            yield return CaptureCharacterEquipment();
+            yield return CaptureImportedCharacterPeers();
+            File.WriteAllText(Path.Combine(output, "character-runtime-report.txt"),
+                "PASSED: all four supplied character roles use their imported textured hands in the real player; flashlight, personal equipment, accepted actions, cigarette/lighter/smoke, held map and camera rendered.\n" +
+                "PASSED: all four imported full-body models rendered through a real loopback guest; source atlases, one skinned body each, personal actions, and map/camera contacts within one centimetre.\n");
+            Debug.Log("DEAD AIR IMPORTED CHARACTER RUNTIME PASSED: four source hand sets, four actual network bodies and equipment/action states.");
+            Application.Quit(0);
+        }
+
+        IEnumerator CaptureImportedCharacterPeers()
+        {
+            var peerObject = new GameObject("Imported cast loopback guest");
+            var peer = peerObject.AddComponent<DeadAirSession>();
+            peer.Initialize(WorldData.Load());
+            try
+            {
+                foreach (string role in new[] { "operator", "engineer", "journalist", "dispatcher" })
+                {
+                    ui.ReturnToMenu();
+                    session.Host("Cast verifier", "engineer", false, true);
+                    peer.Join("127.0.0.1", session.State.code, role, role);
+                    yield return Until(() => peer.State != null && session.State.players.Count == 2, role + " guest joins");
+                    session.Command(new NetPacket { type = "start" });
+                    yield return Until(() => peer.State?.phase == "playing", role + " guest starts");
+                    var actor = session.State.Player(peer.LocalId);
+                    actor.x = 0; actor.y = 0; actor.z = 4; actor.yaw = 0;
+                    player.SetInspectionPose(0, 1, Mathf.PI, -.08f);
+                    yield return new WaitForSecondsRealtime(.25f);
+                    yield return Save("character-coop-" + role + "-body");
+                    var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+                    var views = (Dictionary<string, GameObject>)typeof(DeadAirPlayer).GetField("remoteViews", flags).GetValue(player);
+                    Require(views.TryGetValue(peer.LocalId, out var model), "Missing actual guest body for " + role);
+                    var skins = model.GetComponentsInChildren<SkinnedMeshRenderer>();
+                    Require(skins.Length == 1 && skins[0].sharedMaterials.Length > 0 &&
+                        skins[0].sharedMaterials[0].mainTexture != null && skins[0].sharedMaterials[0].mainTexture.name == role + "_albedo",
+                        "The built network player is missing its one supplied textured model: " + role);
+                    peer.Command(new NetPacket { type = "slot", phrase = 1 });
+                    yield return Until(() => actor.uniqueItemEquipped, role + " guest equips personal item");
+                    peer.Command(new NetPacket { type = "unique-use" });
+                    yield return Until(() => actor.uniqueActionSequence == 1, role + " guest action replicates");
+                    yield return new WaitForSecondsRealtime(role == "operator" ? 4.0f : .35f);
+                    yield return Save("character-coop-" + role + "-action");
+                    // Let the confirmed personal action finish before testing both grips.
+                    yield return new WaitForSecondsRealtime(role == "operator" ? 3.2f : 2.3f);
+                    peer.Command(new NetPacket { type = "map-equip", mapOpen = true });
+                    yield return Until(() => actor.mapOpen, role + " guest map replicates");
+                    yield return Save("character-coop-" + role + "-map");
+                    ValidateRemoteGrip(peer.LocalId, "map");
+                    peer.Command(new NetPacket { type = "map-equip", mapOpen = false });
+                    peer.Command(new NetPacket { type = "move", x = actor.x, y = actor.y, z = actor.z, yaw = actor.yaw,
+                        pitch = 0, camera = true, flashlight = true });
+                    yield return Until(() => actor.camera, role + " guest camera replicates");
+                    yield return Save("character-coop-" + role + "-camera");
+                    ValidateRemoteGrip(peer.LocalId, "camera");
+                    player.EndInspection();
+                    peer.Leave();
+                    session.Leave();
+                    yield return null;
+                }
+            }
+            finally { player.EndInspection(); peer.Leave(); session.Leave(); Destroy(peerObject); }
+            ui.ReturnToMenu();
         }
 
         DeadAirRules CaptureRules()
@@ -63,11 +134,22 @@ namespace DeadAir
             QualitySettings.vSyncCount = 0; Application.targetFrameRate = 30;
             yield return new WaitForSecondsRealtime(1.5f);
             ui.ReturnToMenu();
+            var audio = FindFirstObjectByType<DeadAirAudio>();
+            Require(audio != null, "Procedural audio engine is missing.");
+            audio.ValidateInstruments();
+            yield return Save("horror-00-clean-menu");
             session.Host("Horror verifier", "engineer", true, true);
             session.Command(new NetPacket { type = "start" });
             yield return Until(() => session.State?.phase == "playing", "Horror chapter start");
             var data = WorldData.Load(); var checks = new List<string>();
             DeadAirSettings.Grain = false; DeadAirSettings.Flicker = false;
+            InspectToward(15, 20, 0, 15, .8f, 28); player.SetVerificationFlashlight(true);
+            yield return Save("horror-00b-restored-parking");
+            var cars = Array.FindAll(FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None),
+                t => t.name.StartsWith("prop:abandonedCar-"));
+            Require(cars.Length == 3 && Array.TrueForAll(cars, t => t.GetComponentsInChildren<Renderer>(true).Length >= 8),
+                "Three parking spaces need full cars instead of isolated hubcaps.");
+            checks.Add("PASSED: three complete parked cars in the real game world; clean menu/game frame; procedural audio samples verified.");
             InspectToward(0, -9, 0, -15, 1.2f, -9); player.SetVerificationFlashlight(false);
             yield return Save("horror-01-dressed-cross-hall");
             var web = Array.Find(FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None), t => t.name == "Cobweb:wall:0");
@@ -115,9 +197,13 @@ namespace DeadAir
             yield return new WaitForSecondsRealtime(.15f);
             var scare = FindFirstObjectByType<DeadAirScarePresentation>();
             Require(scare.SpiderActive, "The actual locker event did not present its spider.");
+            Require(DeadAirScarePresentation.FullscreenActive && ui.PresentationHidden,
+                "The spider scare must cover the screen and hide the whole interface.");
             yield return Save("horror-06-locker-spider", false);
             yield return new WaitForSecondsRealtime(1.3f);
             Require(!scare.SpiderActive && me.hiding == locker.id, "Spider animation must end while normal hiding remains active.");
+            Require(!ui.PresentationHidden,
+                "The game interface must return after the spider scare.");
             yield return Save("horror-07-normal-hidden-grille");
             int serial = me.spiderScareSerial;
             session.Command(new NetPacket { type = "interact", id = "exit-locker" });
@@ -152,9 +238,13 @@ namespace DeadAir
             me.sanity = 35; session.State.scare++;
             yield return new WaitForSecondsRealtime(.06f);
             Require(scare.SignalActive, "The paced signal event did not present its visual scare.");
+            Require(DeadAirScarePresentation.FullscreenActive && ui.PresentationHidden,
+                "The entity scare must cover the screen and hide the whole interface.");
             yield return Save("horror-10-signal-apparition", false);
-            yield return new WaitForSecondsRealtime(.5f);
+            yield return new WaitForSecondsRealtime(DeadAirScarePresentation.SignalDuration + .15f);
             Require(!scare.SignalActive, "A signal scare must release the camera view.");
+            Require(!ui.PresentationHidden,
+                "The game interface must return after the entity scare.");
             checks.Add("PASSED: paced transient blind monster apparition releases the view without input changes.");
 
             session.Host("Horror host", "engineer", false, false);
@@ -715,6 +805,7 @@ namespace DeadAir
             captureWorld=FindFirstObjectByType<DeadAirBootstrap>().World;
             frameRenderer=player.ViewCamera.GetComponent<DeadAirFrameRenderer>();
             frameRenderer.OutputCamera.enabled=false;frameRenderer.OutputCamera.targetTexture=captureFrame;
+            captureScare=FindFirstObjectByType<DeadAirScarePresentation>();
         }
 
         void LateUpdate()
@@ -724,6 +815,7 @@ namespace DeadAir
             frameRenderer.EnsureTargets();
             captureWorld.PrepareRender(player.ViewCamera);
             player.ViewCamera.Render();if(!captureWithoutEquipment)frameRenderer.RenderEquipment();frameRenderer.OutputCamera.Render();captureUI.Render();
+            captureScare?.RenderFullscreen(captureFrame);
         }
 
         IEnumerator Capture()
@@ -785,6 +877,12 @@ namespace DeadAir
                 yield return null;
                 player.SetInspectionPose(0, 4, 0, 0);
                 yield return Save("character-" + role + "-flashlight");
+                if (characterCapture)
+                {
+                    var hands = player.GetComponent<DeadAirFirstPersonRig>();
+                    Require(hands != null && hands.UsingImportedHands && hands.ImportedHandsRole == role,
+                        "The built game is missing the supplied textured hands for " + role);
+                }
                 var selectedActor=session.State.Player(session.LocalId);
                 Require(selectedActor.inventory.Count>1&&selectedActor.inventory[1]==DeadAirRoleItems.ForClass(role),"Missing role item inventory slot: "+role);
                 session.Command(new NetPacket { type = "slot", phrase = 1 });

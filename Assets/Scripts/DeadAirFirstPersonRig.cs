@@ -16,11 +16,32 @@ namespace DeadAir
         readonly List<Transform> packCigarettes = new List<Transform>();
         readonly List<Transform> smoke = new List<Transform>();
         readonly Dictionary<Transform, HandGeometry> hands = new Dictionary<Transform, HandGeometry>();
+        readonly List<HandPartBinding> handParts = new List<HandPartBinding>(44);
+        readonly Dictionary<string, ImportedHandParts> importedHands = new Dictionary<string, ImportedHandParts>();
         sealed class HandGeometry
         {
             public int side;
             public Transform palm, forearm, cuff, thumb, thumbMiddle, thumbTip;
+            public HandAttachmentFrames attachments;
             public readonly Transform[] proximal = new Transform[4], middle = new Transform[4], distal = new Transform[4], tip = new Transform[4];
+        }
+        sealed class HandAttachmentFrames
+        {
+            public Vector3 palmWrist, armStart, armWrist, cuffCentre;
+        }
+        sealed class HandPartBinding
+        {
+            public string sourceName;
+            public MeshFilter filter;
+            public MeshRenderer renderer;
+            public Mesh proceduralMesh;
+            public Material[] proceduralMaterials;
+        }
+        sealed class ImportedHandParts
+        {
+            public Mesh[] meshes;
+            public Material[][] materials;
+            public HandAttachmentFrames rightAttachments, leftAttachments;
         }
         Camera sourceCamera, equipmentCamera;
         Transform rig, rightHand, leftHand, packLid, cigarette, lighter, flame, ember, compassNeedle, pendulum, mapMarker;
@@ -33,6 +54,8 @@ namespace DeadAir
         bool bareArms;
         Vector3 previousForward;
         public bool IsUsingUnique => actionTime >= 0;
+        public bool UsingImportedHands { get; private set; }
+        public string ImportedHandsRole { get; private set; }
 
         public void CompleteEquipTransition()
         {
@@ -306,6 +329,7 @@ namespace DeadAir
             currentClass = id;
             bool bare = id == "operator" || id == "dispatcher";
             bareArms = bare;
+            if (ApplyImportedHands(id)) return;
             // Match the Blender cast palette, including their clothing materials.
             Color tint = id == "operator" ? new Color(.72f, .49f, .42f)
                 : id == "engineer" ? new Color(.53f, .39f, .29f) : new Color(.63f, .38f, .10f);
@@ -318,6 +342,102 @@ namespace DeadAir
                 hand.Find("Tailored forearm").localScale = bare ? new Vector3(.073f, .24f, .071f) : new Vector3(.104f, .25f, .10f);
                 hand.Find("Cuff or bracelet").localScale = bare ? new Vector3(.075f, .012f, .071f) : new Vector3(.091f, .037f, .086f);
             }
+        }
+
+        bool ApplyImportedHands(string role)
+        {
+            if (!importedHands.TryGetValue(role, out var imported))
+            {
+                imported = LoadImportedHands(role);
+                // Loading and hierarchy lookup happen once per role, never during grip updates.
+                importedHands.Add(role, imported);
+            }
+            bool complete = imported != null;
+            for (int i = 0; i < handParts.Count; i++)
+            {
+                var target = handParts[i];
+                target.filter.sharedMesh = complete ? imported.meshes[i] : target.proceduralMesh;
+                target.renderer.sharedMaterials = complete ? imported.materials[i] : target.proceduralMaterials;
+            }
+            hands[rightHand].attachments = complete ? imported.rightAttachments : null;
+            hands[leftHand].attachments = complete ? imported.leftAttachments : null;
+            UsingImportedHands = complete;
+            ImportedHandsRole = complete ? role : null;
+            return complete;
+        }
+
+        ImportedHandParts LoadImportedHands(string role)
+        {
+            var prefab = Resources.Load<GameObject>("Characters/Hands/hand_" + role);
+            if (prefab == null) return null;
+            var sources = new Dictionary<string, MeshFilter>(StringComparer.Ordinal);
+            foreach (var filter in prefab.GetComponentsInChildren<MeshFilter>(true))
+            {
+                if (sources.ContainsKey(filter.name))
+                {
+                    Debug.LogWarning("Dead Air imported hands for " + role + " contain duplicate part " + filter.name + ". Using procedural hands.", this);
+                    return null;
+                }
+                sources.Add(filter.name, filter);
+            }
+            var imported = new ImportedHandParts { meshes = new Mesh[handParts.Count], materials = new Material[handParts.Count][] };
+            for (int i = 0; i < handParts.Count; i++)
+            {
+                string name = handParts[i].sourceName;
+                if (!sources.TryGetValue(name, out var filter) || filter.sharedMesh == null || filter.sharedMesh.vertexCount == 0)
+                {
+                    Debug.LogWarning("Dead Air imported hands for " + role + " are missing mesh part " + name + ". Using procedural hands.", this);
+                    return null;
+                }
+                var renderer = filter.GetComponent<MeshRenderer>();
+                var materials = renderer != null ? renderer.sharedMaterials : null;
+                bool assigned = materials != null && materials.Length >= filter.sharedMesh.subMeshCount;
+                if (assigned)
+                    foreach (var material in materials) if (material == null) { assigned = false; break; }
+                if (!assigned)
+                {
+                    Debug.LogWarning("Dead Air imported hands for " + role + " are missing materials for " + name + ". Using procedural hands.", this);
+                    return null;
+                }
+                imported.meshes[i] = filter.sharedMesh;
+                imported.materials[i] = materials;
+            }
+            imported.rightAttachments = MeasureAttachments(sources, "Right_");
+            imported.leftAttachments = MeasureAttachments(sources, "Left_");
+            return imported;
+        }
+
+        static HandAttachmentFrames MeasureAttachments(Dictionary<string, MeshFilter> sources, string prefix)
+        {
+            var palm = sources[prefix + "palm"].sharedMesh;
+            var arm = sources[prefix + "forearm"].sharedMesh;
+            var cuff = sources[prefix + "cuff"].sharedMesh;
+            // Source fragments can taper and their end caps need not be centred
+            // on the unit bounding box. Cache their actual cap centres once.
+            var palmWrist = EndSectionCentre(palm, false);
+            palmWrist.y += palm.bounds.size.y * .006f;
+            return new HandAttachmentFrames {
+                palmWrist = palmWrist,
+                armStart = EndSectionCentre(arm, false),
+                armWrist = EndSectionCentre(arm, true),
+                cuffCentre = (EndSectionCentre(cuff, false) + EndSectionCentre(cuff, true)) * .5f
+            };
+        }
+
+        static Vector3 EndSectionCentre(Mesh mesh, bool upper)
+        {
+            Bounds bounds = mesh.bounds;
+            float end = upper ? bounds.max.y : bounds.min.y;
+            float tolerance = Mathf.Max(.00001f, bounds.size.y * .0001f);
+            Vector3 lower = new Vector3(float.PositiveInfinity, end, float.PositiveInfinity);
+            Vector3 higher = new Vector3(float.NegativeInfinity, end, float.NegativeInfinity);
+            foreach (var vertex in mesh.vertices)
+                if (Mathf.Abs(vertex.y - end) <= tolerance)
+                {
+                    lower.x = Mathf.Min(lower.x, vertex.x); lower.z = Mathf.Min(lower.z, vertex.z);
+                    higher.x = Mathf.Max(higher.x, vertex.x); higher.z = Mathf.Max(higher.z, vertex.z);
+                }
+            return (lower + higher) * .5f;
         }
 
         static string InventoryMode(string id)
@@ -408,7 +528,32 @@ namespace DeadAir
             anatomy.thumbMiddle = Part("Thumb middle", root, tubeMesh, skin, Vector3.zero, Vector3.one);
             anatomy.thumbTip = Part("Thumb tip", root, tubeMesh, skin, Vector3.zero, Vector3.one);
             hands.Add(root, anatomy);
+            string prefix = side == 1 ? "Right_" : "Left_";
+            BindHandPart(prefix + "forearm", anatomy.forearm);
+            BindHandPart(prefix + "cuff", anatomy.cuff);
+            BindHandPart(prefix + "palm", anatomy.palm);
+            for (int i = 0; i < 4; i++)
+            {
+                string finger = prefix + "finger" + i + "_";
+                BindHandPart(finger + "proximal", anatomy.proximal[i]);
+                BindHandPart(finger + "middle", anatomy.middle[i]);
+                BindHandPart(finger + "distal", anatomy.distal[i]);
+                BindHandPart(finger + "tip", anatomy.tip[i]);
+            }
+            BindHandPart(prefix + "thumb", anatomy.thumb);
+            BindHandPart(prefix + "thumb_middle", anatomy.thumbMiddle);
+            BindHandPart(prefix + "thumb_tip", anatomy.thumbTip);
             return root;
+        }
+
+        void BindHandPart(string sourceName, Transform part)
+        {
+            var filter = part.GetComponent<MeshFilter>();
+            var renderer = part.GetComponent<MeshRenderer>();
+            handParts.Add(new HandPartBinding {
+                sourceName = sourceName, filter = filter, renderer = renderer,
+                proceduralMesh = filter.sharedMesh, proceduralMaterials = renderer.sharedMaterials
+            });
         }
 
         // Every grip is described in the moving item's coordinates. The whole
@@ -426,10 +571,36 @@ namespace DeadAir
             h.palm.localPosition = centre;
             h.palm.localRotation = Quaternion.Euler(angles);
             h.palm.localScale = new Vector3(.078f, .090f, .035f);
-            Bone(h.forearm, armEnd, wrist, bareArms ? .074f : .102f, bareArms ? .069f : .095f);
+            if (h.attachments != null)
+            {
+                // Preserve the item grip and palm pose. Only the arm's distal
+                // end follows the source palm's real proximal cap, so a tapered
+                // imported hand cannot leave the legacy box-palm wrist in air.
+                wrist = centre + h.palm.localRotation * Vector3.Scale(h.attachments.palmWrist, h.palm.localScale);
+                FitEndSections(h.forearm, h.attachments.armStart, h.attachments.armWrist,
+                    armEnd, wrist, bareArms ? .074f : .102f, bareArms ? .069f : .095f);
+            }
+            else Bone(h.forearm, armEnd, wrist, bareArms ? .074f : .102f, bareArms ? .069f : .095f);
             h.cuff.localPosition = wrist;
             h.cuff.localRotation = h.forearm.localRotation;
             h.cuff.localScale = bareArms ? new Vector3(.076f, .012f, .072f) : new Vector3(.093f, .035f, .087f);
+            if (h.attachments != null)
+                h.cuff.localPosition -= h.cuff.localRotation * Vector3.Scale(h.attachments.cuffCentre, h.cuff.localScale);
+        }
+
+        static void FitEndSections(Transform part, Vector3 capStart, Vector3 capEnd,
+            Vector3 start, Vector3 end, float width, float depth)
+        {
+            Vector3 direction = end - start;
+            Vector3 capDirection = capEnd - capStart;
+            float radialLengthSquared = Mathf.Pow(capDirection.x * width, 2) + Mathf.Pow(capDirection.z * depth, 2);
+            float length = Mathf.Sqrt(Mathf.Max(.000016f, direction.sqrMagnitude - radialLengthSquared)) /
+                Mathf.Max(.0001f, Mathf.Abs(capDirection.y));
+            Vector3 scale = new Vector3(width, length, depth);
+            Quaternion rotation = Quaternion.FromToRotation(Vector3.Scale(capDirection, scale), direction);
+            part.localScale = scale;
+            part.localRotation = rotation;
+            part.localPosition = start - rotation * Vector3.Scale(capStart, scale);
         }
 
         static void Bone(Transform part, Vector3 start, Vector3 end, float width = .018f, float depth = .019f)

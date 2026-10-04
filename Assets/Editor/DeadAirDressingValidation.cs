@@ -23,6 +23,11 @@ namespace DeadAir.Editor
             foreach(var web in webs)
             {
                 Require(web.GetComponentsInChildren<Collider>(true).Length==0,"Cobweb blocks a player, door or locker: "+web.name);
+                var strands=web.Find("Web strands");
+                Require(strands!=null&&strands.TryGetComponent<MeshFilter>(out var filter)&&filter.sharedMesh!=null&&
+                    filter.sharedMesh.bounds.size.z>.035f,"Cobweb needs curved three-dimensional silk threads: "+web.name);
+                Require(strands.GetComponent<MeshRenderer>()!=null&&strands.GetComponent<MeshRenderer>().sharedMaterial.mainTexture==null,
+                    "Cobweb silk must be thread geometry without a flat texture: "+web.name);
                 foreach(string name in new[]{"Web anchor corner","Web anchor ceiling","Web anchor wall"})
                 {
                     var anchor=web.Find(name);
@@ -38,9 +43,10 @@ namespace DeadAir.Editor
             float webArea=0;var vertices=strandMesh.vertices;var triangles=strandMesh.triangles;
             for(int i=0;i<triangles.Length;i+=3)
                 webArea+=Vector3.Cross(vertices[triangles[i+1]]-vertices[triangles[i]],vertices[triangles[i+2]]-vertices[triangles[i]]).magnitude*.5f;
-            // Both front and back triangles count here. Dust-coated strands may
-            // cover up to 45% of the corner; a filled triangle would have area 1.
-            Require(webArea>.05f && webArea<.45f,"Cobweb has lost its open strand pattern or become a filled triangular sheet.");
+            // Closed tubes have more surface area than strips but keep the
+            // triangular corner open and have a visible third dimension.
+            Require(strandMesh.bounds.size.z>.1f&&webArea>.12f&&webArea<.8f,
+                "Cobweb has lost its curved tubular threads or become a filled sheet.");
             CheckDressingMaterial("cobweb-silk");CheckDressingMaterial("waste-paper");
 
             var litter=transforms.Where(t=>t.name.StartsWith("Floor litter:",StringComparison.Ordinal)).ToArray();

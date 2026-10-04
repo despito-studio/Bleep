@@ -64,6 +64,7 @@ namespace DeadAir
             if(root.Find("station")==null) Instantiate("station").name="station";
             if(root.Find("exterior")==null) Instantiate("exterior").name="exterior";
             DiscardOriginalVanBeams(root.Find("exterior"));
+            RestoreParkedCars(root.Find("exterior"),data);
             CalibratePhysicalMaterials(root.Find("station"));
             CalibratePhysicalMaterials(root.Find("exterior"));
             CalibrateExteriorLighting(root.Find("exterior"));
@@ -143,6 +144,9 @@ namespace DeadAir
                     var source=slots[i];if(source==null)continue;
                     string shaderName=source.shader.name;
                     if(shaderName!="Dead Air/Source Surface" && shaderName!="Dead Air/Source Unlit")continue;
+                    // Procedural car materials already belong to this world and
+                    // are calibrated when created; copying loses their ownership.
+                    if(source.name.StartsWith("Parked car /")&&(source.hideFlags&HideFlags.DontSave)!=0)continue;
                     if(IsLampMaterial(source))continue;
                     if(!copies.TryGetValue(source,out var material))
                     {
@@ -193,6 +197,192 @@ namespace DeadAir
                         // translucent browser cones were removed from the prefab.
                         renderer.gameObject.SetActive(false);break;
                     }
+        }
+
+        // The old furniture cache extracted only a hubcap from the browser's
+        // batched car. Its three orphaned disks survived in the saved exterior,
+        // while the bodies never reached the car prefab. Build complete cars at
+        // the authored prop transforms, including a matching physical footprint.
+        public static void RestoreParkedCars(Transform exterior,WorldData world)
+        {
+            if(exterior==null || world?.props==null)return;
+            foreach(var renderer in exterior.GetComponentsInChildren<Renderer>(true))
+                if(renderer.name=="Batched surfaces / surface_524")renderer.enabled=false;
+            var transforms=exterior.GetComponentsInChildren<Transform>(true);
+            bool needsRepair=false;
+            foreach(var prop in world.props)
+            {
+                if(prop.type!="abandonedCar")continue;
+                Transform parked=null;
+                foreach(var candidate in transforms)if(candidate.name=="prop:"+prop.id){parked=candidate;break;}
+                if(parked==null||parked.Find("Parked sedan")==null){needsRepair=true;break;}
+            }
+            if(!needsRepair)return;
+            var shader=Shader.Find("Dead Air/Source Surface");
+            if(shader==null)throw new InvalidOperationException("The parked-car surface shader is missing.");
+            var rubber=VehicleMaterial(shader,"Parked car / rubber",new Color(.045f,.049f,.046f));
+            var glass=VehicleMaterial(shader,"Parked car / dark glass",new Color(.085f,.14f,.17f));
+            var trim=VehicleMaterial(shader,"Parked car / aged metal",new Color(.32f,.34f,.31f));
+            var lens=VehicleMaterial(shader,"Parked car / unpowered headlamp",new Color(.67f,.64f,.48f));
+            var tail=VehicleMaterial(shader,"Parked car / unpowered tail lamp",new Color(.36f,.07f,.055f));
+            var cube=VehicleCubeMesh();
+            var wheel=VehicleWheelMesh();
+            int index=0;
+            foreach(var prop in world.props)
+            {
+                if(prop.type!="abandonedCar")continue;
+                Transform parked=null;
+                foreach(var candidate in transforms)
+                    if(candidate.name=="prop:"+prop.id){parked=candidate;break;}
+                if(parked==null)
+                {
+                    parked=new GameObject("prop:"+prop.id).transform;parked.SetParent(exterior,false);
+                    parked.localPosition=DeadAirOfficeLayout.Position(prop.x,prop.y,prop.z);
+                    parked.localRotation=DeadAirOfficeLayout.Rotation(prop.rotation);
+                }
+                if(parked.Find("Parked sedan")!=null)continue;
+                foreach(var renderer in parked.GetComponentsInChildren<Renderer>(true))renderer.enabled=false;
+                foreach(var collider in parked.GetComponentsInChildren<Collider>(true))collider.enabled=false;
+                var sedan=new GameObject("Parked sedan").transform;sedan.SetParent(parked,false);
+                float w=prop.w>0?prop.w:2.1f,d=prop.d>0?prop.d:4.2f;
+                var color=index%3==0?new Color(.36f,.43f,.39f):index%3==1?new Color(.38f,.42f,.49f):new Color(.46f,.33f,.28f);
+                if(!string.IsNullOrEmpty(prop.color)&&ColorUtility.TryParseHtmlString(prop.color,out var authored))color=authored;
+                var paint=VehicleMaterial(shader,"Parked car / weathered paint "+index,color);index++;
+                VehiclePart(sedan,"Sedan body",VehicleHullMesh(w,d),paint,Vector3.zero,Vector3.one);
+                VehiclePart(sedan,"Passenger cabin",VehicleCabinMesh(w,d),paint,Vector3.zero,Vector3.one);
+                var windowVertices=new List<Vector3>();
+                for(int side=-1;side<=1;side+=2)
+                {
+                    float lower=side*w*.443f,upper=side*w*.370f;
+                    var a=new Vector3(lower,.99f,-d*.217f);var b=new Vector3(upper,1.43f,-d*.103f);
+                    var c=new Vector3(upper,1.43f,d*.031f);var e=new Vector3(lower,.99f,d*.031f);
+                    if(side>0)VehicleFace(windowVertices,a,b,c,e);else VehicleFace(windowVertices,e,c,b,a);
+                    a=new Vector3(lower,.99f,d*.049f);b=new Vector3(upper,1.43f,d*.049f);
+                    c=new Vector3(upper,1.43f,d*.161f);e=new Vector3(lower,.99f,d*.258f);
+                    if(side>0)VehicleFace(windowVertices,a,b,c,e);else VehicleFace(windowVertices,e,c,b,a);
+                }
+                VehicleFace(windowVertices,new Vector3(-w*.412f,.995f,-d*.233f),new Vector3(-w*.348f,1.43f,-d*.133f),
+                    new Vector3(w*.348f,1.43f,-d*.133f),new Vector3(w*.412f,.995f,-d*.233f));
+                VehicleFace(windowVertices,new Vector3(w*.412f,.995f,d*.283f),new Vector3(w*.348f,1.43f,d*.193f),
+                    new Vector3(-w*.348f,1.43f,d*.193f),new Vector3(-w*.412f,.995f,d*.283f));
+                // Glass is opaque with physical outward normals, so it never becomes floating
+                // additive dots or reveals the empty cabin through the body.
+                VehiclePart(sedan,"Six dark windows",VehicleMesh("Sedan windows",windowVertices),glass,Vector3.zero,Vector3.one);
+                for(int side=-1;side<=1;side+=2)
+                {
+                    for(int axle=-1;axle<=1;axle+=2)
+                    {
+                        var position=new Vector3(side*w*.445f,.34f,axle*d*.31f);
+                        VehiclePart(sedan,"Wheel "+side+" / "+axle,wheel,rubber,position,new Vector3(.27f,.34f,.34f));
+                        VehiclePart(sedan,"Wheel hub "+side+" / "+axle,wheel,trim,position+new Vector3(side*.145f,0,0),new Vector3(.022f,.18f,.18f));
+                    }
+                    VehiclePart(sedan,"Side sill "+side,cube,trim,new Vector3(side*w*.475f,.47f,0),new Vector3(.05f,.08f,d*.77f));
+                    VehiclePart(sedan,"Door handle "+side,cube,trim,new Vector3(side*w*.455f,.96f,d*.04f),new Vector3(.028f,.04f,.17f));
+                    VehiclePart(sedan,"Wing mirror "+side,cube,paint,new Vector3(side*w*.485f,1.01f,-d*.18f),new Vector3(.16f,.13f,.22f));
+                    VehiclePart(sedan,"Rectangular headlamp "+side,cube,lens,new Vector3(side*w*.305f,.76f,-d*.479f),new Vector3(w*.18f,.15f,.04f));
+                    VehiclePart(sedan,"Rectangular tail lamp "+side,cube,tail,new Vector3(side*w*.315f,.78f,d*.478f),new Vector3(w*.17f,.14f,.04f));
+                }
+                foreach(int end in new[]{-1,1})
+                    VehiclePart(sedan,"Bumper "+end,cube,trim,new Vector3(0,.54f,end*d*.48f),new Vector3(w*.90f,.12f,.15f));
+                VehiclePart(sedan,"Front grille",cube,rubber,new Vector3(0,.74f,-d*.482f),new Vector3(w*.34f,.16f,.044f));
+                VehiclePart(sedan,"Number plate",cube,lens,new Vector3(0,.575f,-d*.501f),new Vector3(.43f,.105f,.024f));
+                var bodyCollider=sedan.gameObject.AddComponent<BoxCollider>();
+                bodyCollider.center=new Vector3(0,.77f,0);bodyCollider.size=new Vector3(w,1.48f,d);
+            }
+        }
+
+        static Material VehicleMaterial(Shader shader,string name,Color color)
+        {
+            var material=new Material(shader){name=name,hideFlags=HideFlags.DontSave,enableInstancing=true};
+            material.SetColor("_Color",color);material.SetColor("_EmissionColor",Color.black);
+            material.SetFloat("_Glossiness",.12f);return material;
+        }
+
+        static void VehiclePart(Transform parent,string name,Mesh mesh,Material material,Vector3 position,Vector3 scale)
+        {
+            var part=new GameObject(name);part.transform.SetParent(parent,false);
+            part.transform.localPosition=position;part.transform.localScale=scale;
+            part.AddComponent<MeshFilter>().sharedMesh=mesh;
+            var renderer=part.AddComponent<MeshRenderer>();renderer.sharedMaterial=material;
+            renderer.shadowCastingMode=ShadowCastingMode.On;renderer.receiveShadows=true;
+        }
+
+        static void VehicleFace(List<Vector3> vertices,Vector3 a,Vector3 b,Vector3 c,Vector3 d)
+        {vertices.Add(a);vertices.Add(b);vertices.Add(c);vertices.Add(d);}
+
+        static Mesh VehicleMesh(string name,List<Vector3> vertices)
+        {
+            var indices=new int[vertices.Count/4*6];
+            for(int face=0;face<vertices.Count/4;face++)
+            {
+                int v=face*4,t=face*6;indices[t]=v;indices[t+1]=v+1;indices[t+2]=v+2;
+                indices[t+3]=v;indices[t+4]=v+2;indices[t+5]=v+3;
+            }
+            var mesh=new Mesh(){name=name,hideFlags=HideFlags.DontSave};
+            mesh.SetVertices(vertices);mesh.triangles=indices;mesh.RecalculateNormals();mesh.RecalculateBounds();return mesh;
+        }
+
+        static Mesh VehicleCubeMesh()
+        {
+            var vertices=new List<Vector3>();
+            VehicleFace(vertices,new Vector3(-.5f,-.5f,-.5f),new Vector3(-.5f,.5f,-.5f),new Vector3(.5f,.5f,-.5f),new Vector3(.5f,-.5f,-.5f));
+            VehicleFace(vertices,new Vector3(.5f,-.5f,.5f),new Vector3(.5f,.5f,.5f),new Vector3(-.5f,.5f,.5f),new Vector3(-.5f,-.5f,.5f));
+            VehicleFace(vertices,new Vector3(-.5f,-.5f,.5f),new Vector3(-.5f,.5f,.5f),new Vector3(-.5f,.5f,-.5f),new Vector3(-.5f,-.5f,-.5f));
+            VehicleFace(vertices,new Vector3(.5f,-.5f,-.5f),new Vector3(.5f,.5f,-.5f),new Vector3(.5f,.5f,.5f),new Vector3(.5f,-.5f,.5f));
+            VehicleFace(vertices,new Vector3(-.5f,.5f,-.5f),new Vector3(-.5f,.5f,.5f),new Vector3(.5f,.5f,.5f),new Vector3(.5f,.5f,-.5f));
+            VehicleFace(vertices,new Vector3(-.5f,-.5f,.5f),new Vector3(-.5f,-.5f,-.5f),new Vector3(.5f,-.5f,-.5f),new Vector3(.5f,-.5f,.5f));
+            return VehicleMesh("Sedan box detail",vertices);
+        }
+
+        static Mesh VehicleHullMesh(float w,float d)
+        {
+            var vertices=new List<Vector3>();
+            var z=new[]{-d*.475f,-d*.35f,d*.35f,d*.475f};
+            var widths=new[]{w*.43f,w*.48f,w*.48f,w*.43f};
+            var heights=new[]{.87f,.96f,.96f,.88f};
+            for(int i=0;i<3;i++)
+            {
+                VehicleFace(vertices,new Vector3(-widths[i],heights[i],z[i]),new Vector3(-widths[i+1],heights[i+1],z[i+1]),
+                    new Vector3(widths[i+1],heights[i+1],z[i+1]),new Vector3(widths[i],heights[i],z[i]));
+                foreach(int side in new[]{-1,1})
+                {
+                    var a=new Vector3(side*widths[i],.48f,z[i]);var b=new Vector3(side*widths[i],heights[i],z[i]);
+                    var c=new Vector3(side*widths[i+1],heights[i+1],z[i+1]);var e=new Vector3(side*widths[i+1],.48f,z[i+1]);
+                    if(side==1)VehicleFace(vertices,a,b,c,e);else VehicleFace(vertices,e,c,b,a);
+                }
+            }
+            VehicleFace(vertices,new Vector3(-widths[0],.48f,z[0]),new Vector3(-widths[0],heights[0],z[0]),new Vector3(widths[0],heights[0],z[0]),new Vector3(widths[0],.48f,z[0]));
+            VehicleFace(vertices,new Vector3(widths[3],.48f,z[3]),new Vector3(widths[3],heights[3],z[3]),new Vector3(-widths[3],heights[3],z[3]),new Vector3(-widths[3],.48f,z[3]));
+            VehicleFace(vertices,new Vector3(-widths[0],.48f,z[0]),new Vector3(widths[0],.48f,z[0]),new Vector3(widths[3],.48f,z[3]),new Vector3(-widths[3],.48f,z[3]));
+            return VehicleMesh("Low polygon sedan body",vertices);
+        }
+
+        static Mesh VehicleCabinMesh(float w,float d)
+        {
+            var vertices=new List<Vector3>();
+            var a=new Vector3(-w*.44f,.95f,-d*.24f);var b=new Vector3(w*.44f,.95f,-d*.24f);
+            var c=new Vector3(w*.44f,.95f,d*.29f);var e=new Vector3(-w*.44f,.95f,d*.29f);
+            var f=new Vector3(-w*.36f,1.48f,-d*.12f);var g=new Vector3(w*.36f,1.48f,-d*.12f);
+            var h=new Vector3(w*.36f,1.48f,d*.18f);var j=new Vector3(-w*.36f,1.48f,d*.18f);
+            VehicleFace(vertices,a,f,g,b);VehicleFace(vertices,b,g,h,c);VehicleFace(vertices,c,h,j,e);
+            VehicleFace(vertices,e,j,f,a);VehicleFace(vertices,f,j,h,g);VehicleFace(vertices,e,a,b,c);
+            return VehicleMesh("Sloped sedan cabin",vertices);
+        }
+
+        static Mesh VehicleWheelMesh()
+        {
+            var vertices=new List<Vector3>();const int sides=10;
+            for(int i=0;i<sides;i++)
+            {
+                // A half-segment offset places vertices exactly at the top and
+                // bottom of a ten-sided tire, preserving its authored radius.
+                float a=(i+.5f)*Mathf.PI*2/sides,b=(i+1.5f)*Mathf.PI*2/sides;
+                var p=new Vector3(0,Mathf.Sin(a),Mathf.Cos(a));var q=new Vector3(0,Mathf.Sin(b),Mathf.Cos(b));
+                VehicleFace(vertices,p-Vector3.right*.5f,p+Vector3.right*.5f,q+Vector3.right*.5f,q-Vector3.right*.5f);
+                VehicleFace(vertices,-Vector3.right*.5f,p-Vector3.right*.5f,q-Vector3.right*.5f,-Vector3.right*.5f);
+                VehicleFace(vertices,Vector3.right*.5f,q+Vector3.right*.5f,p+Vector3.right*.5f,Vector3.right*.5f);
+            }
+            return VehicleMesh("Ten sided sedan wheel",vertices);
         }
 
         public static void InstallVanHeadlamps(Transform van)

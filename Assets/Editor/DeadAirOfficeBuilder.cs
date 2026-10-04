@@ -25,6 +25,40 @@ namespace DeadAir.Editor
         static Font signFont;
         static Material plaster, brick, trim, floor, carpet, ceilingPanel, metal, wood, asphalt, grass, glass, lightSurface, paper, black, signLetters, cobwebSilk, wastePaper;
 
+        [MenuItem("Dead Air/Refresh Volumetric Cobwebs")]
+        public static void RefreshCobwebGeometry()
+        {
+            meshes.Remove("cobweb-strands");meshes.Remove("cobweb-locker-strands");
+            var wallMesh=CobwebMesh(false);var lockerMesh=CobwebMesh(true);
+            var silk=AssetDatabase.LoadAssetAtPath<Material>(Folder+"/Materials/cobweb-silk.mat");
+            if(silk==null)throw new InvalidOperationException("Saved cobweb silk material is missing.");
+            silk.mainTexture=null;silk.color=new Color(.39f,.42f,.37f);silk.SetFloat("_Glossiness",.10f);
+            EditorUtility.SetDirty(silk);
+            int count=0;
+            foreach(string path in new[]{"Assets/Resources/World/station.prefab","Assets/Resources/World/exterior.prefab"})
+            {
+                var contents=PrefabUtility.LoadPrefabContents(path);
+                try
+                {
+                    foreach(var oldBatch in contents.GetComponentsInChildren<Transform>(true).Where(t=>t.name=="Batched surfaces / cobweb-silk").ToArray())
+                        UnityEngine.Object.DestroyImmediate(oldBatch.gameObject);
+                    foreach(var web in contents.GetComponentsInChildren<Transform>(true).Where(t=>t.name.StartsWith("Cobweb:",StringComparison.Ordinal)).ToArray())
+                    {
+                        var strands=web.Find("Web strands");if(strands==null)strands=Group(web,"Web strands");strands.localScale=Vector3.one;
+                        var filter=strands.GetComponent<MeshFilter>();if(filter==null)filter=strands.gameObject.AddComponent<MeshFilter>();
+                        filter.sharedMesh=web.name.StartsWith("Cobweb:locker:",StringComparison.Ordinal)?lockerMesh:wallMesh;
+                        var renderer=strands.GetComponent<MeshRenderer>();if(renderer==null)renderer=strands.gameObject.AddComponent<MeshRenderer>();
+                        renderer.sharedMaterial=silk;renderer.shadowCastingMode=ShadowCastingMode.Off;renderer.receiveShadows=true;
+                        count++;
+                    }
+                    PrefabUtility.SaveAsPrefabAsset(contents,path);
+                }
+                finally{PrefabUtility.UnloadPrefabContents(contents);}
+            }
+            AssetDatabase.SaveAssets();
+            Debug.Log("Refreshed "+count+" cobwebs as curved closed silk tubes without textures.");
+        }
+
         [MenuItem("Dead Air/Build Expanded Office")]
         public static void Build()
         {
@@ -255,6 +289,8 @@ namespace DeadAir.Editor
             paper = Surface("sign-board",new Color(.8f,.78f,.62f),0);
             black = Surface("dark-detail",new Color(.07f,.09f,.08f),0);
             cobwebSilk = Surface("cobweb-silk",new Color(.28f,.30f,.26f),0);
+            cobwebSilk.mainTexture=null;cobwebSilk.color=new Color(.39f,.42f,.37f);
+            cobwebSilk.SetFloat("_Glossiness",.10f);
             wastePaper = Surface("waste-paper",new Color(.57f,.54f,.43f),0);
             string signPath=Folder+"/Materials/sign-font.mat";
             signLetters=AssetDatabase.LoadAssetAtPath<Material>(signPath);
@@ -747,7 +783,7 @@ namespace DeadAir.Editor
         static Transform Cobweb(Transform parent,string name,Vector3 position,Quaternion rotation,Vector2 size)
         {
             var root=Group(parent,name);root.localPosition=position;root.localRotation=rotation;root.localScale=new Vector3(size.x,size.y,1);
-            var strands=Group(root,"Web strands");strands.gameObject.AddComponent<MeshFilter>().sharedMesh=CobwebMesh();
+            var strands=Group(root,"Web strands");strands.gameObject.AddComponent<MeshFilter>().sharedMesh=CobwebMesh(name.StartsWith("Cobweb:locker:",StringComparison.Ordinal));
             var renderer=strands.gameObject.AddComponent<MeshRenderer>();renderer.sharedMaterial=cobwebSilk;
             renderer.shadowCastingMode=ShadowCastingMode.Off;renderer.receiveShadows=true;
             WebAnchor(root,"Web anchor corner",Vector3.zero);
@@ -756,27 +792,13 @@ namespace DeadAir.Editor
 
         static void WebAnchor(Transform web,string name,Vector3 point)=>Group(web,name).localPosition=point;
 
-        static Mesh CobwebMesh()
+        static Mesh CobwebMesh(bool locker=false)
         {
-            const string key="cobweb-strands";
+            string key=locker?"cobweb-locker-strands":"cobweb-strands";
             if(meshes.TryGetValue(key,out var cached))return cached;
-            var vertices=new List<Vector3>();var uv=new List<Vector2>();var triangles=new List<int>();
-            const int spokes=8;
-            Vector3 Point(int spoke,float amount)
-            {
-                float angle=spoke*Mathf.PI*.5f/(spokes-1),x=Mathf.Cos(angle),y=Mathf.Sin(angle);
-                float radius=1/(x+y);return new Vector3(x,-y,0)*radius*amount;
-            }
-            void Strand(Vector3 a,Vector3 b)
-            {
-                // Dust-coated strands need to survive the game's 360p sampling.
-                var side=Vector3.Cross(b-a,Vector3.forward).normalized*.0085f;
-                MeshQuad(vertices,uv,triangles,a-side,b-side,b+side,a+side);
-            }
-            for(int spoke=0;spoke<spokes;spoke++)Strand(Vector3.zero,Point(spoke,1));
-            foreach(float amount in new[]{.24f,.45f,.68f,.86f,1})
-                for(int spoke=0;spoke<spokes-1;spoke++)Strand(Point(spoke,amount),Point(spoke+1,amount));
-            return SavedDressingMesh(key,vertices,uv,triangles);
+            var generated=DeadAirWebGeometry.CreateMesh(locker ? .035f : -.115f);
+            try{return SavedDressingMesh(key,new List<Vector3>(generated.vertices),new List<Vector2>(generated.uv),new List<int>(generated.triangles));}
+            finally{UnityEngine.Object.DestroyImmediate(generated);}
         }
 
         static void MeshQuad(List<Vector3> vertices,List<Vector2> uv,List<int> indices,Vector3 a,Vector3 b,Vector3 c,Vector3 d)
@@ -1258,7 +1280,7 @@ namespace DeadAir.Editor
             {
                 if(t.name.StartsWith("interactive:")||t.name.StartsWith("door:")||t.name.StartsWith("door-led:")||
                    t.name.StartsWith("locker-door:")||t.name.StartsWith("state:")||t.name.StartsWith("fan:")||t.name.StartsWith("monitor:")||
-                   t.name.StartsWith("headlamp-lens:")) return true;
+                   t.name.StartsWith("headlamp-lens:")||t.name.StartsWith("Cobweb:")) return true;
                 t=t.parent;
             }
             return false;

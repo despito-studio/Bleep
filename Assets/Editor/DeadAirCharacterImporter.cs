@@ -15,14 +15,23 @@ namespace DeadAir.Editor
         const string ModelFolder = "Assets/Resources/Characters";
         const string MaterialFolder = "Assets/Characters/Materials";
         const string PrefabFolder = "Assets/Resources/World";
+        const string HandFolder = "Assets/Resources/Characters/Hands";
+        const string HandMeshFolder = "Assets/Characters/Meshes";
 
         [MenuItem("Dead Air/Import Blender Characters")]
         public static void ImportAll()
         {
             Directory.CreateDirectory(MaterialFolder);
             Directory.CreateDirectory(PrefabFolder);
+            Directory.CreateDirectory(HandFolder);
+            Directory.CreateDirectory(HandMeshFolder);
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
-            foreach (string role in Roles) ImportCharacter(role);
+            foreach (string role in Roles)
+            {
+                ConfigureTexture(role);
+                ImportCharacter(role);
+                ImportHands(role);
+            }
             AssetDatabase.SaveAssets();
             Validate();
         }
@@ -39,6 +48,8 @@ namespace DeadAir.Editor
             importer.importCameras = false;
             importer.importLights = false;
             importer.importBlendShapes = false;
+            importer.optimizeMeshPolygons = true;
+            importer.optimizeMeshVertices = true;
             importer.meshCompression = ModelImporterMeshCompression.Off;
             importer.animationCompression = ModelImporterAnimationCompression.Off;
             importer.importNormals = ModelImporterNormals.Import;
@@ -98,11 +109,21 @@ namespace DeadAir.Editor
                 visual.transform.localPosition -= new Vector3(bounds.center.x, bounds.min.y, bounds.center.z);
                 var animation = visual.GetComponentInChildren<Animation>(true);
                 if (animation == null) animation = visual.AddComponent<Animation>();
-                foreach (var clip in AssetDatabase.LoadAllAssetsAtPath(path).OfType<AnimationClip>())
-                    if (ClipNames.Contains(clip.name)) animation.AddClip(clip, clip.name);
+                var importedClips = AssetDatabase.LoadAllAssetsAtPath(path).OfType<AnimationClip>()
+                    .Where(clip => ClipNames.Contains(clip.name)).ToArray();
+                foreach (var clip in importedClips) animation.AddClip(clip, clip.name);
                 animation.clip = animation.GetClip("Idle");
                 animation.playAutomatically = false;
                 animation.cullingType = AnimationCullingType.BasedOnRenderers;
+                // AddClip updates legacy runtime states. Persist the actual
+                // imported clip references explicitly after an FBX reimport.
+                var serializedAnimation = new SerializedObject(animation);
+                var savedClips = serializedAnimation.FindProperty("m_Animations");
+                savedClips.arraySize = ClipNames.Length;
+                for (int i = 0; i < ClipNames.Length; i++)
+                    savedClips.GetArrayElementAtIndex(i).objectReferenceValue = importedClips.Single(clip => clip.name == ClipNames[i]);
+                serializedAnimation.FindProperty("m_Animation").objectReferenceValue = importedClips.Single(clip => clip.name == "Idle");
+                serializedAnimation.ApplyModifiedPropertiesWithoutUndo();
                 var motion = root.AddComponent<DeadAirCharacterMotion>();
                 motion.ClassId = role;
                 string prefabPath = PrefabFolder + "/character_" + role + ".prefab";
@@ -131,6 +152,14 @@ namespace DeadAir.Editor
                 source.HasProperty("_BaseColor") ? source.GetColor("_BaseColor") : Color.white;
             material.mainTexture = source.HasProperty("_MainTex") ? source.GetTexture("_MainTex") :
                 source.HasProperty("_BaseMap") ? source.GetTexture("_BaseMap") : null;
+            var atlas = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Characters/Textures/" + role + "_albedo.png");
+            if (atlas != null)
+            {
+                material.mainTexture = atlas;
+                // All four supplied sources use this original diffuse factor.
+                // FBX material conversion can otherwise replace it with white.
+                material.color = new Color(.8f, .8f, .8f, 1);
+            }
             material.SetFloat("_Glossiness", .06f);
             material.SetFloat("_Metallic", 0);
             material.SetFloat("_Cull", 2);
@@ -142,6 +171,120 @@ namespace DeadAir.Editor
             material.enableInstancing = true;
             EditorUtility.SetDirty(material);
             return material;
+        }
+
+        static void ConfigureTexture(string role)
+        {
+            string path = "Assets/Characters/Textures/" + role + "_albedo.png";
+            if (!File.Exists(path)) return; // The original reference cast has a flat material palette.
+            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer == null) throw new InvalidOperationException("Missing character atlas importer: " + path);
+            importer.textureType = TextureImporterType.Default;
+            importer.sRGBTexture = true;
+            importer.alphaSource = TextureImporterAlphaSource.None;
+            importer.maxTextureSize = 1024;
+            importer.mipmapEnabled = true;
+            importer.filterMode = FilterMode.Bilinear;
+            importer.wrapMode = TextureWrapMode.Clamp;
+            importer.textureCompression = TextureImporterCompression.CompressedHQ;
+            importer.isReadable = false;
+            importer.SaveAndReimport();
+        }
+
+        // The authored chunks retain their original atlas UVs. Bake the FBX axis
+        // conversion into each mesh, then place it in the grip solver's unit frame.
+        static void ImportHands(string role)
+        {
+            string sourcePath = "Assets/Characters/Imported/hand_" + role + ".fbx";
+            if (!File.Exists(sourcePath)) return;
+            var importer = AssetImporter.GetAtPath(sourcePath) as ModelImporter;
+            if (importer == null) throw new InvalidOperationException("Missing hand FBX importer: " + role);
+            importer.importAnimation = false;
+            importer.importCameras = false;
+            importer.importLights = false;
+            importer.importBlendShapes = false;
+            importer.importNormals = ModelImporterNormals.Import;
+            importer.optimizeMeshPolygons = true;
+            importer.optimizeMeshVertices = true;
+            importer.materialImportMode = ModelImporterMaterialImportMode.ImportStandard;
+            importer.materialLocation = ModelImporterMaterialLocation.InPrefab;
+            importer.isReadable = true;
+            importer.SaveAndReimport();
+            var source = UnityEngine.Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(sourcePath));
+            var root = new GameObject("hand_" + role);
+            string meshPath = HandMeshFolder + "/hand_" + role + ".asset";
+            var saved = AssetDatabase.LoadAllAssetsAtPath(meshPath).OfType<Mesh>().ToDictionary(m => m.name);
+            try
+            {
+                var sources = source.GetComponentsInChildren<MeshFilter>(true).ToDictionary(f => f.name);
+                foreach (string part in HandPartNames())
+                {
+                    if (!sources.TryGetValue(part, out var filter) || filter.sharedMesh == null)
+                        throw new InvalidOperationException(role + " is missing the textured hand part " + part);
+                    var renderer = filter.GetComponent<MeshRenderer>();
+                    if (renderer == null || renderer.sharedMaterials.Length == 0)
+                        throw new InvalidOperationException(role + " hand part has no material: " + part);
+                    var mesh = UnityEngine.Object.Instantiate(filter.sharedMesh);
+                    mesh.name = part;
+                    var vertices = mesh.vertices;
+                    var normals = mesh.normals;
+                    var matrix = filter.transform.localToWorldMatrix;
+                    var normalMatrix = matrix.inverse.transpose;
+                    for (int i = 0; i < vertices.Length; i++)
+                    {
+                        vertices[i] = matrix.MultiplyPoint3x4(vertices[i]);
+                        if (i < normals.Length) normals[i] = normalMatrix.MultiplyVector(normals[i]).normalized;
+                    }
+                    mesh.vertices = vertices;
+                    mesh.RecalculateBounds();
+                    var bounds = mesh.bounds;
+                    if (bounds.size.x < .00001f || bounds.size.y < .00001f || bounds.size.z < .00001f)
+                        throw new InvalidOperationException(role + " has a flat/empty hand part: " + part);
+                    for (int i = 0; i < vertices.Length; i++)
+                        vertices[i] = Vector3.Scale(vertices[i] - bounds.center,
+                            new Vector3(1 / bounds.size.x, 1 / bounds.size.y, 1 / bounds.size.z));
+                    mesh.vertices = vertices;
+                    // Correct normals for the final nonuniform normalization.
+                    for (int i = 0; i < normals.Length; i++) normals[i] = Vector3.Scale(normals[i], bounds.size).normalized;
+                    mesh.normals = normals;
+                    mesh.RecalculateBounds();
+                    Mesh asset;
+                    if (saved.TryGetValue(part, out asset))
+                    {
+                        EditorUtility.CopySerialized(mesh, asset);
+                        UnityEngine.Object.DestroyImmediate(mesh);
+                        EditorUtility.SetDirty(asset);
+                    }
+                    else
+                    {
+                        asset = mesh;
+                        if (!File.Exists(meshPath)) AssetDatabase.CreateAsset(asset, meshPath);
+                        else AssetDatabase.AddObjectToAsset(asset, meshPath);
+                        saved.Add(part, asset);
+                    }
+                    var child = new GameObject(part);
+                    child.transform.SetParent(root.transform, false);
+                    child.AddComponent<MeshFilter>().sharedMesh = asset;
+                    child.AddComponent<MeshRenderer>().sharedMaterials = renderer.sharedMaterials.Select(m => ImportMaterial(role, m)).ToArray();
+                }
+                PrefabUtility.SaveAsPrefabAsset(root, HandFolder + "/hand_" + role + ".prefab");
+                Debug.Log("IMPORTED CHARACTER HANDS: " + role + " parts=44 atlas retained; shared meshes/materials for every equipment grip.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(source);
+                UnityEngine.Object.DestroyImmediate(root);
+            }
+        }
+
+        static IEnumerable<string> HandPartNames()
+        {
+            foreach (string side in new[] { "Right", "Left" })
+            {
+                foreach (string part in new[] { "forearm", "cuff", "palm", "thumb", "thumb_middle", "thumb_tip" }) yield return side + "_" + part;
+                for (int finger = 0; finger < 4; finger++)
+                    foreach (string part in new[] { "proximal", "middle", "distal", "tip" }) yield return side + "_finger" + finger + "_" + part;
+            }
         }
 
         static Bounds MeasureGeometry(GameObject root)
@@ -184,27 +327,29 @@ namespace DeadAir.Editor
                     for (int submesh = 1; submesh < renderer.sharedMesh.subMeshCount; submesh++)
                         triangles += (int)renderer.sharedMesh.GetIndexCount(submesh) / 3;
                 if (triangles < 100 || triangles > 20000) throw new InvalidOperationException(role + " triangle budget is invalid: " + triangles);
-                var animation = prefab.GetComponentInChildren<Animation>(true);
-                foreach (string name in ClipNames)
-                {
-                    var clip = animation == null ? null : animation.GetClip(name);
-                    if (clip == null || !clip.legacy || clip.length <= .1f || AnimationUtility.GetCurveBindings(clip).Length < 4)
-                        throw new InvalidOperationException(role + " has no usable baked " + name + " animation.");
-                    bool movingCurve = AnimationUtility.GetCurveBindings(clip).Any(binding =>
-                    {
-                        var curve = AnimationUtility.GetEditorCurve(clip, binding);
-                        return binding.type == typeof(Transform) && curve != null && curve.keys.Length > 1 &&
-                            curve.keys.Max(k => k.value) - curve.keys.Min(k => k.value) > .001f;
-                    });
-                    if (!movingCurve) throw new InvalidOperationException(role + " " + name + " has only a static pose.");
-                }
                 var instance = UnityEngine.Object.Instantiate(prefab);
                 try
                 {
+                    // FBX reimports invalidate the native legacy state cache on
+                    // loaded prefab assets. A fresh instance resolves persisted
+                    // clip references exactly as gameplay does.
+                    var instanceAnimation = instance.GetComponentInChildren<Animation>(true);
+                    foreach (string name in ClipNames)
+                    {
+                        var clip = instanceAnimation == null ? null : instanceAnimation.GetClip(name);
+                        if (clip == null || !clip.legacy || clip.length <= .1f || AnimationUtility.GetCurveBindings(clip).Length < 4)
+                            throw new InvalidOperationException(role + " has no usable baked " + name + " animation.");
+                        bool movingCurve = AnimationUtility.GetCurveBindings(clip).Any(binding =>
+                        {
+                            var curve = AnimationUtility.GetEditorCurve(clip, binding);
+                            return binding.type == typeof(Transform) && curve != null && curve.keys.Length > 1 &&
+                                curve.keys.Max(k => k.value) - curve.keys.Min(k => k.value) > .001f;
+                        });
+                        if (!movingCurve) throw new InvalidOperationException(role + " " + name + " has only a static pose.");
+                    }
                     var bounds = MeasureGeometry(instance);
                     if (bounds.size.y < 1.2f || bounds.size.y > 2.8f || bounds.size.x < .2f || bounds.size.x > 2.5f || Mathf.Abs(bounds.min.y) > .05f)
                         throw new InvalidOperationException(role + " has incorrect metre scale or foot origin: " + bounds);
-                    var instanceAnimation = instance.GetComponentInChildren<Animation>(true);
                     var walk = instanceAnimation.GetClip("Walk");
                     walk.SampleAnimation(instanceAnimation.gameObject, 0);
                     var firstPose = SkinVertices(instance);

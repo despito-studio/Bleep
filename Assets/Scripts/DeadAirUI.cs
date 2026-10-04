@@ -5,10 +5,12 @@ using UnityEngine.EventSystems;
 
 namespace DeadAir
 {
+    [DefaultExecutionOrder(1500)]
     public sealed partial class DeadAirUI : MonoBehaviour
     {
         WorldData world; DeadAirSession session; DeadAirPlayer player;
         Font font, heading; Canvas canvas;
+        CanvasGroup interfaceGroup;
         GameObject menuPanel, lobbyPanel, hudPanel, pausePanel, mapPanel, calibrationPanel, endingPanel, settingsPanel, dossierPanel, joinPanel, radioPanel;
         UnityEngine.UI.Text className, classRole, classPerk, lobbyInfo, lobbyPlayers, objectiveText, statusText, messageText, interactionText, roomText, toastText, endingText, mapLocation, frequencyText;
         UnityEngine.UI.InputField nameField, addressField, codeField;
@@ -28,6 +30,7 @@ namespace DeadAir
         public bool HasModal=>Active(menuPanel)||Active(lobbyPanel)||Active(pausePanel)||Active(mapPanel)||Active(calibrationPanel)||Active(endingPanel)||Active(settingsPanel)||Active(dossierPanel)||Active(joinPanel)||Active(chapterPanel)||Active(preparationPanel)||Active(networkPanel)||Active(inventoryPanel)||Active(quitPanel);
         public bool RadioOpen=>Active(radioPanel);
         public bool MapOpen=>Active(mapPanel);
+        public bool PresentationHidden=>interfaceGroup!=null&&interfaceGroup.alpha==0;
         static bool Active(GameObject go)=>go!=null&&go.activeSelf;
         static Color Ink=>new Color32(228,221,205,255);
         static Color Muted=>new Color32(157,150,141,255);
@@ -41,6 +44,7 @@ namespace DeadAir
             heading=Resources.Load<Font>("Fonts/Oswald")??font;
             if(FindFirstObjectByType<EventSystem>()==null){var events=new GameObject("Event System");events.AddComponent<EventSystem>();events.AddComponent<StandaloneInputModule>();}
             var go=new GameObject("BUREAU-9 interface");canvas=go.AddComponent<Canvas>();canvas.renderMode=RenderMode.ScreenSpaceOverlay;
+            interfaceGroup=go.AddComponent<CanvasGroup>();
             var scaler=go.AddComponent<UnityEngine.UI.CanvasScaler>();scaler.uiScaleMode=UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;scaler.referenceResolution=new Vector2(1920,1080);scaler.screenMatchMode=UnityEngine.UI.CanvasScaler.ScreenMatchMode.Expand;
             go.AddComponent<UnityEngine.UI.GraphicRaycaster>();
             designRoot=new GameObject("Safe interface frame",typeof(RectTransform)).GetComponent<RectTransform>();designRoot.SetParent(canvas.transform,false);designRoot.anchorMin=designRoot.anchorMax=designRoot.pivot=new Vector2(.5f,.5f);designRoot.sizeDelta=new Vector2(1920,1080);
@@ -86,7 +90,7 @@ namespace DeadAir
             Button(card,"Close","×",width-77,24,44,44,()=>Close(root));
             root.SetActive(false);return root;
         }
-        void Open(GameObject panel){HideRadio();panel.SetActive(true);panel.transform.SetAsLastSibling();Cursor.lockState=CursorLockMode.None;Cursor.visible=true;ReconcilePause();RefreshModalInput(true);}
+        void Open(GameObject panel){if(DeadAirScarePresentation.FullscreenActive)return;HideRadio();panel.SetActive(true);panel.transform.SetAsLastSibling();Cursor.lockState=CursorLockMode.None;Cursor.visible=true;ReconcilePause();RefreshModalInput(true);}
         void Close(GameObject panel){panel.SetActive(false);DeadAirSettings.Save();ReconcilePause();if(panel==mapPanel)player.SetMapPresentation(false);RefreshModalInput(true);}
         void ReconcilePause()
         {
@@ -189,7 +193,7 @@ namespace DeadAir
             SettingSlider(p,"ОТОЧЕННЯ",235,0,1,DeadAirSettings.AmbienceVolume,v=>DeadAirSettings.AmbienceVolume=v);
             SettingSlider(p,"ЗВУКОВІ ЕФЕКТИ",335,0,1,DeadAirSettings.EffectsVolume,v=>DeadAirSettings.EffectsVolume=v);
             SettingSlider(p,"ЧУТЛИВІСТЬ МИШІ",435,.3f,2,DeadAirSettings.Sensitivity,v=>DeadAirSettings.Sensitivity=v,true);
-            Text(p,"VHS label","ЗЕРНО ТА СКАНЛАЙНИ",17,40,554,535,39);Toggle(p,"Grain",610,544,()=>DeadAirSettings.Grain,v=>DeadAirSettings.Grain=v);
+            Text(p,"VHS label","ЗЕРНО ПЛІВКИ",17,40,554,535,39);Toggle(p,"Grain",610,544,()=>DeadAirSettings.Grain,v=>DeadAirSettings.Grain=v);
             Text(p,"Flicker label","МЕРЕХТІННЯ ТА СПАЛАХИ",17,40,614,535,39);Toggle(p,"Flicker",610,604,()=>DeadAirSettings.Flicker,v=>DeadAirSettings.Flicker=v);
             Text(p,"Quality label","ДЕТАЛІЗАЦІЯ",17,40,674,410,43);
             int[] qualities={360,540,720};for(int i=0;i<3;i++){int q=qualities[i];Button(p,"Quality "+q,q+"p",466+i*154,664,140,46,()=>{DeadAirSettings.Quality=q;});}
@@ -256,6 +260,7 @@ namespace DeadAir
         void Update()
         {
             if(toastText==null)return;if(Time.unscaledTime>=toastUntil)toastText.gameObject.SetActive(false);
+            if(DeadAirScarePresentation.FullscreenActive)return;
             if((Input.GetKeyDown(KeyCode.I)||Input.GetKeyDown(KeyCode.Tab))&&(InventoryOpen||!HasModal))ToggleInventory();
             if(Time.unscaledTime<nextHud||session.State==null||session.State.phase!="playing")return;nextHud=Time.unscaledTime+.1f;
             var state=session.State;var me=state.Player(session.LocalId);if(me==null)return;
@@ -310,11 +315,11 @@ namespace DeadAir
             return itemId;
         }
         public bool TryCloseTopModal()
-        {if(RadioOpen){HideRadio();return true;}GameObject top=null;foreach(var p in new[]{settingsPanel,dossierPanel,joinPanel,calibrationPanel,mapPanel,chapterPanel,preparationPanel,networkPanel,inventoryPanel,quitPanel,endingPanel})if(Active(p)&&(top==null||p.transform.GetSiblingIndex()>top.transform.GetSiblingIndex()))top=p;if(top==endingPanel&&top!=null){ReturnToMenu();return true;}if(top!=null){Close(top);return true;}return false;}
-        public void ToggleRadio(){if(RadioOpen)HideRadio();else if(session.State?.phase=="playing"&&!HasModal)radioPanel.SetActive(true);}
+        {if(DeadAirScarePresentation.FullscreenActive)return true;if(RadioOpen){HideRadio();return true;}GameObject top=null;foreach(var p in new[]{settingsPanel,dossierPanel,joinPanel,calibrationPanel,mapPanel,chapterPanel,preparationPanel,networkPanel,inventoryPanel,quitPanel,endingPanel})if(Active(p)&&(top==null||p.transform.GetSiblingIndex()>top.transform.GetSiblingIndex()))top=p;if(top==endingPanel&&top!=null){ReturnToMenu();return true;}if(top!=null){Close(top);return true;}return false;}
+        public void ToggleRadio(){if(DeadAirScarePresentation.FullscreenActive)return;if(RadioOpen)HideRadio();else if(session.State?.phase=="playing"&&!HasModal)radioPanel.SetActive(true);}
         public void HideRadio(){if(radioPanel!=null)radioPanel.SetActive(false);}
         public void ShowPause(bool shown){if(shown){pausePanel.transform.Find("Pause card/Pause note").GetComponent<UnityEngine.UI.Text>().text=session.State?.players.Count>1?"Мережева гра не призупиняється.":"";Open(pausePanel);}else Close(pausePanel);}
-        public void ToggleMap(){if(Active(mapPanel))Close(mapPanel);else if(session.State?.phase=="playing"){if(player.LocalPaused)player.SetPause(false);player.SetMapPresentation(true);Open(mapPanel);}}
+        public void ToggleMap(){if(DeadAirScarePresentation.FullscreenActive)return;if(Active(mapPanel))Close(mapPanel);else if(session.State?.phase=="playing"){if(player.LocalPaused)player.SetPause(false);player.SetMapPresentation(true);Open(mapPanel);}}
         public void ShowCalibration(){Open(calibrationPanel);}
         public void ShowSettings(){Open(settingsPanel);}
         public void ShowDossier(){Open(dossierPanel);}

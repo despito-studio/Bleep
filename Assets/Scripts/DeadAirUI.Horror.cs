@@ -313,6 +313,7 @@ namespace DeadAir
 
         public void ToggleInventory()
         {
+            if(DeadAirScarePresentation.FullscreenActive)return;
             if(Active(inventoryPanel)){Close(inventoryPanel);return;}
             var me=session.State?.Player(session.LocalId);
             if(session.State?.phase!="playing"||me==null||me.down||!string.IsNullOrEmpty(me.hiding))return;
@@ -435,6 +436,15 @@ namespace DeadAir
 
         void LateUpdate()
         {
+            // One parent CanvasGroup hides all HUD, inventory, radio, prompts
+            // and notifications together for exactly the full-screen scare.
+            bool hidden=DeadAirScarePresentation.FullscreenActive;
+            if(interfaceGroup!=null)
+            {
+                interfaceGroup.alpha=hidden?0:1;
+                interfaceGroup.interactable=!hidden;interfaceGroup.blocksRaycasts=!hidden;
+            }
+            if(hidden)return;
             // Clicking blank modal space clears Unity's selection. Restore it only
             // within an active menu, leaving the gameplay keyboard untouched.
             if(EventSystem.current!=null&&Active(focusedPanel)&&!HasPanelFocus(focusedPanel))FocusPanel(focusedPanel);

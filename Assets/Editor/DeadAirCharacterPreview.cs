@@ -10,7 +10,9 @@ namespace DeadAir.Editor
     public static class DeadAirCharacterPreview
     {
         [MenuItem("Dead Air/Render Character Lineup")]
-        public static void RenderLineup()
+        public static void RenderLineup() => RenderLineup(null);
+
+        public static void RenderLineup(string outputPath)
         {
             const int layer = 29;
             var stage = new GameObject("Character validation studio") { hideFlags = HideFlags.HideAndDontSave };
@@ -52,10 +54,11 @@ namespace DeadAir.Editor
                 camera.Render(); RenderTexture.active = target;
                 var pixels = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
                 pixels.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0); pixels.Apply();
-                Directory.CreateDirectory("Art/Characters/Previews");
-                File.WriteAllBytes("Art/Characters/Previews/unity-lineup.png", pixels.EncodeToPNG());
+                string path = Path.GetFullPath(outputPath ?? "Art/Characters/Previews/unity-lineup.png");
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                File.WriteAllBytes(path, pixels.EncodeToPNG());
                 UnityEngine.Object.DestroyImmediate(pixels);
-                Debug.Log("CHARACTER LINEUP SAVED: Art/Characters/Previews/unity-lineup.png");
+                Debug.Log("CHARACTER LINEUP SAVED: " + path);
             }
             finally
             {

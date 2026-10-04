@@ -4,15 +4,21 @@ using UnityEngine;
 
 namespace DeadAir
 {
-    // The WebAudio instruments in src/audio.js, rendered into reusable local clips.
-    // No downloads, microphone, or external audio middleware are needed.
-    public sealed class DeadAirAudio : MonoBehaviour
+    // Deterministic synthesis: every score, ambience bed and effect is built locally.
+    public sealed partial class DeadAirAudio : MonoBehaviour
     {
         const int Rate = 32000;
         static DeadAirAudio instance;
         readonly Dictionary<string, AudioClip> clips = new Dictionary<string, AudioClip>();
         readonly List<AudioSource> voices = new List<AudioSource>();
-        AudioSource hum, air, radio, dread, tinnitus;
+        readonly Dictionary<AudioSource, float> voiceLevels = new Dictionary<AudioSource, float>();
+        readonly Dictionary<string, AudioSource> roleVoices = new Dictionary<string, AudioSource>();
+        readonly Dictionary<AudioSource, string> voiceOwners = new Dictionary<AudioSource, string>();
+        AudioSource hum, air, radio, dread, tinnitus, generator, fluorescent;
+        AudioSource menuScore, explorationScore, tensionScore, pursuitScore;
+        string phase = "menu", surface = "tile", enemyBehaviour;
+        bool outside, down;
+        float musicDuckUntil;
         float master = .5f, ambience = 1, effects = 1;
         int voiceIndex, stepSide;
         float nextStep, nextHeart, nextBreath, nextMonster, nextWhisper, nextAlarm, nextKnock;
@@ -20,14 +26,30 @@ namespace DeadAir
 
         public void Initialize()
         {
+            if (clips.Count > 0) return;
             instance = this;
             BuildInstruments();
-            for (int i = 0; i < 20; i++) voices.Add(Source("Effect voice " + (i + 1), false));
+            for (int i = 0; i < 32; i++)
+            {
+                var voice = Source("Effect voice " + (i + 1), false);
+                voices.Add(voice); voiceLevels.Add(voice, 1);
+            }
             hum = Loop("Station transformer / 48 Hz", "hum");
             air = Loop("Station ventilation", "air");
             radio = Loop("Receiver static", "static");
             dread = Loop("Threat subharmonic", "dread");
             tinnitus = Loop("Low sanity tinnitus", "tinnitus");
+            generator = Loop("Generator motor", "generator-bed");
+            fluorescent = Loop("Station fluorescent ballast", "fluorescent-bed");
+            generator.spatialBlend = 1; generator.minDistance = 2.5f; generator.maxDistance = 24;
+            var powerObject = WorldData.Load().Objective("power");
+            if (powerObject != null) generator.transform.position = new Vector3(-powerObject.x, powerObject.y + .8f, powerObject.z);
+            // All score stems share one musical clock; threat can rise without restarting a phrase.
+            double musicStart = AudioSettings.dspTime + .1;
+            menuScore = Score("Menu / detuned piano and bowed drone", "music-menu", musicStart);
+            explorationScore = Score("Exploration / empty station", "music-exploration", musicStart);
+            tensionScore = Score("Threat / dissonant tremolo", "music-tension", musicStart);
+            pursuitScore = Score("Pursuit / urgent low percussion", "music-pursuit", musicStart);
             nextKnock = Time.unscaledTime + UnityEngine.Random.Range(14, 26);
             ApplySettings();
             DeadAirSettings.Changed += ApplySettings;
@@ -58,13 +80,29 @@ namespace DeadAir
             return source;
         }
 
+        AudioSource Score(string title, string clip, double start)
+        {
+            var source = Source(title, true);
+            source.clip = clips[clip]; source.priority = 170;
+            if (Application.isPlaying) source.PlayScheduled(start);
+            return source;
+        }
+
+        public void SetContext(string currentPhase, bool isOutside, bool isDown, string behaviour, bool onStairs)
+        {
+            phase = currentPhase; outside = isOutside; down = isDown; enemyBehaviour = behaviour;
+            surface = onStairs ? "metal" : outside ? "gravel" : "tile";
+        }
+
         public static void ApplySettings()
         {
             if (instance == null) return;
             instance.master = PlayerPrefs.GetInt("DeadAir.Muted", 0) != 0 ? 0 : Mathf.Clamp01(PlayerPrefs.GetFloat("DeadAir.Volume", .5f));
             instance.ambience = Mathf.Clamp01(PlayerPrefs.GetFloat("DeadAir.AmbienceVolume", 1));
             instance.effects = Mathf.Clamp01(PlayerPrefs.GetFloat("DeadAir.EffectsVolume", 1));
-            foreach (var voice in instance.voices) voice.volume = instance.master * instance.effects * .85f;
+            foreach (var voice in instance.voices) voice.volume = instance.master * instance.effects * .85f * instance.voiceLevels[voice];
+            if (instance.master <= 0)
+                foreach (var source in instance.GetComponentsInChildren<AudioSource>()) source.volume = 0;
         }
 
         public static void Play(string kind)
@@ -72,7 +110,45 @@ namespace DeadAir
             if (instance != null) instance.Emit(kind, 1, 0, null);
         }
 
-        public void Emit(string kind, float level = 1, float pan = 0, Vector3? position = null)
+        public static void PlayAt(string kind, Vector3 position, float level = 1)
+        {
+            if (instance != null) instance.Emit(kind, level, 0, position);
+        }
+
+        public void StopLocalRoleAction()
+        {
+            foreach (var voice in voices)
+                if (voice.spatialBlend == 0 && voice.clip != null && voice.clip.name.Contains("role-"))
+                {
+                    if (voiceOwners.TryGetValue(voice, out string actorId)) StopRoleAction(actorId);
+                    else voice.Stop();
+                }
+        }
+
+        public void PlayRoleAction(string actorId, string characterClass, Vector3? position)
+        {
+            StopRoleAction(actorId);
+            Emit("role-" + characterClass, 1, 0, position, actorId);
+        }
+
+        public void StopRoleAction(string actorId)
+        {
+            if (!roleVoices.TryGetValue(actorId, out var voice)) return;
+            voice.Stop(); roleVoices.Remove(actorId); voiceOwners.Remove(voice);
+        }
+
+        public void StopRoleActions()
+        {
+            foreach (var voice in roleVoices.Values) voice.Stop();
+            roleVoices.Clear(); voiceOwners.Clear();
+        }
+
+        public void UpdateRolePosition(string actorId, Vector3 position)
+        {
+            if (roleVoices.TryGetValue(actorId, out var voice) && voice.spatialBlend > 0) voice.transform.position = position;
+        }
+
+        public void Emit(string kind, float level = 1, float pan = 0, Vector3? position = null, string ownerId = null)
         {
             if (!Application.isPlaying || !clips.TryGetValue(kind, out var clip) || voices.Count == 0) return;
             // Reuse idle voices first so an interface click cannot cut off the ending chord.
@@ -83,12 +159,23 @@ namespace DeadAir
                 if (!candidate.isPlaying) { source = candidate; voiceIndex = (voiceIndex + i + 1) % voices.Count; break; }
             }
             if (source == null) { source = voices[voiceIndex]; voiceIndex = (voiceIndex + 1) % voices.Count; source.Stop(); }
+            // Ownership follows the pooled source, so cancelling one actor cannot stop a later cue.
+            if (voiceOwners.TryGetValue(source, out string previousOwner))
+            {
+                roleVoices.Remove(previousOwner); voiceOwners.Remove(source);
+            }
+            if (ownerId != null) { roleVoices[ownerId] = source; voiceOwners[source] = ownerId; }
             source.spatialBlend = position.HasValue ? 1 : 0;
             if (position.HasValue) source.transform.position = position.Value;
             source.panStereo = Mathf.Clamp(pan, -1, 1);
-            source.pitch = kind == "step" || kind == "run-step" ? UnityEngine.Random.Range(.94f, 1.06f) : 1;
+            source.pitch = kind.Contains("step") || kind == "door" || kind == "locker" ? UnityEngine.Random.Range(.94f, 1.06f) : 1;
             source.volume = master * effects * .85f;
-            source.PlayOneShot(clip, Mathf.Clamp01(level));
+            source.clip = clip;
+            voiceLevels[source] = Mathf.Clamp01(level);
+            source.volume *= voiceLevels[source];
+            source.priority = kind == "spider" || kind == "screamer" || kind == "scare" ? 30 : 100;
+            source.Play();
+            if (kind == "spider" || kind == "screamer" || kind == "scare") musicDuckUntil = Time.unscaledTime + .85f;
         }
 
         public void Tick(bool paused, bool moving, bool sprinting, bool hiding, float stamina, float sanity,
@@ -96,13 +183,25 @@ namespace DeadAir
         {
             float now = Time.unscaledTime;
             float insanity = 1 - Mathf.Clamp01(sanity / 100);
-            float bed = paused ? 0 : master * ambience * (hiding ? .35f : 1);
-            Fade(hum, bed * (power ? 1.45f : .7f), .7f);
-            Fade(air, bed * (.04f + threat * .042f), .5f);
+            float duck = now < musicDuckUntil ? .22f : 1;
+            float bed = paused ? 0 : master * ambience * (hiding ? .35f : 1) * duck;
+            Fade(hum, bed * (outside ? .15f : power ? 1.45f : .7f), .7f);
+            Fade(air, bed * (outside ? .15f : .04f + threat * .042f), .5f);
             Fade(radio, bed * (camera ? .02f + threat * .018f : .002f), .18f);
             Fade(dread, bed * (threat * .05f + insanity * .02f), .3f);
             dread.pitch = (71 + Mathf.Sin(now * .24f) * 1.5f + threat * 10) / 71;
             Fade(tinnitus, bed * Mathf.Max(0, insanity - .45f) * .03f, .5f);
+            Fade(generator, bed * (power ? .75f : 0), 1.1f);
+            Fade(fluorescent, bed * (power && !outside ? .11f : 0), .7f);
+            bool inRun = phase == "playing";
+            float score = master * ambience * duck;
+            float danger = Mathf.Clamp01(threat * 1.15f + Mathf.Max(0, insanity - .35f) * .55f);
+            float pursuit = inRun && !paused && !down && !hiding && monsterPosition.HasValue &&
+                (enemyBehaviour == "pursuit" || broadcast || threat > .78f) ? Mathf.Max(.6f, threat) : 0;
+            Fade(menuScore, !inRun && (phase == "menu" || phase == "lobby") ? score * .8f : 0, 1.8f);
+            Fade(explorationScore, inRun && !paused ? score * .42f * (1 - pursuit * .8f) * (hiding ? .6f : 1) : 0, 1.4f);
+            Fade(tensionScore, inRun && !paused ? score * danger * .6f * (down ? .35f : 1) : 0, .75f);
+            Fade(pursuitScore, score * pursuit * .66f, .4f);
             if (paused)
             {
                 wasMoving = false;
@@ -116,7 +215,8 @@ namespace DeadAir
                 if (now >= nextStep)
                 {
                     stepSide = stepSide == 1 ? -1 : 1;
-                    Emit(sprinting ? "run-step" : "step", 1, stepSide * .12f);
+                    string step = surface == "tile" ? sprinting ? "run-step" : "step" : (sprinting ? "run-step-" : "step-") + surface;
+                    Emit(step, 1, stepSide * .12f);
                     nextStep = now + (sprinting ? .31f : .52f) + UnityEngine.Random.Range(0, .035f);
                 }
             }
@@ -157,6 +257,7 @@ namespace DeadAir
         public void ResetRun()
         {
             foreach (var source in voices) source.Stop();
+            roleVoices.Clear(); voiceOwners.Clear();
             float now = Time.unscaledTime;
             nextStep = now + .1f; nextHeart = now + .4f; nextBreath = now;
             nextMonster = now; nextWhisper = now + 6; nextAlarm = now;
@@ -187,6 +288,42 @@ namespace DeadAir
             Debug.Log("DEAD AIR AUDIO VALIDATED: " + clips.Count + " non-silent finite clips, maximum peak=" + largestPeak.ToString("F5", System.Globalization.CultureInfo.InvariantCulture));
         }
 
+        public int GeneratedClipCount => clips.Count;
+
+        // Also makes every instrument reviewable outside Play Mode, without an asset download.
+        public int ExportLibrary(string folder)
+        {
+            System.IO.Directory.CreateDirectory(folder);
+            var looping = new HashSet<AudioClip>();
+            foreach (var source in GetComponentsInChildren<AudioSource>())
+                if (source.loop && source.clip != null) looping.Add(source.clip);
+            foreach (var entry in clips)
+            {
+                AudioClip clip = entry.Value;
+                var values = new float[clip.samples * clip.channels];
+                if (!clip.GetData(values, 0)) throw new InvalidOperationException("Cannot export audio: " + entry.Key);
+                bool isLoop = looping.Contains(clip);
+                using (var writer = new System.IO.BinaryWriter(System.IO.File.Create(System.IO.Path.Combine(folder, entry.Key + ".wav"))))
+                {
+                    int bytes = values.Length * 2;
+                    writer.Write(System.Text.Encoding.ASCII.GetBytes("RIFF")); writer.Write(36 + bytes + (isLoop ? 68 : 0));
+                    writer.Write(System.Text.Encoding.ASCII.GetBytes("WAVEfmt ")); writer.Write(16); writer.Write((short)1);
+                    writer.Write((short)clip.channels); writer.Write(clip.frequency); writer.Write(clip.frequency * clip.channels * 2);
+                    writer.Write((short)(clip.channels * 2)); writer.Write((short)16);
+                    writer.Write(System.Text.Encoding.ASCII.GetBytes("data")); writer.Write(bytes);
+                    foreach (float sample in values) writer.Write((short)Mathf.RoundToInt(Mathf.Clamp(sample, -1, 1) * 32767));
+                    if (isLoop)
+                    {
+                        writer.Write(System.Text.Encoding.ASCII.GetBytes("smpl")); writer.Write(60);
+                        writer.Write(0); writer.Write(0); writer.Write(Mathf.RoundToInt(1000000000f / clip.frequency));
+                        writer.Write(60); writer.Write(0); writer.Write(0); writer.Write(0); writer.Write(1); writer.Write(0);
+                        writer.Write(0); writer.Write(0); writer.Write(0); writer.Write(clip.samples - 1); writer.Write(0); writer.Write(0);
+                    }
+                }
+            }
+            return clips.Count;
+        }
+
         void OnDestroy()
         {
             DeadAirSettings.Changed -= ApplySettings;
@@ -208,9 +345,9 @@ namespace DeadAir
             Add("pickup", b => { b.Knock(0, .45f); b.Tone(.055f, 520, 390, .16f, .045f, Wave.Triangle); b.Noise(.1f, .17f, .038f, 2400); }, .35f);
             Add("power", b => { b.Knock(0, .95f); b.Knock(.15f, .55f); b.Tone(.15f, 31, 96, 1.25f, .14f, Wave.Triangle, .14f); b.Noise(.05f, .65f, .11f, 900, .015f); }, 1.8f);
             Add("error", b => { b.Tone(0, 132, 113, .1f, .048f, Wave.Triangle); b.Tone(.14f, 132, 113, .1f, .048f, Wave.Triangle); }, .3f);
-            Add("scare", b => { b.Noise(0, .9f, .22f, 1100, .045f); b.Tone(0, 115, 36, 1.4f, .19f, Wave.Triangle, .04f); b.Tone(.07f, 340, 140, .75f, .075f, Wave.Sine, .04f); b.Tone(.12f, 360, 150, .85f, .062f, Wave.Sine, .04f); }, 1.7f);
-            Add("screamer", b => { b.Noise(0, .35f, .3f, 2800, .005f); b.Tone(0, 720, 85, .45f, .25f, Wave.Saw, .005f); }, .6f);
-            Add("spider", b => { b.Noise(0, .16f, .12f, 3500, .008f); b.Tone(.015f, 950, 145, .22f, .09f, Wave.Saw, .01f); for (int i = 0; i < 5; i++) b.Knock(.18f + i * .05f, .18f); }, .55f);
+            Add("scare", b => b.HorrorSting(0), 1.9f);
+            Add("screamer", b => b.HorrorSting(1), 1.55f);
+            Add("spider", b => b.HorrorSting(2), 1.55f);
             Add("listening", b => { b.Noise(0, .6f, .035f, 620, .12f); b.Tone(.1f, 72, 49, .8f, .04f, Wave.Triangle, .12f); }, 1.1f);
             Add("vanish", b => { b.Noise(0, .2f, .065f, 1700, .02f); b.Tone(.015f, 210, 38, .35f, .06f, Wave.Triangle, .025f); }, .5f);
             Add("radio", b => { b.Noise(0, .04f, .08f, 3200); b.Tone(.03f, 1240, 1100, .08f, .05f); b.Noise(.09f, .25f, .07f, 1800, .02f); }, .45f);
@@ -235,15 +372,16 @@ namespace DeadAir
             Add("static", b => b.Bed(2), 8);
             Add("dread", b => b.Bed(3), 8);
             Add("tinnitus", b => b.Bed(4), 8);
+            AddProceduralScoreAndFoley();
         }
 
         enum Wave { Sine, Triangle, Saw }
 
-        sealed class Instrument
+        sealed partial class Instrument
         {
             float[] samples;
             readonly System.Random random;
-            bool loop;
+            bool loop, stereo;
             public Instrument(float seconds, int seed) { samples = new float[Mathf.CeilToInt(seconds * Rate)]; random = new System.Random(seed); }
 
             static double Envelope(double time, double duration, double gain, double attack)
@@ -354,8 +492,20 @@ namespace DeadAir
                     float gain = .9f / peak;
                     for (int i = 0; i < samples.Length; i++) samples[i] *= gain;
                 }
-                var result = AudioClip.Create("DEAD AIR / " + name, samples.Length, 1, Rate, false);
-                result.SetData(samples, 0);
+                float[] output = samples;
+                if (stereo)
+                {
+                    output = new float[samples.Length * 2];
+                    int delay = Rate / 83;
+                    for (int i = 0; i < samples.Length; i++)
+                    {
+                        float delayed = samples[(i + samples.Length - delay) % samples.Length];
+                        output[i * 2] = samples[i] * .82f + delayed * .18f;
+                        output[i * 2 + 1] = samples[i] * .82f - delayed * .18f;
+                    }
+                }
+                var result = AudioClip.Create("DEAD AIR / " + name, samples.Length, stereo ? 2 : 1, Rate, false);
+                result.SetData(output, 0);
                 return result;
             }
         }

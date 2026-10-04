@@ -40,7 +40,6 @@ namespace DeadAir
             material.SetFloat("_Clock", Time.unscaledTime);
             material.SetFloat("_Aspect", frame.width / (float)frame.height);
             material.SetFloat("_Grain", DeadAirSettings.Grain ? .035f : 0);
-            material.SetFloat("_Scanlines", DeadAirSettings.Grain ? .075f : 0);
             material.SetFloat("_Threat", Mathf.Clamp01(Threat));
             material.SetFloat("_Insanity", Mathf.Clamp01(Insanity));
             material.SetFloat("_Nightmare", Mathf.Clamp01(Nightmare));

@@ -133,7 +133,7 @@ namespace DeadAir
                     {
                         lightOn = !HoldingFlashlight(me) || !lightOn;
                         SelectSlot(me.inventory.IndexOf("flashlight"));
-                        DeadAirAudio.Play("click");
+                        DeadAirAudio.Play("flashlight");
                     }
                     else
                     {
@@ -141,7 +141,7 @@ namespace DeadAir
                         DeadAirAudio.Play("error");
                     }
                 }
-                if (Input.GetKeyDown(KeyCode.V)) { cameraUp = !cameraUp; session.Command(new NetPacket { type = "unique-equip", uniqueEquipped = false }); DeadAirAudio.Play("click"); }
+                if (Input.GetKeyDown(KeyCode.V)) { cameraUp = !cameraUp; session.Command(new NetPacket { type = "unique-equip", uniqueEquipped = false }); DeadAirAudio.Play("camera-equip"); }
                 if (Input.GetKeyDown(KeyCode.R) && me.uniqueItemEquipped) session.Command(new NetPacket { type = "unique-use" });
                 if (Input.GetKeyDown(KeyCode.Q)) ui.ToggleRadio();
                 if (ui.RadioOpen)
@@ -213,12 +213,14 @@ namespace DeadAir
             string itemId = me.inventory[me.selectedSlot];
             if(DeadAirRoleItems.IsRoleItem(itemId)){ui.Toast("Особистий предмет залишається з персонажем.");return;}
             session.Command(new NetPacket { type = "drop", id = itemId });
-            DeadAirAudio.Play("click");
             if (itemId == "flashlight") lightOn = false;
         }
 
         void SelectSlot(int slot)
         {
+            var me = session.State?.Player(session.LocalId);
+            if (me != null && me.inventory != null && slot >= 0 && slot < me.inventory.Count && slot != me.selectedSlot)
+                DeadAirAudio.Play("equip");
             cameraUp = false;
             session.Command(new NetPacket { type = "slot", phrase = slot });
         }
@@ -553,6 +555,7 @@ namespace DeadAir
         public void SetMapPresentation(bool open)
         {
             if (open) cameraUp = false;
+            DeadAirAudio.Play("paper");
             session.Command(new NetPacket { type = "map-equip", mapOpen = open });
         }
 

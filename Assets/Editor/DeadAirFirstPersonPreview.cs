@@ -22,6 +22,15 @@ namespace DeadAir.Editor
             public int foregroundPixels, coloredPixels;
             public int[] foregroundBounds;
             public List<ContactResult> contacts;
+            public List<WristResult> wrists;
+        }
+
+        [Serializable]
+        sealed class WristResult
+        {
+            public string hand, parts;
+            public float surfaceGapMm;
+            public bool passed;
         }
 
         [Serializable]
@@ -38,6 +47,7 @@ namespace DeadAir.Editor
             public int width = Width, height = Height;
             public List<CaptureResult> captures = new List<CaptureResult>();
             public int contactFailures;
+            public int wristFailures;
         }
 
         sealed class PreviewCase
@@ -52,12 +62,14 @@ namespace DeadAir.Editor
         }
 
         [MenuItem("Dead Air/Render First Person Equipment")]
-        public static void RenderAll()
+        public static void RenderAll() => RenderAll(null);
+
+        public static void RenderAll(string outputDirectory)
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode)
                 throw new InvalidOperationException("Render first person equipment after leaving Play mode.");
 
-            string directory = Path.GetFullPath(Path.Combine(Application.dataPath,
+            string directory = Path.GetFullPath(outputDirectory ?? Path.Combine(Application.dataPath,
                 "../Art/Characters/Previews/first-person"));
             Directory.CreateDirectory(directory);
             var report = new CaptureReport();
@@ -126,12 +138,16 @@ namespace DeadAir.Editor
                     var result = RenderCase(item, world, view, rig, target, directory);
                     report.captures.Add(result);
                     foreach (var contact in result.contacts) if (!contact.passed) report.contactFailures++;
+                    foreach (var wrist in result.wrists) if (!wrist.passed) report.wristFailures++;
                     // Keep completed evidence if a later case catches an empty frame.
                     File.WriteAllText(Path.Combine(directory, "capture-report.json"), JsonUtility.ToJson(report, true));
                 }
                 if (report.contactFailures > 0)
                     throw new InvalidOperationException("First person grip validation failed: " + report.contactFailures +
                         " contacts. All " + report.captures.Count + " PNGs and capture-report.json saved in " + directory);
+                if (report.wristFailures > 0)
+                    throw new InvalidOperationException("First person wrist continuity failed: " + report.wristFailures +
+                        " separated mesh pairs. PNGs and capture-report.json saved in " + directory);
                 Debug.Log("FIRST PERSON PREVIEW PASSED: " + report.captures.Count + " colored captures with verified mesh contacts in " + directory);
             }
             finally
@@ -202,13 +218,99 @@ namespace DeadAir.Editor
                 {
                     file = item.Filename, role = item.Role, mode = item.Mode, actionAge = item.Age,
                     foregroundPixels = changed, coloredPixels = colored,
-                    foregroundBounds = new[] { minX, minY, maxX, maxY }, contacts = ValidateContacts(item, hands)
+                    foregroundBounds = new[] { minX, minY, maxX, maxY }, contacts = ValidateContacts(item, hands),
+                    wrists = rig.UsingImportedHands ? ValidateWrists(hands) : new List<WristResult>()
                 };
             }
             finally
             {
                 if (image != null) UnityEngine.Object.DestroyImmediate(image);
             }
+        }
+
+        static List<WristResult> ValidateWrists(Transform root)
+        {
+            var results = new List<WristResult>();
+            foreach (string side in new[] { "Left", "Right" })
+            {
+                Transform hand = root.Find(side + " articulated hand");
+                if (hand == null || !hand.gameObject.activeInHierarchy) continue;
+                MeshFilter palm = FindMesh(hand, "Faceted palm"), arm = FindMesh(hand, "Tailored forearm"),
+                    cuff = FindMesh(hand, "Cuff or bracelet");
+                AddWrist(results, side, palm, arm);
+                AddWrist(results, side, palm, cuff);
+                AddWrist(results, side, cuff, arm);
+            }
+            return results;
+        }
+
+        static void AddWrist(List<WristResult> results, string side, MeshFilter first, MeshFilter second)
+        {
+            float distance = first != null && second != null ? SurfaceGap(WorldTriangles(first), WorldTriangles(second))
+                : float.PositiveInfinity;
+            results.Add(new WristResult { hand = side, parts = (first != null ? first.name : "missing") + " / " +
+                (second != null ? second.name : "missing"), surfaceGapMm = distance * 1000,
+                passed = distance <= .0015f });
+        }
+
+        // Measure the rendered mesh surfaces independently of the runtime cap
+        // anchors. Intersection, vertex-to-face and edge-to-edge distances catch
+        // floating wrists even when their world bounding boxes overlap.
+        static float SurfaceGap(Triangle[] first, Triangle[] second)
+        {
+            float nearest = float.PositiveInfinity;
+            foreach (var a in first)
+                foreach (var b in second)
+                {
+                    if (SegmentHitsTriangle(a.A, a.B, b) || SegmentHitsTriangle(a.B, a.C, b) ||
+                        SegmentHitsTriangle(a.C, a.A, b) || SegmentHitsTriangle(b.A, b.B, a) ||
+                        SegmentHitsTriangle(b.B, b.C, a) || SegmentHitsTriangle(b.C, b.A, a)) return 0;
+                    nearest = Mathf.Min(nearest, (a.A - ClosestPointOnTriangle(a.A, b.A, b.B, b.C)).sqrMagnitude,
+                        (a.B - ClosestPointOnTriangle(a.B, b.A, b.B, b.C)).sqrMagnitude,
+                        (a.C - ClosestPointOnTriangle(a.C, b.A, b.B, b.C)).sqrMagnitude,
+                        (b.A - ClosestPointOnTriangle(b.A, a.A, a.B, a.C)).sqrMagnitude,
+                        (b.B - ClosestPointOnTriangle(b.B, a.A, a.B, a.C)).sqrMagnitude,
+                        (b.C - ClosestPointOnTriangle(b.C, a.A, a.B, a.C)).sqrMagnitude);
+                    nearest = Mathf.Min(nearest, SegmentGapSquared(a.A, a.B, b.A, b.B),
+                        SegmentGapSquared(a.A, a.B, b.B, b.C), SegmentGapSquared(a.A, a.B, b.C, b.A),
+                        SegmentGapSquared(a.B, a.C, b.A, b.B), SegmentGapSquared(a.B, a.C, b.B, b.C),
+                        SegmentGapSquared(a.B, a.C, b.C, b.A), SegmentGapSquared(a.C, a.A, b.A, b.B),
+                        SegmentGapSquared(a.C, a.A, b.B, b.C), SegmentGapSquared(a.C, a.A, b.C, b.A));
+                    if (nearest < 1e-12f) return 0;
+                }
+            return Mathf.Sqrt(nearest);
+        }
+
+        static bool SegmentHitsTriangle(Vector3 start, Vector3 end, Triangle triangle)
+        {
+            Vector3 direction = end - start, edge1 = triangle.B - triangle.A, edge2 = triangle.C - triangle.A;
+            Vector3 p = Vector3.Cross(direction, edge2);
+            float determinant = Vector3.Dot(edge1, p);
+            if (Mathf.Abs(determinant) < 1e-12f) return false;
+            float inverse = 1 / determinant;
+            Vector3 offset = start - triangle.A;
+            float u = Vector3.Dot(offset, p) * inverse;
+            if (u < 0 || u > 1) return false;
+            Vector3 q = Vector3.Cross(offset, edge1);
+            float v = Vector3.Dot(direction, q) * inverse;
+            if (v < 0 || u + v > 1) return false;
+            float along = Vector3.Dot(edge2, q) * inverse;
+            return along >= 0 && along <= 1;
+        }
+
+        static float SegmentGapSquared(Vector3 a, Vector3 b, Vector3 c, Vector3 d)
+        {
+            Vector3 u = b - a, v = d - c, offset = a - c;
+            float aa = Vector3.Dot(u, u), vv = Vector3.Dot(v, v), uv = Vector3.Dot(u, v),
+                uw = Vector3.Dot(u, offset), vw = Vector3.Dot(v, offset);
+            if (aa <= 1e-12f) return (a - (c + v * (vv > 1e-12f ? Mathf.Clamp01(vw / vv) : 0))).sqrMagnitude;
+            if (vv <= 1e-12f) return (c - (a + u * Mathf.Clamp01(-uw / aa))).sqrMagnitude;
+            float denominator = aa * vv - uv * uv;
+            float s = denominator > 1e-20f ? Mathf.Clamp01((uv * vw - uw * vv) / denominator) : 0;
+            float t = (uv * s + vw) / vv;
+            if (t < 0) { t = 0; s = Mathf.Clamp01(-uw / aa); }
+            else if (t > 1) { t = 1; s = Mathf.Clamp01((uv - uw) / aa); }
+            return (a + u * s - c - v * t).sqrMagnitude;
         }
 
         static List<ContactResult> ValidateContacts(PreviewCase item, Transform root)

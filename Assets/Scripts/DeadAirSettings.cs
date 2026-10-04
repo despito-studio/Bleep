@@ -20,7 +20,8 @@ namespace DeadAir
         public static float EffectsVolume { get => PlayerPrefs.GetFloat("DeadAir.EffectsVolume", 1); set => SetFloat("DeadAir.EffectsVolume", Mathf.Clamp01(value)); }
         public static float Sensitivity { get => PlayerPrefs.GetFloat("DeadAir.MouseSensitivity", 1); set => SetFloat("DeadAir.MouseSensitivity", Mathf.Clamp(value, .3f, 2)); }
         public static bool Muted { get => PlayerPrefs.GetInt("DeadAir.Muted", 0) != 0; set => SetInt("DeadAir.Muted", value ? 1 : 0); }
-        public static bool Grain { get => PlayerPrefs.GetInt("DeadAir.Grain", 1) != 0; set => SetInt("DeadAir.Grain", value ? 1 : 0); }
+        // A fresh opt-in key also clears the old always-on VHS default for existing saves.
+        public static bool Grain { get => PlayerPrefs.GetInt("DeadAir.FilmGrain", 0) != 0; set => SetInt("DeadAir.FilmGrain", value ? 1 : 0); }
         public static bool Flicker { get => PlayerPrefs.GetInt("DeadAir.Flicker", 1) != 0; set => SetInt("DeadAir.Flicker", value ? 1 : 0); }
         public static int Quality { get => PlayerPrefs.GetInt("DeadAir.Quality", 360); set => SetInt("DeadAir.Quality", value); }
         static void SetFloat(string key, float value) { PlayerPrefs.SetFloat(key, value); Changed?.Invoke(); }

@@ -1,0 +1,5909 @@
+{
+  "coordinate_system": "Blender metres Z up -Y front; each source variant is rotated around Z according to its own face direction",
+  "source_files_preserved": true,
+  "characters": [
+    {
+      "role": "operator",
+      "name": "Vivian",
+      "source": "D:\\1\\1.glb",
+      "sha256": "bafa81ccb9ca80f406c93aff98ce48f1adb9ac650ed9a1ae55048c592b7bb1ea",
+      "variant": "whole",
+      "selection": {},
+      "forward_source": "+X",
+      "rotation_Z_degrees": -90,
+      "original": {
+        "vertices": 7186,
+        "triangles": 4523
+      },
+      "cleaned": {
+        "vertices": 2361,
+        "triangles": 4523,
+        "exact_position_vertices_merged": 4825,
+        "degenerate_faces_removed": 0,
+        "duplicate_faces_removed": 0
+      },
+      "bounds_min": [
+        -0.7118982076644897,
+        -0.16739726066589355,
+        0.0
+      ],
+      "bounds_max": [
+        0.7118982076644897,
+        0.16739726066589355,
+        1.8799999952316284
+      ],
+      "height_m": 1.88,
+      "T_pose_markers": {
+        "hip": 0.89,
+        "waist": 1.05,
+        "chest": 1.27,
+        "headbase": 1.52,
+        "hipx": 0.108,
+        "knee": [
+          0.112,
+          0.007,
+          0.47
+        ],
+        "ankle": [
+          0.106,
+          0,
+          0.15
+        ],
+        "top": 1.88,
+        "shoulder": [
+          0.2278074264526367,
+          0.005518591031432152,
+          1.44219172000885
+        ],
+        "elbow": [
+          0.42001994252204894,
+          0.005518591031432152,
+          1.44219172000885
+        ],
+        "wrist": [
+          0.5979944944381713,
+          0.005518591031432152,
+          1.44219172000885
+        ]
+      },
+      "previews": [
+        "D:\\DeadAirUnityProject\\Verification-Characters\\Prepared\\operator_selected_front.png",
+        "D:\\DeadAirUnityProject\\Verification-Characters\\Prepared\\operator_selected_back.png",
+        "D:\\DeadAirUnityProject\\Verification-Characters\\Prepared\\operator_idle_front.png",
+        "D:\\DeadAirUnityProject\\Verification-Characters\\Prepared\\operator_walk_front.png",
+        "D:\\DeadAirUnityProject\\Verification-Characters\\Prepared\\operator_use_item_front.png"
+      ],
+      "textures": [
+        {
+          "source_size": [
+            1024,
+            1024
+          ],
+          "runtime_size": [
+            1024,
+            1024
+          ],
+          "runtime": "Assets/Characters/Textures/operator_albedo.png",
+          "original_copy": "Art/Characters/Imported/operator_source_albedo.png"
+        }
+      ],
+      "hands": {
+        "role": "operator",
+        "output_path": "D:\\DeadAirUnityProject\\Assets\\Characters\\Imported\\hand_operator.fbx",
+        "source_mesh": "Vivian_Body",
+        "part_count": 44,
+        "source_fragments": 6,
+        "generated_parts": 38,
+        "axis_contract": "Blender X width, Z along, Y=-Unity depth; FBX Y up, -Z forward; baked mesh axes",
+        "parts": [
+          {
+            "method": "source_fragment",
+            "signed_x_band_m": [
+              0.4244693181713001,
+              0.5891847661770223
+            ],
+            "source_extent_m": [
+              0.056989431381225586,
+              0.07070086151361465,
+              0.16471543908119202
+            ],
+            "cap_faces": 2,
+            "name": "Left_forearm",
+            "vertices": 36,
+            "triangles": 68,
+            "atlas_uv": [
+              0.133056640625,
+              0.3911946713924408
+            ],
+            "atlas_sample_distance_m": 0.016971535980701447,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "source_fragment",
+            "signed_x_band_m": [
+              0.5883838807059243,
+              0.6044015901278844
+            ],
+            "source_extent_m": [
+              0.04474055767059326,
+              0.07604959607124329,
+              0.01601773500442505
+            ],
+            "cap_faces": 2,
+            "name": "Left_cuff",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.2549642026424408,
+              0.5123698115348816
+            ],
+            "atlas_sample_distance_m": 0.005091882310807705,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "source_fragment",
+            "signed_x_band_m": [
+              0.6003971627723943,
+              0.6478273801163094
+            ],
+            "source_extent_m": [
+              0.06254398822784424,
+              0.09527386724948883,
+              0.047430217266082764
+            ],
+            "cap_faces": 5,
+            "name": "Left_palm",
+            "vertices": 86,
+            "triangles": 168,
+            "atlas_uv": [
+              0.255126953125,
+              0.529052734375
+            ],
+            "atlas_sample_distance_m": 0.00513116642832756,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger0_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.973876953125,
+              0.2784017026424408
+            ],
+            "atlas_sample_distance_m": 0.029690749943256378,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger0_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.973876953125,
+              0.2784017026424408
+            ],
+            "atlas_sample_distance_m": 0.02283155731856823,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger0_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.9733073115348816,
+              0.2915852963924408
+            ],
+            "atlas_sample_distance_m": 0.01757415011525154,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger0_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.9723307490348816,
+              0.2963053584098816
+            ],
+            "atlas_sample_distance_m": 0.013480161316692829,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger1_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.9720866084098816,
+              0.2682291865348816
+            ],
+            "atlas_sample_distance_m": 0.013556086458265781,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger1_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.973876953125,
+              0.2784017026424408
+            ],
+            "atlas_sample_distance_m": 0.008268354460597038,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger1_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.9716796875,
+              0.2830403745174408
+            ],
+            "atlas_sample_distance_m": 0.004495829343795776,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger1_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.1964518278837204,
+              0.9293619990348816
+            ],
+            "atlas_sample_distance_m": 0.0017625706968829036,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger2_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.19677734375,
+              0.898193359375
+            ],
+            "atlas_sample_distance_m": 0.003678073175251484,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger2_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.1961263120174408,
+              0.9139811396598816
+            ],
+            "atlas_sample_distance_m": 0.008630497381091118,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger2_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.1947428435087204,
+              0.9192708730697632
+            ],
+            "atlas_sample_distance_m": 0.00733745563775301,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger2_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.7202962636947632,
+              0.072021484375
+            ],
+            "atlas_sample_distance_m": 0.01502537727355957,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger3_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.9815267324447632,
+              0.61962890625
+            ],
+            "atlas_sample_distance_m": 0.013927874155342579,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger3_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.610595703125,
+              0.4795735776424408
+            ],
+            "atlas_sample_distance_m": 0.015282520093023777,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger3_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.7193197011947632,
+              0.0572916679084301
+            ],
+            "atlas_sample_distance_m": 0.02197319082915783,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger3_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.720947265625,
+              0.0623372420668602
+            ],
+            "atlas_sample_distance_m": 0.027150224894285202,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_thumb",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.4134114682674408,
+              0.2381184995174408
+            ],
+            "atlas_sample_distance_m": 0.03097994439303875,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_thumb_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.22705078125,
+              0.5362142324447632
+            ],
+            "atlas_sample_distance_m": 0.038498252630233765,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_thumb_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.9716796875,
+              0.2830403745174408
+            ],
+            "atlas_sample_distance_m": 0.0324496366083622,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "source_fragment",
+            "signed_x_band_m": [
+              0.4244693181713001,
+              0.5891847661770223
+            ],
+            "source_extent_m": [
+              0.056989431381225586,
+              0.07070086151361465,
+              0.16471543908119202
+            ],
+            "cap_faces": 2,
+            "name": "Right_forearm",
+            "vertices": 36,
+            "triangles": 68,
+            "atlas_uv": [
+              0.2762044370174408,
+              0.7183431386947632
+            ],
+            "atlas_sample_distance_m": 0.016971535980701447,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "source_fragment",
+            "signed_x_band_m": [
+              0.5883838807059243,
+              0.6044015901278844
+            ],
+            "source_extent_m": [
+              0.04474055767059326,
+              0.07604959607124329,
+              0.01601773500442505
+            ],
+            "cap_faces": 2,
+            "name": "Right_cuff",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.6036784052848816,
+              0.02278645895421505
+            ],
+            "atlas_sample_distance_m": 0.00509199732914567,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "source_fragment",
+            "signed_x_band_m": [
+              0.6003971627723943,
+              0.6478273801163094
+            ],
+            "source_extent_m": [
+              0.06254398822784424,
+              0.09527386724948883,
+              0.047430217266082764
+            ],
+            "cap_faces": 5,
+            "name": "Right_palm",
+            "vertices": 86,
+            "triangles": 168,
+            "atlas_uv": [
+              0.1289876401424408,
+              0.6058756709098816
+            ],
+            "atlas_sample_distance_m": 0.005131160840392113,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger0_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.0038248698692768812,
+              0.0233561210334301
+            ],
+            "atlas_sample_distance_m": 0.029690749943256378,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger0_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.0038248698692768812,
+              0.0233561210334301
+            ],
+            "atlas_sample_distance_m": 0.02283155731856823,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger0_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.16015625,
+              0.2079264372587204
+            ],
+            "atlas_sample_distance_m": 0.01757415011525154,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger0_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.1617838591337204,
+              0.2120768278837204
+            ],
+            "atlas_sample_distance_m": 0.013480161316692829,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger1_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.0056966147385537624,
+              0.01399739645421505
+            ],
+            "atlas_sample_distance_m": 0.013556107878684998,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger1_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.0038248698692768812,
+              0.0233561210334301
+            ],
+            "atlas_sample_distance_m": 0.008268354460597038,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger1_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.159912109375,
+              0.3810221552848816
+            ],
+            "atlas_sample_distance_m": 0.004495829343795776,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger1_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.3701171875,
+              0.9635416865348816
+            ],
+            "atlas_sample_distance_m": 0.0017625706968829036,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger2_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.3697916865348816,
+              0.932373046875
+            ],
+            "atlas_sample_distance_m": 0.003678073175251484,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger2_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.3704427182674408,
+              0.9482421875
+            ],
+            "atlas_sample_distance_m": 0.008630497381091118,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger2_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.371826171875,
+              0.9535319209098816
+            ],
+            "atlas_sample_distance_m": 0.007337219547480345,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger2_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.0625,
+              0.6809896230697632
+            ],
+            "atlas_sample_distance_m": 0.01502537727355957,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger3_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.2179362028837204,
+              0.4154459834098816
+            ],
+            "atlas_sample_distance_m": 0.013927874155342579,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger3_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.2264811247587204,
+              0.4239909052848816
+            ],
+            "atlas_sample_distance_m": 0.015282491222023964,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger3_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.2265625,
+              0.4349772334098816
+            ],
+            "atlas_sample_distance_m": 0.02197319082915783,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger3_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.061279296875,
+              0.671142578125
+            ],
+            "atlas_sample_distance_m": 0.027150224894285202,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_thumb",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.6002604365348816,
+              0.0463053397834301
+            ],
+            "atlas_sample_distance_m": 0.03097994439303875,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_thumb_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.3843587338924408,
+              0.2335612028837204
+            ],
+            "atlas_sample_distance_m": 0.038498252630233765,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_thumb_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.159912109375,
+              0.3810221552848816
+            ],
+            "atlas_sample_distance_m": 0.0324496366083622,
+            "sample_material": "operator_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          }
+        ]
+      },
+      "mouth": {
+        "position": [
+          0.0039622364565730095,
+          -0.10985323041677475,
+          1.5683411359786987
+        ],
+        "method": "source lip-colored UV vertices"
+      },
+      "rest_markers": {
+        "root": {
+          "head": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            0.1599999964237213
+          ]
+        },
+        "pelvis": {
+          "head": [
+            0.0,
+            0.0,
+            0.8899999856948853
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.0499999523162842
+          ]
+        },
+        "spine": {
+          "head": [
+            0.0,
+            0.0,
+            1.0499999523162842
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.2699999809265137
+          ]
+        },
+        "chest": {
+          "head": [
+            0.0,
+            0.0,
+            1.2699999809265137
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.44219172000885
+          ]
+        },
+        "neck": {
+          "head": [
+            0.0,
+            0.0,
+            1.44219172000885
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.5199999809265137
+          ]
+        },
+        "head": {
+          "head": [
+            0.0,
+            0.0,
+            1.5199999809265137
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.8799999952316284
+          ]
+        },
+        "upper_arm.L": {
+          "head": [
+            0.2278074324131012,
+            0.005518591031432152,
+            1.44219172000885
+          ],
+          "tail": [
+            0.3090399503707886,
+            0.005518587306141853,
+            1.2679879665374756
+          ]
+        },
+        "forearm.L": {
+          "head": [
+            0.3090399503707886,
+            0.005518587306141853,
+            1.2679879665374756
+          ],
+          "tail": [
+            0.38425523042678833,
+            0.005518583580851555,
+            1.1066882610321045
+          ]
+        },
+        "hand.L": {
+          "head": [
+            0.38425523042678833,
+            0.005518583580851555,
+            1.1066882610321045
+          ],
+          "tail": [
+            0.4307432472705841,
+            0.005518581252545118,
+            1.006994366645813
+          ]
+        },
+        "upper_arm.R": {
+          "head": [
+            -0.2278074324131012,
+            0.005518591031432152,
+            1.44219172000885
+          ],
+          "tail": [
+            -0.3090399503707886,
+            0.005518587306141853,
+            1.2679879665374756
+          ]
+        },
+        "forearm.R": {
+          "head": [
+            -0.3090399503707886,
+            0.005518587306141853,
+            1.2679879665374756
+          ],
+          "tail": [
+            -0.38425523042678833,
+            0.005518583580851555,
+            1.1066882610321045
+          ]
+        },
+        "hand.R": {
+          "head": [
+            -0.38425523042678833,
+            0.005518583580851555,
+            1.1066882610321045
+          ],
+          "tail": [
+            -0.4307432472705841,
+            0.005518581252545118,
+            1.006994366645813
+          ]
+        },
+        "thigh.L": {
+          "head": [
+            0.1080000028014183,
+            0.0,
+            0.8899999856948853
+          ],
+          "tail": [
+            0.1120000034570694,
+            0.007000000216066837,
+            0.4699999988079071
+          ]
+        },
+        "shin.L": {
+          "head": [
+            0.1120000034570694,
+            0.007000000216066837,
+            0.4699999988079071
+          ],
+          "tail": [
+            0.10599999874830246,
+            1.862645149230957e-09,
+            0.1499999761581421
+          ]
+        },
+        "foot.L": {
+          "head": [
+            0.10599999874830246,
+            1.862645149230957e-09,
+            0.1499999761581421
+          ],
+          "tail": [
+            0.10599999874830246,
+            -0.20000000298023224,
+            0.044999971985816956
+          ]
+        },
+        "thigh.R": {
+          "head": [
+            -0.1080000028014183,
+            0.0,
+            0.8899999856948853
+          ],
+          "tail": [
+            -0.1120000034570694,
+            0.007000000216066837,
+            0.4699999988079071
+          ]
+        },
+        "shin.R": {
+          "head": [
+            -0.1120000034570694,
+            0.007000000216066837,
+            0.4699999988079071
+          ],
+          "tail": [
+            -0.10599999874830246,
+            1.862645149230957e-09,
+            0.1499999761581421
+          ]
+        },
+        "foot.R": {
+          "head": [
+            -0.10599999874830246,
+            1.862645149230957e-09,
+            0.1499999761581421
+          ],
+          "tail": [
+            -0.10599999874830246,
+            -0.20000000298023224,
+            0.044999971985816956
+          ]
+        }
+      },
+      "clips": [
+        {
+          "name": "Idle",
+          "frames": 49,
+          "fps": 24
+        },
+        {
+          "name": "Walk",
+          "frames": 33,
+          "fps": 24
+        },
+        {
+          "name": "Run",
+          "frames": 25,
+          "fps": 24
+        },
+        {
+          "name": "UseItem",
+          "frames": 49,
+          "fps": 24
+        }
+      ],
+      "bones": 18,
+      "runtime": "Assets\\Resources\\Characters\\character_operator.fbx",
+      "editable_source": "Art/Characters/Imported/operator.blend",
+      "source_unchanged": true
+    },
+    {
+      "role": "journalist",
+      "name": "Edgar",
+      "source": "D:\\1\\2.glb",
+      "sha256": "bfb63026f71d1e2424782efc398d111b2e0ed01779af1f92a694d6e79e15de41",
+      "variant": "negative-source-Y",
+      "selection": {
+        "split_source_Y": 0.001953125,
+        "centers_source_Y": [
+          -0.2275390625,
+          0.2314453125
+        ],
+        "selected_side": "negative"
+      },
+      "forward_source": "+X",
+      "rotation_Z_degrees": -90,
+      "original": {
+        "vertices": 7939,
+        "triangles": 4818
+      },
+      "cleaned": {
+        "vertices": 1359,
+        "triangles": 2716,
+        "exact_position_vertices_merged": 3092,
+        "degenerate_faces_removed": 0,
+        "duplicate_faces_removed": 0
+      },
+      "bounds_min": [
+        -0.7534210681915283,
+        -0.3976389169692993,
+        0.0
+      ],
+      "bounds_max": [
+        0.7534210681915283,
+        0.3976389169692993,
+        2.0450000762939453
+      ],
+      "height_m": 2.045,
+      "T_pose_markers": {
+        "hip": 0.84,
+        "waist": 1.07,
+        "chest": 1.24745623588562,
+        "headbase": 1.65,
+        "hipx": 0.103,
+        "knee": [
+          0.107,
+          0.008,
+          0.47
+        ],
+        "ankle": [
+          0.12,
+          0,
+          0.14
+        ],
+        "top": 2.045,
+        "shoulder": [
+          0.25616316318511967,
+          -0.14051900804042816,
+          1.3274562358856201
+        ],
+        "elbow": [
+          0.4445184302330017,
+          -0.14051900804042816,
+          1.3274562358856201
+        ],
+        "wrist": [
+          0.6027368545532227,
+          -0.14051900804042816,
+          1.3274562358856201
+        ]
+      },
+      "previews": [
+        "D:\\DeadAirUnityProject\\Verification-Characters\\Prepared\\journalist_selected_front.png",
+        "D:\\DeadAirUnityProject\\Verification-Characters\\Prepared\\journalist_selected_back.png",
+        "D:\\DeadAirUnityProject\\Verification-Characters\\Prepared\\journalist_idle_front.png",
+        "D:\\DeadAirUnityProject\\Verification-Characters\\Prepared\\journalist_walk_front.png",
+        "D:\\DeadAirUnityProject\\Verification-Characters\\Prepared\\journalist_use_item_front.png"
+      ],
+      "textures": [
+        {
+          "source_size": [
+            1024,
+            1024
+          ],
+          "runtime_size": [
+            1024,
+            1024
+          ],
+          "runtime": "Assets/Characters/Textures/journalist_albedo.png",
+          "original_copy": "Art/Characters/Imported/journalist_source_albedo.png"
+        }
+      ],
+      "hands": {
+        "role": "journalist",
+        "output_path": "D:\\DeadAirUnityProject\\Assets\\Characters\\Imported\\hand_journalist.fbx",
+        "source_mesh": "Edgar_Body",
+        "part_count": 44,
+        "source_fragments": 6,
+        "generated_parts": 38,
+        "axis_contract": "Blender X width, Z along, Y=-Unity depth; FBX Y up, -Z forward; baked mesh axes",
+        "parts": [
+          {
+            "method": "source_fragment",
+            "signed_x_band_m": [
+              0.4484738774321005,
+              0.5949050192933659
+            ],
+            "source_extent_m": [
+              0.19470131397247314,
+              0.242137610912323,
+              0.14643114805221558
+            ],
+            "cap_faces": 2,
+            "name": "Left_forearm",
+            "vertices": 28,
+            "triangles": 52,
+            "atlas_uv": [
+              0.7496744990348816,
+              0.5380859375
+            ],
+            "atlas_sample_distance_m": 0.06385290622711182,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "source_fragment",
+            "signed_x_band_m": [
+              0.5941930364371842,
+              0.6084326935608184
+            ],
+            "source_extent_m": [
+              0.19653093814849854,
+              0.2514219284057617,
+              0.014239668846130371
+            ],
+            "cap_faces": 2,
+            "name": "Left_cuff",
+            "vertices": 58,
+            "triangles": 112,
+            "atlas_uv": [
+              0.4022623896598816,
+              0.9576009511947632
+            ],
+            "atlas_sample_distance_m": 0.019443869590759277,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "source_fragment",
+            "signed_x_band_m": [
+              0.6048727792799099,
+              0.6470379862071157
+            ],
+            "source_extent_m": [
+              0.18694531917572021,
+              0.26309943199157715,
+              0.04216521978378296
+            ],
+            "cap_faces": 4,
+            "name": "Left_palm",
+            "vertices": 127,
+            "triangles": 250,
+            "atlas_uv": [
+              0.4022623896598816,
+              0.9576009511947632
+            ],
+            "atlas_sample_distance_m": 0.01298308465629816,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger0_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.9479166865348816,
+              0.3855794370174408
+            ],
+            "atlas_sample_distance_m": 0.007722179405391216,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger0_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.9506022334098816,
+              0.484375
+            ],
+            "atlas_sample_distance_m": 0.0111450906842947,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger0_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.9478353261947632,
+              0.3748372495174408
+            ],
+            "atlas_sample_distance_m": 0.012074731290340424,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger0_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.03466796875,
+              0.1939290463924408
+            ],
+            "atlas_sample_distance_m": 0.03142872825264931,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger1_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.949462890625,
+              0.4911295771598816
+            ],
+            "atlas_sample_distance_m": 0.0051935515366494656,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger1_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.9506022334098816,
+              0.484375
+            ],
+            "atlas_sample_distance_m": 0.009399840608239174,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger1_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.9461263418197632,
+              0.4798177182674408
+            ],
+            "atlas_sample_distance_m": 0.00942123495042324,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger1_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.03466796875,
+              0.1939290463924408
+            ],
+            "atlas_sample_distance_m": 0.01655973307788372,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger2_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.9449869990348816,
+              0.49267578125
+            ],
+            "atlas_sample_distance_m": 0.006617242936044931,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger2_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.0402018241584301,
+              0.9864909052848816
+            ],
+            "atlas_sample_distance_m": 0.010255038738250732,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger2_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.9427083730697632,
+              0.4808756709098816
+            ],
+            "atlas_sample_distance_m": 0.008288213051855564,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger2_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.8121744990348816,
+              0.031494140625
+            ],
+            "atlas_sample_distance_m": 0.009946851059794426,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger3_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.98193359375,
+              0.3912760615348816
+            ],
+            "atlas_sample_distance_m": 0.008533598855137825,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger3_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.26953125,
+              0.8850911855697632
+            ],
+            "atlas_sample_distance_m": 0.014306100085377693,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger3_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.9427083730697632,
+              0.4808756709098816
+            ],
+            "atlas_sample_distance_m": 0.015494752675294876,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger3_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.8121744990348816,
+              0.031494140625
+            ],
+            "atlas_sample_distance_m": 0.008187031373381615,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_thumb",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.9479166865348816,
+              0.3855794370174408
+            ],
+            "atlas_sample_distance_m": 0.019704168662428856,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_thumb_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.9479166865348816,
+              0.3855794370174408
+            ],
+            "atlas_sample_distance_m": 0.011844424530863762,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_thumb_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.9496256709098816,
+              0.3788248896598816
+            ],
+            "atlas_sample_distance_m": 0.011560967192053795,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "source_fragment",
+            "signed_x_band_m": [
+              0.4484738774321005,
+              0.5949050192933659
+            ],
+            "source_extent_m": [
+              0.22722220420837402,
+              0.3049561381340027,
+              0.14643114805221558
+            ],
+            "cap_faces": 4,
+            "name": "Right_forearm",
+            "vertices": 73,
+            "triangles": 138,
+            "atlas_uv": [
+              0.154052734375,
+              0.9153646230697632
+            ],
+            "atlas_sample_distance_m": 0.044625815004110336,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "source_fragment",
+            "signed_x_band_m": [
+              0.5941930364371842,
+              0.6084326935608184
+            ],
+            "source_extent_m": [
+              0.15260076522827148,
+              0.23471632599830627,
+              0.014239668846130371
+            ],
+            "cap_faces": 3,
+            "name": "Right_cuff",
+            "vertices": 59,
+            "triangles": 110,
+            "atlas_uv": [
+              0.5299479365348816,
+              0.4815267026424408
+            ],
+            "atlas_sample_distance_m": 0.029907863587141037,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "source_fragment",
+            "signed_x_band_m": [
+              0.6048727792799099,
+              0.6470379862071157
+            ],
+            "source_extent_m": [
+              0.1508958339691162,
+              0.25624921917915344,
+              0.04216521978378296
+            ],
+            "cap_faces": 2,
+            "name": "Right_palm",
+            "vertices": 84,
+            "triangles": 164,
+            "atlas_uv": [
+              0.5299479365348816,
+              0.4815267026424408
+            ],
+            "atlas_sample_distance_m": 0.019755374640226364,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger0_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.4769694209098816,
+              0.220458984375
+            ],
+            "atlas_sample_distance_m": 0.009980924427509308,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger0_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.4769694209098816,
+              0.220458984375
+            ],
+            "atlas_sample_distance_m": 0.016086004674434662,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger0_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.8806966543197632,
+              0.92919921875
+            ],
+            "atlas_sample_distance_m": 0.01466432586312294,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger0_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.8806966543197632,
+              0.92919921875
+            ],
+            "atlas_sample_distance_m": 0.010311729274690151,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger1_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.4769694209098816,
+              0.220458984375
+            ],
+            "atlas_sample_distance_m": 0.014117351733148098,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger1_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.092529296875,
+              0.9620768427848816
+            ],
+            "atlas_sample_distance_m": 0.016522089019417763,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger1_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.9601237177848816,
+              0.5840657949447632
+            ],
+            "atlas_sample_distance_m": 0.013341249898076057,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger1_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.0809733122587204,
+              0.9857584834098816
+            ],
+            "atlas_sample_distance_m": 0.009037061594426632,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger2_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.5220540761947632,
+              0.4872233271598816
+            ],
+            "atlas_sample_distance_m": 0.029016869142651558,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger2_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.092529296875,
+              0.9620768427848816
+            ],
+            "atlas_sample_distance_m": 0.023324904963374138,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger2_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.9601237177848816,
+              0.5840657949447632
+            ],
+            "atlas_sample_distance_m": 0.01952672004699707,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger2_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.8806966543197632,
+              0.9189453125
+            ],
+            "atlas_sample_distance_m": 0.011750861071050167,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger3_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.5220540761947632,
+              0.4872233271598816
+            ],
+            "atlas_sample_distance_m": 0.04505438730120659,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger3_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.7215169668197632,
+              0.9637858271598816
+            ],
+            "atlas_sample_distance_m": 0.03624282404780388,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger3_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.274658203125,
+              0.4386393427848816
+            ],
+            "atlas_sample_distance_m": 0.033995483070611954,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger3_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.274658203125,
+              0.4386393427848816
+            ],
+            "atlas_sample_distance_m": 0.018712753430008888,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_thumb",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.5220540761947632,
+              0.4872233271598816
+            ],
+            "atlas_sample_distance_m": 0.023150529712438583,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_thumb_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.4769694209098816,
+              0.220458984375
+            ],
+            "atlas_sample_distance_m": 0.017568834125995636,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_thumb_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.4769694209098816,
+              0.220458984375
+            ],
+            "atlas_sample_distance_m": 0.01811780408024788,
+            "sample_material": "journalist_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          }
+        ]
+      },
+      "mouth": {
+        "position": [
+          0.02862427942454815,
+          -0.34882310032844543,
+          1.7001328468322754
+        ],
+        "method": "source lip-colored UV vertices"
+      },
+      "rest_markers": {
+        "root": {
+          "head": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            0.1599999964237213
+          ]
+        },
+        "pelvis": {
+          "head": [
+            0.0,
+            0.0,
+            0.8399999141693115
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.0700000524520874
+          ]
+        },
+        "spine": {
+          "head": [
+            0.0,
+            0.0,
+            1.0700000524520874
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.2474561929702759
+          ]
+        },
+        "chest": {
+          "head": [
+            0.0,
+            0.0,
+            1.2474561929702759
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.3274562358856201
+          ]
+        },
+        "neck": {
+          "head": [
+            0.0,
+            0.0,
+            1.3274562358856201
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.649999976158142
+          ]
+        },
+        "head": {
+          "head": [
+            0.0,
+            0.0,
+            1.649999976158142
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            2.0450000762939453
+          ]
+        },
+        "upper_arm.L": {
+          "head": [
+            0.2561631500720978,
+            -0.14051900804042816,
+            1.3274562358856201
+          ],
+          "tail": [
+            0.3357655107975006,
+            -0.14051900804042816,
+            1.1567484140396118
+          ]
+        },
+        "forearm.L": {
+          "head": [
+            0.3357655107975006,
+            -0.14051900804042816,
+            1.1567484140396118
+          ],
+          "tail": [
+            0.4026314914226532,
+            -0.14051900804042816,
+            1.0133538246154785
+          ]
+        },
+        "hand.L": {
+          "head": [
+            0.4026314914226532,
+            -0.14051900804042816,
+            1.0133538246154785
+          ],
+          "tail": [
+            0.449119508266449,
+            -0.14051900804042816,
+            0.913659930229187
+          ]
+        },
+        "upper_arm.R": {
+          "head": [
+            -0.2561631500720978,
+            -0.14051900804042816,
+            1.3274562358856201
+          ],
+          "tail": [
+            -0.3357655107975006,
+            -0.14051900804042816,
+            1.1567484140396118
+          ]
+        },
+        "forearm.R": {
+          "head": [
+            -0.3357655107975006,
+            -0.14051900804042816,
+            1.1567484140396118
+          ],
+          "tail": [
+            -0.4026314914226532,
+            -0.14051900804042816,
+            1.0133538246154785
+          ]
+        },
+        "hand.R": {
+          "head": [
+            -0.4026314914226532,
+            -0.14051900804042816,
+            1.0133538246154785
+          ],
+          "tail": [
+            -0.449119508266449,
+            -0.14051900804042816,
+            0.913659930229187
+          ]
+        },
+        "thigh.L": {
+          "head": [
+            0.10300000011920929,
+            0.0,
+            0.8399999737739563
+          ],
+          "tail": [
+            0.10700000077486038,
+            0.00800000037997961,
+            0.4699999988079071
+          ]
+        },
+        "shin.L": {
+          "head": [
+            0.10700000077486038,
+            0.00800000037997961,
+            0.4699999988079071
+          ],
+          "tail": [
+            0.11999999731779099,
+            0.0,
+            0.13999998569488525
+          ]
+        },
+        "foot.L": {
+          "head": [
+            0.11999999731779099,
+            0.0,
+            0.13999998569488525
+          ],
+          "tail": [
+            0.11999999731779099,
+            -0.20000000298023224,
+            0.044999994337558746
+          ]
+        },
+        "thigh.R": {
+          "head": [
+            -0.10300000011920929,
+            0.0,
+            0.8399999737739563
+          ],
+          "tail": [
+            -0.10700000077486038,
+            0.00800000037997961,
+            0.4699999988079071
+          ]
+        },
+        "shin.R": {
+          "head": [
+            -0.10700000077486038,
+            0.00800000037997961,
+            0.4699999988079071
+          ],
+          "tail": [
+            -0.11999999731779099,
+            0.0,
+            0.13999998569488525
+          ]
+        },
+        "foot.R": {
+          "head": [
+            -0.11999999731779099,
+            0.0,
+            0.13999998569488525
+          ],
+          "tail": [
+            -0.11999999731779099,
+            -0.20000000298023224,
+            0.044999994337558746
+          ]
+        }
+      },
+      "clips": [
+        {
+          "name": "Idle",
+          "frames": 49,
+          "fps": 24
+        },
+        {
+          "name": "Walk",
+          "frames": 33,
+          "fps": 24
+        },
+        {
+          "name": "Run",
+          "frames": 25,
+          "fps": 24
+        },
+        {
+          "name": "UseItem",
+          "frames": 49,
+          "fps": 24
+        }
+      ],
+      "bones": 18,
+      "runtime": "Assets\\Resources\\Characters\\character_journalist.fbx",
+      "editable_source": "Art/Characters/Imported/journalist.blend",
+      "source_unchanged": true
+    },
+    {
+      "role": "engineer",
+      "name": "Victor",
+      "source": "D:\\1\\3.fbx",
+      "sha256": "d8eefeacd8e23e47076f5f7a2e68093728cf5ac4bfa237a52c9c3a8650d8a81a",
+      "variant": "positive-source-Y",
+      "selection": {
+        "split_source_Y": 0.0059814490377902985,
+        "centers_source_Y": [
+          -0.2451171837747097,
+          0.2570800818502903
+        ],
+        "selected_side": "positive"
+      },
+      "forward_source": "-X",
+      "rotation_Z_degrees": 90,
+      "original": {
+        "vertices": 5375,
+        "triangles": 10360
+      },
+      "cleaned": {
+        "vertices": 2730,
+        "triangles": 5254,
+        "exact_position_vertices_merged": 0,
+        "degenerate_faces_removed": 0,
+        "duplicate_faces_removed": 0
+      },
+      "bounds_min": [
+        -0.7849089503288269,
+        -0.4654510021209717,
+        0.0
+      ],
+      "bounds_max": [
+        0.7849089503288269,
+        0.4654510021209717,
+        1.8100000619888306
+      ],
+      "height_m": 1.81,
+      "T_pose_markers": {
+        "hip": 0.6,
+        "waist": 0.89,
+        "chest": 1.19,
+        "headbase": 1.53,
+        "hipx": 0.217,
+        "knee": [
+          0.245,
+          0.015,
+          0.345
+        ],
+        "ankle": [
+          0.266,
+          0,
+          0.13
+        ],
+        "top": 1.81,
+        "shoulder": [
+          0.3,
+          0.09,
+          1.44
+        ],
+        "elbow": [
+          0.48,
+          0.156,
+          1.43
+        ],
+        "wrist": [
+          0.644,
+          0.151,
+          1.425
+        ]
+      },
+      "previews": [
+        "D:\\DeadAirUnityProject\\Verification-Characters\\Prepared\\engineer_selected_front.png",
+        "D:\\DeadAirUnityProject\\Verification-Characters\\Prepared\\engineer_selected_back.png",
+        "D:\\DeadAirUnityProject\\Verification-Characters\\Prepared\\engineer_idle_front.png",
+        "D:\\DeadAirUnityProject\\Verification-Characters\\Prepared\\engineer_walk_front.png",
+        "D:\\DeadAirUnityProject\\Verification-Characters\\Prepared\\engineer_run_front.png",
+        "D:\\DeadAirUnityProject\\Verification-Characters\\Prepared\\engineer_use_item_front.png"
+      ],
+      "atlas_binding": {
+        "method": "existing_runtime_atlas",
+        "path": "D:\\DeadAirUnityProject\\Assets\\Characters\\Textures\\engineer_albedo.png",
+        "exists_on_disk": true,
+        "size": [
+          1024,
+          1024
+        ],
+        "material_factors_preserved": [
+          {
+            "source_material": "tripo_0b97e0b8_6342_496b_80f0_ead0dc02ecc1",
+            "diffuse_color": [
+              0.800000011920929,
+              0.800000011920929,
+              0.800000011920929,
+              1.0
+            ],
+            "principled_base_color_factors": [
+              [
+                0.800000011920929,
+                0.800000011920929,
+                0.800000011920929,
+                1.0
+              ]
+            ]
+          }
+        ]
+      },
+      "textures": [
+        {
+          "source_size": [
+            4096,
+            4096
+          ],
+          "runtime_size": [
+            1024,
+            1024
+          ],
+          "runtime": "Assets/Characters/Textures/engineer_albedo.png",
+          "original_copy": "Art/Characters/Imported/engineer_source_albedo.png"
+        }
+      ],
+      "hands": {
+        "role": "engineer",
+        "output_path": "D:\\DeadAirUnityProject\\Assets\\Characters\\Imported\\hand_engineer.fbx",
+        "source_mesh": "Victor_Body",
+        "part_count": 44,
+        "source_fragments": 6,
+        "generated_parts": 38,
+        "axis_contract": "Blender X width, Z along, Y=-Unity depth; FBX Y up, -Z forward; baked mesh axes",
+        "parts": [
+          {
+            "method": "source_fragment",
+            "signed_x_band_m": [
+              0.5517909973887378,
+              0.6370253190040588
+            ],
+            "source_extent_m": [
+              0.17925214767456055,
+              0.21978875994682312,
+              0.08523428440093994
+            ],
+            "cap_faces": 2,
+            "name": "Left_forearm",
+            "vertices": 122,
+            "triangles": 217,
+            "atlas_uv": [
+              0.551264226436615,
+              0.5402141809463501
+            ],
+            "atlas_sample_distance_m": 0.022712327539920807,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "source_fragment",
+            "signed_x_band_m": [
+              0.6364253190040589,
+              0.6484253190040589
+            ],
+            "source_extent_m": [
+              0.07974088191986084,
+              0.15127910673618317,
+              0.012000024318695068
+            ],
+            "cap_faces": 2,
+            "name": "Left_cuff",
+            "vertices": 79,
+            "triangles": 138,
+            "atlas_uv": [
+              0.0775124579668045,
+              0.1879132241010666
+            ],
+            "atlas_sample_distance_m": 0.02072759158909321,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "source_fragment",
+            "signed_x_band_m": [
+              0.6454253190040589,
+              0.6786253190040589
+            ],
+            "source_extent_m": [
+              0.06702494621276855,
+              0.16251395642757416,
+              0.03320002555847168
+            ],
+            "cap_faces": 2,
+            "name": "Left_palm",
+            "vertices": 95,
+            "triangles": 186,
+            "atlas_uv": [
+              0.8121373653411865,
+              0.9069957733154297
+            ],
+            "atlas_sample_distance_m": 0.022474074736237526,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger0_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.8121373653411865,
+              0.9069957733154297
+            ],
+            "atlas_sample_distance_m": 0.017001308500766754,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger0_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.8091983199119568,
+              0.8972324132919312
+            ],
+            "atlas_sample_distance_m": 0.021651363000273705,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger0_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.8086485862731934,
+              0.8934077620506287
+            ],
+            "atlas_sample_distance_m": 0.02038387954235077,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger0_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.29541587829589844,
+              0.4451157748699188
+            ],
+            "atlas_sample_distance_m": 0.02085071988403797,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger1_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.8121373653411865,
+              0.9069957733154297
+            ],
+            "atlas_sample_distance_m": 0.012483230791985989,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger1_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.29521629214286804,
+              0.43356654047966003
+            ],
+            "atlas_sample_distance_m": 0.007589578628540039,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger1_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.29435691237449646,
+              0.43893134593963623
+            ],
+            "atlas_sample_distance_m": 0.009296493604779243,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger1_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.29541587829589844,
+              0.4451157748699188
+            ],
+            "atlas_sample_distance_m": 0.00724289333447814,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger2_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.8144615888595581,
+              0.9045659899711609
+            ],
+            "atlas_sample_distance_m": 0.022955143824219704,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger2_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.5196793079376221,
+              0.8225805759429932
+            ],
+            "atlas_sample_distance_m": 0.009440598078072071,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger2_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.29435691237449646,
+              0.43893134593963623
+            ],
+            "atlas_sample_distance_m": 0.008284667506814003,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger2_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.4611152112483978,
+              0.22338056564331055
+            ],
+            "atlas_sample_distance_m": 0.00861541461199522,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger3_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.973462700843811,
+              0.6923907995223999
+            ],
+            "atlas_sample_distance_m": 0.014245240017771721,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger3_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.2897683382034302,
+              0.433665931224823
+            ],
+            "atlas_sample_distance_m": 0.005301347468048334,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger3_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.29094868898391724,
+              0.4392295479774475
+            ],
+            "atlas_sample_distance_m": 0.011494169943034649,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger3_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.29094868898391724,
+              0.4392295479774475
+            ],
+            "atlas_sample_distance_m": 0.020198436453938484,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_thumb",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.8121373653411865,
+              0.9069957733154297
+            ],
+            "atlas_sample_distance_m": 0.02195979468524456,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_thumb_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.8144615888595581,
+              0.9045659899711609
+            ],
+            "atlas_sample_distance_m": 0.028512118384242058,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_thumb_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.8091983199119568,
+              0.8972324132919312
+            ],
+            "atlas_sample_distance_m": 0.03040960803627968,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "source_fragment",
+            "signed_x_band_m": [
+              0.5517909973887378,
+              0.6370253190040588
+            ],
+            "source_extent_m": [
+              0.18803250789642334,
+              0.22814686596393585,
+              0.08523428440093994
+            ],
+            "cap_faces": 3,
+            "name": "Right_forearm",
+            "vertices": 122,
+            "triangles": 221,
+            "atlas_uv": [
+              0.4835033416748047,
+              0.8990594744682312
+            ],
+            "atlas_sample_distance_m": 0.024625660851597786,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "source_fragment",
+            "signed_x_band_m": [
+              0.6364253190040589,
+              0.6484253190040589
+            ],
+            "source_extent_m": [
+              0.11057782173156738,
+              0.15454497933387756,
+              0.012000024318695068
+            ],
+            "cap_faces": 3,
+            "name": "Right_cuff",
+            "vertices": 87,
+            "triangles": 158,
+            "atlas_uv": [
+              0.4807012975215912,
+              0.9060325026512146
+            ],
+            "atlas_sample_distance_m": 0.02241593971848488,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "source_fragment",
+            "signed_x_band_m": [
+              0.6454253190040589,
+              0.6786253190040589
+            ],
+            "source_extent_m": [
+              0.08006703853607178,
+              0.1544470638036728,
+              0.03320002555847168
+            ],
+            "cap_faces": 2,
+            "name": "Right_palm",
+            "vertices": 96,
+            "triangles": 175,
+            "atlas_uv": [
+              0.47725433111190796,
+              0.9098955988883972
+            ],
+            "atlas_sample_distance_m": 0.01984795182943344,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger0_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.47542041540145874,
+              0.916653037071228
+            ],
+            "atlas_sample_distance_m": 0.015375370159745216,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger0_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.4762241244316101,
+              0.9238232374191284
+            ],
+            "atlas_sample_distance_m": 0.020519882440567017,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger0_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.4727265238761902,
+              0.9286589026451111
+            ],
+            "atlas_sample_distance_m": 0.018183177337050438,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger0_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.47126445174217224,
+              0.9343082308769226
+            ],
+            "atlas_sample_distance_m": 0.017308365553617477,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger1_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.4772099256515503,
+              0.9196433424949646
+            ],
+            "atlas_sample_distance_m": 0.006858582142740488,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger1_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.4762241244316101,
+              0.9238232374191284
+            ],
+            "atlas_sample_distance_m": 0.006226758472621441,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger1_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.4727265238761902,
+              0.9286589026451111
+            ],
+            "atlas_sample_distance_m": 0.004415804520249367,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger1_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.47126445174217224,
+              0.9343082308769226
+            ],
+            "atlas_sample_distance_m": 0.00646732235327363,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger2_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.4772099256515503,
+              0.9196433424949646
+            ],
+            "atlas_sample_distance_m": 0.01821257546544075,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger2_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.4762241244316101,
+              0.9238232374191284
+            ],
+            "atlas_sample_distance_m": 0.015312633477151394,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger2_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.9018938541412354,
+              0.8083008527755737
+            ],
+            "atlas_sample_distance_m": 0.013641725294291973,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger2_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.9012410044670105,
+              0.814222514629364
+            ],
+            "atlas_sample_distance_m": 0.00932942796498537,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger3_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.902478814125061,
+              0.7968745231628418
+            ],
+            "atlas_sample_distance_m": 0.012357588857412338,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger3_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.9002665281295776,
+              0.8019872903823853
+            ],
+            "atlas_sample_distance_m": 0.007555884309113026,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger3_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.9018938541412354,
+              0.8083008527755737
+            ],
+            "atlas_sample_distance_m": 0.009382091462612152,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger3_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.8999924659729004,
+              0.8100463151931763
+            ],
+            "atlas_sample_distance_m": 0.012683048844337463,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_thumb",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.47542041540145874,
+              0.916653037071228
+            ],
+            "atlas_sample_distance_m": 0.025833362713456154,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_thumb_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.4772099256515503,
+              0.9196433424949646
+            ],
+            "atlas_sample_distance_m": 0.02674596570432186,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_thumb_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.4762241244316101,
+              0.9238232374191284
+            ],
+            "atlas_sample_distance_m": 0.02947295270860195,
+            "sample_material": "engineer_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          }
+        ]
+      },
+      "mouth": {
+        "position": [
+          0.002992939203977585,
+          -0.1863139569759369,
+          1.5950082540512085
+        ],
+        "method": "source lip-colored UV vertices"
+      },
+      "rest_markers": {
+        "root": {
+          "head": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            0.1599999964237213
+          ]
+        },
+        "pelvis": {
+          "head": [
+            0.0,
+            0.0,
+            0.6000000238418579
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            0.8899999856948853
+          ]
+        },
+        "spine": {
+          "head": [
+            0.0,
+            0.0,
+            0.8899999856948853
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.190000057220459
+          ]
+        },
+        "chest": {
+          "head": [
+            0.0,
+            0.0,
+            1.190000057220459
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.440000057220459
+          ]
+        },
+        "neck": {
+          "head": [
+            0.0,
+            0.0,
+            1.440000057220459
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.5299999713897705
+          ]
+        },
+        "head": {
+          "head": [
+            0.0,
+            0.0,
+            1.5299999713897705
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.809999942779541
+          ]
+        },
+        "upper_arm.L": {
+          "head": [
+            0.30000001192092896,
+            0.09000000357627869,
+            1.440000057220459
+          ],
+          "tail": [
+            0.3670080900192261,
+            0.156000018119812,
+            1.2726384401321411
+          ]
+        },
+        "forearm.L": {
+          "head": [
+            0.3670080900192261,
+            0.156000018119812,
+            1.2726384401321411
+          ],
+          "tail": [
+            0.4317859411239624,
+            0.1510000377893448,
+            1.1218907833099365
+          ]
+        },
+        "hand.L": {
+          "head": [
+            0.4317859411239624,
+            0.1510000377893448,
+            1.1218907833099365
+          ],
+          "tail": [
+            0.4782739579677582,
+            0.15100005269050598,
+            1.022196888923645
+          ]
+        },
+        "upper_arm.R": {
+          "head": [
+            -0.30000001192092896,
+            0.09000000357627869,
+            1.440000057220459
+          ],
+          "tail": [
+            -0.3670080900192261,
+            0.156000018119812,
+            1.2726384401321411
+          ]
+        },
+        "forearm.R": {
+          "head": [
+            -0.3670080900192261,
+            0.156000018119812,
+            1.2726384401321411
+          ],
+          "tail": [
+            -0.4317859411239624,
+            0.1510000377893448,
+            1.1218907833099365
+          ]
+        },
+        "hand.R": {
+          "head": [
+            -0.4317859411239624,
+            0.1510000377893448,
+            1.1218907833099365
+          ],
+          "tail": [
+            -0.4782739579677582,
+            0.15100005269050598,
+            1.022196888923645
+          ]
+        },
+        "thigh.L": {
+          "head": [
+            0.21699999272823334,
+            0.0,
+            0.6000000238418579
+          ],
+          "tail": [
+            0.24500000476837158,
+            0.014999999664723873,
+            0.3450000286102295
+          ]
+        },
+        "shin.L": {
+          "head": [
+            0.24500000476837158,
+            0.014999999664723873,
+            0.3450000286102295
+          ],
+          "tail": [
+            0.26600000262260437,
+            0.0,
+            0.1300000250339508
+          ]
+        },
+        "foot.L": {
+          "head": [
+            0.26600000262260437,
+            0.0,
+            0.1300000250339508
+          ],
+          "tail": [
+            0.26600000262260437,
+            -0.20000001788139343,
+            0.04500003904104233
+          ]
+        },
+        "thigh.R": {
+          "head": [
+            -0.21699999272823334,
+            0.0,
+            0.6000000238418579
+          ],
+          "tail": [
+            -0.24500000476837158,
+            0.014999999664723873,
+            0.3450000286102295
+          ]
+        },
+        "shin.R": {
+          "head": [
+            -0.24500000476837158,
+            0.014999999664723873,
+            0.3450000286102295
+          ],
+          "tail": [
+            -0.26600000262260437,
+            0.0,
+            0.1300000250339508
+          ]
+        },
+        "foot.R": {
+          "head": [
+            -0.26600000262260437,
+            0.0,
+            0.1300000250339508
+          ],
+          "tail": [
+            -0.26600000262260437,
+            -0.20000001788139343,
+            0.04500003904104233
+          ]
+        }
+      },
+      "clips": [
+        {
+          "name": "Idle",
+          "frames": 49,
+          "fps": 24
+        },
+        {
+          "name": "Walk",
+          "frames": 33,
+          "fps": 24
+        },
+        {
+          "name": "Run",
+          "frames": 25,
+          "fps": 24
+        },
+        {
+          "name": "UseItem",
+          "frames": 49,
+          "fps": 24
+        }
+      ],
+      "bones": 18,
+      "runtime": "Assets\\Resources\\Characters\\character_engineer.fbx",
+      "editable_source": "Art/Characters/Imported/engineer.blend",
+      "source_unchanged": true
+    },
+    {
+      "role": "dispatcher",
+      "name": "Hazel",
+      "source": "D:\\1\\4.fbx",
+      "sha256": "11e88bbbbdae8d5f62da002a3bb02cd58b8457652a472ab357b9ea5dc6e6d761",
+      "variant": "whole",
+      "selection": {},
+      "forward_source": "+X",
+      "rotation_Z_degrees": -90,
+      "original": {
+        "vertices": 5074,
+        "triangles": 9580
+      },
+      "cleaned": {
+        "vertices": 5074,
+        "triangles": 9572,
+        "exact_position_vertices_merged": 0,
+        "degenerate_faces_removed": 2,
+        "duplicate_faces_removed": 0
+      },
+      "bounds_min": [
+        -0.7125329971313477,
+        -0.3267635703086853,
+        0.0
+      ],
+      "bounds_max": [
+        0.7125329971313477,
+        0.3267635703086853,
+        2.0300002098083496
+      ],
+      "height_m": 2.03,
+      "T_pose_markers": {
+        "hip": 0.96,
+        "waist": 1.14,
+        "chest": 1.36,
+        "headbase": 1.68,
+        "hipx": 0.094,
+        "knee": [
+          0.102,
+          0.013,
+          0.505
+        ],
+        "ankle": [
+          0.103,
+          0,
+          0.14
+        ],
+        "top": 2.03,
+        "shoulder": [
+          0.22088522911071778,
+          -0.15817537903785706,
+          1.5420860052108765
+        ],
+        "elbow": [
+          0.4132691383361816,
+          -0.15817537903785706,
+          1.5420860052108765
+        ],
+        "wrist": [
+          0.598527717590332,
+          -0.15817537903785706,
+          1.5420860052108765
+        ]
+      },
+      "previews": [
+        "D:\\DeadAirUnityProject\\Verification-Characters\\Prepared\\dispatcher_selected_front.png",
+        "D:\\DeadAirUnityProject\\Verification-Characters\\Prepared\\dispatcher_selected_back.png",
+        "D:\\DeadAirUnityProject\\Verification-Characters\\Prepared\\dispatcher_idle_front.png",
+        "D:\\DeadAirUnityProject\\Verification-Characters\\Prepared\\dispatcher_walk_front.png",
+        "D:\\DeadAirUnityProject\\Verification-Characters\\Prepared\\dispatcher_use_item_front.png"
+      ],
+      "textures": [
+        {
+          "source_size": [
+            4096,
+            4096
+          ],
+          "runtime_size": [
+            1024,
+            1024
+          ],
+          "runtime": "Assets/Characters/Textures/dispatcher_albedo.png",
+          "original_copy": "Art/Characters/Imported/dispatcher_source_albedo.png"
+        }
+      ],
+      "hands": {
+        "role": "dispatcher",
+        "output_path": "D:\\DeadAirUnityProject\\Assets\\Characters\\Imported\\hand_dispatcher.fbx",
+        "source_mesh": "Hazel_Body",
+        "part_count": 44,
+        "source_fragments": 6,
+        "generated_parts": 38,
+        "axis_contract": "Blender X width, Z along, Y=-Unity depth; FBX Y up, -Z forward; baked mesh axes",
+        "parts": [
+          {
+            "method": "source_fragment",
+            "signed_x_band_m": [
+              0.41790059740732716,
+              0.5893574287486733
+            ],
+            "source_extent_m": [
+              0.23750519752502441,
+              0.12991207838058472,
+              0.17145684361457825
+            ],
+            "cap_faces": 2,
+            "name": "Left_forearm",
+            "vertices": 148,
+            "triangles": 285,
+            "atlas_uv": [
+              0.021726390346884727,
+              0.2757662534713745
+            ],
+            "atlas_sample_distance_m": 0.003456773003563285,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "source_fragment",
+            "signed_x_band_m": [
+              0.5885237650429834,
+              0.6051970391567794
+            ],
+            "source_extent_m": [
+              0.06751835346221924,
+              0.09335459768772125,
+              0.016673266887664795
+            ],
+            "cap_faces": 3,
+            "name": "Left_cuff",
+            "vertices": 47,
+            "triangles": 86,
+            "atlas_uv": [
+              0.890973687171936,
+              0.4760798215866089
+            ],
+            "atlas_sample_distance_m": 0.01642942614853382,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "source_fragment",
+            "signed_x_band_m": [
+              0.6010287206283303,
+              0.6504001378652927
+            ],
+            "source_extent_m": [
+              0.052153825759887695,
+              0.11669617146253586,
+              0.049371421337127686
+            ],
+            "cap_faces": 5,
+            "name": "Left_palm",
+            "vertices": 112,
+            "triangles": 220,
+            "atlas_uv": [
+              0.48566460609436035,
+              0.8537964224815369
+            ],
+            "atlas_sample_distance_m": 0.014750569127500057,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger0_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.28147634863853455,
+              0.061934541910886765
+            ],
+            "atlas_sample_distance_m": 0.026068756356835365,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger0_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.2828019857406616,
+              0.06925515085458755
+            ],
+            "atlas_sample_distance_m": 0.02594166249036789,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger0_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.2833124101161957,
+              0.07314640283584595
+            ],
+            "atlas_sample_distance_m": 0.026822317391633987,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger0_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.505797266960144,
+              0.6622978448867798
+            ],
+            "atlas_sample_distance_m": 0.02864411659538746,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger1_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.28147634863853455,
+              0.061934541910886765
+            ],
+            "atlas_sample_distance_m": 0.011631877161562443,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger1_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.5046389102935791,
+              0.6508513689041138
+            ],
+            "atlas_sample_distance_m": 0.011132068932056427,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger1_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.5050129890441895,
+              0.6547585725784302
+            ],
+            "atlas_sample_distance_m": 0.012377111241221428,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger1_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.505797266960144,
+              0.6622978448867798
+            ],
+            "atlas_sample_distance_m": 0.012798955664038658,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger2_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.08465107530355453,
+              0.038754746317863464
+            ],
+            "atlas_sample_distance_m": 0.005973026156425476,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger2_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.08470918983221054,
+              0.046361785382032394
+            ],
+            "atlas_sample_distance_m": 0.006011158227920532,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger2_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.084851935505867,
+              0.05042898654937744
+            ],
+            "atlas_sample_distance_m": 0.007551197893917561,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger2_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.08491005748510361,
+              0.05803601071238518
+            ],
+            "atlas_sample_distance_m": 0.008646748028695583,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger3_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.5024299621582031,
+              0.28790614008903503
+            ],
+            "atlas_sample_distance_m": 0.01651160791516304,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger3_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.08571094274520874,
+              0.04575296491384506
+            ],
+            "atlas_sample_distance_m": 0.01803647167980671,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger3_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.084851935505867,
+              0.05042898654937744
+            ],
+            "atlas_sample_distance_m": 0.02025420032441616,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_finger3_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.08491005748510361,
+              0.05803601071238518
+            ],
+            "atlas_sample_distance_m": 0.022508956491947174,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_thumb",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.3164823055267334,
+              0.5520133972167969
+            ],
+            "atlas_sample_distance_m": 0.02761971578001976,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_thumb_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.28147634863853455,
+              0.061934541910886765
+            ],
+            "atlas_sample_distance_m": 0.034446585923433304,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Left_thumb_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.2828019857406616,
+              0.06925515085458755
+            ],
+            "atlas_sample_distance_m": 0.03446405753493309,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "source_fragment",
+            "signed_x_band_m": [
+              0.41790059740732716,
+              0.5893574287486733
+            ],
+            "source_extent_m": [
+              0.23757994174957275,
+              0.13189545273780823,
+              0.17145684361457825
+            ],
+            "cap_faces": 2,
+            "name": "Right_forearm",
+            "vertices": 148,
+            "triangles": 285,
+            "atlas_uv": [
+              0.8502367734909058,
+              0.7184140682220459
+            ],
+            "atlas_sample_distance_m": 0.004127101972699165,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "source_fragment",
+            "signed_x_band_m": [
+              0.5885237650429834,
+              0.6051970391567794
+            ],
+            "source_extent_m": [
+              0.03588283061981201,
+              0.06548653542995453,
+              0.016673266887664795
+            ],
+            "cap_faces": 2,
+            "name": "Right_cuff",
+            "vertices": 39,
+            "triangles": 74,
+            "atlas_uv": [
+              0.8676443099975586,
+              0.6860482096672058
+            ],
+            "atlas_sample_distance_m": 0.016052022576332092,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "source_fragment",
+            "signed_x_band_m": [
+              0.6010287206283303,
+              0.6504001378652927
+            ],
+            "source_extent_m": [
+              0.052153825759887695,
+              0.11669616401195526,
+              0.049371421337127686
+            ],
+            "cap_faces": 5,
+            "name": "Right_palm",
+            "vertices": 113,
+            "triangles": 222,
+            "atlas_uv": [
+              0.8676623106002808,
+              0.6753495931625366
+            ],
+            "atlas_sample_distance_m": 0.01369006559252739,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger0_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.07939334958791733,
+              0.2954912781715393
+            ],
+            "atlas_sample_distance_m": 0.02674831449985504,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger0_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.07948186993598938,
+              0.29043149948120117
+            ],
+            "atlas_sample_distance_m": 0.026591921225190163,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger0_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.07976864278316498,
+              0.28574779629707336
+            ],
+            "atlas_sample_distance_m": 0.027164196595549583,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger0_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.08069837093353271,
+              0.2817992568016052
+            ],
+            "atlas_sample_distance_m": 0.02883184887468815,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger1_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.07939334958791733,
+              0.2954912781715393
+            ],
+            "atlas_sample_distance_m": 0.01123547088354826,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger1_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.07948186993598938,
+              0.29043149948120117
+            ],
+            "atlas_sample_distance_m": 0.011363673023879528,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger1_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.07976864278316498,
+              0.28574779629707336
+            ],
+            "atlas_sample_distance_m": 0.012645010836422443,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger1_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.6922672986984253,
+              0.3971053957939148
+            ],
+            "atlas_sample_distance_m": 0.015103393234312534,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger2_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.2563445270061493,
+              0.34996652603149414
+            ],
+            "atlas_sample_distance_m": 0.006009030621498823,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger2_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.25712335109710693,
+              0.35874056816101074
+            ],
+            "atlas_sample_distance_m": 0.006536082364618778,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger2_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.43869253993034363,
+              0.4494476318359375
+            ],
+            "atlas_sample_distance_m": 0.00820805225521326,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger2_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.25683748722076416,
+              0.3673887252807617
+            ],
+            "atlas_sample_distance_m": 0.01049315370619297,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger3_proximal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.4382432699203491,
+              0.463021457195282
+            ],
+            "atlas_sample_distance_m": 0.015009189024567604,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger3_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.43810224533081055,
+              0.45481762290000916
+            ],
+            "atlas_sample_distance_m": 0.017621343955397606,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger3_distal",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.43869253993034363,
+              0.4494476318359375
+            ],
+            "atlas_sample_distance_m": 0.020232273265719414,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_finger3_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.43790632486343384,
+              0.44538232684135437
+            ],
+            "atlas_sample_distance_m": 0.022401953116059303,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_thumb",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.17749594151973724,
+              0.6054732799530029
+            ],
+            "atlas_sample_distance_m": 0.028911372646689415,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_thumb_middle",
+            "vertices": 32,
+            "triangles": 60,
+            "atlas_uv": [
+              0.3582333028316498,
+              0.222883939743042
+            ],
+            "atlas_sample_distance_m": 0.03503519296646118,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          },
+          {
+            "method": "atlas_sampled_anatomy",
+            "name": "Right_thumb_tip",
+            "vertices": 46,
+            "triangles": 80,
+            "atlas_uv": [
+              0.3595501184463501,
+              0.21556101739406586
+            ],
+            "atlas_sample_distance_m": 0.035072699189186096,
+            "sample_material": "dispatcher_source_atlas",
+            "canonical_blender_bounds": [
+              [
+                -0.5,
+                -0.5,
+                -0.5
+              ],
+              [
+                0.5,
+                0.5,
+                0.5
+              ]
+            ]
+          }
+        ]
+      },
+      "mouth": {
+        "position": [
+          0.004477844573557377,
+          -0.3099462687969208,
+          1.718304991722107
+        ],
+        "method": "source lip-colored UV vertices"
+      },
+      "rest_markers": {
+        "root": {
+          "head": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            0.1599999964237213
+          ]
+        },
+        "pelvis": {
+          "head": [
+            0.0,
+            0.0,
+            0.9599999189376831
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.1399999856948853
+          ]
+        },
+        "spine": {
+          "head": [
+            0.0,
+            0.0,
+            1.1399999856948853
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.3600000143051147
+          ]
+        },
+        "chest": {
+          "head": [
+            0.0,
+            0.0,
+            1.3600000143051147
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.5420860052108765
+          ]
+        },
+        "neck": {
+          "head": [
+            0.0,
+            0.0,
+            1.5420860052108765
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.6799999475479126
+          ]
+        },
+        "head": {
+          "head": [
+            0.0,
+            0.0,
+            1.6799999475479126
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            2.0299999713897705
+          ]
+        },
+        "upper_arm.L": {
+          "head": [
+            0.22088523209095,
+            -0.15817537903785706,
+            1.5420860052108765
+          ],
+          "tail": [
+            0.3021901845932007,
+            -0.15817537903785706,
+            1.3677269220352173
+          ]
+        },
+        "forearm.L": {
+          "head": [
+            0.3021901845932007,
+            -0.15817537903785706,
+            1.3677269220352173
+          ],
+          "tail": [
+            0.38048383593559265,
+            -0.15817537903785706,
+            1.199825644493103
+          ]
+        },
+        "hand.L": {
+          "head": [
+            0.38048383593559265,
+            -0.15817537903785706,
+            1.199825644493103
+          ],
+          "tail": [
+            0.4269718527793884,
+            -0.15817537903785706,
+            1.1001317501068115
+          ]
+        },
+        "upper_arm.R": {
+          "head": [
+            -0.22088523209095,
+            -0.15817537903785706,
+            1.5420860052108765
+          ],
+          "tail": [
+            -0.3021901845932007,
+            -0.15817537903785706,
+            1.3677269220352173
+          ]
+        },
+        "forearm.R": {
+          "head": [
+            -0.3021901845932007,
+            -0.15817537903785706,
+            1.3677269220352173
+          ],
+          "tail": [
+            -0.38048383593559265,
+            -0.15817537903785706,
+            1.199825644493103
+          ]
+        },
+        "hand.R": {
+          "head": [
+            -0.38048383593559265,
+            -0.15817537903785706,
+            1.199825644493103
+          ],
+          "tail": [
+            -0.4269718527793884,
+            -0.15817537903785706,
+            1.1001317501068115
+          ]
+        },
+        "thigh.L": {
+          "head": [
+            0.09399999678134918,
+            0.0,
+            0.9599999785423279
+          ],
+          "tail": [
+            0.10199999809265137,
+            0.012999999336898327,
+            0.5049999952316284
+          ]
+        },
+        "shin.L": {
+          "head": [
+            0.10199999809265137,
+            0.012999999336898327,
+            0.5049999952316284
+          ],
+          "tail": [
+            0.10300000011920929,
+            0.0,
+            0.13999995589256287
+          ]
+        },
+        "foot.L": {
+          "head": [
+            0.10300000011920929,
+            0.0,
+            0.13999995589256287
+          ],
+          "tail": [
+            0.10300000011920929,
+            -0.20000000298023224,
+            0.04499995708465576
+          ]
+        },
+        "thigh.R": {
+          "head": [
+            -0.09399999678134918,
+            0.0,
+            0.9599999785423279
+          ],
+          "tail": [
+            -0.10199999809265137,
+            0.012999999336898327,
+            0.5049999952316284
+          ]
+        },
+        "shin.R": {
+          "head": [
+            -0.10199999809265137,
+            0.012999999336898327,
+            0.5049999952316284
+          ],
+          "tail": [
+            -0.10300000011920929,
+            0.0,
+            0.13999995589256287
+          ]
+        },
+        "foot.R": {
+          "head": [
+            -0.10300000011920929,
+            0.0,
+            0.13999995589256287
+          ],
+          "tail": [
+            -0.10300000011920929,
+            -0.20000000298023224,
+            0.04499995708465576
+          ]
+        }
+      },
+      "clips": [
+        {
+          "name": "Idle",
+          "frames": 49,
+          "fps": 24
+        },
+        {
+          "name": "Walk",
+          "frames": 33,
+          "fps": 24
+        },
+        {
+          "name": "Run",
+          "frames": 25,
+          "fps": 24
+        },
+        {
+          "name": "UseItem",
+          "frames": 49,
+          "fps": 24
+        }
+      ],
+      "bones": 18,
+      "runtime": "Assets\\Resources\\Characters\\character_dispatcher.fbx",
+      "editable_source": "Art/Characters/Imported/dispatcher.blend",
+      "source_unchanged": true
+    }
+  ]
+}

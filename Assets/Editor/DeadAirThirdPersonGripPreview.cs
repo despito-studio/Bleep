@@ -13,10 +13,12 @@ namespace DeadAir.Editor
         [Serializable] class Report { public string capturedAtUtc; public List<Result> results = new List<Result>(); }
 
         [MenuItem("Dead Air/Render Third Person Equipment Grips")]
-        public static void RenderAll()
+        public static void RenderAll() => RenderAll(null);
+
+        public static void RenderAll(string outputDirectory)
         {
             const int layer = 29;
-            const string output = "Art/Characters/Previews/third-person";
+            string output = outputDirectory ?? "Art/Characters/Previews/third-person";
             Directory.CreateDirectory(output);
             var report = new Report { capturedAtUtc = DateTime.UtcNow.ToString("O") };
             var stage = new GameObject("Third person grip validation") { hideFlags = HideFlags.HideAndDontSave };
@@ -48,12 +50,16 @@ namespace DeadAir.Editor
                         RenderPose(stage, camera, frame, layer, output, report, role, mode, "Idle", .2f);
                 RenderPose(stage, camera, frame, layer, output, report, "operator", "lighting", "UseItem", 2.4f / 7f);
                 RenderPose(stage, camera, frame, layer, output, report, "operator", "smoke", "UseItem", 4.15f / 7f);
+                foreach (string role in new[] { "engineer", "journalist", "dispatcher" })
+                    RenderPose(stage, camera, frame, layer, output, report, role, "inspecting", "UseItem", .5f);
                 RenderPose(stage, camera, frame, layer, output, report, "engineer", "empty", "Idle", .2f);
                 camera.transform.position = new Vector3(4.5f, 1.75f, .45f);
                 camera.transform.LookAt(new Vector3(0, 1.25f, .1f));
                 foreach (string role in new[] { "operator", "engineer", "journalist", "dispatcher" })
                     foreach (string mode in new[] { "map", "camera" })
                         RenderPose(stage, camera, frame, layer, output, report, role, mode, "Idle", .2f, "-side");
+                foreach (string role in new[] { "engineer", "journalist", "dispatcher" })
+                    RenderPose(stage, camera, frame, layer, output, report, role, "inspecting", "UseItem", .5f, "-side");
                 File.WriteAllText(Path.Combine(output, "capture-report.json"), JsonUtility.ToJson(report, true));
                 Debug.Log("DEAD AIR THIRD PERSON GRIPS PASSED: " + report.results.Count + " rendered equipment poses, measured imported finger contacts, map/camera errors within one centimetre, torso vertices unchanged by hand IK.");
             }
@@ -79,7 +85,7 @@ namespace DeadAir.Editor
                 var before = Bake(character);
                 var equipment = new PlayerState { characterClass = role, flashlight = true, inventory = new List<string> { mode == "empty" ? "empty" : "flashlight" },
                     selectedSlot = 0, cigarettesRemaining = 11, mapOpen = mode == "map", camera = mode == "camera",
-                    uniqueItemEquipped = mode == "personal" || mode == "lighting" || mode == "smoke" };
+                    uniqueItemEquipped = mode == "personal" || mode == "lighting" || mode == "smoke" || mode == "inspecting" };
                 motion.SetEquipmentPreview(equipment, clip, normalizedTime);
                 float error = motion.GripContactError;
                 float torsoDelta = TorsoDelta(character, before);

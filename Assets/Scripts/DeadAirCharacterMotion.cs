@@ -211,6 +211,12 @@ namespace DeadAir
         void MeasureMouth()
         {
             if (head == null || classId != "operator") return;
+            foreach (var marker in head.GetComponentsInChildren<Transform>(true))
+                if (marker.name == "MouthSocket")
+                {
+                    mouthLocal = head.InverseTransformPoint(marker.position);
+                    return;
+                }
             var bounds = new Bounds();
             bool found = false;
             foreach (var renderer in GetComponentsInChildren<SkinnedMeshRenderer>(true))
@@ -338,6 +344,7 @@ namespace DeadAir
             if (propMode == "camera") { PoseCamera(); return; }
             if (propMode == "operator" && actionTime >= 0) { PoseSmoking(); return; }
             if (propMode == "dispatcher" && actionTime >= 0) { PoseCompass(); return; }
+            if ((propMode == "engineer" || propMode == "journalist") && actionTime >= 0) { PosePersonalInspection(); return; }
             if (actionTime >= 0) return;
             bool pack = propMode == "operator";
             const float shoulder = -12, elbow = -35;
@@ -359,7 +366,15 @@ namespace DeadAir
         void PoseCompass()
         {
             if (rightHand == null) return;
-            rightHand.rotation = Quaternion.LookRotation(-transform.up, transform.forward);
+            Quaternion rotation = Quaternion.LookRotation(-transform.up, transform.forward);
+            if (actionTime >= 0 && rightArm != null)
+            {
+                float inspect = Mathf.Sin(Mathf.Clamp01(actionTime / PersonalActionDuration) * Mathf.PI);
+                Vector3 contact = rightArm.position + transform.right * .10f - transform.up * (.20f - inspect * .05f) + transform.forward * .32f;
+                FitSingleHandContact(ref contact, rotation);
+                SolveHand(true, contact, rotation);
+            }
+            else rightHand.rotation = rotation;
             var compass = props["dispatcher"];
             compass.rotation = transform.rotation;
             compass.position = rightSocket.position - compass.rotation * new Vector3(.056f, .035f, 0);
@@ -371,14 +386,22 @@ namespace DeadAir
         {
             if (rightHand == null || leftHand == null) return;
             var map = props["map"];
-            float height = (transform.InverseTransformPoint(rightArm.position).y + transform.InverseTransformPoint(leftArm.position).y) * .5f - .21f;
-            map.localPosition = new Vector3(0, height, classId == "engineer" ? .46f : .34f);
-            map.localRotation = Quaternion.Euler(-35, 0, 0);
+            float shoulderHeight = (transform.InverseTransformPoint(rightArm.position).y + transform.InverseTransformPoint(leftArm.position).y) * .5f;
+            // The engineer's broad chest and tie need the paper above the belly.
+            // Other bodies can read the usual downward-tilted map at chest level.
+            map.localPosition = new Vector3(0, shoulderHeight + (classId == "engineer" ? .04f : -.21f), .50f);
+            map.localRotation = Quaternion.Euler(classId == "engineer" ? -10 : -35, 0, 0);
+            Quaternion rightRotation = Quaternion.LookRotation(-map.forward, -map.right);
+            Quaternion leftRotation = Quaternion.LookRotation(-map.forward, map.right);
+            Vector3 origin = map.position;
+            FitContactOrigin(ref origin, map.TransformVector(new Vector3(.22f, -.025f, 0)), rightRotation,
+                map.TransformVector(new Vector3(-.22f, -.025f, 0)), leftRotation);
+            map.position = origin;
             Vector3 rightContact = map.TransformPoint(new Vector3(.22f, -.025f, 0));
             Vector3 leftContact = map.TransformPoint(new Vector3(-.22f, -.025f, 0));
             // Fingers lie across the paper edge; both thumbs and palms stay on that edge.
-            SolveHand(true, rightContact, Quaternion.LookRotation(-map.forward, -map.right));
-            SolveHand(false, leftContact, Quaternion.LookRotation(-map.forward, map.right));
+            SolveHand(true, rightContact, rightRotation);
+            SolveHand(false, leftContact, leftRotation);
         }
 
         void PoseCamera()
@@ -386,12 +409,40 @@ namespace DeadAir
             if (rightHand == null || leftHand == null) return;
             var camera = props["camera"];
             float shoulderHeight = (transform.InverseTransformPoint(rightArm.position).y + transform.InverseTransformPoint(leftArm.position).y) * .5f;
-            camera.localPosition = new Vector3(0, shoulderHeight - (classId == "engineer" ? .23f : .13f), classId == "engineer" ? .44f : .34f);
-            camera.localRotation = Quaternion.identity;
-            SolveHand(true, camera.TransformPoint(new Vector3(.085f, .06f, .025f)),
-                Quaternion.LookRotation(transform.right, -transform.up));
-            SolveHand(false, camera.TransformPoint(new Vector3(-.025f, .015f, .070f)),
-                Quaternion.LookRotation(-transform.up, transform.forward));
+            camera.localPosition = new Vector3(0, shoulderHeight - (classId == "engineer" ? .035f : .07f), .50f);
+            camera.localRotation = Quaternion.Euler(classId == "engineer" ? 25 : 0, 0, 0);
+            Quaternion rightRotation = Quaternion.LookRotation(-camera.up, camera.forward);
+            Quaternion leftRotation = rightRotation;
+            Vector3 origin = camera.position;
+            // Both palms support real bottom corners. This keeps the rear of the
+            // camcorder clear of the supplied torsos while respecting arm reach.
+            FitContactOrigin(ref origin, camera.TransformVector(new Vector3(.085f, .015f, .025f)), rightRotation,
+                camera.TransformVector(new Vector3(-.085f, .015f, .025f)), leftRotation);
+            camera.position = origin;
+            SolveHand(true, camera.TransformPoint(new Vector3(.085f, .015f, .025f)), rightRotation);
+            SolveHand(false, camera.TransformPoint(new Vector3(-.085f, .015f, .025f)), leftRotation);
+        }
+
+        void PosePersonalInspection()
+        {
+            if (rightHand == null || rightArm == null) return;
+            float inspect = Mathf.Sin(Mathf.Clamp01(actionTime / PersonalActionDuration) * Mathf.PI);
+            bool wrench = propMode == "engineer";
+            Quaternion rotation = wrench ? Quaternion.LookRotation(-transform.up, transform.forward)
+                : Quaternion.LookRotation(-transform.forward, -transform.up);
+            rotation = Quaternion.AngleAxis(Mathf.Sin(actionTime * 3f) * inspect * 10f, transform.forward) * rotation;
+            Vector3 contact = rightArm.position + transform.right * .10f - transform.up * (wrench ? .18f - inspect * .04f : .15f - inspect * .03f)
+                + transform.forward * (wrench ? .35f + inspect * .03f : .30f);
+            FitSingleHandContact(ref contact, rotation);
+            SolveHand(true, contact, rotation);
+        }
+
+        void FitSingleHandContact(ref Vector3 contact, Quaternion rotation)
+        {
+            if (rightForearm == null || rightHand == null) return;
+            Vector3 gripOffset = rotation * Vector3.Scale(rightGrip, rightHand.lossyScale);
+            float reach = Vector3.Distance(rightArm.position, rightForearm.position) + Vector3.Distance(rightForearm.position, rightHand.position) - .002f;
+            contact = rightArm.position + Vector3.ClampMagnitude(contact - gripOffset - rightArm.position, reach) + gripOffset;
         }
 
         void PoseSmoking()
@@ -400,12 +451,19 @@ namespace DeadAir
             float inhale = Mathf.SmoothStep(0, 1, Mathf.Clamp01((actionTime - 3.0f) / .7f)) *
                 (1 - Mathf.SmoothStep(0, 1, Mathf.Clamp01((actionTime - 4.65f) / .7f)));
             Vector3 contact = rightSocket.position;
+            Quaternion rightRotation = rightHand.rotation;
+            Quaternion leftRotation = Quaternion.LookRotation(-transform.forward, -transform.up);
             if (head != null && inhale > 0)
             {
                 Vector3 mouth = head.TransformPoint(mouthLocal);
                 contact = Vector3.Lerp(contact, mouth + transform.forward * .035f, inhale);
-                SolveHand(true, contact, rightHand.rotation);
             }
+            // During lighting both hands must reach the same cigarette/lighter
+            // assembly. Bring the assembly into their common reach before IK.
+            if (lighter.gameObject.activeSelf)
+                FitContactOrigin(ref contact, Vector3.zero, rightRotation,
+                    transform.forward * .0385f - transform.up * .067f, leftRotation);
+            if (inhale > 0 || lighter.gameObject.activeSelf) SolveHand(true, contact, rightRotation);
             cigarette.rotation = Quaternion.FromToRotation(Vector3.up, transform.forward);
             cigarette.position = contact - transform.forward * .035f;
             if (lighter.gameObject.activeSelf)
@@ -413,8 +471,7 @@ namespace DeadAir
                 lighter.rotation = transform.rotation;
                 lighter.position = cigarette.TransformPoint(new Vector3(0, .08f, 0)) -
                     lighter.rotation * new Vector3(.045f, .107f, 0);
-                SolveHand(false, lighter.TransformPoint(new Vector3(.045f, .04f, -.0065f)),
-                    Quaternion.LookRotation(-transform.forward, -transform.up));
+                SolveHand(false, lighter.TransformPoint(new Vector3(.045f, .04f, -.0065f)), leftRotation);
             }
             for (int i = 0; i < smoke.Count; i++)
                 if (smoke[i].gameObject.activeSelf)
@@ -424,6 +481,40 @@ namespace DeadAir
                         new Vector3(Mathf.Sin(age * 9 + i) * age * .025f, age * .22f, age * .04f);
                 }
         }
+
+        bool FitContactOrigin(ref Vector3 origin, Vector3 rightContactOffset, Quaternion rightRotation,
+            Vector3 leftContactOffset, Quaternion leftRotation)
+        {
+            if (rightArm == null || leftArm == null || rightForearm == null || leftForearm == null || rightHand == null || leftHand == null) return false;
+            // A fixed finger contact and hand rotation turn each wrist's reach
+            // into a sphere for the common prop origin. Only the prop moves.
+            Vector3 a = rightArm.position - rightContactOffset + rightRotation * Vector3.Scale(rightGrip, rightHand.lossyScale);
+            Vector3 b = leftArm.position - leftContactOffset + leftRotation * Vector3.Scale(leftGrip, leftHand.lossyScale);
+            float ra = Vector3.Distance(rightArm.position, rightForearm.position) + Vector3.Distance(rightForearm.position, rightHand.position) - .002f;
+            float rb = Vector3.Distance(leftArm.position, leftForearm.position) + Vector3.Distance(leftForearm.position, leftHand.position) - .002f;
+            float distance = Vector3.Distance(a, b);
+            if (ra <= 0 || rb <= 0 || distance > ra + rb) return false;
+            if (Inside(origin, a, ra) && Inside(origin, b, rb)) return true;
+            Vector3 onA = a + Vector3.ClampMagnitude(origin - a, ra);
+            if (Inside(onA, b, rb)) { origin = onA; return true; }
+            Vector3 onB = b + Vector3.ClampMagnitude(origin - b, rb);
+            if (Inside(onB, a, ra)) { origin = onB; return true; }
+            if (distance < .00001f) { origin = a + Vector3.ClampMagnitude(origin - a, Mathf.Min(ra, rb)); return true; }
+            // Both limits are active: the closest feasible point lies on the
+            // circle where the two reach spheres meet.
+            Vector3 axis = (b - a) / distance;
+            float along = (ra * ra - rb * rb + distance * distance) / (2 * distance);
+            Vector3 centre = a + axis * along;
+            float radius = Mathf.Sqrt(Mathf.Max(0, ra * ra - along * along));
+            Vector3 radial = origin - centre;
+            radial -= axis * Vector3.Dot(radial, axis);
+            if (radial.sqrMagnitude < .000001f) radial = Vector3.Cross(axis, transform.up);
+            if (radial.sqrMagnitude < .000001f) radial = Vector3.Cross(axis, transform.forward);
+            origin = centre + radial.normalized * radius;
+            return true;
+        }
+
+        static bool Inside(Vector3 point, Vector3 centre, float radius) => Vector3.SqrMagnitude(point - centre) <= radius * radius + .0000001f;
 
         void SolveHand(bool right, Vector3 contact, Quaternion handRotation)
         {

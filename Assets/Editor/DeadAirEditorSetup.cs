@@ -106,6 +106,12 @@ namespace DeadAir.Editor
         [MenuItem("Dead Air/Build Windows")]
         public static void BuildWindows()
         {
+            // The Built-in renderer needs no DirectX 12 features. DirectX 11
+            // also supports older GPUs whose DX12 driver can fail creating HDR targets.
+            PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.StandaloneWindows64, false);
+            PlayerSettings.SetGraphicsAPIs(BuildTarget.StandaloneWindows64,
+                new[] { UnityEngine.Rendering.GraphicsDeviceType.Direct3D11 });
+            AssetDatabase.SaveAssets();
             EditorSceneManager.OpenScene("Assets/Scenes/Blackpine.unity");
             Directory.CreateDirectory("Builds/Windows");
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
