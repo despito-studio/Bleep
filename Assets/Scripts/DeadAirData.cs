@@ -36,6 +36,12 @@ namespace DeadAir
     }
     [Serializable] public class NavigationNodeData { public float x, y, z; }
     [Serializable] public class NavigationLinkData { public int a, b; }
+    [Serializable] public class MushroomData
+    {
+        public string id, label;
+        public float x, y, z;
+        public int variant;
+    }
     public static class DeadAirRoleItems
     {
         public static string ForClass(string classId) => classId == "operator" ? "cigarette-pack" :
@@ -69,6 +75,10 @@ namespace DeadAir
         public LockerData[] lockers;
         public PropData[] props;
         public ClassData[] classes;
+        [NonSerialized] MushroomData[] mushrooms;
+        // Rules, interaction prompts and presentation share exactly the same placements.
+        public MushroomData[] Mushrooms => mushrooms ?? (mushrooms = DeadAirMushrooms.CreatePlacements(this));
+        public MushroomData Mushroom(string id) => Array.Find(Mushrooms, item => item.id == id);
 
         public static WorldData Load()
         {
@@ -122,6 +132,9 @@ namespace DeadAir
         public int uniqueActionSequence, cigarettesRemaining;
         // Host-authored event counters survive skipped snapshots without repeating a scare.
         public int spiderScareSerial, spiderScareAt;
+        // Only the host can start/extend a trip; these fields travel in room snapshots.
+        public float mushroomTripStartedAt, mushroomTripUntil;
+        public int mushroomTripSerial;
         public float uniqueActionAt = -100;
         public List<string> inventory = new List<string>();
         public int selectedSlot;

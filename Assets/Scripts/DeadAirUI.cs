@@ -265,7 +265,9 @@ namespace DeadAir
             if(Time.unscaledTime<nextHud||session.State==null||session.State.phase!="playing")return;nextHud=Time.unscaledTime+.1f;
             var state=session.State;var me=state.Player(session.LocalId);if(me==null)return;
             string room=world.RoomAt(me.x,me.z,me.y);roomText.text=player.CameraUp?"● REC":"";
-            statusText.text="";
+            float mushroomTime=DeadAirMushrooms.Remaining(state,me);
+            statusText.text=mushroomTime>0&&!me.down?"ГРИБНИЙ ТРІП  ·  "+Mathf.CeilToInt(mushroomTime)+" с":"";
+            statusText.color=mushroomTime>0?new Color(.64f,.91f,.76f):Muted;
             evidenceText.text=state.tapes.Count+" / 3  КАСЕТИ\n\n"+state.fuses.Count+" / 2  ЗАПОБІЖНИКИ";
             sanityBar.fillAmount=Mathf.Clamp01(me.sanity/100);staminaBar.fillAmount=Mathf.Clamp01(player.Stamina/100);
             var forward=player.ViewCamera.transform.forward;float compass=Mathf.Repeat(Mathf.Atan2(forward.x,forward.z)*Mathf.Rad2Deg,360);

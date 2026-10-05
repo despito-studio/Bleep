@@ -21,7 +21,7 @@ namespace DeadAir
         DeadAirFrameRenderer frameRenderer;
         DeadAirScarePresentation captureScare;
         DeadAirWorld captureWorld;
-        bool officeCapture, menuCapture, repairCapture, lightingCapture, horrorCapture, characterCapture, captureWithoutEquipment;
+        bool officeCapture, menuCapture, repairCapture, lightingCapture, horrorCapture, characterCapture, indieCapture, captureWithoutEquipment;
         bool preferencesCaptured, hadPlayerName, hadChapter;
         string originalPlayerName, originalChapter;
         readonly Dictionary<string,float> originalSliders = new Dictionary<string,float>();
@@ -34,12 +34,12 @@ namespace DeadAir
             ui = FindFirstObjectByType<DeadAirUI>();
             var args = Environment.GetCommandLineArgs();
             for (int i = 0; i + 1 < args.Length; i++)
-                if (args[i] == "-deadAirCapture" || args[i] == "-deadAirOfficeCapture" || args[i] == "-deadAirMenuCapture" || args[i] == "-deadAirRepairCapture" || args[i] == "-deadAirLightingCapture" || args[i] == "-deadAirHorrorCapture" || args[i] == "-deadAirCharacterCapture")
-                { output = args[i + 1];officeCapture=args[i]=="-deadAirOfficeCapture";menuCapture=args[i]=="-deadAirMenuCapture";repairCapture=args[i]=="-deadAirRepairCapture";lightingCapture=args[i]=="-deadAirLightingCapture";horrorCapture=args[i]=="-deadAirHorrorCapture";characterCapture=args[i]=="-deadAirCharacterCapture"; }
+                if (args[i] == "-deadAirCapture" || args[i] == "-deadAirOfficeCapture" || args[i] == "-deadAirMenuCapture" || args[i] == "-deadAirRepairCapture" || args[i] == "-deadAirLightingCapture" || args[i] == "-deadAirHorrorCapture" || args[i] == "-deadAirCharacterCapture" || args[i] == "-deadAirIndieCapture")
+                { output = args[i + 1];officeCapture=args[i]=="-deadAirOfficeCapture";menuCapture=args[i]=="-deadAirMenuCapture";repairCapture=args[i]=="-deadAirRepairCapture";lightingCapture=args[i]=="-deadAirLightingCapture";horrorCapture=args[i]=="-deadAirHorrorCapture";characterCapture=args[i]=="-deadAirCharacterCapture";indieCapture=args[i]=="-deadAirIndieCapture"; }
             if (string.IsNullOrEmpty(output)) { enabled = false; return; }
             if (!Path.IsPathRooted(output)) throw new ArgumentException("-deadAirCapture requires an absolute output folder.");
             Directory.CreateDirectory(output);
-            if(menuCapture||repairCapture||lightingCapture||horrorCapture||characterCapture)
+            if(menuCapture||repairCapture||lightingCapture||horrorCapture||characterCapture||indieCapture)
             {
                 hadPlayerName=PlayerPrefs.HasKey("DeadAir.PlayerName");originalPlayerName=PlayerPrefs.GetString("DeadAir.PlayerName");
                 hadChapter=PlayerPrefs.HasKey("DeadAir.Chapter");originalChapter=PlayerPrefs.GetString("DeadAir.Chapter");
@@ -50,7 +50,86 @@ namespace DeadAir
                 preferencesCaptured=true;
             }
             if(Application.isBatchMode)InitializeOffscreenCapture();
-            StartCoroutine(characterCapture?CaptureImportedCharacters():horrorCapture?CaptureHorror():lightingCapture?CaptureLighting():repairCapture?CaptureRepairs():menuCapture?CaptureMenu():officeCapture?CaptureOffice():Capture());
+            StartCoroutine(indieCapture?CaptureIndie():characterCapture?CaptureImportedCharacters():horrorCapture?CaptureHorror():lightingCapture?CaptureLighting():repairCapture?CaptureRepairs():menuCapture?CaptureMenu():officeCapture?CaptureOffice():Capture());
+        }
+
+        IEnumerator CaptureIndie()
+        {
+            Application.targetFrameRate = 30;
+            yield return new WaitForSecondsRealtime(1.5f);
+            DeadAirSettings.Quality = 720;
+            DeadAirSettings.Flicker = false;
+            var audio = FindAnyObjectByType<DeadAirAudio>();
+            audio.ValidateInstruments();
+            yield return Save("indie-00-menu");
+            session.Host("Indie verifier", "engineer", true, true);
+            session.Command(new NetPacket { type = "start" });
+            yield return Until(() => session.State?.phase == "playing", "Solo start");
+            var data = WorldData.Load();
+            var mushroom = data.Mushrooms[0];
+            InspectToward(mushroom.x + .7f, mushroom.z + 1.05f, mushroom.y, mushroom.x, mushroom.y + .32f, mushroom.z);
+            player.SetVerificationFlashlight(true);
+            yield return Save("indie-01-mushrooms");
+            Require(player.InteractionId == mushroom.id, "The starter mushroom needs the actual E prompt.");
+            var me = session.State.Player(session.LocalId);
+            session.Command(new NetPacket { type = "interact", id = mushroom.id });
+            yield return Until(() => me.mushroomTripSerial == 1, "Accepted mushroom meal");
+            Require(session.State.Collected(mushroom.id), "Eaten mushrooms must disappear for every player.");
+            yield return new WaitForSecondsRealtime(1.7f);
+            var tape = player.ViewCamera.GetComponent<DeadAirFrameRenderer>().OutputCamera.GetComponent<DeadAirTapeEffect>();
+            Require(tape.Trip > .1f, "An accepted meal must reach the actual output shader.");
+            yield return Save("indie-02-trip");
+            session.Command(new NetPacket { type = "pause", paused = true });
+            float frozenTime = session.State.elapsed;
+            yield return new WaitForSecondsRealtime(.3f);
+            Require(tape.Trip == 0 && Mathf.Abs(session.State.elapsed - frozenTime) < .001f, "Solo pause must hide and freeze the trip.");
+            session.Command(new NetPacket { type = "pause", paused = false });
+            yield return new WaitForSecondsRealtime(.2f);
+            Require(tape.Trip > 0, "The trip must resume after pause.");
+            me.mushroomTripUntil = session.State.elapsed;
+            yield return null; yield return null;
+            Require(tape.Trip == 0, "The rendered trip must clear when its host timer ends.");
+            InspectToward(0, -9, 0, -15, 1.2f, -9); player.SetVerificationFlashlight(false);
+            yield return Save("indie-03-cross-hall");
+            InspectToward(-11.3f, -16.1f, 4.2f, -15, 5.3f, -13);
+            yield return Save("indie-04-meeting-room");
+            InspectToward(0, -12.1f, 4.2f, 0, 5.5f, -22);
+            yield return Save("indie-05-newsroom");
+            var scares = FindAnyObjectByType<DeadAirScarePresentation>();
+            scares.Signal(); yield return Save("indie-06-entity", false);
+            yield return new WaitForSecondsRealtime(1.2f);
+            scares.Spider(); yield return Save("indie-07-spider", false);
+            yield return new WaitForSecondsRealtime(1.4f);
+            player.EndInspection(); ui.ReturnToMenu();
+            yield return null;
+            Require(tape.Trip == 0, "Returning to the menu must clear mushroom presentation.");
+
+            var peerObject = new GameObject("Mushroom loopback guest");
+            var peer = peerObject.AddComponent<DeadAirSession>(); peer.Initialize(data);
+            try
+            {
+                session.Host("Mushroom host", "engineer", false, true);
+                peer.Join("127.0.0.1", session.State.code, "Mushroom guest", "operator");
+                yield return Until(() => peer.State != null && session.State.players.Count == 2, "Mushroom guest joins");
+                session.Command(new NetPacket { type = "start" });
+                yield return Until(() => peer.State?.phase == "playing", "Guest receives start");
+                var guest = session.State.Player(peer.LocalId);
+                guest.x = mushroom.x + .7f; guest.y = mushroom.y; guest.z = mushroom.z + 1.05f;
+                peer.Command(new NetPacket { type = "interact", id = mushroom.id });
+                yield return Until(() => peer.State.Player(peer.LocalId).mushroomTripSerial == 1, "Guest receives mushroom trip");
+                Require(peer.State.Collected(mushroom.id) && session.State.Collected(mushroom.id), "The meal must disappear in both snapshots.");
+                Require(session.State.Player(session.LocalId).mushroomTripSerial == 0, "Only the eater should trip.");
+                session.Command(new NetPacket { type = "interact", id = mushroom.id });
+                yield return null;
+                Require(guest.mushroomTripSerial == 1, "A consumed mushroom cannot be eaten twice.");
+            }
+            finally { peer.Leave(); Destroy(peerObject); session.Leave(); }
+            ui.ReturnToMenu();
+            yield return Save("indie-08-returned-menu");
+            File.WriteAllText(Path.Combine(output, "indie-runtime-report.txt"),
+                "PASSED: actual E prompt and host-authorized mushroom consumption; GPU trip onset, pause/resume/expiry/menu reset; real loopback guest receives the meal and only eater trips; dedicated entity/spider presentations; clean room frames with flashlight off.\n");
+            Debug.Log("DEAD AIR INDIE RUNTIME PASSED: rendered mushrooms, trip lifecycle, scare presentation and loopback consumption.");
+            Application.Quit(0);
         }
 
         IEnumerator CaptureImportedCharacters()

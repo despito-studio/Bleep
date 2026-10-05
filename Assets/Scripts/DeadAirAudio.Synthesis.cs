@@ -13,6 +13,7 @@ namespace DeadAir
             Add("music-pursuit", b => b.Music(3), 32);
             Add("generator-bed", b => b.MachineBed(false), 8);
             Add("fluorescent-bed", b => b.MachineBed(true), 8);
+            Add("mushroom-bed", b => b.MushroomBed(), 8);
             Add("flashlight", b => { b.Knock(0, .55f); b.Noise(.015f, .055f, .06f, 2700, .002f); }, .22f);
             Add("camera-equip", b => { b.Noise(0, .16f, .065f, 1700, .015f); b.Tone(.03f, 1080, 690, .09f, .045f, Wave.Triangle); b.Knock(.16f, .3f); }, .4f);
             Add("equip", b => { b.Noise(0, .16f, .045f, 1200, .018f); b.Knock(.11f, .25f); }, .32f);
@@ -137,17 +138,94 @@ namespace DeadAir
 
             public void HorrorSting(int kind)
             {
-                // Physical impact, detuned scream partials and a falling sub hit start together.
-                Noise(0, .25f, .34f, kind == 2 ? 3400 : 2100, .002f);
-                Noise(.015f, .85f, .23f, 900, .006f);
-                Tone(0, 95, 27, 1.25f, .32f, Wave.Triangle, .002f);
-                Tone(.002f, kind == 2 ? 1180 : 790, 125, .72f, .27f, Wave.Saw, .002f);
-                Tone(.013f, kind == 2 ? 1265 : 838, 139, .77f, .18f, Wave.Saw, .003f);
-                Tone(.025f, 311, 103, 1.1f, .14f, Wave.Sine, .004f);
+                stereo = true;
+                // Original formant cry, impact and falling bass; each creature has a
+                // recognisable texture rather than only a louder version of one sting.
+                Noise(0, kind == 2 ? .12f : .2f, .34f, kind == 2 ? 3600 : 1900, .002f);
+                Noise(.013f, .65f, .18f, 820, .005f);
+                Tone(0, kind == 2 ? 112 : 84, 29, .95f, .34f, Wave.Triangle, .003f);
+                CreatureCry(.012f, kind == 0 ? 1.02f : .88f, kind == 0 ? .31f : .48f, kind);
                 if (kind == 2)
-                    for (int i = 0; i < 8; i++) { Knock(.28f + i * .06f, .5f); Noise(.28f + i * .06f, .035f, .065f, 2600, .002f); }
+                {
+                    Tone(.009f, 1560, 460, .38f, .15f, Wave.Saw, .003f);
+                    for (int i = 0; i < 8; i++)
+                    {
+                        float at = .22f + i * .072f;
+                        Knock(at, .55f); Noise(at, .04f, .1f, 2900 + i * 90, .002f);
+                    }
+                }
                 else
-                    Tone(.08f, 1174, 415, .65f, .085f, Wave.Sine, .004f);
+                {
+                    Tone(.016f, 640, 180, .82f, .17f, Wave.Saw, .003f);
+                    Tone(.033f, 679, 193, .88f, .11f, Wave.Saw, .005f);
+                    Noise(.14f, .53f, .1f, 2800, .009f);
+                }
+            }
+
+            void CreatureCry(float at, float duration, float gain, int kind)
+            {
+                int offset = Mathf.RoundToInt(at * Rate), count = Mathf.CeilToInt(duration * Rate);
+                var rasp = new BandPass(kind == 2 ? 3100 : 1600);
+                double phase = 0;
+                for (int i = 0; i < count && offset + i < samples.Length; i++)
+                {
+                    double t = i / (double)Rate, u = t / duration;
+                    double fundamental = kind == 2 ? 310 + 270 * Math.Sin(Math.PI * u) : 118 + 245 * Math.Sin(Math.PI * u);
+                    fundamental *= 1 + .025 * Math.Sin(t * 2 * Math.PI * 13) + .008 * Math.Sin(t * 97);
+                    phase += fundamental / Rate;
+                    double voice = 0, weights = 0;
+                    double formant = kind == 2 ? 970 : 620;
+                    for (int k = 1; k <= 24 && fundamental * k < Rate * .44; k++)
+                    {
+                        double frequency = fundamental * k;
+                        double a = (frequency - formant) / 290, b = (frequency - 1480) / 420, c = (frequency - 2680) / 590;
+                        double weight = (.05 + 1.8 * Math.Exp(-a * a) + Math.Exp(-b * b) + .55 * Math.Exp(-c * c)) / Math.Sqrt(k);
+                        voice += Math.Sin(phase * Math.PI * 2 * k) * weight;
+                        weights += weight;
+                    }
+                    double envelope = Math.Min(1, t / .007) * Math.Pow(Math.Max(0, 1 - u), 1.65);
+                    double tremor = .78 + .22 * Math.Sin(t * 2 * Math.PI * (kind == 2 ? 29 : 17));
+                    double noise = rasp.Tick(random.NextDouble() * 2 - 1);
+                    samples[offset + i] += (float)((voice / Math.Max(.1, weights) * 1.55 + noise * .32) * envelope * tremor * gain);
+                }
+            }
+
+            public void MushroomBloom()
+            {
+                stereo = true;
+                // Swelling glassy chord bends into an uneasy, fluttering trip onset.
+                Tone(0, 82, 48, 1.4f, .14f, Wave.Sine, .18f);
+                Noise(.06f, .85f, .085f, 1300, .21f);
+                int count = Math.Min(samples.Length, Mathf.CeilToInt(3.05f * Rate));
+                double a = 0, b = 0, c = 0;
+                for (int i = 0; i < count; i++)
+                {
+                    double t = i / (double)Rate, u = t / 3.05;
+                    double bend = 1 + .065 * Math.Sin(t * 5.5) + .019 * Math.Sin(t * 17);
+                    a += (294 + u * 68) * bend / Rate;
+                    b += (415 - u * 75) / Rate; c += (588 + u * 175) / Rate;
+                    double envelope = Math.Min(1, t / .3) * Math.Pow(Math.Max(0, 1 - u), 1.5);
+                    double flutter = .7 + .3 * Math.Sin(t * 2 * Math.PI * (2 + u * 5));
+                    samples[i] += (float)((Math.Sin(a * Math.PI * 2) * .12 + Math.Sin(b * Math.PI * 2) * .09 + Math.Sin(c * Math.PI * 2) * .055) * envelope * flutter);
+                }
+                for (int i = 0; i < 5; i++)
+                    Tone(.35f + i * .27f, 1040 + i * 73, 570 + i * 42, .45f, .055f, Wave.Sine, .025f);
+            }
+
+            public void MushroomBed()
+            {
+                loop = true; stereo = true;
+                // Every carrier and modulation completes whole cycles in eight seconds.
+                // The trip can sustain for any game duration without a seam or retrigger.
+                for (int i = 0; i < samples.Length; i++)
+                {
+                    double t = i / (double)Rate, tau = Math.PI * 2;
+                    double flutter = .72 + .28 * Math.Sin(tau * .5 * t);
+                    double low = Math.Sin(tau * 55 * t) * .06;
+                    double glass = Math.Sin(tau * 196.25 * t + 1.1 * Math.Sin(tau * .375 * t)) * .05;
+                    double dissonance = Math.Sin(tau * 293.375 * t + .7 * Math.Sin(tau * .25 * t)) * .025;
+                    samples[i] = (float)(low + (glass + dissonance) * flutter);
+                }
             }
         }
     }

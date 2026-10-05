@@ -60,7 +60,8 @@ namespace DeadAir
             QualitySettings.vSyncCount = 0;
             QualitySettings.shadowDistance = 45f;
             QualitySettings.shadowCascades = 2;
-            QualitySettings.shadowResolution = ShadowResolution.Medium;
+            QualitySettings.shadows = ShadowQuality.All;
+            QualitySettings.shadowResolution = ShadowResolution.High;
             if(root.Find("station")==null) Instantiate("station").name="station";
             if(root.Find("exterior")==null) Instantiate("exterior").name="exterior";
             DiscardOriginalVanBeams(root.Find("exterior"));
@@ -68,6 +69,8 @@ namespace DeadAir
             CalibratePhysicalMaterials(root.Find("station"));
             CalibratePhysicalMaterials(root.Find("exterior"));
             CalibrateExteriorLighting(root.Find("exterior"));
+            StylePracticalLighting(root.Find("station"),true);
+            StylePracticalLighting(root.Find("exterior"),false);
             var dynamicRoots = new HashSet<Transform>();
             foreach(var t in root.GetComponentsInChildren<Transform>(true))
             {
@@ -103,6 +106,12 @@ namespace DeadAir
                 }
             }
             sky = new DeadAirSky(root);
+            var moon=root.Find("Dead Air Night Sky & Moon/Directional moonlight")?.GetComponent<Light>();
+            if(moon!=null)
+            {
+                moon.shadows=LightShadows.Soft;
+                moon.shadowCustomResolution=1024;
+            }
             culling = new DeadAirCulling(data,root.Find("station"),root.Find("exterior"),dynamicRoots,doorAnimations);
             anchor=Instantiate("monster");bloodyAnchor=Instantiate("monster_bloody");
             anchorMotion=anchor.AddComponent<DeadAirMonsterMotion>();
@@ -152,7 +161,18 @@ namespace DeadAir
                     {
                         material=new Material(source) {name=source.name+" / lit",hideFlags=HideFlags.DontSave};
                         material.shader=litShader;
-                        material.SetColor("_EmissionColor",IsMonitorMaterial(source)?new Color(.12f,.16f,.13f):Color.black);
+                        bool monitor=IsMonitorMaterial(source);
+                        material.SetColor("_EmissionColor",monitor?new Color(.12f,.16f,.13f):Color.black);
+                        material.SetFloat("_LightBanding",monitor?.12f:.38f);
+                        material.SetFloat("_SurfaceGrain",monitor?0:.025f);
+                        material.SetColor("_ShadowTint",new Color(.86f,.95f,1.08f));
+                        // Labels converted from the unlit export need a matte
+                        // response. Preserve the authored finish on physical props.
+                        if(shaderName=="Dead Air/Source Unlit")
+                        {
+                            material.SetFloat("_Glossiness",monitor?.22f:.045f);
+                            material.SetFloat("_Metallic",0);
+                        }
                         copies.Add(source,material);
                     }
                     slots[i]=material;changed=true;
@@ -183,6 +203,33 @@ namespace DeadAir
                 if(!transform.name.StartsWith("prop:van-") && transform.name!="van" &&
                     !transform.name.StartsWith("Broadcast service van"))continue;
                 InstallVanHeadlamps(transform);
+            }
+        }
+
+        static void StylePracticalLighting(Transform content,bool interior)
+        {
+            if(content==null)return;
+            foreach(var light in content.GetComponentsInChildren<Light>(true))
+            {
+                if(!light.name.StartsWith("lamp:"))continue;
+                if(light.name.StartsWith("lamp:van-headlamp-"))continue;
+                if(interior && light.name.StartsWith("lamp:zone-"))
+                {
+                    // Equipment rooms retain a cold tube hue; the occupied
+                    // offices get warm practical pools against blue night shadows.
+                    bool equipment=light.name.Contains("СЕРВЕРНА") || light.name.Contains("АПАРАТНА") ||
+                        light.name.Contains("МОНТАЖНА") || light.name.Contains("САНВУЗОЛ");
+                    bool passage=light.name.Contains("ХОЛ") || light.name.Contains("ГАЛЕРЕЯ") ||
+                        light.name.Contains("ПРОХІД");
+                    light.color=equipment?new Color(.78f,.9f,1f):
+                        passage?new Color(.90f,.94f,.82f):new Color(1f,.89f,.71f);
+                }
+                else if(!interior && light.type!=LightType.Directional)
+                    light.color=new Color(1f,.87f,.67f);
+                if(light.shadows==LightShadows.None)continue;
+                light.shadows=LightShadows.Soft;
+                light.shadowBias=.018f;
+                light.shadowNormalBias=interior?.06f:.04f;
             }
         }
 
@@ -295,7 +342,10 @@ namespace DeadAir
         {
             var material=new Material(shader){name=name,hideFlags=HideFlags.DontSave,enableInstancing=true};
             material.SetColor("_Color",color);material.SetColor("_EmissionColor",Color.black);
-            material.SetFloat("_Glossiness",.12f);return material;
+            bool glass=name.Contains("glass"),metal=name.Contains("metal");
+            material.SetFloat("_Glossiness",glass?.48f:metal?.32f:.12f);
+            material.SetFloat("_Metallic",metal?.65f:0);
+            material.SetFloat("_SurfaceGrain",glass?0:.025f);return material;
         }
 
         static void VehiclePart(Transform parent,string name,Mesh mesh,Material material,Vector3 position,Vector3 scale)
@@ -571,7 +621,7 @@ namespace DeadAir
                 l.range = 15;
                 l.spotAngle=48;l.innerSpotAngle=23;
                 l.intensity = 1.55f;
-                l.shadows=LightShadows.Hard;l.shadowBias=.015f;l.shadowNormalBias=.025f;
+                l.shadows=LightShadows.Soft;l.shadowBias=.015f;l.shadowNormalBias=.025f;
                 l.color = new Color(1f, .96f, .88f);
             }
             else if (interactables.TryGetValue(type, out var orig) && orig != null)

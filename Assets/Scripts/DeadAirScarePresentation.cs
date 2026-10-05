@@ -124,21 +124,29 @@ namespace DeadAir
 
         public void Spider()
         {
+            if (paused || spider == null) return;
             signalTime = -1;
             if (signal != null) signal.SetActive(false);
             spiderTime = 0; spider.SetActive(true);
             ActivateFullscreen();
             PoseSpider();
+            DeadAirAudio.Play("spider");
         }
 
         public void Signal()
         {
-            if (SpiderActive || signal == null) return;
+            if (paused || SpiderActive || signal == null) return;
             signalTime = 0; signal.SetActive(true);
             ActivateFullscreen(); PoseSignal();
+            DeadAirAudio.Play("screamer");
         }
 
-        public void SetPaused(bool value) { paused = value; if (value) Clear(); }
+        public void SetPaused(bool value)
+        {
+            if (value && !paused) DeadAirAudio.StopScare();
+            paused = value;
+            if (value) Clear();
+        }
 
         public void Clear()
         {

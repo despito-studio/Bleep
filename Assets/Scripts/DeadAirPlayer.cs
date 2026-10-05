@@ -45,7 +45,7 @@ namespace DeadAir
         {
             world = data; session = game; ui = gameUI;
             foreach(var argument in Environment.GetCommandLineArgs())
-                if(argument=="-deadAirCapture"||argument=="-deadAirOfficeCapture"||argument=="-deadAirMenuCapture"||argument=="-deadAirRepairCapture"||argument=="-deadAirLightingCapture"||argument=="-deadAirHorrorCapture"||argument=="-deadAirMovementVerification")verificationAllowed=true;
+                if(argument=="-deadAirCapture"||argument=="-deadAirOfficeCapture"||argument=="-deadAirMenuCapture"||argument=="-deadAirRepairCapture"||argument=="-deadAirLightingCapture"||argument=="-deadAirHorrorCapture"||argument=="-deadAirMovementVerification"||argument=="-deadAirIndieCapture")verificationAllowed=true;
             controller = gameObject.AddComponent<CharacterController>();
             controller.height = 1.7f; controller.radius = .22f; controller.center = new Vector3(0, .85f, 0);
             controller.stepOffset = .28f; controller.slopeLimit = 48; controller.skinWidth = .035f;
@@ -67,7 +67,7 @@ namespace DeadAir
             flashlight.color = new Color32(255, 239, 211, 255);
             flashlight.intensity = 1.25f;
             flashlight.cullingMask = ~(1 << 30);
-            flashlight.shadows = LightShadows.Hard;
+            flashlight.shadows = LightShadows.Soft;
             flashlight.shadowStrength = .8f; flashlight.shadowBias = .018f;
             flashlight.shadowNormalBias = .04f; flashlight.renderMode = LightRenderMode.ForcePixel;
             flashlight.transform.localPosition = new Vector3(.16f, -.12f, .15f);
@@ -88,7 +88,12 @@ namespace DeadAir
             if (inspectionPose)
             {
                 Cursor.lockState = CursorLockMode.None; Cursor.visible = false;
-                if (state != null) { UpdateEquipment(state.Player(session.LocalId), state, 0); SyncRemote(state); }
+                if (state != null)
+                {
+                    var inspected = state.Player(session.LocalId);
+                    UpdateEquipment(inspected, state, 0); SyncRemote(state);
+                    if (state.phase == "playing" && inspected != null) FindInteraction(inspected, state);
+                }
                 return;
             }
             if (state == null)
@@ -413,6 +418,13 @@ namespace DeadAir
                 if (state.Collected(obj.id) || obj.id == "power" && state.power || obj.id == "broadcast" && state.broadcast ||
                     obj.id == "fuel-canister" && state.canister || obj.id == "pressure-valve" && state.valveOpened) continue;
                 ConsiderInteraction(obj.id, obj.label, obj.x, obj.y, obj.z, 2.5f, origin, forward, ref nearest);
+            }
+            foreach (var mushroom in world.Mushrooms)
+            {
+                if (state.Collected(mushroom.id) || Mathf.Abs(me.y - mushroom.y) >= 1) continue;
+                ConsiderInteraction(mushroom.id, "З’їсти " + mushroom.label + " · дивний ефект",
+                    mushroom.x, mushroom.y, mushroom.z, DeadAirMushrooms.EatRange, origin, forward, ref nearest,
+                    DeadAirMushrooms.EyeOffset);
             }
             foreach (var other in state.players)
                 if (other.id != session.LocalId && other.down)

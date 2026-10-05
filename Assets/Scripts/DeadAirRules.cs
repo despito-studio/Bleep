@@ -236,6 +236,8 @@ namespace DeadAir
                 ResetRoleItem(p);
                 p.moveSequence = 0;
                 p.spiderScareSerial=p.spiderScareAt=0;
+                p.mushroomTripStartedAt=p.mushroomTripUntil=0;
+                p.mushroomTripSerial=0;
                 ResetMovementBudget(p);
             }
             nextScare = 35;
@@ -420,6 +422,8 @@ namespace DeadAir
                 return null;
             }
             if (!string.IsNullOrEmpty(p.hiding)) return "Спочатку вийдіть із шафи.";
+            if (objectId.StartsWith("mushroom-", StringComparison.Ordinal))
+                return EatMushroom(p, objectId);
             if (objectId.StartsWith("dropped:"))
             {
                 string droppedId = objectId.Substring(8);
@@ -542,12 +546,42 @@ namespace DeadAir
             {
                 if (!State.broadcast) return "Передайте сигнал перед від’їздом.";
                 State.phase = "won"; State.enemy.active = false;
+                foreach(var player in State.players)ClearMushroomTrip(player);
                 State.message = "Ви вийшли. На записі чути на один голос більше.";
             }
             // Rejected objective interactions must remain available for a later retry.
             if (!State.collected.Contains(objectId)) State.collected.Add(objectId);
             UpdateQuest(); Dirty = true; return null;
         }
+
+        string EatMushroom(PlayerState player, string mushroomId)
+        {
+            var mushroom = world.Mushroom(mushroomId);
+            if (mushroom == null) return "Невідомий гриб.";
+            if (State.Collected(mushroomId)) return "Цей гриб уже з’їли.";
+            if (!SameFloor(player.y, mushroom.y) ||
+                !Near(player, mushroom.x, mushroom.y, mushroom.z, DeadAirMushrooms.EatRange, DeadAirMushrooms.EyeOffset))
+                return "Підійдіть ближче до гриба.";
+            bool ongoing = player.mushroomTripUntil > State.elapsed;
+            if (!ongoing) player.mushroomTripStartedAt = State.elapsed;
+            player.mushroomTripUntil = ongoing
+                ? Mathf.Min(player.mushroomTripUntil + DeadAirMushrooms.ExtensionSeconds,
+                    player.mushroomTripStartedAt + DeadAirMushrooms.MaximumTripSeconds)
+                : State.elapsed + DeadAirMushrooms.TripSeconds;
+            player.mushroomTripSerial++;
+            State.collected.Add(mushroomId);
+            if (!State.creative)
+            {
+                player.sanity = Mathf.Max(Mathf.Min(12, player.sanity), player.sanity - 6);
+                HearNoise(player.x, player.y, player.z, 18, 6);
+            }
+            State.message = player.name + " з’їв " + mushroom.label + ". Станція попливла…";
+            Dirty = true;
+            return null;
+        }
+
+        static void ClearMushroomTrip(PlayerState player)
+        { player.mushroomTripStartedAt = player.mushroomTripUntil = 0; }
 
         public string Drop(string id, string itemId)
         {
@@ -649,6 +683,7 @@ namespace DeadAir
             if (allDown)
             {
                 State.phase = "lost"; State.paused = false;
+                foreach(var player in State.players)ClearMushroomTrip(player);
                 State.message = "Сигнал утрачено. Ваші голоси належать станції.";
                 // Tick stops immediately after defeat, so the final state cannot
                 // wait for the next periodic publish tick.
@@ -675,7 +710,7 @@ namespace DeadAir
             for (int i = 0; i < State.players.Count; i++)
             {
                 var p = State.players[i];
-                if (p.down) continue;
+                if (p.down) { ClearMushroomTrip(p); continue; }
                 if (State.creative) { p.sanity = 100; continue; }
                 if (!string.IsNullOrEmpty(p.hiding)) { p.sanity = Mathf.Min(100, p.sanity + 2.5f * dt); continue; }
                 float drain = p.flashlight ? 0 : 1.4f;
@@ -758,6 +793,7 @@ namespace DeadAir
                     !SegmentBlocked(enemy.x,enemy.y,enemy.z,p.x,p.y,p.z))
                 {
                     p.down = true; p.sanity = 0; State.scare++;
+                    ClearMushroomTrip(p);
                     p.camera = p.flashlight = p.sprinting = p.mapOpen = p.uniqueItemEquipped = false;
                     p.uniqueActionCancelled = true;
                     State.message = p.name + " втратив зв’язок. Підніміть напарника!";

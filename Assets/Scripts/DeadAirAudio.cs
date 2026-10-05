@@ -14,11 +14,12 @@ namespace DeadAir
         readonly Dictionary<AudioSource, float> voiceLevels = new Dictionary<AudioSource, float>();
         readonly Dictionary<string, AudioSource> roleVoices = new Dictionary<string, AudioSource>();
         readonly Dictionary<AudioSource, string> voiceOwners = new Dictionary<AudioSource, string>();
-        AudioSource hum, air, radio, dread, tinnitus, generator, fluorescent;
+        AudioSource hum, air, radio, dread, tinnitus, generator, fluorescent, scareVoice, tripLoop;
         AudioSource menuScore, explorationScore, tensionScore, pursuitScore;
         string phase = "menu", surface = "tile", enemyBehaviour;
-        bool outside, down;
-        float musicDuckUntil;
+        bool outside, down, gameplayPaused;
+        float musicDuckUntil, scareLevel = 1, tripIntensity, tripOnsetUntil;
+        bool tripPaused;
         float master = .5f, ambience = 1, effects = 1;
         int voiceIndex, stepSide;
         float nextStep, nextHeart, nextBreath, nextMonster, nextWhisper, nextAlarm, nextKnock;
@@ -34,6 +35,12 @@ namespace DeadAir
                 var voice = Source("Effect voice " + (i + 1), false);
                 voices.Add(voice); voiceLevels.Add(voice, 1);
             }
+            // Scares never enter the shared foley pool: footsteps and remote role actions
+            // cannot steal the source while its scream or impact is still releasing.
+            scareVoice = Source("Dedicated fullscreen scream / impact", false);
+            scareVoice.priority = 8;
+            tripLoop = Source("Mushroom trip / glassy flutter bed", true);
+            tripLoop.clip = clips["mushroom-bed"]; tripLoop.priority = 150;
             hum = Loop("Station transformer / 48 Hz", "hum");
             air = Loop("Station ventilation", "air");
             radio = Loop("Receiver static", "static");
@@ -101,6 +108,8 @@ namespace DeadAir
             instance.ambience = Mathf.Clamp01(PlayerPrefs.GetFloat("DeadAir.AmbienceVolume", 1));
             instance.effects = Mathf.Clamp01(PlayerPrefs.GetFloat("DeadAir.EffectsVolume", 1));
             foreach (var voice in instance.voices) voice.volume = instance.master * instance.effects * .85f * instance.voiceLevels[voice];
+            if (instance.scareVoice != null) instance.scareVoice.volume = instance.master * instance.effects * .95f * instance.scareLevel;
+            if (instance.tripLoop != null) instance.tripLoop.volume = instance.tripPaused ? 0 : instance.master * instance.effects * instance.tripIntensity * .6f;
             if (instance.master <= 0)
                 foreach (var source in instance.GetComponentsInChildren<AudioSource>()) source.volume = 0;
         }
@@ -113,6 +122,67 @@ namespace DeadAir
         public static void PlayAt(string kind, Vector3 position, float level = 1)
         {
             if (instance != null) instance.Emit(kind, level, 0, position);
+        }
+
+        public static void StopScare()
+        {
+            if (instance == null) return;
+            if (instance.scareVoice != null) instance.scareVoice.Stop();
+            instance.musicDuckUntil = 0;
+        }
+
+        public static void StopMushroomTrip()
+        {
+            if (instance == null) return;
+            instance.StopTripOnset();
+            if (instance.tripLoop != null) { instance.tripLoop.Stop(); instance.tripLoop.volume = 0; }
+        }
+
+        void StopTripOnset()
+        {
+            tripOnsetUntil = 0;
+            if (!clips.TryGetValue("mushroom-trip", out var trip)) return;
+            foreach (var voice in voices)
+                if (voice.clip == trip) voice.Stop();
+        }
+
+        public void SetTripContext(float intensity, bool paused)
+        {
+            tripIntensity = Mathf.Clamp01(intensity); tripPaused = paused;
+            if (tripLoop == null) return;
+            if (paused || tripIntensity <= .001f)
+            {
+                // Intensity starts at zero while the host clock enters the trip. Preserve
+                // the fresh onset through that ramp; pausing/death still cancels it now.
+                if (paused || Time.unscaledTime >= tripOnsetUntil) StopTripOnset();
+                if (paused) { tripLoop.volume = 0; tripLoop.Stop(); return; }
+            }
+            else if (Application.isPlaying && !tripLoop.isPlaying) tripLoop.Play();
+            float target = master * effects * tripIntensity * .6f * (Time.unscaledTime < musicDuckUntil ? .25f : 1);
+            Fade(tripLoop, target, target > tripLoop.volume ? .3f : .55f);
+            tripLoop.pitch = 1 + tripIntensity * (.035f * Mathf.Sin(Time.unscaledTime * .73f) + .012f * Mathf.Sin(Time.unscaledTime * 2.3f));
+            if (target <= 0 && tripLoop.volume < .0001f) { tripLoop.volume = 0; tripLoop.Stop(); }
+        }
+
+        static bool IsScare(string kind) => kind == "spider" || kind == "screamer" || kind == "scare";
+
+        void EmitScare(string kind, AudioClip clip, float level)
+        {
+            if (gameplayPaused || scareVoice == null) return;
+            // An incidental threat sting cannot replace the creature currently on screen.
+            if (scareVoice.isPlaying && scareVoice.clip != null && kind == "scare") return;
+            scareVoice.Stop();
+            scareVoice.clip = clip; scareVoice.spatialBlend = 0; scareVoice.panStereo = 0; scareVoice.pitch = 1;
+            scareLevel = Mathf.Clamp01(level);
+            scareVoice.volume = master * effects * .95f * scareLevel;
+            scareVoice.Play();
+            musicDuckUntil = Time.unscaledTime + clip.length + .25f;
+            // The sting starts in this frame; the score must make room in this frame too.
+            foreach (var score in new[] { menuScore, explorationScore, tensionScore, pursuitScore })
+                if (score != null) score.volume *= .14f;
+            foreach (var bed in new[] { hum, air, radio, dread, tinnitus, generator, fluorescent })
+                if (bed != null) bed.volume *= .3f;
+            if (tripLoop != null) tripLoop.volume *= .25f;
         }
 
         public void StopLocalRoleAction()
@@ -151,6 +221,8 @@ namespace DeadAir
         public void Emit(string kind, float level = 1, float pan = 0, Vector3? position = null, string ownerId = null)
         {
             if (!Application.isPlaying || !clips.TryGetValue(kind, out var clip) || voices.Count == 0) return;
+            if (IsScare(kind)) { EmitScare(kind, clip, level); return; }
+            if (gameplayPaused && (kind == "mushroom-eat" || kind == "mushroom-trip")) return;
             // Reuse idle voices first so an interface click cannot cut off the ending chord.
             AudioSource source = null;
             for (int i = 0; i < voices.Count; i++)
@@ -173,17 +245,20 @@ namespace DeadAir
             source.clip = clip;
             voiceLevels[source] = Mathf.Clamp01(level);
             source.volume *= voiceLevels[source];
-            source.priority = kind == "spider" || kind == "screamer" || kind == "scare" ? 30 : 100;
+            source.priority = 100;
             source.Play();
-            if (kind == "spider" || kind == "screamer" || kind == "scare") musicDuckUntil = Time.unscaledTime + .85f;
+            if (kind == "mushroom-trip") tripOnsetUntil = Time.unscaledTime + clip.length;
         }
 
         public void Tick(bool paused, bool moving, bool sprinting, bool hiding, float stamina, float sanity,
             float threat, bool camera, bool power, bool broadcast, Vector3? monsterPosition, float monsterDistance)
         {
             float now = Time.unscaledTime;
+            gameplayPaused = paused;
+            if (paused && scareVoice != null && scareVoice.isPlaying) StopScare();
+            if (paused) StopMushroomTrip();
             float insanity = 1 - Mathf.Clamp01(sanity / 100);
-            float duck = now < musicDuckUntil ? .22f : 1;
+            float duck = now < musicDuckUntil ? .14f : 1;
             float bed = paused ? 0 : master * ambience * (hiding ? .35f : 1) * duck;
             Fade(hum, bed * (outside ? .15f : power ? 1.45f : .7f), .7f);
             Fade(air, bed * (outside ? .15f : .04f + threat * .042f), .5f);
@@ -256,6 +331,9 @@ namespace DeadAir
 
         public void ResetRun()
         {
+            StopScare(); gameplayPaused = false;
+            tripIntensity = tripOnsetUntil = 0; tripPaused = false;
+            if (tripLoop != null) { tripLoop.Stop(); tripLoop.volume = 0; }
             foreach (var source in voices) source.Stop();
             roleVoices.Clear(); voiceOwners.Clear();
             float now = Time.unscaledTime;
@@ -282,6 +360,16 @@ namespace DeadAir
                 }
                 double rms = Math.Sqrt(energy / values.Length);
                 if (peak > 1 || rms < .000001) throw new InvalidOperationException("Clipped or silent audio: " + entry.Key);
+                if (IsScare(entry.Key) || entry.Key == "mushroom-eat" || entry.Key == "mushroom-trip")
+                {
+                    double tailEnergy = 0;
+                    int tail = Mathf.Min(values.Length, entry.Value.frequency * entry.Value.channels / 50);
+                    for (int i = values.Length - tail; i < values.Length; i++) tailEnergy += values[i] * values[i];
+                    if (Math.Sqrt(tailEnergy / tail) > .002)
+                        throw new InvalidOperationException("Cue must naturally release to silence: " + entry.Key);
+                    if (IsScare(entry.Key) && rms < .018)
+                        throw new InvalidOperationException("Scare cue lacks audible impact: " + entry.Key);
+                }
                 largestPeak = Mathf.Max(largestPeak, peak);
                 Debug.Log("DEAD AIR AUDIO: " + entry.Key + " peak=" + peak.ToString("F5", System.Globalization.CultureInfo.InvariantCulture) + " rms=" + rms.ToString("F5", System.Globalization.CultureInfo.InvariantCulture));
             }
@@ -348,6 +436,11 @@ namespace DeadAir
             Add("scare", b => b.HorrorSting(0), 1.9f);
             Add("screamer", b => b.HorrorSting(1), 1.55f);
             Add("spider", b => b.HorrorSting(2), 1.55f);
+            Add("mushroom-eat", b => {
+                b.Noise(0, .15f, .14f, 1550, .004f); b.Knock(.025f, .75f);
+                b.Noise(.16f, .24f, .085f, 720, .015f); b.Tone(.26f, 190, 85, .33f, .07f, Wave.Triangle, .018f);
+            }, .9f);
+            Add("mushroom-trip", b => b.MushroomBloom(), 3.8f);
             Add("listening", b => { b.Noise(0, .6f, .035f, 620, .12f); b.Tone(.1f, 72, 49, .8f, .04f, Wave.Triangle, .12f); }, 1.1f);
             Add("vanish", b => { b.Noise(0, .2f, .065f, 1700, .02f); b.Tone(.015f, 210, 38, .35f, .06f, Wave.Triangle, .025f); }, .5f);
             Add("radio", b => { b.Noise(0, .04f, .08f, 3200); b.Tone(.03f, 1240, 1100, .08f, .05f); b.Noise(.09f, .25f, .07f, 1800, .02f); }, .45f);
@@ -477,6 +570,10 @@ namespace DeadAir
                     float[] amounts = { .065f, .045f, .03f };
                     for (int d = 0; d < delays.Length; d++)
                         for (int i = delays[d]; i < samples.Length; i++) samples[i] += dry[i - delays[d]] * amounts[d];
+                    // End every one-shot at silence even if a future layer reaches the clip
+                    // boundary. This prevents clicks when the dedicated scare voice releases.
+                    int release = Mathf.Min(Rate / 40, samples.Length);
+                    for (int i = 0; i < release; i++) samples[samples.Length - release + i] *= 1 - i / (float)Mathf.Max(1, release - 1);
                 }
                 // Filtering bounded noise can overshoot its input range. Preserve its waveform
                 // with one gain reduction after all layering and loop crossfades are complete.
@@ -499,9 +596,19 @@ namespace DeadAir
                     int delay = Rate / 83;
                     for (int i = 0; i < samples.Length; i++)
                     {
-                        float delayed = samples[(i + samples.Length - delay) % samples.Length];
+                        float delayed = loop ? samples[(i + samples.Length - delay) % samples.Length] : i >= delay ? samples[i - delay] : 0;
                         output[i * 2] = samples[i] * .82f + delayed * .18f;
                         output[i * 2 + 1] = samples[i] * .82f - delayed * .18f;
+                    }
+                    if (!loop)
+                    {
+                        int release = Mathf.Min(Rate / 40, samples.Length);
+                        for (int i = 0; i < release; i++)
+                        {
+                            float gain = 1 - i / (float)Mathf.Max(1, release - 1);
+                            int index = (samples.Length - release + i) * 2;
+                            output[index] *= gain; output[index + 1] *= gain;
+                        }
                     }
                 }
                 var result = AudioClip.Create("DEAD AIR / " + name, samples.Length, stereo ? 2 : 1, Rate, false);

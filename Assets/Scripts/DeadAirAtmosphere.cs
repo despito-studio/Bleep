@@ -23,7 +23,7 @@ namespace DeadAir
         readonly Dictionary<string, float> remoteStepTimes = new Dictionary<string, float>();
         readonly HashSet<string> droppedIds = new HashSet<string>();
         readonly List<string> departedActors = new List<string>();
-        int lastScare, lastRadioSequence, lastSpider, lastEncounter;
+        int lastScare, lastRadioSequence, lastSpider, lastEncounter, lastMushroom;
         bool lastEnemyActive, lastEnemyStunned;
         string lastEnemyBehaviour;
         bool lastBroadcast, lastPower, lastValve, lastCalibrated;
@@ -89,6 +89,8 @@ namespace DeadAir
             }
             bool playing = phase == "playing" && me != null;
             bool paused = !playing || state.paused || player.LocalPaused || player.ModalOpen;
+            float trip = !paused && playing ? DeadAirMushrooms.Intensity(state, me) : 0;
+            audioEngine.SetTripContext(trip, paused || playing && me.down);
             if (scares != null)
             {
                 if (!playing) scares.Clear();
@@ -114,6 +116,8 @@ namespace DeadAir
                 tape.Recording = playing && player.CameraUp;
                 tape.Nightmare = playing && state.enemy.bloody ? 1 : 0;
                 tape.Flash = !paused && Time.unscaledTime < flashUntil ? .16f : 0;
+                tape.Trip = trip;
+                tape.TripClock = playing ? DeadAirMushrooms.Phase(state, me) : 0;
             }
             if (!playing || paused)
             {
@@ -127,6 +131,12 @@ namespace DeadAir
         void DetectEvents(RoomState state, PlayerState me)
         {
             DetectPlayerSounds(state, me);
+            if (me.mushroomTripSerial > lastMushroom && DeadAirMushrooms.Remaining(state, me) > 0)
+            {
+                audioEngine.Emit("mushroom-eat", .9f);
+                audioEngine.Emit("mushroom-trip", .7f);
+                nextPhantom = Time.unscaledTime + 1.8f;
+            }
             if (state.power && !lastPower) ObjectiveSound("power", "power");
             if (state.valveOpened && !lastValve) ObjectiveSound("pressure-valve", "valve");
             if (state.calibrated && !lastCalibrated) ObjectiveSound("broadcast", "calibrate");
@@ -135,7 +145,6 @@ namespace DeadAir
             if (spiderTriggered)
             {
                 scares?.Spider();
-                audioEngine.Emit("spider", 1);
             }
             if (state.enemy.encounterSerial > lastEncounter && state.enemy.behaviour == "peek")
                 audioEngine.Emit("listening", .65f, 0, new Vector3(-state.enemy.x, state.enemy.y + 1.5f, state.enemy.z));
@@ -147,7 +156,6 @@ namespace DeadAir
             if (signalTriggered)
             {
                 scares?.Signal();
-                audioEngine.Emit("screamer", .95f);
                 nextVisualScare = Time.unscaledTime + 32;
             }
             else if (!spiderTriggered && !me.down && state.scare > lastScare)
@@ -247,6 +255,7 @@ namespace DeadAir
             lastValve = state.valveOpened; lastCalibrated = state.calibrated;
             lastRadioSequence = state.radioSequence;
             lastSpider = me == null ? 0 : me.spiderScareSerial;
+            lastMushroom = me == null ? 0 : me.mushroomTripSerial;
             lastEncounter = state.enemy.encounterSerial;
             lastEnemyActive = state.enemy.active;
             lastEnemyStunned = state.enemy.stunned;
@@ -268,13 +277,14 @@ namespace DeadAir
         void Hallucinations(PlayerState me)
         {
             float now = Time.unscaledTime;
-            if (me.sanity < 40 && now >= nextPhantom && phantom != null)
+            bool tripping = DeadAirMushrooms.Intensity(session.State, me) > .1f;
+            if ((me.sanity < 40 || tripping) && !me.down && string.IsNullOrEmpty(me.hiding) && now >= nextPhantom && phantom != null)
             {
                 var direction = Quaternion.Euler(0, UnityEngine.Random.value > .5f ? 47 : -47, 0) * player.transform.forward;
                 phantom.transform.position = player.transform.position + direction * 6.5f;
                 phantom.SetActive(true);
-                phantomUntil = now + 7;
-                nextPhantom = now + UnityEngine.Random.Range(18, 32);
+                phantomUntil = now + (tripping ? 2.2f : 7);
+                nextPhantom = now + (tripping ? UnityEngine.Random.Range(3.4f, 5.5f) : UnityEngine.Random.Range(18, 32));
             }
             if (phantom != null && phantom.activeSelf)
             {
@@ -282,7 +292,7 @@ namespace DeadAir
                 var target = player.transform.position;
                 target.y = phantom.transform.position.y;
                 phantom.transform.LookAt(target);
-                if (now > phantomUntil || Vector3.Distance(phantom.transform.position, player.transform.position) < 3 || player.FlashlightOn && player.CameraUp)
+                if (now > phantomUntil || me.down || (!tripping && me.sanity >= 40) || Vector3.Distance(phantom.transform.position, player.transform.position) < 3 || !tripping && player.FlashlightOn && player.CameraUp)
                 {
                     phantom.SetActive(false);
                     audioEngine.Emit("whisper", .8f, UnityEngine.Random.Range(-.8f, .8f));
