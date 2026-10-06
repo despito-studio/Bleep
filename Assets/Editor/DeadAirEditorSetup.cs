@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEditor.Build.Reporting;
@@ -56,7 +57,7 @@ namespace DeadAir.Editor
         public static void ValidateMigration()
         {
             var world = WorldData.Load();
-            if (world.rooms.Length < 20 || world.objects.Length != 12 || world.doors.Length < 16 || world.stairs == null || world.stairs.Length == 0)
+            if (world.rooms.Length < 20 || world.objects.Length < 12 || world.doors.Length < 16 || world.stairs == null || world.stairs.Length == 0)
                 throw new Exception("The two-storey office is missing rooms, doors, stairs or objectives.");
             string[] models = { "station", "exterior", "character_engineer", "character_operator",
                 "character_journalist", "character_dispatcher", "monster", "monster_bloody", "camera" };
@@ -85,6 +86,32 @@ namespace DeadAir.Editor
                 var error = rules.Interact("host", id);
                 if (error != null) throw new Exception(id + ": " + error);
             }
+            var testPlayer = rules.State.Player("host");
+            var ladderObj = world.Objective("ladder");
+            testPlayer.x = ladderObj.x; testPlayer.z = ladderObj.z; testPlayer.y = ladderObj.y;
+            string err;
+            if ((err = rules.Interact("host", "ladder")) != null) throw new Exception("Failed to pick up ladder: " + err);
+            testPlayer.x = -9f; testPlayer.z = 7f; testPlayer.y = 0;
+            if ((err = rules.Interact("host", "ladder-spot")) != null) throw new Exception("Failed to place ladder: " + err);
+            if ((err = rules.Interact("host", "ladder-climb")) != null) throw new Exception("Failed to climb ladder: " + err);
+            testPlayer.x = -11.22f; testPlayer.z = -1.5f; testPlayer.y = 4.2f;
+            if ((err = rules.Interact("host", "drawer-director")) != null) throw new Exception("Failed to open drawer: " + err);
+            if ((err = rules.Interact("host", "key-main")) != null) throw new Exception("Failed to pick up main key: " + err);
+            var frontDoor = world.Door("door-front");
+            testPlayer.x = frontDoor.x; testPlayer.z = frontDoor.z; testPlayer.y = 0;
+            if ((err = rules.Interact("host", "door-front")) != null) throw new Exception("Failed to unlock front door: " + err);
+            var rearDoor = world.Door("door-rear");
+            testPlayer.x = rearDoor.x; testPlayer.z = rearDoor.z; testPlayer.y = 0;
+            if ((err = rules.Interact("host", "door-rear")) != null) throw new Exception("Failed to unlock rear door: " + err);
+            var bKeyObj = world.Objective("key-basement");
+            testPlayer.x = bKeyObj.x; testPlayer.z = bKeyObj.z; testPlayer.y = 0;
+            if ((err = rules.Interact("host", "key-basement")) != null) throw new Exception("Failed to pick up basement key: " + err);
+            var bDoor = world.Door("door-basement");
+            testPlayer.x = bDoor.x; testPlayer.z = bDoor.z; testPlayer.y = 0;
+            if ((err = rules.Interact("host", "door-basement")) != null) throw new Exception("Failed to unlock basement door: " + err);
+            var breakerObj = world.Objective("breaker");
+            testPlayer.x = breakerObj.x; testPlayer.z = breakerObj.z; testPlayer.y = -4.2f;
+            if ((err = rules.Interact("host", "breaker")) != null) throw new Exception("Failed to toggle breaker: " + err);
             var actor = rules.State.Player("host");var broadcast=world.Objective("broadcast");
             actor.x = broadcast.x; actor.z = broadcast.z;actor.y=broadcast.y>4?4.2f:0;
             if (rules.Calibrate("host", 96.4f) != null || rules.Interact("host", "broadcast") != null)

@@ -25,6 +25,7 @@ namespace DeadAir
         Vector3 encounterReturnPosition;
         Vector3 patrolDestination;
         float nextPatrol;
+        float nextBreakerTrip = 30;
         readonly System.Collections.Generic.Dictionary<string,float> footstepsAt = new System.Collections.Generic.Dictionary<string,float>();
         const float DoorPassageDelay = .6f, SpiderChance = .25f, SpiderCooldown = 45;
         public bool Dirty { get; private set; }
@@ -44,7 +45,7 @@ namespace DeadAir
             State.spawnCountdown = creative ? 999999 : 35;
             State.message = "Сигнал установлено. Очікуємо на операторів.";
             foreach (var d in world.doors)
-                State.doors.Add(new DoorState { id = d.id, locked = !string.IsNullOrEmpty(d.requires), requiredKey = d.requires });
+                State.doors.Add(new DoorState { id = d.id, locked = !string.IsNullOrEmpty(d.requires), requiredKey = d.requires, openSign = 1f });
             AddPlayer(hostId, name, classId);
         }
 
@@ -206,11 +207,12 @@ namespace DeadAir
             State.collected.Clear();
             State.droppedItems.Clear();
             State.canister = State.valveOpened = State.calibrated = State.power = State.broadcast = false;
+            State.ladderPlaced = State.windowBroken = State.breakerOn = State.directorDrawerOpen = false;
             State.quest = new QuestState();
             State.enemy = new EnemyState { x = 0, y = 0, z = -34 };
             enemyRoute.Clear();enemyRouteCursor=0;nextRouteAttempt=0;
-            inspectedLockers.Clear();spiderCooldowns.Clear();footstepsAt.Clear();nextPeek=35;encounterEnds=0;nextPatrol=0;
-            foreach (var door in State.doors) { door.open = false; door.openedAt=-100; door.locked = !string.IsNullOrEmpty(door.requiredKey); }
+            inspectedLockers.Clear();spiderCooldowns.Clear();footstepsAt.Clear();nextPeek=35;encounterEnds=0;nextPatrol=0;nextBreakerTrip=35;
+            foreach (var door in State.doors) { door.open = false; door.openedAt=-100; door.openSign = 1f; door.locked = !string.IsNullOrEmpty(door.requiredKey); }
             State.elapsed = 0;
             State.scare = 0;
             State.radioSequence = 0;
@@ -251,6 +253,109 @@ namespace DeadAir
             Dirty = true;
         }
 
+        public string ExecuteCommand(string playerId, string commandLine)
+        {
+            if (string.IsNullOrWhiteSpace(commandLine)) return null;
+            var parts = commandLine.Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 0) return null;
+            string cmd = parts[0].ToLowerInvariant();
+            var p = State.Player(playerId);
+            if (p == null) return "Гравця не знайдено";
+
+            if (cmd == "noclip" || cmd == "nc")
+            {
+                p.noclip = !p.noclip;
+                Dirty = true;
+                return p.noclip ? "Noclip УВІМКНЕНО (WASD для польоту, Space = вгору, Ctrl/C = вниз, Shift = прискорення)" : "Noclip ВИМКНЕНО";
+            }
+            if (cmd == "give")
+            {
+                if (parts.Length < 2) return "Використання: give <ladder|key-main|key-basement|all>";
+                string item = parts[1].ToLowerInvariant();
+                if (item == "all")
+                {
+                    if (!p.inventory.Contains("ladder")) p.inventory.Add("ladder");
+                    if (!p.inventory.Contains("key-main")) p.inventory.Add("key-main");
+                    if (!p.inventory.Contains("key-basement")) p.inventory.Add("key-basement");
+                    if (!p.inventory.Contains("keycard-guard")) p.inventory.Add("keycard-guard");
+                    if (!p.inventory.Contains("keycard-engineer")) p.inventory.Add("keycard-engineer");
+                    State.collected.Add("ladder");
+                    State.collected.Add("key-main");
+                    State.collected.Add("key-basement");
+                    Dirty = true;
+                    return "Видано всі ключі та драбину!";
+                }
+                if (item == "ladder" || item == "драбина")
+                {
+                    if (!p.inventory.Contains("ladder")) p.inventory.Add("ladder");
+                    State.collected.Add("ladder");
+                    Dirty = true;
+                    return "Драбину додано в інвентар!";
+                }
+                if (item == "key-main" || item == "key_main" || item == "mainkey" || item == "key")
+                {
+                    if (!p.inventory.Contains("key-main")) p.inventory.Add("key-main");
+                    State.collected.Add("key-main");
+                    Dirty = true;
+                    return "Головний ключ станції додано в інвентар!";
+                }
+                if (item == "key-basement" || item == "key_basement" || item == "basementkey")
+                {
+                    if (!p.inventory.Contains("key-basement")) p.inventory.Add("key-basement");
+                    State.collected.Add("key-basement");
+                    Dirty = true;
+                    return "Ключ від підвалу додано в інвентар!";
+                }
+                if (!p.inventory.Contains(item)) p.inventory.Add(item);
+                State.collected.Add(item);
+                Dirty = true;
+                return "Предмет '" + item + "' додано в інвентар";
+            }
+            if (cmd == "tp" || cmd == "teleport")
+            {
+                if (parts.Length < 2) return "Використання: tp <director|basement|van|front|generator>";
+                string target = parts[1].ToLowerInvariant();
+                if (target == "director") { p.x = -12f; p.y = 4.2f; p.z = -1.5f; }
+                else if (target == "basement") { p.x = 0f; p.y = -4.2f; p.z = -54f; }
+                else if (target == "van") { p.x = -8.5f; p.y = 0f; p.z = 24f; }
+                else if (target == "front") { p.x = 0f; p.y = 0f; p.z = 12f; }
+                else if (target == "generator") { p.x = -11f; p.y = 0f; p.z = -65f; }
+                else if (parts.Length >= 4 && float.TryParse(parts[1], out float tx) && float.TryParse(parts[2], out float ty) && float.TryParse(parts[3], out float tz))
+                {
+                    p.x = tx; p.y = ty; p.z = tz;
+                }
+                else return "Невідома локація для телепортації";
+                p.yaw = 0; p.pitch = 0;
+                Dirty = true;
+                return "Телепортовано до: " + target;
+            }
+            if (cmd == "power")
+            {
+                State.power = State.quest.power = !State.power;
+                Dirty = true;
+                return State.power ? "Генератор увімкнено!" : "Генератор вимкнено";
+            }
+            if (cmd == "breaker")
+            {
+                State.breakerOn = State.quest.breakerOn = !State.breakerOn;
+                Dirty = true;
+                return State.breakerOn ? "Рубильник увімкнено (світло працює)!" : "Рубильник вимкнено";
+            }
+            if (cmd == "heal" || cmd == "god")
+            {
+                p.sanity = p.stamina = 100;
+                p.down = false;
+                p.invulnerableUntil = State.elapsed + 999999f;
+                Dirty = true;
+                return "Повне здоров'я, розсудок та безсмертя активовано!";
+            }
+            if (cmd == "help")
+            {
+                return "Доступні команди:\n- noclip / nc — режим польоту крізь стіни\n- tp <director|basement|van|front|generator> — телепортація\n- give <ladder|key-main|key-basement|all> — видати предмети\n- power — перемкнути живлення генератора\n- breaker — перемкнути рубильник світла\n- heal — відновити розсудок та стаміну\n- clear — очистити екран консолі";
+            }
+            return "Невідома команда '" + cmd + "'. Введіть 'help' для списку команд.";
+        }
+
         public void Move(string id, NetPacket input)
         {
             if (State.phase != "playing" || State.paused) return;
@@ -269,14 +374,16 @@ namespace DeadAir
                 float.IsNaN(input.z) || float.IsInfinity(input.z) ||
                 float.IsNaN(input.yaw) || float.IsInfinity(input.yaw) ||
                 float.IsNaN(input.pitch) || float.IsInfinity(input.pitch)) return;
-            if (Mathf.Abs(input.x) > 100 || Mathf.Abs(input.z) > 100 || input.y < -.5f || input.y > 20) return;
+            if (Mathf.Abs(input.x) > 100 || Mathf.Abs(input.z) > 100 || input.y < -15f || input.y > 35) return;
+            p.noclip = input.noclip;
             if (string.IsNullOrEmpty(p.hiding))
             {
                 var delta = Vector3.Distance(new Vector3(p.x, p.y, p.z), new Vector3(input.x, input.y, input.z));
                 float moveSeconds=movementBudgets.TryGetValue(id,out var lastBudget)?Mathf.Max(.04f,(float)(movementTime()-lastBudget.at)):.1f;
-                if (!MovementWithinBudget(p, delta) || !Walkable(input.x, input.y, input.z) ||
-                    SegmentBlocked(p.x, p.y, p.z, input.x, input.y, input.z)) return;
-                movementBudgets[id].distance=Mathf.Max(0,movementBudgets[id].distance-delta);
+                if (!p.noclip && (!MovementWithinBudget(p, delta) || !Walkable(input.x, input.y, input.z) ||
+                    SegmentBlocked(p.x, p.y, p.z, input.x, input.y, input.z))) return;
+                if (movementBudgets.TryGetValue(id, out var budget))
+                    budget.distance = Mathf.Max(0, budget.distance - delta);
                 p.x = input.x; p.y = input.y; p.z = input.z;
                 p.yaw = input.yaw; p.pitch = Mathf.Clamp(input.pitch, -1.35f, 1.35f);
                 if(delta>.025f&&(!footstepsAt.TryGetValue(id,out float footstepAt)||State.elapsed>=footstepAt))
@@ -333,10 +440,10 @@ namespace DeadAir
                 z > world.courtyard.maxZ - .2f || z < world.courtyard.minZ + .2f) return false;
             if (world.stairs != null)
                 foreach (var stair in world.stairs)
-                    if (stair.Contains(x, z, .12f)) return Mathf.Abs(y - stair.HeightAt(z)) <= .4f;
+                    if (stair.Contains(x, z, .12f) && Mathf.Abs(y - stair.HeightAt(z)) <= .55f) return true;
             if (Mathf.Abs(y) <= .25f) return true;
             foreach (var room in world.rooms)
-                if (Mathf.Abs(y - room.floorY) <= .25f && x >= room.minX && x <= room.maxX &&
+                if (Mathf.Abs(y - room.floorY) <= .45f && x >= room.minX && x <= room.maxX &&
                     z >= room.minZ && z <= room.maxZ) return true;
             return false;
         }
@@ -345,7 +452,7 @@ namespace DeadAir
         {
             // The host sees the same imported collision geometry as its local controller.
             // A torso-height ray catches walls even if a packet skips across their thin collider.
-            if (PhysicalSegmentBlocked(new Vector3(-ax, ay + .75f, az), new Vector3(-bx, by + .75f, bz))) return true;
+            if (PhysicalSegmentBlocked(new Vector3(-ax, ay + .75f, az), new Vector3(-bx, by + .75f, bz), true)) return true;
             foreach (var door in world.doors)
             {
                 if (State.Door(door.id)?.open == true || Mathf.Abs((ay + by) * .5f + 1.4f - door.y) > 1) continue;
@@ -374,10 +481,15 @@ namespace DeadAir
                 // It is an actor, never an office wall or a movement blocker for itself.
                 if(collider is CharacterController || collider.GetComponentInParent<DeadAirPlayer>()!=null ||
                     collider.GetComponentInParent<DeadAirCharacterMotion>()!=null)continue;
+                if(collider.name.StartsWith("Stair tread") || collider.name.StartsWith("Stair riser") || collider.name.StartsWith("Stair side wall") || collider.name.StartsWith("Stair handrail"))continue;
                 if(ignoreDoors)
                 {
                     bool door=false;
-                    for(var part=collider.transform;part!=null;part=part.parent)if(part.name.StartsWith("door:")){door=true;break;}
+                    for(var part=collider.transform;part!=null;part=part.parent)
+                        if(part.name.StartsWith("door:") || part.name.StartsWith("Door frame") || part.name == "Door leaf")
+                        {
+                            door=true;break;
+                        }
                     if(door)continue;
                 }
                 return true;
@@ -394,6 +506,7 @@ namespace DeadAir
 
         public static bool HasInteractionSightline(Vector3 origin, Vector3 target, string targetId)
         {
+            if (targetId == "ladder-climb" || targetId == "ladder-spot" || targetId == "drawer-director" || targetId == "ladder" || targetId == "key-main") return true;
             var offset = target - origin;
             if (offset.sqrMagnitude < .0001f) return true;
             int count = Physics.RaycastNonAlloc(origin, offset.normalized, sightHits, offset.magnitude,
@@ -480,19 +593,101 @@ namespace DeadAir
                     else
                     {
                         var reqObj = world.Objective(door.requiredKey);
-                        return "Потрібна картка доступу" + (reqObj != null ? " (" + reqObj.label + ")" : "") + ".";
+                        return "Потрібен ключ або картка" + (reqObj != null ? " (" + reqObj.label + ")" : "") + ".";
                     }
                 }
                 door.open = !door.open;
-                if(door.open)door.openedAt=State.elapsed;
+                if(door.open)
+                {
+                    door.openedAt=State.elapsed;
+                    var casingRot = DeadAirOfficeLayout.Rotation(doorData.rotation);
+                    var casingRight = casingRot * Vector3.right;
+                    var playerPos = DeadAirOfficeLayout.Position(p.x, p.y, p.z);
+                    var doorPos = DeadAirOfficeLayout.Position(doorData.x, doorData.y - 1.4f, doorData.z);
+                    var lookDir = Quaternion.Euler(0, 180 - p.yaw * Mathf.Rad2Deg, 0) * Vector3.forward;
+                    float dot = Vector3.Dot(lookDir, casingRight);
+                    if (Mathf.Abs(dot) < 0.05f)
+                    {
+                        var toDoor = (doorPos - playerPos).normalized;
+                        dot = Vector3.Dot(toDoor, casingRight);
+                    }
+                    door.openSign = dot >= 0 ? 1f : -1f;
+                }
                 HearNoise(doorData.x,doorData.y-1.4f,doorData.z,18,7);
                 State.message = doorData.label + (door.open ? ": відчинено." : ": зачинено.");
                 Dirty = true; return null;
             }
+            if (objectId == "drawer-director")
+            {
+                if (!Near(p, -11.22f, 4.2f, -1.52f, 2.8f, 0, "drawer-director")) return "Підійдіть ближче до столу директора.";
+                State.directorDrawerOpen = State.quest.directorDrawerOpen = !State.directorDrawerOpen;
+                State.message = State.directorDrawerOpen ? "Ящик столу директора відкрито." : "Ящик столу директора зачинено.";
+                Dirty = true; return null;
+            }
+            if (objectId == "ladder-spot")
+            {
+                if (!Near(p, -9f, 0f, 7f, 3.5f, 0, "ladder-spot")) return "Підійдіть до вікна зовні.";
+                if (!p.HasItem("ladder")) return "Потрібна драбина. Перевірте фургон знімальної групи.";
+                p.inventory.Remove("ladder");
+                State.ladderPlaced = State.quest.ladderPlaced = true;
+                State.message = "Драбину встановлено під вікном директора!";
+                Dirty = true; return null;
+            }
+            if (objectId == "ladder-climb")
+            {
+                if (!State.ladderPlaced) return "Спочатку встановіть драбину.";
+                if (!Near(p, -9f, 0f, 7f, 3.5f, 0, "ladder-climb") && !Near(p, -9f, 4.2f, 5.5f, 3.5f, 0, "ladder-climb")) return "Підійдіть до драбини.";
+                State.windowBroken = State.quest.windowBroken = true;
+                if (p.y > 2)
+                {
+                    p.x = -9f; p.y = 0f; p.z = 7.5f;
+                    p.yaw = Mathf.PI; p.pitch = 0;
+                    State.message = "Ви спустилися по драбині на передній двір.";
+                }
+                else
+                {
+                    p.x = -9f; p.y = 4.2f; p.z = 5.0f;
+                    p.yaw = 0; p.pitch = 0;
+                    HearNoise(-9f, 4.2f, 6f, 35, 10);
+                    State.message = "Вікно розбито! Ви проникли в кабінет директора.";
+                }
+                Dirty = true; return null;
+            }
             var obj = world.Objective(objectId);
-            if (obj == null) return "Невідомий предмет.";
-            if (!Near(p, obj.x, obj.y, obj.z, 2.5f, 0, obj.id)) return "Підійдіть ближче.";
+            float objRange = obj.id == "ladder" ? 3.5f : 2.5f;
+            float objEyeOffset = obj.id == "ladder" ? 0.9f : 0f;
+            if (!Near(p, obj.x, obj.y, obj.z, objRange, objEyeOffset, obj.id)) return "Підійдіть ближче.";
             if (State.Collected(objectId)) return null;
+            if (objectId == "ladder")
+            {
+                if (!p.inventory.Contains("ladder")) p.inventory.Add("ladder");
+                State.collected.Add("ladder");
+                State.message = "Складну драбину взято. Встановіть її під вікном кабінету директора.";
+                Dirty = true; return null;
+            }
+            if (objectId == "key-main")
+            {
+                if (!State.directorDrawerOpen) return "Ящик столу зачинений. Спочатку відкрийте ящик.";
+                if (!p.inventory.Contains("key-main")) p.inventory.Add("key-main");
+                State.collected.Add("key-main");
+                State.message = "Головну картку доступу станції отримано! Тепер можна відчинити головний та задній входи.";
+                Dirty = true; return null;
+            }
+            if (objectId == "key-basement")
+            {
+                if (!p.inventory.Contains("key-basement")) p.inventory.Add("key-basement");
+                State.collected.Add("key-basement");
+                State.message = "Картку підвалу отримано!";
+                Dirty = true; return null;
+            }
+            if (objectId == "breaker")
+            {
+                if (!State.power) return "Немає живлення. Спочатку увімкніть генератор на задньому дворі.";
+                State.breakerOn = State.quest.breakerOn = !State.breakerOn;
+                HearNoise(obj.x, obj.y, obj.z, 22, 6);
+                State.message = State.breakerOn ? "Рубильник увімкнено! Освітлення станції працює." : "Рубильник вимкнено. Світло згасло.";
+                Dirty = true; return null;
+            }
             if (objectId.StartsWith("keycard-"))
             {
                 State.keycards.Add(objectId);
@@ -609,6 +804,9 @@ namespace DeadAir
         {
             if (itemId == "flashlight") return "Ліхтар";
             if (itemId == "fuel-canister") return "Каністра";
+            if (itemId == "ladder") return "Складна драбина";
+            if (itemId == "key-main") return "Головний ключ станції";
+            if (itemId == "key-basement" || itemId == "keycard-basement") return "Картка Під.";
             if(DeadAirRoleItems.IsRoleItem(itemId))return DeadAirRoleItems.Label(itemId);
             var obj = world.Objective(itemId);
             if (obj != null) return obj.label;
@@ -752,6 +950,19 @@ namespace DeadAir
             if (!hasLiving) { CheckDefeat(); return; }
             enemy.stunned = State.elapsed<enemy.stunnedUntil;
             if (enemy.stunned) return;
+            if (!State.creative && State.power && State.breakerOn && State.elapsed >= nextBreakerTrip)
+            {
+                nextBreakerTrip = State.elapsed + UnityEngine.Random.Range(20f, 35f);
+                if (random.Next(100) < 23)
+                {
+                    State.breakerOn = State.quest.breakerOn = false;
+                    State.scare++;
+                    State.message = "ДИКТОР ВИМКНУВ РУБИЛЬНИК У ПІДВАЛІ! Світло згасло.";
+                    var breakerObj = world.Objective("breaker");
+                    if (breakerObj != null) HearNoise(breakerObj.x, breakerObj.y, breakerObj.z, 30, 8);
+                    Dirty = true;
+                }
+            }
             bool investigating=State.elapsed<enemy.heardUntil;
             if(!State.creative&&!State.broadcast&&!investigating&&State.elapsed>=nextPeek&&encounterPlayer!=null&&TryBeginPeek(encounterPlayer,false))return;
             Vector3 heard=new Vector3(enemy.heardX,enemy.heardY,enemy.heardZ);
@@ -1253,7 +1464,7 @@ namespace DeadAir
             if (world.stairs != null)
                 foreach (var stair in world.stairs)
                 {
-                    if (stair.Contains(x, z, .12f)) return stair.HeightAt(z);
+                    if (stair.Contains(x, z, .12f) && Mathf.Abs(currentY - stair.HeightAt(z)) < 2.5f) return stair.HeightAt(z);
                     if (Mathf.Abs(currentY - stair.lowerY) < .4f) return stair.lowerY;
                     if (Mathf.Abs(currentY - stair.upperY) < .4f) return stair.upperY;
                 }

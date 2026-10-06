@@ -555,7 +555,7 @@ namespace DeadAir
         {
             if (string.IsNullOrEmpty(id) || id == "empty") return "empty";
             if (id == "flashlight" || id == "fuel-canister") return id;
-            if (id.StartsWith("keycard", StringComparison.Ordinal)) return "keycard";
+            if (id.StartsWith("keycard", StringComparison.Ordinal) || id.StartsWith("key-", StringComparison.Ordinal)) return "keycard";
             if (id.StartsWith("fuse", StringComparison.Ordinal)) return "fuse";
             return "tape";
         }

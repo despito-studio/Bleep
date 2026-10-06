@@ -108,7 +108,7 @@ namespace DeadAir
             bool outside = playing && !stairs && IsOutside(me.x, me.y, me.z);
             audioEngine.SetContext(phase, outside, playing && me.down, playing ? state.enemy.behaviour : null, stairs);
             audioEngine.Tick(paused, moving, playing && player.Sprinting, hiding, player.Stamina, playing ? me.sanity : 100,
-                threat, playing && player.CameraUp, playing && state.power, playing && state.broadcast, enemyPosition, distance);
+                threat, playing && player.CameraUp, playing && state.power, playing && state.broadcast, enemyPosition, distance, playing && state.breakerOn);
             if (tape != null)
             {
                 tape.Threat = Mathf.Lerp(tape.Threat, paused ? 0 : threat, Time.unscaledDeltaTime * 2);

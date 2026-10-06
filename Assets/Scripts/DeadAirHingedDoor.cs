@@ -21,17 +21,19 @@ namespace DeadAir
             openAngle = degrees;
         }
 
-        public void SetOpen(bool value)
+        public void SetOpen(bool value, float sign = 1f)
         {
             if (!initialized) Initialize(95);
-            if (open == value && cycleTime < 0) return;
+            float desiredTarget = value ? Mathf.Abs(openAngle) * (sign < 0 ? -1f : 1f) : 0;
+            if (open == value && Mathf.Abs(target - desiredTarget) < .1f && cycleTime < 0) return;
             open = value; cycleTime = -1;
-            from = angle; target = value ? openAngle : 0; elapsed = 0;
+            from = angle; target = desiredTarget; elapsed = 0;
         }
 
-        public void PlayAccessCycle()
+        public void PlayAccessCycle(float sign = 1f)
         {
             if (!initialized) Initialize(95);
+            openAngle = Mathf.Abs(openAngle) * (sign < 0 ? -1f : 1f);
             cycleTime = 0; open = false; from = angle;
         }
 

@@ -21,6 +21,11 @@ namespace DeadAir
             Add("cassette", b => { b.Knock(0, .45f); b.Knock(.12f, .6f); b.Tone(.19f, 860, 850, .24f, .06f, Wave.Sine, .015f); }, .65f);
             Add("fuse", b => { b.Tone(0, 1350, 1340, .22f, .065f); b.Tone(.05f, 1930, 1910, .17f, .045f); b.Knock(.14f, .55f); }, .5f);
             Add("keycard", b => { b.Noise(0, .12f, .08f, 2000, .007f); b.Tone(.12f, 780, 780, .1f, .055f); b.Tone(.26f, 1040, 1040, .12f, .045f); }, .55f);
+            Add("key", b => { b.Tone(0, 2400, 2380, .15f, .05f); b.Tone(.04f, 3200, 3180, .12f, .04f); b.Knock(.08f, .4f); }, .35f);
+            Add("ladder", b => { b.Knock(0, .9f); b.Tone(.03f, 320, 280, .25f, .06f, Wave.Triangle); b.Knock(.12f, .7f); }, .4f);
+            Add("breaker-toggle", b => { b.Knock(0, 1.4f); b.Tone(.02f, 180, 80, .35f, .08f, Wave.Triangle); b.Noise(.02f, .12f, .14f, 1800, .005f); b.Knock(.08f, .8f); }, .5f);
+            Add("drawer-slide", b => { b.Noise(0, .28f, .08f, 750, .03f); b.Knock(.22f, .6f); }, .45f);
+            Add("window-shatter", b => { b.Noise(0, .45f, .22f, 4500, .002f); b.Noise(.05f, .6f, .18f, 3200, .01f); b.Tone(0, 850, 420, .3f, .08f, Wave.Saw); b.Knock(0, 1.6f); b.Knock(.15f, .9f); }, .9f);
             Add("fuel-pickup", b => { b.Knock(0, 1.2f); b.Tone(.05f, 230, 125, .38f, .06f, Wave.Triangle); b.Noise(.15f, .35f, .085f, 480, .04f); }, .8f);
             Add("drop", b => { b.Noise(0, .14f, .08f, 1500, .02f); b.Knock(.08f, 1.2f); b.Knock(.24f, .5f); }, .6f);
             Add("valve", b => { for (int i = 0; i < 6; i++) { b.Knock(i * .14f, .5f); b.Tone(i * .14f, 630, 390, .14f, .055f, Wave.Triangle); } b.Noise(.25f, 1.05f, .10f, 900, .06f); }, 1.6f);

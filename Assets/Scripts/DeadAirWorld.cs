@@ -26,7 +26,9 @@ namespace DeadAir
         readonly Dictionary<string, GameObject> droppedViews = new Dictionary<string, GameObject>();
         readonly HashSet<string> activeDropped = new HashSet<string>();
         readonly List<string> droppedToRemove = new List<string>();
-        bool lastPower, lastBroadcast;
+        bool lastPower, lastBroadcast, lastBreaker;
+        GameObject windowDirectorGlass;
+        readonly Material interiorLampMaterial;
         readonly DeadAirSky sky;
         readonly DeadAirCulling culling;
         Camera renderCamera;
@@ -71,6 +73,31 @@ namespace DeadAir
             CalibrateExteriorLighting(root.Find("exterior"));
             StylePracticalLighting(root.Find("station"),true);
             StylePracticalLighting(root.Find("exterior"),false);
+            var litShader = Shader.Find("Dead Air/Source Surface");
+            if(litShader!=null)
+            {
+                interiorLampMaterial = new Material(litShader){name="light-panel / dynamic interior",hideFlags=HideFlags.DontSave};
+                interiorLampMaterial.SetColor("_EmissionColor",Color.black);
+                interiorLampMaterial.SetColor("_Color",new Color(.20f,.22f,.18f,1f));
+                var stationRoot = root.Find("station");
+                if(stationRoot!=null)
+                {
+                    foreach(var renderer in stationRoot.GetComponentsInChildren<Renderer>(true))
+                    {
+                        var slots = renderer.sharedMaterials;
+                        bool modified = false;
+                        for(int i=0;i<slots.Length;i++)
+                        {
+                            if(slots[i]!=null && slots[i].name.StartsWith("light-panel"))
+                            {
+                                slots[i] = interiorLampMaterial;
+                                modified = true;
+                            }
+                        }
+                        if(modified) renderer.sharedMaterials = slots;
+                    }
+                }
+            }
             var dynamicRoots = new HashSet<Transform>();
             foreach(var t in root.GetComponentsInChildren<Transform>(true))
             {
@@ -96,6 +123,7 @@ namespace DeadAir
                 else if(t.name.StartsWith("door-led:")) doorLeds[t.name.Substring(9)] = t.GetComponent<Renderer>();
                 else if(t.name.StartsWith("door-light:")) doorLights[t.name.Substring(11)] = t.GetComponent<Light>();
                 else if(t.name.StartsWith("state:")) { stateViews[t.name.Substring(6)] = t; dynamicRoots.Add(t); }
+                else if(t.name == "window-director-glass") windowDirectorGlass = t.gameObject;
                 else if(t.name.StartsWith("fan:")) { fans.Add(t); dynamicRoots.Add(t); }
                 else if(t.name.StartsWith("monitor:")) monitors.Add(t.GetComponent<Renderer>());
                 else if(t.name.StartsWith("lamp:"))
@@ -482,7 +510,7 @@ namespace DeadAir
             if(state==null) return;
             foreach(var door in state.doors)
             {
-                if(doorAnimations.TryGetValue(door.id,out var animation))animation.SetOpen(door.open);
+                if(doorAnimations.TryGetValue(door.id,out var animation))animation.SetOpen(door.open, door.openSign);
                 var color=door.locked?new Color(.88f,.27f,.20f):door.open?new Color(.31f,.78f,.47f):new Color(.84f,.74f,.47f);
                 if(doorLeds.TryGetValue(door.id,out var led)&&led!=null) SetTint(led,color);
                 if(doorLights.TryGetValue(door.id,out var light)&&light!=null)light.color=color;
@@ -502,7 +530,7 @@ namespace DeadAir
             foreach(var obj in data.objects)
             {
                 if(!interactables.TryGetValue(obj.id,out var view))continue;
-                if(obj.type=="tape"||obj.type=="fuse"||obj.type=="keycard")view.gameObject.SetActive(!state.Collected(obj.id));
+                if(obj.type=="tape"||obj.type=="fuse"||obj.type=="keycard"||obj.type=="key"||obj.type=="ladder")view.gameObject.SetActive(!state.Collected(obj.id));
                 if(obj.id=="fuel-canister")view.gameObject.SetActive(!state.canister&&!state.quest.fuelAdded);
                 if(obj.id=="pressure-valve")view.localRotation=interactionRotations[obj.id]*Quaternion.Euler(0,0,state.valveOpened?180:0);
             }
@@ -512,23 +540,43 @@ namespace DeadAir
                 var lamp=lamps[i];float time=Time.time+i*3.77f;
                 lamp.light.color=state.broadcast&&lamp.interior?new Color(1,.36f,.19f):lamp.color;
                 float wave=flicker?Mathf.Sin(time*1.7f)*Mathf.Sin(time*13.6f):0;
-                float supply=lamp.interior?(state.power?1f:.6f):1f;
-                // Battery lighting remains usable before the generator is repaired.
-                // Faulty tubes dip briefly; they no longer black out the entire room.
+                float supply=lamp.interior?((state.power && state.breakerOn)?1f:0f):1f;
                 float flutter=wave>.94f?.72f:1f;
                 if(state.broadcast&&lamp.interior)flutter*=flicker?.86f+Mathf.Sin(Time.time*3)*.08f:.9f;
                 lamp.light.intensity=lamp.intensity*supply*flutter;
             }
-            if(state.power)
+            if(state.power && state.breakerOn)
                 foreach(var fan in fans)fan.Rotate(0,0,-Time.deltaTime*14*Mathf.Rad2Deg,Space.Self);
             if(stateViews.TryGetValue("powerLever",out var lever))lever.localRotation=Quaternion.Euler(0,0,-(state.power?-.7f:.55f)*Mathf.Rad2Deg);
-            if(lastPower!=state.power||lastBroadcast!=state.broadcast)
+            if(stateViews.TryGetValue("breakerHandle",out var breakerH))breakerH.localRotation=Quaternion.Euler(-(state.breakerOn?45f:-45f),0,0);
+            if(stateViews.TryGetValue("directorDrawer",out var dDrawer))
+            {
+                float targetZ = state.directorDrawerOpen ? 0.38f : 0f;
+                dDrawer.localPosition = Vector3.Lerp(dDrawer.localPosition, new Vector3(dDrawer.localPosition.x, dDrawer.localPosition.y, targetZ), Time.deltaTime * 8f);
+            }
+            if(stateViews.TryGetValue("placedLadder",out var ladderView))ladderView.gameObject.SetActive(state.ladderPlaced);
+            if(windowDirectorGlass == null)
+            {
+                var winGlass = GameObject.Find("window-director-glass");
+                if(winGlass != null) windowDirectorGlass = winGlass;
+            }
+            if(windowDirectorGlass != null) windowDirectorGlass.SetActive(!state.windowBroken);
+            if(lastPower!=state.power||lastBroadcast!=state.broadcast||lastBreaker!=state.breakerOn)
             {
                 TintState("powerLamp",state.power?new Color(.53f,.78f,.53f):new Color(.88f,.32f,.17f));
+                TintState("breakerLamp",(state.power&&state.breakerOn)?new Color(.53f,.78f,.53f):state.power?new Color(.88f,.62f,.22f):new Color(.15f,.15f,.15f));
                 TintState("broadcastBulb",state.broadcast?new Color(.87f,.13f,.067f):new Color(.58f,.27f,.16f));
                 TintState("exitLamp",state.broadcast?new Color(.2f,1,.33f):new Color(.87f,.2f,.13f));
-                foreach(var monitor in monitors)SetTint(monitor,state.power?Color.white:new Color(.39f,.47f,.41f));
-                lastPower=state.power;lastBroadcast=state.broadcast;
+                foreach(var monitor in monitors)SetTint(monitor,(state.power&&state.breakerOn)?Color.white:new Color(.39f,.47f,.41f));
+                bool lit = state.power && state.breakerOn;
+                if(interiorLampMaterial!=null)
+                {
+                    Color emission = lit ? (state.broadcast ? new Color(1f, .36f, .19f) * 0.85f : new Color(.65f, .70f, .55f)) : Color.black;
+                    Color albedo = lit ? (state.broadcast ? new Color(1f, .55f, .45f, 1f) : new Color(.85f, .88f, .75f, 1f)) : new Color(.20f, .22f, .18f, 1f);
+                    interiorLampMaterial.SetColor("_EmissionColor", emission);
+                    interiorLampMaterial.SetColor("_Color", albedo);
+                }
+                lastPower=state.power;lastBroadcast=state.broadcast;lastBreaker=state.breakerOn;
             }
             bool enemyVisible=state.enemy.active&&state.enemy.behaviour!="vanished";
             anchor.SetActive(enemyVisible&&!state.broadcast);

@@ -50,13 +50,14 @@ namespace DeadAir.Editor
                 var state=new RoomState {phase="playing"};
                 world.Apply(state);
                 for(int i=0;i<lamps.Length;i++)
-                    Require(Mathf.Abs(lamps[i].intensity/fullOutput[i]-.6f)<.001f && lamps[i].intensity>1,
-                        "Battery lighting must remain usable before the generator: "+lamps[i].name);
+                    Require(lamps[i].intensity < .01f,
+                        "Lighting must be completely off before generator and breaker: "+lamps[i].name);
                 state.power=true;
+                state.breakerOn=true;
                 world.Apply(state);
                 for(int i=0;i<lamps.Length;i++)
                     Require(Mathf.Abs(lamps[i].intensity-fullOutput[i])<.001f,
-                        "Repairing the generator must restore the authored fixture output: "+lamps[i].name);
+                        "Repairing generator and toggling breaker must restore fixture output: "+lamps[i].name);
                 state.broadcast=true;
                 world.Apply(state);
                 for(int i=0;i<lamps.Length;i++)

@@ -240,6 +240,7 @@ namespace DeadAir
                 case "unique-equip": rules.EquipUnique(id, packet.uniqueEquipped); break;
                 case "map-equip": rules.EquipMap(id, packet.mapOpen); break;
                 case "unique-use": error = rules.UseUnique(id); break;
+                case "console": error = rules.ExecuteCommand(id, packet.id); break;
             }
             if (error != null)
             {
@@ -247,6 +248,13 @@ namespace DeadAir
                 else guests.Find(p => p.id == id)?.Send(new NetPacket { type = "error", error = error });
             }
             if (rules.Dirty && packet.type != "move") Publish();
+        }
+
+        public string ExecuteConsole(string cmd)
+        {
+            if (rules != null) return rules.ExecuteCommand(LocalId, cmd);
+            Command(new NetPacket { type = "console", id = cmd });
+            return null;
         }
 
         void Update()

@@ -28,6 +28,16 @@ namespace DeadAir
         public bool Sprinting { get; private set; }
         public float Stamina => stamina;
         public Camera ViewCamera => view;
+        public bool Noclip { get; private set; }
+        public void ToggleNoclip() => SetNoclip(!Noclip);
+        public void SetNoclip(bool enabled)
+        {
+            Noclip = enabled;
+            if (controller != null) controller.enabled = !Noclip;
+            verticalVelocity = 0;
+            var me = session?.State?.Player(session?.LocalId);
+            if (me != null) me.noclip = Noclip;
+        }
         bool lightOn = true, cameraUp, pausedLocally;
         bool inspectionPose;
         float yaw, pitch, stamina = 100, nextSend, nextRadio, footBob, currentBob, verticalVelocity;
@@ -122,12 +132,12 @@ namespace DeadAir
                 previousHiding = me.hiding;
             }
             if (!IsPlaying) { ShowMenuCamera(); SyncRemote(state); return; }
-            if(string.IsNullOrEmpty(me.hiding))ReconcileMovement(me);
+            if(string.IsNullOrEmpty(me.hiding) && !climbingLadder && !Noclip)ReconcileMovement(me);
             if (Input.GetKeyDown(KeyCode.Escape) && !escapeHandled)
                 SetPause(!pausedLocally);
-            if (Input.GetKeyDown(KeyCode.M) && !me.down && string.IsNullOrEmpty(me.hiding)) { cameraUp = false; ui.ToggleMap(); }
-            var controlled = !pausedLocally && !state.paused && !ui.HasModal && !me.down && string.IsNullOrEmpty(me.hiding);
-            bool lookingFromLocker = !pausedLocally && !state.paused && !ui.HasModal && !me.down && !string.IsNullOrEmpty(me.hiding);
+            if (Input.GetKeyDown(KeyCode.M) && !me.down && string.IsNullOrEmpty(me.hiding) && !climbingLadder && !DeadAirConsole.IsOpen) { cameraUp = false; ui.ToggleMap(); }
+            var controlled = !pausedLocally && !state.paused && !ui.HasModal && !DeadAirConsole.IsOpen && !me.down && string.IsNullOrEmpty(me.hiding) && !climbingLadder;
+            bool lookingFromLocker = !pausedLocally && !state.paused && !ui.HasModal && !DeadAirConsole.IsOpen && !me.down && !string.IsNullOrEmpty(me.hiding) && !climbingLadder;
             Sprinting = false;
             bool hasFlashlight = me.HasItem("flashlight");
             if (controlled)
@@ -172,20 +182,23 @@ namespace DeadAir
                 }
             }
             else ui.HideRadio();
-            Cursor.lockState = controlled || lookingFromLocker ? CursorLockMode.Locked : CursorLockMode.None;
-            Cursor.visible = !controlled && !lookingFromLocker;
+            Cursor.lockState = (controlled || lookingFromLocker || climbingLadder) && !DeadAirConsole.IsOpen ? CursorLockMode.Locked : CursorLockMode.None;
+            Cursor.visible = (!controlled && !lookingFromLocker && !climbingLadder) || DeadAirConsole.IsOpen;
             if (controlled) Move(me, state);
             else if (lookingFromLocker) LookFromLocker(me);
-            else if (!state.paused && !pausedLocally && string.IsNullOrEmpty(me.hiding)) ApplyGravity(Vector3.zero);
+            else if (!state.paused && !pausedLocally && string.IsNullOrEmpty(me.hiding) && !climbingLadder && !Noclip) ApplyGravity(Vector3.zero);
             var authoritativePosition = new Vector3(-me.x, me.y, me.z);
-            if (!string.IsNullOrEmpty(me.hiding) && Vector3.Distance(transform.position, authoritativePosition) > .1f)
+            if (!string.IsNullOrEmpty(me.hiding) && Vector3.Distance(transform.position, authoritativePosition) > .1f && !climbingLadder)
                 Teleport(me.x, me.y, me.z);
             SendMovement(me, state);
             bool moving = controlled && MovementAxes().sqrMagnitude > .01f;
             currentBob = Mathf.Lerp(currentBob, moving ? (Sprinting ? .028f : .018f) : 0, Time.deltaTime * 10);
             footBob += Time.deltaTime * (moving ? (Sprinting ? 13 : 8) : 2);
-            view.transform.localPosition = new Vector3(0, me.down ? .55f : 1.65f + Mathf.Sin(footBob) * currentBob, 0);
-            view.transform.localRotation = Quaternion.Euler(-pitch * Mathf.Rad2Deg, 0, me.down ? -12.6f : Mathf.Sin(footBob * .5f) * currentBob * 6.87f);
+            if (!climbingLadder)
+            {
+                view.transform.localPosition = new Vector3(0, me.down ? .55f : 1.65f + Mathf.Sin(footBob) * currentBob, 0);
+                view.transform.localRotation = Quaternion.Euler(-pitch * Mathf.Rad2Deg, 0, me.down ? -12.6f : Mathf.Sin(footBob * .5f) * currentBob * 6.87f);
+            }
             view.fieldOfView = Mathf.Lerp(view.fieldOfView, cameraUp ? 57 : Sprinting ? 74 : 68, Time.deltaTime * 5);
             var classData = world.GetClass(me.characterClass);
             flashlight.enabled = lightOn && HoldingFlashlight(me) && !me.down && string.IsNullOrEmpty(me.hiding);
@@ -194,13 +207,75 @@ namespace DeadAir
             flashlight.innerSpotAngle = flashlight.spotAngle * .52f;
             UpdateEquipment(me, state, moving ? (Sprinting ? 1.7f : 1f) : 0);
             FindInteraction(me, state);
-            if (Input.GetKeyDown(KeyCode.E) && !state.paused && !me.down && !ui.HasModal && !pausedLocally && !string.IsNullOrEmpty(InteractionId))
+            if (Input.GetKeyDown(KeyCode.E) && !state.paused && !me.down && !ui.HasModal && !DeadAirConsole.IsOpen && !pausedLocally && !string.IsNullOrEmpty(InteractionId) && !climbingLadder)
             {
                 if (InteractionId == "broadcast" && !state.calibrated)
                     ui.ShowCalibration();
-                else session.Command(new NetPacket { type = "interact", id = InteractionId });
+                else if (InteractionId == "ladder-climb")
+                    StartCoroutine(ClimbLadderRoutine(me.y < 2));
+                else
+                {
+                    if (InteractionId == "drawer-director") DeadAirAudio.Play("drawer-slide");
+                    else if (InteractionId == "breaker") DeadAirAudio.Play("breaker-toggle");
+                    else if (InteractionId == "ladder" || InteractionId == "ladder-spot") DeadAirAudio.Play("ladder");
+                    else if (InteractionId.StartsWith("key-")) DeadAirAudio.Play("key");
+                    session.Command(new NetPacket { type = "interact", id = InteractionId });
+                }
             }
             SyncRemote(state);
+        }
+
+        bool climbingLadder;
+
+        System.Collections.IEnumerator ClimbLadderRoutine(bool climbingUp)
+        {
+            climbingLadder = true;
+            controller.enabled = false;
+            Vector3 startPos = transform.position;
+            Vector3 targetPos = climbingUp ? new Vector3(9f, 4.4f, 6.2f) : new Vector3(9f, 0f, 7.26f);
+            float duration = 1.25f;
+            float elapsed = 0f;
+            DeadAirAudio.Play("ladder");
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                float bob = Mathf.Sin(t * Mathf.PI * 6f) * 0.04f;
+                transform.position = Vector3.Lerp(startPos, targetPos, t) + Vector3.up * bob;
+                if (climbingUp)
+                {
+                    yaw = 0; pitch = -0.1f;
+                    transform.rotation = Quaternion.Euler(0, 180, 0);
+                    view.transform.localRotation = Quaternion.Euler(6f, 0, Mathf.Sin(t * Mathf.PI * 6f) * 3f);
+                }
+                else
+                {
+                    yaw = Mathf.PI; pitch = 0.2f;
+                    transform.rotation = Quaternion.Euler(0, 0, 0);
+                    view.transform.localRotation = Quaternion.Euler(-10f, 0, Mathf.Sin(t * Mathf.PI * 6f) * 3f);
+                }
+                yield return null;
+            }
+
+            if (climbingUp)
+            {
+                DeadAirAudio.Play("window-shatter");
+                view.transform.localRotation = Quaternion.Euler(14f, 0, 6f);
+                yield return new WaitForSeconds(0.2f);
+                session.Command(new NetPacket { type = "interact", id = "ladder-climb" });
+                yield return new WaitForSeconds(0.1f);
+                Teleport(-9f, 4.2f, 5.0f);
+                yaw = 0; pitch = 0;
+            }
+            else
+            {
+                session.Command(new NetPacket { type = "interact", id = "ladder-climb" });
+                yield return new WaitForSeconds(0.1f);
+                Teleport(-9f, 0f, 7.26f);
+                yaw = Mathf.PI; pitch = 0;
+            }
+            controller.enabled = true;
+            climbingLadder = false;
         }
 
         void DropCurrentItem(PlayerState me)
@@ -260,6 +335,20 @@ namespace DeadAir
             transform.rotation = Quaternion.Euler(0, 180 - yaw * Mathf.Rad2Deg, 0);
             view.transform.localRotation = Quaternion.Euler(-pitch * Mathf.Rad2Deg, 0, 0);
             var axes=MovementAxes();
+            if (Noclip)
+            {
+                Vector3 moveDir = view.transform.forward * axes.y + view.transform.right * axes.x;
+                float upDown = 0f;
+                if (Input.GetKey(KeyCode.Space)) upDown += 1f;
+                if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl) || Input.GetKey(KeyCode.C)) upDown -= 1f;
+                moveDir += Vector3.up * upDown;
+
+                bool fastFly = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+                float flySpeed = fastFly ? 16f : 6.5f;
+                transform.position += moveDir * (flySpeed * Time.deltaTime);
+                verticalVelocity = 0;
+                return;
+            }
             var forward = axes.y;
             var sideways = axes.x;
             var direction = (transform.forward * forward + transform.right * sideways).normalized;
@@ -295,7 +384,7 @@ namespace DeadAir
 
         void ApplyGravity(Vector3 horizontalVelocity)
         {
-            if (!controller.enabled) return;
+            if (Noclip || !controller.enabled) return;
             // Keep physical stair/floor collision steps small even during a slow render frame.
             int steps=Mathf.Max(1,Mathf.CeilToInt(Time.deltaTime/.033f));
             float dt=Time.deltaTime/steps;
@@ -373,7 +462,8 @@ namespace DeadAir
                     type = "move", x = -transform.position.x, y = transform.position.y, z = transform.position.z,
                     moveSequence=sequence,
                     yaw = yaw, pitch = pitch, flashlight = lightOn && HoldingFlashlight(me) && !me.down && string.IsNullOrEmpty(me.hiding),
-                    camera = cameraUp && !me.down && string.IsNullOrEmpty(me.hiding), mapOpen = ui.MapOpen && !me.down && string.IsNullOrEmpty(me.hiding), sprinting = Sprinting
+                    camera = cameraUp && !me.down && string.IsNullOrEmpty(me.hiding), mapOpen = ui.MapOpen && !me.down && string.IsNullOrEmpty(me.hiding), sprinting = Sprinting,
+                    noclip = Noclip
                 });
             }
         }
@@ -391,7 +481,7 @@ namespace DeadAir
         void FindInteraction(PlayerState me, RoomState state)
         {
             InteractionId = InteractionLabel = null;
-            if (me.down) return;
+            if (me.down || climbingLadder) return;
             if (!string.IsNullOrEmpty(me.hiding)) { InteractionId = "exit-locker"; InteractionLabel = "Вийти з шафи"; return; }
             float nearest = 2.5f;
             var origin = new Vector2(-transform.position.x, transform.position.z);
@@ -402,7 +492,7 @@ namespace DeadAir
             {
                 var current = state.Door(door.id);
                 string label = door.label + (current != null && current.open ? " — зачинити" : " — відчинити");
-                if (current != null && current.locked && !me.HasItem(current.requiredKey)) label += " (потрібна картка)";
+                if (current != null && current.locked && !me.HasItem(current.requiredKey)) label += " (потрібна картка або ключ)";
                 ConsiderInteraction(door.id, label, door.x, door.y, door.z, 2.5f, origin, forward, ref nearest);
             }
             if (state.droppedItems != null)
@@ -415,17 +505,32 @@ namespace DeadAir
             }
             foreach (var obj in world.objects)
             {
+                if (obj.id == "exit" && !state.broadcast) continue;
                 if (state.Collected(obj.id) || obj.id == "power" && state.power || obj.id == "broadcast" && state.broadcast ||
                     obj.id == "fuel-canister" && state.canister || obj.id == "pressure-valve" && state.valveOpened) continue;
-                ConsiderInteraction(obj.id, obj.label, obj.x, obj.y, obj.z, 2.5f, origin, forward, ref nearest);
+                if (obj.id == "key-main" && !state.directorDrawerOpen) continue;
+                string label = obj.label;
+                if (obj.id == "breaker")
+                    label = "Рубильник освітлення (" + (state.breakerOn ? "увімкнено — вимкнути" : "вимкнено — увімкнути") + ")";
+                float objRange = obj.id == "ladder" ? 3.5f : 2.5f;
+                float objEyeOffset = obj.id == "ladder" ? 0.9f : 0f;
+                ConsiderInteraction(obj.id, label, obj.x, obj.y, obj.z, objRange, origin, forward, ref nearest, objEyeOffset);
             }
-            foreach (var mushroom in world.Mushrooms)
+            if (!state.ladderPlaced)
             {
-                if (state.Collected(mushroom.id) || Mathf.Abs(me.y - mushroom.y) >= 1) continue;
-                ConsiderInteraction(mushroom.id, "З’їсти " + mushroom.label + " · дивний ефект",
-                    mushroom.x, mushroom.y, mushroom.z, DeadAirMushrooms.EatRange, origin, forward, ref nearest,
-                    DeadAirMushrooms.EyeOffset);
+                if (me.HasItem("ladder"))
+                    ConsiderInteraction("ladder-spot", "Встановити драбину під вікно", -9f, 0.5f, 7.26f, 3.5f, origin, forward, ref nearest);
+                else
+                    ConsiderInteraction("ladder-spot", "Вікно кабінету директора (потрібна драбина з фургона)", -9f, 0.5f, 7.26f, 3.5f, origin, forward, ref nearest);
             }
+            else
+            {
+                if (me.y < 2)
+                    ConsiderInteraction("ladder-climb", state.windowBroken ? "Залізти у вікно директора" : "Залізти по драбині і розбити вікно", -9f, 1.5f, 6.8f, 3.5f, origin, forward, ref nearest);
+                else
+                    ConsiderInteraction("ladder-climb", "Спуститися по драбині назовні", -9f, 4.2f, 5.8f, 3.5f, origin, forward, ref nearest);
+            }
+            ConsiderInteraction("drawer-director", state.directorDrawerOpen ? "Зачинити ящик столу" : "Відкрити ящик столу", -11.22f, 4.8f, -1.52f, 2.8f, origin, forward, ref nearest);
             foreach (var other in state.players)
                 if (other.id != session.LocalId && other.down)
                     ConsiderInteraction("revive:" + other.id, "Підняти " + other.name, other.x, other.y, other.z, 2.2f, origin, forward, ref nearest, 1);
@@ -485,15 +590,15 @@ namespace DeadAir
             UpdateMenuCharacter();
         }
 
-        void Teleport(float x, float y, float z)
+        public void Teleport(float x, float y, float z)
         {
-            controller.enabled = false;
+            if (controller != null) controller.enabled = false;
             transform.position = new Vector3(-x, y, z);
             verticalVelocity = 0;
-            controller.enabled = true;
+            if (controller != null && !Noclip) controller.enabled = true;
             sentMovement.Clear();
-            reconciledMoveSequence=session.State?.Player(session.LocalId)?.moveSequence??0;
-            nextMoveSequence=Mathf.Max(nextMoveSequence,reconciledMoveSequence);
+            reconciledMoveSequence = session.State?.Player(session.LocalId)?.moveSequence ?? 0;
+            nextMoveSequence = Mathf.Max(nextMoveSequence, reconciledMoveSequence);
         }
 
         public void SendRadioPhrase(int phrase)

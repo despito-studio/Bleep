@@ -346,8 +346,9 @@ namespace DeadAir
         static string ItemIcon(string id)
         {
             if(string.IsNullOrEmpty(id))return "frame";
-            if(id.StartsWith("tape"))return "tape";if(id.StartsWith("fuse"))return "fuse";if(id.StartsWith("keycard"))return "key";
-            if(id=="cigarette-pack"||id=="wrench"||id=="recorder"||id=="compass")return id;
+            if(id.StartsWith("tape"))return "tape";if(id.StartsWith("fuse"))return "fuse";
+            if(id.StartsWith("keycard") || id.StartsWith("key-"))return "key";
+            if(id=="cigarette-pack"||id=="wrench"||id=="recorder"||id=="compass"||id=="ladder")return id;
             return id=="flashlight"?"flashlight":id=="fuel-canister"?"fuel":"chapter";
         }
         static string ItemDescription(string id)
@@ -358,8 +359,9 @@ namespace DeadAir
             if(id=="wrench")return "Гайковий ключ. R — оглянути.";
             if(id=="recorder")return "Диктофон. R — увімкнути.";
             if(id=="compass")return "Компас. R — оглянути.";
+            if(id=="ladder")return "Складна драбина для проникнення всередину.";
             if(id.StartsWith("tape"))return "Касета для передавача.";
-            if(id.StartsWith("keycard"))return "Картка доступу до замкнених кімнат.";
+            if(id.StartsWith("keycard") || id.StartsWith("key-"))return "Картка доступу до замкнених приміщень.";
             if(id.StartsWith("fuse"))return "Запобіжник для генератора.";
             if(id=="fuel-canister")return "Пальне для генератора в задньому дворі.";
             return "Особистий предмет оператора.";

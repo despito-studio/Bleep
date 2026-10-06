@@ -23,6 +23,8 @@ namespace DeadAir
             var interfaceController = new GameObject("Interface controller").AddComponent<DeadAirUI>();
             actor.Initialize(data, session, interfaceController);
             interfaceController.Initialize(data, session, actor);
+            var devConsole = new GameObject("Developer console").AddComponent<DeadAirConsole>();
+            devConsole.Initialize(session, actor, data);
             new GameObject("VHS atmosphere").AddComponent<DeadAirAtmosphere>().Initialize(session, actor);
             if(Application.isPlaying)
                 new GameObject("Visual capture").AddComponent<DeadAirVisualCapture>().Initialize(session, actor);

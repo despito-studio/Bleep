@@ -62,7 +62,10 @@ for(let f=0;f<2;f++) {
 }
 room('ПЕРЕДНІЙ ДВІР','FRONT YARD',-30,30,6,38,0);room('ЗАДНІЙ ДВІР · ГЕНЕРАТОР','GENERATOR',-30,30,-76,-54,0);
 room('СЛУЖБОВИЙ ПРОХІД','PATH',-30,-18,-54,6,0);room('БОКОВИЙ ПРОХІД','PATH',18,30,-54,6,0);
-door('front','Головний вхід',0,0,6,null,pi/2,2.8,-90);door('rear','Вихід у задній двір',0,0,-54,null,pi/2,2.4,90);
+door('front','Головний вхід',0,0,6,'key-main',pi/2,2.8,-90);door('rear','Вихід у задній двір',0,0,-54,'key-main',pi/2,2.4,90);
+room('ПІДВАЛ · СЛУЖБОВИЙ ВХІД','HALL BASEMENT ENTRY',-1.8,1.8,-51,-49.5,0);
+door('basement','Підвал під сходами',0,0,-51,'key-basement',pi/2,2.0,90);
+room('ПІДВАЛ · ЕЛЕКТРОЩИТОВА','BASEMENT',-6,6,-39.5,-27,-H);
 
 // Quest IDs remain stable; locations now follow the working rooms rather than the old rows.
 obj('tape-1','tape','Касета 01 · Нічна зміна',0,.865,-21);
@@ -77,6 +80,10 @@ obj('keycard-guard','keycard','Картка доступу · Охорона',11
 obj('keycard-engineer','keycard','Картка головного інженера · Рецепція',-11,.83,-2.4);
 obj('fuel-canister','canister','Каністра з паливом · задній двір',-14,.7,-62);
 obj('pressure-valve','valve','Вентиль тиску · Вентвузол, 2 поверх',17.66,5.5,-35);
+obj('ladder','ladder','Складна драбина · біля фургона',-8.35,0,27);
+obj('key-main','keycard','Головна картка доступу · Кабінет директора',-11.22,4.72,-1.37);
+obj('key-basement','key','Ключ від підвалу · Кімната персоналу',13.3,.52,-35.5);
+obj('breaker','breaker','Рубильник освітлення · Підвал',0,-H+1.4,-27.2);
 locker('locker-1','Шафа в архіві',-4.8,0,-21.5,pi/2);
 locker('locker-2','Шафа в інженерній',-16.9,0,-12.4,pi/2);
 locker('locker-3','Шафа в серверній',16.9,H,-22.5,-pi/2);
@@ -135,6 +142,11 @@ for(const x of [-16,-13,-10])for(const z of [-40.3,-43.5,-49.7])prop('shelf',x,H
 for(const x of [10,13,16])prop('airDuct',x,H,-30,0,1.3,1.3);prop('fan',15.5,H,-38.78,0,1.2,.15);
 prop('table',11.3,H,-36.8,0,2.3,1.2,'Сервісний стіл вентиляції');
 prop('sofa',13,H,-49.5,0,3.1,.95);prop('coffeeTable',13,H,-47.6,0,1.9,.9);prop('wardrobe',16.9,H,-43.2,-pi/2,2.2,.65);prop('mirror',14.3,H,-39.18,pi,2.4,.08);prop('kitchen',10.5,H,-40,pi,3.2,.65);
+// Basement electrical switchgear props
+prop('cableSpool',-3.5,-H,-30,0,1.2,1.2,'Кабельний барабан · Підвал');
+prop('table',3.5,-H,-32,0,2.4,1.3,'Верстак чергового електрика');
+prop('shelf',-4.8,-H,-34,0,2.2,.6,'Стелаж з інструментами');
+prop('shelf',-4.8,-H,-37,0,2.2,.6,'Стелаж із запчастинами');
 // Wayfinding, waiting niches and shared office equipment make circulation useful.
 for(let f=0;f<2;f++){const y=f*H;prop('directory',-3.8,y,-10.82,0,2.2,.12);prop('officePlant',4.8,y,3.8,0,.75,.75);prop('bench',4.9,y,-4.2,-pi/2,2.3,.65);
   prop('bench',-6.8,y,-31,pi/2,2.4,.65);prop('vendingMachine',6.75,y,-30.7,-pi/2,1.1,.8);prop('officePlant',-6.9,y,-37.2,0,.75,.75);
@@ -171,7 +183,10 @@ for(const p of props)if(mountedDepth[p.type]) {
 }
 // Portable navigation grid uses the same rectangular zones, door apertures and
 // furniture footprints as this authored plan. The flight supplies intermediate Y.
-const stairs=[{minX:-1.8,maxX:1.8,minZ:-51,maxZ:-39,lowerY:0,upperY:H,steps:24}];
+const stairs=[
+  {minX:-1.8,maxX:1.8,minZ:-51,maxZ:-39,lowerY:0,upperY:H,steps:24},
+  {minX:-1.6,maxX:1.6,minZ:-49.5,maxZ:-39.5,lowerY:-H,upperY:0,steps:20}
+];
 const circulation=r=>r.mapLabel.startsWith('HALL');
 const inside=(r,x,z,pad=0)=>x>=r.minX+pad&&x<=r.maxX-pad&&z>=r.minZ+pad&&z<=r.maxZ-pad;
 const interior=(x,z)=>x>-18&&x<18&&z>-54&&z<6;
@@ -192,12 +207,13 @@ function inFurniture(x,y,z){
     return Math.abs(px)<p.w/2+.28&&Math.abs(pz)<p.d/2+.28;
   });
 }
-for(let f=0;f<2;f++)for(let ix=-29;ix<30;ix++)for(let iz=-75;iz<38;iz++){
+for(let f=-1;f<2;f++)for(let ix=-29;ix<30;ix++)for(let iz=-75;iz<38;iz++){
   const x=ix+.5,z=iz+.5;
-  if(f&&!interior(x,z))continue;
-  const stair=stairs.find(s=>inside(s,x,z));
-  if(f&&stair)continue; // real opening in the upper slab
-  const y=stair?H*((stair.maxZ-z)/(stair.maxZ-stair.minZ)):f*H;
+  if(f>0&&!interior(x,z))continue;
+  if(f<0&&!inside({minX:-7,maxX:7,minZ:-53,maxZ:-26},x,z))continue;
+  const stair=stairs.find(s=>inside(s,x,z)&&(Math.abs(s.lowerY-f*H)<.1||Math.abs(s.upperY-f*H)<.1));
+  if(f>=-1&&stair&&Math.abs(stair.upperY-f*H)<.1)continue; // real opening in the upper slab
+  const y=stair?stair.lowerY+(stair.upperY-stair.lowerY)*((stair.maxZ-z)/(stair.maxZ-stair.minZ)):f*H;
   if(!stair&&inFurniture(x,y,z))continue;
   const r=rooms.find(r=>Math.abs(r.floorY-f*H)<.1&&inside(r,x,z));
   if(!r)continue;

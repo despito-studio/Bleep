@@ -82,7 +82,7 @@ namespace DeadAir.Editor
                 BuildCourtyards();
                 foreach (var room in world.rooms)
                 {
-                    var parent = room.minZ >= 6 || room.maxZ <= -54 || room.maxX <= -18 || room.minX >= 18 ? exterior.transform : station.transform;
+                    var parent = room.floorY < -1 ? station.transform : (room.minZ >= 6 || room.maxZ <= -54 || room.maxX <= -18 || room.minX >= 18 ? exterior.transform : station.transform);
                     sectors[SectorKey(room)] = Group(parent, "sector:" + room.name);
                 }
                 foreach (var prop in world.props) BuildProp(prop);
@@ -284,8 +284,8 @@ namespace DeadAir.Editor
             wood = Surface("wood",new Color(.31f,.23f,.15f),5);
             asphalt = Surface("asphalt",new Color(.19f,.22f,.19f),4);
             grass = Surface("grass",new Color(.15f,.23f,.14f),4);
-            glass = Surface("dark-window",new Color(.09f,.17f,.18f),2);
-            lightSurface = Surface("light-panel",new Color(.79f,.83f,.68f),0, new Color(.5f,.54f,.39f));
+            glass = Surface("dark-window",new Color(.22f,.35f,.38f),2,null,0.28f);
+            lightSurface = Surface("light-panel",new Color(.20f,.22f,.18f),0, Color.black);
             paper = Surface("sign-board",new Color(.8f,.78f,.62f),0);
             black = Surface("dark-detail",new Color(.07f,.09f,.08f),0);
             cobwebSilk = Surface("cobweb-silk",new Color(.28f,.30f,.26f),0);
@@ -301,7 +301,7 @@ namespace DeadAir.Editor
             EditorUtility.SetDirty(signLetters);
         }
 
-        static Material Surface(string name, Color color, int pattern, Color? emission = null)
+        static Material Surface(string name, Color color, int pattern, Color? emission = null, float alpha = 1f)
         {
             string texturePath = Folder + "/Textures/" + name + ".png";
             const int resolution = 64;
@@ -322,7 +322,7 @@ namespace DeadAir.Editor
                     if(x%20==0||z%20==0)shade=.66f;
                     else if(x%3==1&&z%3==1)shade=.90f;
                 }
-                colors[z*resolution+x] = color*shade; colors[z*resolution+x].a=1;
+                colors[z*resolution+x] = color*shade; colors[z*resolution+x].a=alpha;
             }
             texture.SetPixels(colors); texture.Apply(); File.WriteAllBytes(texturePath,texture.EncodeToPNG());
             UnityEngine.Object.DestroyImmediate(texture);
@@ -336,11 +336,13 @@ namespace DeadAir.Editor
             var shader = Shader.Find("Dead Air/Source Surface");
             if(shader==null) throw new InvalidOperationException("Dead Air surface shader is missing.");
             if(material==null){material=new Material(shader);AssetDatabase.CreateAsset(material,materialPath);}
-            material.shader=shader; material.color=Color.white;
+            material.shader=shader; material.color=new Color(1,1,1,alpha);
             material.mainTexture=AssetDatabase.LoadAssetAtPath<Texture2D>(texturePath);
-            material.mainTextureScale=Vector2.one; material.SetFloat("_Glossiness",.03f);
-            material.SetFloat("_Cull",2); material.SetFloat("_ZWrite",1);
-            material.SetFloat("_SrcBlend",(float)BlendMode.One); material.SetFloat("_DstBlend",(float)BlendMode.Zero);
+            material.mainTextureScale=Vector2.one; material.SetFloat("_Glossiness",alpha<.99f?.85f:.03f);
+            material.SetFloat("_Cull",2); material.SetFloat("_ZWrite",alpha<.99f?0:1);
+            material.SetFloat("_SrcBlend",(float)(alpha<.99f?BlendMode.SrcAlpha:BlendMode.One));
+            material.SetFloat("_DstBlend",(float)(alpha<.99f?BlendMode.OneMinusSrcAlpha:BlendMode.Zero));
+            material.renderQueue = alpha<.99f ? 3000 : 2000;
             material.SetFloat("_FogEnabled",1); material.SetFloat("_Cutoff",0);
             material.SetColor("_EmissionColor",emission??Color.black);material.enableInstancing=true;
             EditorUtility.SetDirty(material);return material;
@@ -354,14 +356,46 @@ namespace DeadAir.Editor
         {
             var room=world.rooms.FirstOrDefault(r=>y>=r.floorY-.25f&&y<r.floorY+Storey-.1f&&x>=r.minX&&x<=r.maxX&&z>=r.minZ&&z<=r.maxZ);
             return room!=null&&sectors.TryGetValue(SectorKey(room),out var sector)?sector:
+                y<-1?station.transform:
                 z>6||z<-54||Mathf.Abs(x)>18?exterior.transform:station.transform;
         }
 
         static void BuildShell()
         {
             var shell=Group(station.transform,"shell");
-            // One non-overlapping slab per floor section. The upper stair opening is a real hole.
-            Box(shell,"Ground slab",0,-.18f,-24,36,.36f,60,floor);
+            // Ground slab sections with opening under stairs for basement descent
+            Box(shell,"Ground left slab",-9.925f,-.18f,-24,16.15f,.36f,60,floor);
+            Box(shell,"Ground right slab",9.925f,-.18f,-24,16.15f,.36f,60,floor);
+            Box(shell,"Ground corridor front",0,-.18f,-16.5f,3.70f,.36f,45,floor);
+            Box(shell,"Ground rear landing",0,-.18f,-52.5f,3.70f,.36f,3,floor);
+            // Landing under door-basement from z = -51 to z = -49.5 at y = 0
+            Box(shell,"Basement landing slab",0,-.18f,-50.25f,3.70f,.36f,1.5f,floor);
+
+            // Wall enclosing under-stairs space at z = -51 (with doorway for door-basement)
+            Box(shell,"Under-stairs wall left",-1.425f,2.1f,-51f,.75f,4.2f,.22f,trim);
+            Box(shell,"Under-stairs wall right",1.425f,2.1f,-51f,.75f,4.2f,.22f,trim);
+            Box(shell,"Under-stairs wall header",0,3.5f,-51f,2.1f,1.4f,.22f,trim);
+
+            // Basement stair shaft enclosure (walls and foundation from z = -51 to z = -39.5)
+            Box(shell,"Basement stair west wall",-1.75f,-2.1f,-45.25f,.22f,4.2f,11.5f,brick);
+            Box(shell,"Basement stair east wall",1.75f,-2.1f,-45.25f,.22f,4.2f,11.5f,brick);
+            Box(shell,"Basement stair rear wall",0,-2.1f,-51f,3.6f,4.2f,.22f,brick);
+            Box(shell,"Basement stair foundation",0,-Storey-.18f,-45.25f,3.72f,.36f,11.5f,floor);
+
+            // Basement structure (room at z = -39.5 to -27, x = -6 to 6, floor at -Storey = -4.2)
+            float bCenterZ = -33.25f;
+            float bDepth = 12.5f;
+            float bWidth = 12.2f;
+            float bHeight = Storey - .40f; // 3.80m tall
+            float bMidY = -Storey + bHeight / 2;
+            Box(shell,"Basement floor slab",0,-Storey-.18f,bCenterZ,bWidth,.36f,bDepth,floor);
+            Box(shell,"Basement ceiling",0,-.43f,bCenterZ,bWidth,.06f,bDepth,ceilingPanel,false);
+            Box(shell,"Basement north wall",0,bMidY,-27f,bWidth,bHeight,.22f,brick);
+            Box(shell,"Basement south wall left",-3.9f,bMidY,-39.5f,4.4f,bHeight,.22f,brick);
+            Box(shell,"Basement south wall right",3.9f,bMidY,-39.5f,4.4f,bHeight,.22f,brick);
+            Box(shell,"Basement south header",0,-.40f-.5f,-39.5f,3.4f,1.0f,.22f,brick);
+            Box(shell,"Basement west wall",-6.1f,bMidY,bCenterZ,.22f,bHeight,bDepth,brick);
+            Box(shell,"Basement east wall",6.1f,bMidY,bCenterZ,.22f,bHeight,bDepth,brick);
             Box(shell,"Upper left slab",-9.93f,Storey-.16f,-24,16.14f,.32f,60,carpet);
             Box(shell,"Upper right slab",9.93f,Storey-.16f,-24,16.14f,.32f,60,carpet);
             Box(shell,"Upper corridor front",0,Storey-.16f,-16.5f,3.72f,.32f,45,carpet);
@@ -532,9 +566,8 @@ namespace DeadAir.Editor
         static void Window(Transform shell,Vector3 position,Quaternion rotation,float width,float height)
         {
             var root=Group(shell,"Window");root.localPosition=position;root.localRotation=rotation;
-            // A full-depth reveal bridges the brick opening to the recessed glazing.
-            // Both interior and exterior have a frame; the glass never floats at the wall face.
-            Block(root,"Recessed glass",Vector3.zero,new Vector3(width-.08f,height-.08f,.035f),glass,true);
+            bool isDirectorWindow = Mathf.Abs(position.x - 9f) < .25f && Mathf.Abs(position.y - 6.38f) < .25f && Mathf.Abs(position.z - 6f) < .25f;
+            Block(root,isDirectorWindow ? "window-director-glass" : "Recessed glass",Vector3.zero,new Vector3(width-.08f,height-.08f,.035f),glass,true);
             foreach(float x in new[]{-width/2+.025f,width/2-.025f})Block(root,"Window reveal side",new Vector3(x,0,0),new Vector3(.05f,height,.35f),trim,false);
             foreach(float y in new[]{-height/2+.025f,height/2-.025f})Block(root,"Window reveal horizontal",new Vector3(0,y,0),new Vector3(width,.05f,.35f),trim,false);
             foreach(float face in new[]{-.185f,.185f})
@@ -558,17 +591,25 @@ namespace DeadAir.Editor
                     float top=stair.lowerY+(i+1)*rise;
                     Box(shell,"Stair tread "+(i+1),(stair.minX+stair.maxX)/2,top-.09f,stair.maxZ-(i+.5f)*depth,width,.18f,depth,trim);
                     Box(shell,"Stair riser "+(i+1),(stair.minX+stair.maxX)/2,top-rise/2,stair.maxZ-i*depth,width,rise,.055f,metal);
+                    // Solid side walls matching stair color so stairs do not float
+                    float wallH = Mathf.Max(0.01f, top - stair.lowerY - .18f);
+                    foreach(float x in new[]{stair.minX-.04f, stair.maxX+.04f})
+                        Box(shell, "Stair side wall", x, stair.lowerY + wallH / 2, stair.maxZ - (i + .5f) * depth, .08f, wallH, depth, trim);
+
                     if(i%3==0) foreach(float x in new[]{stair.minX-.05f,stair.maxX+.05f})
                         Box(shell,"Stair handrail post",x,top+.52f,stair.maxZ-(i+.5f)*depth,.05f,1.04f,.05f,metal);
                 }
                 // Continuous handrails follow the exact stair slope; ground bypasses remain on either side.
                 foreach(float x in new[]{stair.minX-.05f,stair.maxX+.05f})
                     Beam(shell,"Sloping handrail",DeadAirOfficeLayout.Position(x,stair.lowerY+1.06f,stair.maxZ),DeadAirOfficeLayout.Position(x,stair.upperY+1.06f,stair.minZ),.06f,metal);
-                foreach(float x in new[]{stair.minX-.08f,stair.maxX+.08f})
-                    Beam(shell,"Upper opening rail",DeadAirOfficeLayout.Position(x,Storey+1.05f,stair.maxZ),DeadAirOfficeLayout.Position(x,Storey+1.05f,stair.minZ),.055f,metal);
-                for(int i=0;i<7;i++) foreach(float x in new[]{stair.minX-.08f,stair.maxX+.08f})
-                    Box(shell,"Upper guard post",x,Storey+.52f,stair.minZ+i*2,.05f,1.04f,.05f,metal);
-                HangingSign(shell,"2 FLOOR  /  STUDIO + CONTROL",new Vector3(0,3.36f,-37.9f),3.4f,.4f,Storey-.355f);
+                if (stair.upperY >= Storey)
+                {
+                    foreach(float x in new[]{stair.minX-.08f,stair.maxX+.08f})
+                        Beam(shell,"Upper opening rail",DeadAirOfficeLayout.Position(x,Storey+1.05f,stair.maxZ),DeadAirOfficeLayout.Position(x,Storey+1.05f,stair.minZ),.055f,metal);
+                    for(int i=0;i<7;i++) foreach(float x in new[]{stair.minX-.08f,stair.maxX+.08f})
+                        Box(shell,"Upper guard post",x,Storey+.52f,stair.minZ+i*2,.05f,1.04f,.05f,metal);
+                    HangingSign(shell,"2 FLOOR  /  STUDIO + CONTROL",new Vector3(0,3.36f,-37.9f),3.4f,.4f,Storey-.355f);
+                }
             }
         }
 
@@ -576,6 +617,13 @@ namespace DeadAir.Editor
         {
             var shell=Group(exterior.transform,"shell");
             Box(shell,"Front yard",0,-.18f,22,60,.36f,32,asphalt);
+            var placedLadderRoot = Group(exterior.transform, "state:placedLadder");
+            placedLadderRoot.localPosition = new Vector3(9f, 0, 7.26f);
+            placedLadderRoot.localRotation = Quaternion.Euler(-10.5f, 0, 0);
+            foreach(int side in new[]{-1, 1})
+                Block(placedLadderRoot, "Placed ladder rail", new Vector3(side * .24f, 2.9f, 0), new Vector3(.055f, 5.8f, .055f), metal, true);
+            for(int step = 0; step < 18; step++)
+                Block(placedLadderRoot, "Placed ladder rung", new Vector3(0, .32f + step * .30f, 0), new Vector3(.48f, .035f, .035f), metal, false);
             Box(shell,"Rear yard",0,-.18f,-65,60,.36f,22,asphalt);
             Box(shell,"Left service path",-24,-.18f,-24,12,.36f,60,asphalt);
             Box(shell,"Right service path",24,-.18f,-24,12,.36f,60,asphalt);
@@ -888,8 +936,35 @@ namespace DeadAir.Editor
                     Table(root,w,d);Monitor(root,new Vector3(.25f,.84f,-d*.27f));
                     Block(root,"Keyboard",new Vector3(.25f,.835f,d*.12f),new Vector3(.62f,.035f,.21f),paper,false);
                     Block(root,"Computer tower",new Vector3(w*.32f,.35f,-d*.18f),new Vector3(.34f,.70f,.52f),paper,true);
-                    Block(root,"Desk drawers",new Vector3(-w*.34f,.36f,0),new Vector3(.47f,.72f,d*.82f),trim,true);
-                    for(int i=0;i<3;i++)Block(root,"Drawer pull",new Vector3(-w*.34f,.18f+i*.21f,d*.43f),new Vector3(.21f,.03f,.045f),metal,false);
+                    bool isDirectorDesk = p.label.Contains("директора");
+                    if (isDirectorDesk)
+                    {
+                        Block(root,"Desk lower drawers",new Vector3(-w*.34f,.25f,0),new Vector3(.47f,.48f,d*.82f),trim,true);
+                        for(int i=0;i<2;i++)Block(root,"Drawer pull",new Vector3(-w*.34f,.18f+i*.21f,d*.43f),new Vector3(.21f,.03f,.045f),metal,false);
+                        var drawer=Group(root,"state:directorDrawer");
+                        drawer.localPosition=new Vector3(-w*.34f,.60f,0);
+                        float dw=.45f, dh=.18f, dd=d*.80f, t=.02f;
+                        // Hollow drawer box: bottom, back, left, right walls
+                        Block(drawer,"Drawer bottom",new Vector3(0,-dh/2+t/2,0),new Vector3(dw-t*2,t,dd-t*2),wood,false);
+                        Block(drawer,"Drawer back",new Vector3(0,0,-dd/2+t/2),new Vector3(dw,dh,t),wood,false);
+                        Block(drawer,"Drawer left",new Vector3(-dw/2+t/2,0,0),new Vector3(t,dh,dd),wood,false);
+                        Block(drawer,"Drawer right",new Vector3(dw/2-t/2,0,0),new Vector3(t,dh,dd),wood,false);
+                        Block(drawer,"Drawer front",new Vector3(0,0,dd/2+.012f),new Vector3(dw+.02f,dh+.03f,.025f),trim,true);
+                        Block(drawer,"Drawer pull",new Vector3(0,0,dd/2+.035f),new Vector3(.21f,.03f,.045f),metal,false);
+                        // Key card resting inside drawer tray
+                        var card=Group(drawer,"interactive:key-main");
+                        card.localPosition=new Vector3(0,-dh/2+t+.004f,.15f);
+                        card.localRotation=Quaternion.Euler(0,15,0);
+                        Block(card,"Access card body",Vector3.zero,new Vector3(.14f,.006f,.09f),paper,false);
+                        Block(card,"Card magnetic stripe",new Vector3(0,.0035f,.026f),new Vector3(.14f,.002f,.018f),trim,false);
+                        Block(card,"Card chip",new Vector3(-.035f,.0035f,-.012f),new Vector3(.028f,.002f,.024f),wood,false);
+                        Block(card,"Card photo badge",new Vector3(.035f,.0035f,-.012f),new Vector3(.032f,.002f,.036f),black,false);
+                    }
+                    else
+                    {
+                        Block(root,"Desk drawers",new Vector3(-w*.34f,.36f,0),new Vector3(.47f,.72f,d*.82f),trim,true);
+                        for(int i=0;i<3;i++)Block(root,"Drawer pull",new Vector3(-w*.34f,.18f+i*.21f,d*.43f),new Vector3(.21f,.03f,.045f),metal,false);
+                    }
                     Paperwork(root,new Vector3(-w*.30f,.83f,d*.12f));break;
                 case "coffeeTable":
                     Block(root,"Low tabletop",new Vector3(0,.42f,0),new Vector3(w,.10f,d),wood,true);
@@ -1122,11 +1197,38 @@ namespace DeadAir.Editor
 
         static void BuildObjective(ObjectiveData o)
         {
-            float baseY=o.y>=Storey?Storey:0;
+            if (station != null && station.GetComponentsInChildren<Transform>(true).Any(t => t.name == "interactive:" + o.id))
+                return;
+            float baseY=o.y < -1 ? -Storey : o.y >= Storey ? Storey : 0;
             var root=Group(Sector(o.x,baseY,o.z),"interactive:"+o.id);
             root.localPosition=DeadAirOfficeLayout.Position(o.x,o.y,o.z);
             switch(o.type)
             {
+                case "key":
+                    Block(root,"Key bow",Vector3.zero,new Vector3(.06f,.012f,.06f),wood,false);
+                    Block(root,"Key shaft",new Vector3(0,0,.045f),new Vector3(.018f,.010f,.06f),metal,false);
+                    Block(root,"Key bit",new Vector3(.016f,0,.065f),new Vector3(.022f,.010f,.025f),metal,false);
+                    break;
+                case "ladder":
+                    Vector3 ladderRight = new Vector3(0, 0, 1);
+                    Vector3 ladderUp = new Vector3(Mathf.Sin(10.5f * Mathf.Deg2Rad), Mathf.Cos(10.5f * Mathf.Deg2Rad), 0);
+                    Vector3 ladderFwd = Vector3.Cross(ladderUp, ladderRight);
+                    root.localRotation = Quaternion.LookRotation(ladderFwd, ladderUp);
+                    foreach(int side in new[]{-1, 1})
+                        Block(root,"Ladder rail",new Vector3(side*.22f,.9f,0),new Vector3(.045f,1.8f,.045f),metal,true);
+                    for(int step=0;step<6;step++)
+                        Block(root,"Ladder rung",new Vector3(0,.25f+step*.28f,0),new Vector3(.44f,.03f,.03f),metal,false);
+                    break;
+                case "breaker":
+                    root.localRotation=Quaternion.Euler(0,180,0);
+                    Block(root,"Breaker panel casing",Vector3.zero,new Vector3(.55f,.75f,.22f),metal,true);
+                    var breakerLever=Group(root,"state:breakerHandle");
+                    breakerLever.localPosition=new Vector3(0,-.05f,.12f);
+                    Block(breakerLever,"Breaker lever arm",new Vector3(0,.12f,0),new Vector3(.06f,.25f,.06f),black,false);
+                    Block(breakerLever,"Breaker knob",new Vector3(0,.26f,0),new Vector3(.09f,.08f,.09f),wood,false);
+                    Block(root,"state:breakerLamp",new Vector3(.18f,.24f,.12f),new Vector3(.08f,.08f,.03f),lightSurface,false);
+                    Sign(root,"380 V\nMAIN BREAKER",new Vector3(0,.34f,.123f),Quaternion.identity,.48f,.16f);
+                    break;
                 case "tape":
                     Block(root,"Betacam tape",Vector3.zero,new Vector3(.27f,.09f,.17f),black,false);
                     Block(root,"Tape label",new Vector3(0,.052f,0),new Vector3(.18f,.01f,.10f),paper,false);break;

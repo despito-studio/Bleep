@@ -251,7 +251,7 @@ namespace DeadAir
         }
 
         public void Tick(bool paused, bool moving, bool sprinting, bool hiding, float stamina, float sanity,
-            float threat, bool camera, bool power, bool broadcast, Vector3? monsterPosition, float monsterDistance)
+            float threat, bool camera, bool power, bool broadcast, Vector3? monsterPosition, float monsterDistance, bool breakerOn = true)
         {
             float now = Time.unscaledTime;
             gameplayPaused = paused;
@@ -260,14 +260,14 @@ namespace DeadAir
             float insanity = 1 - Mathf.Clamp01(sanity / 100);
             float duck = now < musicDuckUntil ? .14f : 1;
             float bed = paused ? 0 : master * ambience * (hiding ? .35f : 1) * duck;
-            Fade(hum, bed * (outside ? .15f : power ? 1.45f : .7f), .7f);
-            Fade(air, bed * (outside ? .15f : .04f + threat * .042f), .5f);
+            Fade(hum, bed * (power && breakerOn && !outside ? 1.45f : 0), .7f);
+            Fade(air, bed * (power && breakerOn && !outside ? (.035f + threat * .042f) : 0), .5f);
             Fade(radio, bed * (camera ? .02f + threat * .018f : .002f), .18f);
             Fade(dread, bed * (threat * .05f + insanity * .02f), .3f);
             dread.pitch = (71 + Mathf.Sin(now * .24f) * 1.5f + threat * 10) / 71;
             Fade(tinnitus, bed * Mathf.Max(0, insanity - .45f) * .03f, .5f);
-            Fade(generator, bed * (power ? .75f : 0), 1.1f);
-            Fade(fluorescent, bed * (power && !outside ? .11f : 0), .7f);
+            Fade(generator, bed * (power ? .95f : 0), 1.1f);
+            Fade(fluorescent, bed * (power && breakerOn && !outside ? .11f : 0), .7f);
             bool inRun = phase == "playing";
             float score = master * ambience * duck;
             float danger = Mathf.Clamp01(threat * 1.15f + Mathf.Max(0, insanity - .35f) * .55f);

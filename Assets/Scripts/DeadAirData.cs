@@ -115,7 +115,7 @@ namespace DeadAir
         {
             if (stairs != null)
                 foreach (var stair in stairs)
-                    if (stair.Contains(x, z) && Mathf.Abs(y - stair.HeightAt(z)) < .75f) return "СХОДИ / 1–2 ПОВЕРХ";
+                    if (stair.Contains(x, z) && Mathf.Abs(y - stair.HeightAt(z)) < .75f) return stair.lowerY < 0 ? "СХОДИ / ПІДВАЛ" : "СХОДИ / 1–2 ПОВЕРХ";
             foreach (var room in rooms)
                 if (Mathf.Abs(y - room.floorY) < 1 && x >= room.minX && x <= room.maxX && z >= room.minZ && z <= room.maxZ)
                     return room.name;
@@ -127,7 +127,7 @@ namespace DeadAir
     {
         public string id, name, characterClass, hiding;
         public float x, y, z, yaw, pitch, sanity = 100, stamina = 100, invulnerableUntil;
-        public bool flashlight = true, camera, sprinting, down, mapOpen, uniqueItemEquipped;
+        public bool flashlight = true, camera, sprinting, down, mapOpen, uniqueItemEquipped, noclip;
         public bool uniqueActionCancelled = true;
         public int uniqueActionSequence, cigarettesRemaining;
         // Host-authored event counters survive skipped snapshots without repeating a scare.
@@ -153,6 +153,7 @@ namespace DeadAir
         public string id, requiredKey;
         public bool locked, open;
         public float openedAt = -100;
+        public float openSign = 1f;
     }
     [Serializable] public class EnemyState
     {
@@ -167,12 +168,14 @@ namespace DeadAir
     {
         public int stage = 1;
         public bool fuelAdded, valveOpened, calibrated, power, broadcast;
+        public bool ladderPlaced, windowBroken, breakerOn, directorDrawerOpen;
     }
     [Serializable] public class RoomState
     {
         public string code, hostId, phase = "lobby", message, radioSenderId;
         public string chapterId = DeadAirChapters.DefaultId;
         public bool solo, creative, paused, canister, valveOpened, calibrated, power, broadcast;
+        public bool ladderPlaced, windowBroken, breakerOn, directorDrawerOpen;
         public float spawnCountdown = 35, elapsed;
         public int scare, radioSequence;
         public List<PlayerState> players = new List<PlayerState>();
@@ -191,7 +194,7 @@ namespace DeadAir
     [Serializable] public class NetPacket
     {
         public string type, id, name, classId, code, playerId, stateJson, error, chapterId;
-        public bool solo, creative, flashlight, camera, sprinting, paused, ok, mapOpen, uniqueEquipped;
+        public bool solo, creative, flashlight, camera, sprinting, paused, ok, mapOpen, uniqueEquipped, noclip;
         public int phrase, slot, moveSequence;
         public float x, y, z, yaw, pitch, frequency;
     }

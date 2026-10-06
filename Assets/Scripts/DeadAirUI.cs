@@ -306,7 +306,10 @@ namespace DeadAir
             if (itemId == "fuel-canister") return "Каністра";
             if (itemId == "keycard-guard") return "Картка Охр.";
             if (itemId == "keycard-engineer") return "Картка Інж.";
+            if (itemId == "key-basement" || itemId == "keycard-basement") return "Картка Під.";
+            if (itemId == "key-main") return "Головний Ключ";
             if (itemId.StartsWith("keycard-")) return "Картка";
+            if (itemId == "ladder") return "Драбина";
             if (itemId == "tape-1") return "Касета #1";
             if (itemId == "tape-2") return "Касета #2";
             if (itemId == "tape-3") return "Касета #3";

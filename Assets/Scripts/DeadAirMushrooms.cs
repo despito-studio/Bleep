@@ -37,21 +37,7 @@ namespace DeadAir
 
         public static MushroomData[] CreatePlacements(WorldData world)
         {
-            var result = new List<MushroomData>();
-            // The first pair grows on the approach, before the first locked doorway.
-            AddPlacement(world, result, "mushroom-arrival", "Сигнальний мухомор", world.spawn.x + .85f,
-                world.spawn.y, world.spawn.z - 1.05f, 0, true);
-            AddPlacement(world, result, "mushroom-approach", "Фіолетовий шептун", world.spawn.x - 1,
-                world.spawn.y, world.spawn.z - 4, 1, true);
-            // Curated room positions are snapped to the same authored walkable graph as the enemy.
-            AddPlacement(world, result, "mushroom-lobby", "М’ятна примара", 2, 0, 1, 2);
-            AddPlacement(world, result, "mushroom-gallery", "Сигнальний мухомор", -7.7f, 0, -18, 0);
-            AddPlacement(world, result, "mushroom-staff", "Фіолетовий шептун", 12.5f, 0, -33, 1);
-            AddPlacement(world, result, "mushroom-mail", "М’ятна примара", -13, 0, -43, 2);
-            AddPlacement(world, result, "mushroom-upper-lobby", "Фіолетовий шептун", 1.8f, 4.2f, 1, 1);
-            AddPlacement(world, result, "mushroom-studio", "Сигнальний мухомор", 14, 4.2f, -14, 0);
-            AddPlacement(world, result, "mushroom-records", "М’ятна примара", -12, 4.2f, -43, 2);
-            return result.ToArray();
+            return Array.Empty<MushroomData>();
         }
 
         static void AddPlacement(WorldData world, List<MushroomData> output, string id, string label,
@@ -88,6 +74,7 @@ namespace DeadAir
         public void Initialize(WorldData world, DeadAirSession game)
         {
             session = game; placements = world.Mushrooms;
+            if (placements == null || placements.Length == 0) return;
             stem = Lathe("Angular mushroom stem", new[] { new Vector2(.082f, .015f), new Vector2(.064f, .2f),
                 new Vector2(.074f, .42f), new Vector2(.088f, .6f) }, 7, true);
             cap = Lathe("Faceted umbrella cap", new[] { new Vector2(0, .91f), new Vector2(.14f, .875f),
