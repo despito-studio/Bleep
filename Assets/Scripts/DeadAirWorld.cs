@@ -28,6 +28,8 @@ namespace DeadAir
         readonly List<string> droppedToRemove = new List<string>();
         bool lastPower, lastBroadcast, lastBreaker;
         GameObject windowDirectorGlass;
+        readonly DeadAirWindowBreak directorWindow;
+        readonly DeadAirDrawerPresentation drawerPresentation;
         readonly Material interiorLampMaterial;
         readonly DeadAirSky sky;
         readonly DeadAirCulling culling;
@@ -123,7 +125,7 @@ namespace DeadAir
                 else if(t.name.StartsWith("door-led:")) doorLeds[t.name.Substring(9)] = t.GetComponent<Renderer>();
                 else if(t.name.StartsWith("door-light:")) doorLights[t.name.Substring(11)] = t.GetComponent<Light>();
                 else if(t.name.StartsWith("state:")) { stateViews[t.name.Substring(6)] = t; dynamicRoots.Add(t); }
-                else if(t.name == "window-director-glass") windowDirectorGlass = t.gameObject;
+                else if(t.name == "window-director-glass") { windowDirectorGlass = t.gameObject; dynamicRoots.Add(t); }
                 else if(t.name.StartsWith("fan:")) { fans.Add(t); dynamicRoots.Add(t); }
                 else if(t.name.StartsWith("monitor:")) monitors.Add(t.GetComponent<Renderer>());
                 else if(t.name.StartsWith("lamp:"))
@@ -133,6 +135,16 @@ namespace DeadAir
                         interior=t.IsChildOf(root.Find("station"))});
                 }
             }
+            drawerPresentation = new DeadAirDrawerPresentation(root, data);
+            if (interactables.TryGetValue("key-main", out var directorKey))
+                foreach (var part in root.GetComponentsInChildren<Transform>(true))
+                    if (part.name == "drawer:drawer-director")
+                    {
+                        directorKey.SetParent(part, true);
+                        break;
+                    }
+            var pane = stateViews.TryGetValue("directorWindowPane", out var breakablePane) ? breakablePane.gameObject : windowDirectorGlass;
+            directorWindow = new DeadAirWindowBreak(pane);
             sky = new DeadAirSky(root);
             var moon=root.Find("Dead Air Night Sky & Moon/Directional moonlight")?.GetComponent<Light>();
             if(moon!=null)
@@ -549,18 +561,9 @@ namespace DeadAir
                 foreach(var fan in fans)fan.Rotate(0,0,-Time.deltaTime*14*Mathf.Rad2Deg,Space.Self);
             if(stateViews.TryGetValue("powerLever",out var lever))lever.localRotation=Quaternion.Euler(0,0,-(state.power?-.7f:.55f)*Mathf.Rad2Deg);
             if(stateViews.TryGetValue("breakerHandle",out var breakerH))breakerH.localRotation=Quaternion.Euler(-(state.breakerOn?45f:-45f),0,0);
-            if(stateViews.TryGetValue("directorDrawer",out var dDrawer))
-            {
-                float targetZ = state.directorDrawerOpen ? 0.38f : 0f;
-                dDrawer.localPosition = Vector3.Lerp(dDrawer.localPosition, new Vector3(dDrawer.localPosition.x, dDrawer.localPosition.y, targetZ), Time.deltaTime * 8f);
-            }
+            drawerPresentation.Apply(state, animationDelta);
             if(stateViews.TryGetValue("placedLadder",out var ladderView))ladderView.gameObject.SetActive(state.ladderPlaced);
-            if(windowDirectorGlass == null)
-            {
-                var winGlass = GameObject.Find("window-director-glass");
-                if(winGlass != null) windowDirectorGlass = winGlass;
-            }
-            if(windowDirectorGlass != null) windowDirectorGlass.SetActive(!state.windowBroken);
+            directorWindow.Apply(state.windowBroken, animationDelta);
             if(lastPower!=state.power||lastBroadcast!=state.broadcast||lastBreaker!=state.breakerOn)
             {
                 TintState("powerLamp",state.power?new Color(.53f,.78f,.53f):new Color(.88f,.32f,.17f));
@@ -663,6 +666,7 @@ namespace DeadAir
                 var lightObj = new GameObject("dropped_light");
                 lightObj.transform.SetParent(view.transform, false);
                 var l = lightObj.AddComponent<Light>();
+                l.enabled = false;
                 lightObj.transform.localPosition=new Vector3(0,1.05f,0);
                 lightObj.transform.localRotation=Quaternion.Euler(-90,0,0);
                 l.type = LightType.Spot;
@@ -671,6 +675,12 @@ namespace DeadAir
                 l.intensity = 1.55f;
                 l.shadows=LightShadows.Soft;l.shadowBias=.015f;l.shadowNormalBias=.025f;
                 l.color = new Color(1f, .96f, .88f);
+            }
+            else if (type == DeadAirSupplies.BatteryItem)
+            {
+                view = DeadAirDrawerPresentation.CreateBattery(root);
+                view.name = "dropped_battery_" + item.id;
+                view.transform.rotation = Quaternion.Euler(90, 0, 0);
             }
             else if (interactables.TryGetValue(type, out var orig) && orig != null)
             {

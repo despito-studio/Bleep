@@ -66,6 +66,22 @@ door('front','Головний вхід',0,0,6,'key-main',pi/2,2.8,-90);door('re
 room('ПІДВАЛ · СЛУЖБОВИЙ ВХІД','HALL BASEMENT ENTRY',-1.8,1.8,-51,-49.5,0);
 door('basement','Підвал під сходами',0,0,-51,'key-basement',pi/2,2.0,90);
 room('ПІДВАЛ · ЕЛЕКТРОЩИТОВА','BASEMENT',-6,6,-39.5,-27,-H);
+// Retain the electrical room and stair entrance, extending each side by 12 m.
+// The occupied basement grows from 150 to 450 m²; galleries keep the cells
+// reachable without routing through furniture or an adjacent locked cell.
+room('ПІДВАЛ · СХОДОВИЙ СПУСК','HALL BASEMENT STAIRS',-1.6,1.6,-49.5,-39.5,-H);
+room('ПІДВАЛ · ЗАХІДНА ГАЛЕРЕЯ','HALL BASEMENT WEST',-11,-6,-39.5,-27,-H);
+room('ПІДВАЛ · СХІДНА ГАЛЕРЕЯ','HALL BASEMENT EAST',6,11,-39.5,-27,-H);
+door('basement-west','Західні камери',-6,-H,-35.5,null,0,2.2,90);
+door('basement-east','Східні камери',6,-H,-35.5,null,0,2.2,-90);
+for(const side of [-1,1])for(let i=0;i<3;i++) {
+  const cell=i+1+(side>0?3:0),maxZ=-27-i*12.5/3,minZ=-27-(i+1)*12.5/3;
+  const name='ПІДВАЛ · КАМЕРА '+String(cell).padStart(2,'0');
+  room(name,'CELL '+String(cell).padStart(2,'0'),side<0?-18:11,side<0?-11:18,minZ,maxZ,-H);
+  door('prison-'+cell,name,side*11,-H,(minZ+maxZ)/2,null,0,2.0,side<0?90:-90);
+  prop('prisonBed',side*15,-H,maxZ-1.45,0,2.4,.95,'Ліжко · Камера '+cell,'prison-bed-'+cell);
+  prop('prisonSanitary',side*16.75,-H,minZ+.85,side<0?pi/2:-pi/2,.75,1.05,'Санітарний куток · Камера '+cell,'prison-sanitary-'+cell);
+}
 
 // Quest IDs remain stable; locations now follow the working rooms rather than the old rows.
 obj('tape-1','tape','Касета 01 · Нічна зміна',0,.865,-21);
@@ -84,6 +100,7 @@ obj('ladder','ladder','Складна драбина · біля фургона'
 obj('key-main','keycard','Головна картка доступу · Кабінет директора',-11.22,4.72,-1.37);
 obj('key-basement','key','Ключ від підвалу · Кімната персоналу',13.3,.52,-35.5);
 obj('breaker','breaker','Рубильник освітлення · Підвал',0,-H+1.4,-27.2);
+obj('prison-book','book','Щоденник нічного наглядача · Камера 01',-15,-H+.595,-28.45);
 locker('locker-1','Шафа в архіві',-4.8,0,-21.5,pi/2);
 locker('locker-2','Шафа в інженерній',-16.9,0,-12.4,pi/2);
 locker('locker-3','Шафа в серверній',16.9,H,-22.5,-pi/2);
@@ -210,7 +227,7 @@ function inFurniture(x,y,z){
 for(let f=-1;f<2;f++)for(let ix=-29;ix<30;ix++)for(let iz=-75;iz<38;iz++){
   const x=ix+.5,z=iz+.5;
   if(f>0&&!interior(x,z))continue;
-  if(f<0&&!inside({minX:-7,maxX:7,minZ:-53,maxZ:-26},x,z))continue;
+  if(f<0&&!inside({minX:-18,maxX:18,minZ:-51,maxZ:-27},x,z))continue;
   const stair=stairs.find(s=>inside(s,x,z)&&(Math.abs(s.lowerY-f*H)<.1||Math.abs(s.upperY-f*H)<.1));
   if(f>=-1&&stair&&Math.abs(stair.upperY-f*H)<.1)continue; // real opening in the upper slab
   const y=stair?stair.lowerY+(stair.upperY-stair.lowerY)*((stair.maxZ-z)/(stair.maxZ-stair.minZ)):f*H;
@@ -220,6 +237,18 @@ for(let f=-1;f<2;f++)for(let ix=-29;ix<30;ix++)for(let iz=-75;iz<38;iz++){
   const id=navigationNodes.length;navigationNodes.push({x,y,z});navInfo.push({r,stair});
   const key=x+','+z;if(!nodeBuckets.has(key))nodeBuckets.set(key,[]);nodeBuckets.get(key).push(id);
 }
+// The ground landing lies below the upper flight and above the basement flight.
+// Both flights share X/Z, so the ordinary one-node-per-floor pass selects the
+// upper stair here. Preserve the separate landing at y=0 to connect the basement
+// door to its first tread; there is over 3.8 m of physical head clearance.
+for(let ix=-1;ix<=0;ix++) {
+  const x=ix+.5,z=-50.5,y=0;
+  const r=rooms.find(r=>r.floorY===0&&inside(r,x,z));
+  const id=navigationNodes.length;
+  navigationNodes.push({x,y,z});navInfo.push({r,stair:null});
+  const key=x+','+z;if(!nodeBuckets.has(key))nodeBuckets.set(key,[]);
+  nodeBuckets.get(key).push(id);
+}
 function aperture(a,b){
   const x=(a.x+b.x)/2,z=(a.z+b.z)/2,y=(a.y+b.y)/2;
   return doors.some(d=>Math.abs(d.y-1.4-y)<.3&&Math.abs((x-d.x)*Math.cos(d.rotation)-(z-d.z)*Math.sin(d.rotation))<.05&&Math.abs((x-d.x)*Math.sin(d.rotation)+(z-d.z)*Math.cos(d.rotation))<d.w/2-.27);
@@ -227,7 +256,12 @@ function aperture(a,b){
 for(let i=0;i<navigationNodes.length;i++){
   const a=navigationNodes[i],ai=navInfo[i];
   for(const [dx,dz] of [[1,0],[0,1]])for(const j of nodeBuckets.get((a.x+dx)+','+(a.z+dz))||[]){
-    const b=navigationNodes[j],bi=navInfo[j];if(Math.abs(a.y-b.y)>.36)continue;
+    const b=navigationNodes[j],bi=navInfo[j];
+    // The basement flight rises .42 m per 1 m grid step; the upper flight
+    // rises .35 m. Use the authored slope instead of cutting its route apart.
+    const flight=ai.stair||bi.stair;
+    const maxRise=flight?(flight.upperY-flight.lowerY)/(flight.maxZ-flight.minZ)+.02:.36;
+    if(Math.abs(a.y-b.y)>maxRise)continue;
     if(ai.stair||bi.stair){
       const s=ai.stair||bi.stair,other=ai.stair?b:a;
       if(!(ai.stair&&bi.stair)&&other.z>s.minZ&&other.z<s.maxZ)continue;
@@ -253,6 +287,7 @@ const keep=new Set(largest),remap=new Map();navigationNodes=navigationNodes.filt
 navigationLinks=navigationLinks.filter(edge=>keep.has(edge.a)&&keep.has(edge.b)).map(edge=>({a:remap.get(edge.a),b:remap.get(edge.b)}));
 const exteriorObstacles=props.filter(p=>p.y===0&&(p.z>6||p.z<-54)&&['van','abandonedCar','planter','bench','dieselGenerator','fuelStore','crate','dumpster'].includes(p.type)).map(p=>({id:p.id,minX:p.x-p.w/2,maxX:p.x+p.w/2,minZ:p.z-p.d/2,maxZ:p.z+p.d/2}));
 const data={spawn:{x:0,y:0,z:19},courtyard:{minX:-30,maxX:30,minZ:-76,maxZ:38},extraction:{x:-8.1,y:1.2,z:26},stairs,exteriorObstacles,rooms,objects,doors,lockers,props,navigationNodes,navigationLinks,classes:old.classes};
-fs.writeFileSync(file,JSON.stringify(data,null,2)+'\n');
+const outputFile = typeof process !== 'undefined' && process.argv[2] ? process.argv[2] : file;
+fs.writeFileSync(outputFile,JSON.stringify(data,null,2)+'\n');
 console.log(`Branched office: ${rooms.length} zones, ${doors.length} doors, ${lockers.length} lockers, ${props.length} props, ${navigationNodes.length} navigation nodes, ${navigationLinks.length} links.`);
 

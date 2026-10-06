@@ -9,7 +9,7 @@ namespace DeadAir
 {
     // Opt-in build verification: -deadAirCapture <absolute output folder>.
     // Uses real rendered frames (including the game UI and post processing).
-    public sealed class DeadAirVisualCapture : MonoBehaviour
+    public sealed partial class DeadAirVisualCapture : MonoBehaviour
     {
         DeadAirSession session;
         DeadAirPlayer player;
@@ -21,7 +21,7 @@ namespace DeadAir
         DeadAirFrameRenderer frameRenderer;
         DeadAirScarePresentation captureScare;
         DeadAirWorld captureWorld;
-        bool officeCapture, menuCapture, repairCapture, lightingCapture, horrorCapture, characterCapture, indieCapture, captureWithoutEquipment;
+        bool officeCapture, menuCapture, repairCapture, lightingCapture, horrorCapture, characterCapture, indieCapture, updateCapture, captureWithoutEquipment;
         bool preferencesCaptured, hadPlayerName, hadChapter;
         string originalPlayerName, originalChapter;
         readonly Dictionary<string,float> originalSliders = new Dictionary<string,float>();
@@ -34,12 +34,13 @@ namespace DeadAir
             ui = FindFirstObjectByType<DeadAirUI>();
             var args = Environment.GetCommandLineArgs();
             for (int i = 0; i + 1 < args.Length; i++)
-                if (args[i] == "-deadAirCapture" || args[i] == "-deadAirOfficeCapture" || args[i] == "-deadAirMenuCapture" || args[i] == "-deadAirRepairCapture" || args[i] == "-deadAirLightingCapture" || args[i] == "-deadAirHorrorCapture" || args[i] == "-deadAirCharacterCapture" || args[i] == "-deadAirIndieCapture")
+                if (args[i] == "-deadAirCapture" || args[i] == "-deadAirOfficeCapture" || args[i] == "-deadAirMenuCapture" || args[i] == "-deadAirRepairCapture" || args[i] == "-deadAirLightingCapture" || args[i] == "-deadAirHorrorCapture" || args[i] == "-deadAirCharacterCapture" || args[i] == "-deadAirIndieCapture" || args[i] == "-deadAirUpdateCapture")
                 { output = args[i + 1];officeCapture=args[i]=="-deadAirOfficeCapture";menuCapture=args[i]=="-deadAirMenuCapture";repairCapture=args[i]=="-deadAirRepairCapture";lightingCapture=args[i]=="-deadAirLightingCapture";horrorCapture=args[i]=="-deadAirHorrorCapture";characterCapture=args[i]=="-deadAirCharacterCapture";indieCapture=args[i]=="-deadAirIndieCapture"; }
+            updateCapture = Array.IndexOf(args, "-deadAirUpdateCapture") >= 0;
             if (string.IsNullOrEmpty(output)) { enabled = false; return; }
             if (!Path.IsPathRooted(output)) throw new ArgumentException("-deadAirCapture requires an absolute output folder.");
             Directory.CreateDirectory(output);
-            if(menuCapture||repairCapture||lightingCapture||horrorCapture||characterCapture||indieCapture)
+            if(menuCapture||repairCapture||lightingCapture||horrorCapture||characterCapture||indieCapture||updateCapture)
             {
                 hadPlayerName=PlayerPrefs.HasKey("DeadAir.PlayerName");originalPlayerName=PlayerPrefs.GetString("DeadAir.PlayerName");
                 hadChapter=PlayerPrefs.HasKey("DeadAir.Chapter");originalChapter=PlayerPrefs.GetString("DeadAir.Chapter");
@@ -50,7 +51,7 @@ namespace DeadAir
                 preferencesCaptured=true;
             }
             if(Application.isBatchMode)InitializeOffscreenCapture();
-            StartCoroutine(indieCapture?CaptureIndie():characterCapture?CaptureImportedCharacters():horrorCapture?CaptureHorror():lightingCapture?CaptureLighting():repairCapture?CaptureRepairs():menuCapture?CaptureMenu():officeCapture?CaptureOffice():Capture());
+            StartCoroutine(updateCapture?CaptureUpdate():indieCapture?CaptureIndie():characterCapture?CaptureImportedCharacters():horrorCapture?CaptureHorror():lightingCapture?CaptureLighting():repairCapture?CaptureRepairs():menuCapture?CaptureMenu():officeCapture?CaptureOffice():Capture());
         }
 
         IEnumerator CaptureIndie()

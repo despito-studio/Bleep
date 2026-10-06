@@ -72,6 +72,7 @@ namespace DeadAir
             Navigation(p,"Settings","Налаштування",114,654,570,ShowSettings);
             Navigation(p,"Dossier","Керування",114,721,570,ShowDossier);
             Navigation(p,"Exit","Вийти",114,788,570,()=>Open(quitPanel));
+            Text(p,"Build version","v"+Application.version,18,144,968,600,28).color=Muted;
             BuildPreparation();BuildChapters();BuildNetwork();BuildInventory();BuildQuit();RefreshChapterLabels();
         }
 
@@ -308,6 +309,7 @@ namespace DeadAir
         void EquipInventorySelection()
         {
             var me=session.State?.Player(session.LocalId);if(me==null||bagSelection<0||bagSelection>=me.inventory.Count)return;
+            if(me.inventory[bagSelection]==DeadAirPrisonBook.Id){Close(inventoryPanel);ShowBook();return;}
             Close(inventoryPanel);player.SelectInventorySlot(bagSelection);
         }
 
@@ -331,21 +333,26 @@ namespace DeadAir
                 int slot=bagPage*12+i;bool has=slot<me.inventory.Count;string id=has?me.inventory[slot]:null;
                 bagSlots[i].interactable=has;bagIcons[i].enabled=has;
                 if(has)bagIcons[i].sprite=DeadAirUIArt.Sprite(ItemIcon(id));
-                bagLabels[i].text=has?FormatItemName(id):"—";
+                bagLabels[i].text=has?StackItemName(id,me):"—";
                 var colors=bagSlots[i].colors;colors.normalColor=slot==bagSelection?new Color(.43f,.17f,.13f,.95f):new Color(.14f,.12f,.12f,.8f);bagSlots[i].colors=colors;
             }
             inventoryPageLabel.text=me.inventory.Count>12?(bagPage+1)+" / "+Mathf.CeilToInt(me.inventory.Count/12f):"";
             inventoryPanel.transform.Find("Inventory card/Previous inventory page").gameObject.SetActive(me.inventory.Count>12);
             inventoryPanel.transform.Find("Inventory card/Next inventory page").gameObject.SetActive(me.inventory.Count>12);
             string selected=bagSelection<me.inventory.Count?me.inventory[bagSelection]:null;
-            inventoryName.text=selected=="cigarette-pack"?"Сигарети · "+me.cigarettesRemaining:selected!=null?FormatItemName(selected):"Сумка порожня";
+            inventoryName.text=selected=="cigarette-pack"?"Сигарети · "+me.cigarettesRemaining:selected!=null?StackItemName(selected,me):"Сумка порожня";
             inventoryPreview.enabled=selected!=null;if(selected!=null)inventoryPreview.sprite=DeadAirUIArt.Sprite(ItemIcon(selected));
             inventoryDescription.text=ItemDescription(selected);
+            if(selected=="flashlight")inventoryDescription.text+="\nЗаряд: "+Mathf.CeilToInt(me.flashlightCharge/DeadAirSupplies.FlashlightSeconds*100)+"%. Запас: "+me.spareBatteries+".";
+            var equipLabel=inventoryPanel.transform.Find("Inventory card/Equip item/Label").GetComponent<Text>();
+            equipLabel.text=selected==DeadAirPrisonBook.Id?"ПРОЧИТАТИ КНИГУ":"ОБРАТИ ПРЕДМЕТ";
         }
 
         static string ItemIcon(string id)
         {
             if(string.IsNullOrEmpty(id))return "frame";
+            if(id==DeadAirSupplies.BatteryItem)return "fuse";
+            if(id==DeadAirPrisonBook.Id)return "chapter";
             if(id.StartsWith("tape"))return "tape";if(id.StartsWith("fuse"))return "fuse";
             if(id.StartsWith("keycard") || id.StartsWith("key-"))return "key";
             if(id=="cigarette-pack"||id=="wrench"||id=="recorder"||id=="compass"||id=="ladder")return id;
@@ -354,7 +361,9 @@ namespace DeadAir
         static string ItemDescription(string id)
         {
             if(string.IsNullOrEmpty(id))return "";
-            if(id=="flashlight")return "F — увімкнути / вимкнути.";
+            if(id=="flashlight")return "F — увімкнути / вимкнути. R — замінити батарейку. Однієї вистачає на 3 хвилини світла.";
+            if(id==DeadAirSupplies.BatteryItem)return "Запасні батарейки для ліхтаря. R — вставити одну. G — викинути одну для іншого оператора.";
+            if(id==DeadAirPrisonBook.Id)return "Записи наглядача з підвальних камер. Натисніть «Прочитати книгу» або R, тримаючи її.";
             if(id=="cigarette-pack")return "R — дістати сигарету й закурити.";
             if(id=="wrench")return "Гайковий ключ. R — оглянути.";
             if(id=="recorder")return "Диктофон. R — увімкнути.";

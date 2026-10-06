@@ -237,6 +237,7 @@ namespace DeadAir
                 case "calibrate": error = rules.Calibrate(id, packet.frequency); break;
                 case "drop": error = rules.Drop(id, packet.id); break;
                 case "slot": rules.SelectSlot(id, packet.phrase); break;
+                case "reload": error = rules.ReloadFlashlight(id); break;
                 case "unique-equip": rules.EquipUnique(id, packet.uniqueEquipped); break;
                 case "map-equip": rules.EquipMap(id, packet.mapOpen); break;
                 case "unique-use": error = rules.UseUnique(id); break;

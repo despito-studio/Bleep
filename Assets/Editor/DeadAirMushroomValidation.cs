@@ -16,7 +16,7 @@ namespace DeadAir.Editor
             ValidateTimingAndLifecycle();
             ValidatePeerAndSerialization();
             ValidateGeometry();
-            Debug.Log("DEAD AIR MUSHROOM RULES PASSED: nine deterministic walkable placements, spawn access, host-authoritative one-use meals, lobby/pause/down/hiding/range/floor/wall guards, 22s onset/fade and 35s total cap, pause/death/restart cleanup, peer ownership and snapshot serialization, outward faceted geometry without movement colliders.");
+            Debug.Log("DEAD AIR MUSHROOM RULES PASSED: deterministic backyard/basement placements, host-authoritative one-use meals, lobby/pause/down/hiding/range/floor/wall guards, 22s onset/fade and 35s total cap, pause/death/restart cleanup, peer ownership and snapshot serialization, outward faceted geometry without movement colliders.");
         }
 
         static void Require(bool condition, string message)
@@ -26,7 +26,8 @@ namespace DeadAir.Editor
         {
             return new WorldData { spawn = new PointData { x = 80, z = 70 },
                 courtyard = new BoundsData { minX = 60, maxX = 95, minZ = 55, maxZ = 95 },
-                rooms = Array.Empty<RoomData>(), stairs = Array.Empty<StairData>(),
+                rooms = new[] { new RoomData { name = "ЗАДНІЙ ДВІР", mapLabel = "GENERATOR",
+                    minX = 65, maxX = 90, minZ = 60, maxZ = 90, floorY = 0 } }, stairs = Array.Empty<StairData>(),
                 doors = Array.Empty<DoorData>(), lockers = Array.Empty<LockerData>(),
                 objects = Array.Empty<ObjectiveData>(), props = Array.Empty<PropData>(), classes = WorldData.Load().classes };
         }
@@ -47,8 +48,8 @@ namespace DeadAir.Editor
         {
             var world = WorldData.Load(); var first = world.Mushrooms;
             var other = DeadAirMushrooms.CreatePlacements(world);
-            Require(first.Length == 9 && first.Select(item => item.id).Distinct().Count() == first.Length,
-                "The office must have nine distinct mushroom patches.");
+            Require(first.Length >= 5 && first.Select(item => item.id).Distinct().Count() == first.Length,
+                "The backyard and basement must contain distinct mushroom patches.");
             for (int i = 0; i < first.Length; i++)
             {
                 var a = first[i]; var b = other[i];
@@ -59,11 +60,12 @@ namespace DeadAir.Editor
                     "Every patch must use an authored walkable navigation point.");
                 Require(!world.stairs.Any(stair => stair.Contains(a.x, a.z)), "Fungi must not occupy stair treads.");
             }
-            var arrival = first[0];
-            Require(Vector3.Distance(new Vector3(arrival.x, arrival.y, arrival.z),
-                new Vector3(world.spawn.x, world.spawn.y, world.spawn.z)) < 2,
-                "The first mushroom must be directly accessible beside spawn.");
-            Require(first.Any(item => item.y > 4), "The second floor needs its own fungus patches.");
+            Require(first.Any(item => item.y < -1) && first.Any(item => item.y == 0),
+                "Both basement and backyard must have mushrooms.");
+            Require(first.All(item => world.rooms.Any(room => (room.mapLabel == "GENERATOR" || room.floorY < -1) &&
+                Mathf.Abs(item.y - room.floorY) < .15f && item.x > room.minX && item.x < room.maxX &&
+                item.z > room.minZ && item.z < room.maxZ)), "Mushrooms must stay in the requested areas.");
+            Require(first.All(item => item.y <= 0), "Mushrooms must not spawn on the office upper floor.");
         }
 
         static void ValidateAuthorityAndConsumption()

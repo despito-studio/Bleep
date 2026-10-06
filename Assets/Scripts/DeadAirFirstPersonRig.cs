@@ -288,6 +288,39 @@ namespace DeadAir
             else if (mode == "fuel-canister") GripFuelCan();
         }
 
+        public void PresentLadder(float age, bool up, bool intactWindow)
+        {
+            if (rig == null || !visible) return;
+            currentMode = null;
+            actionTime = -1;
+            foreach (var item in items) item.Value.gameObject.SetActive(false);
+            foreach (var puff in smoke) puff.gameObject.SetActive(false);
+            cigarette.gameObject.SetActive(false); lighter.gameObject.SetActive(false);
+            flame.gameObject.SetActive(false); ember.gameObject.SetActive(false);
+            rig.localPosition = Vector3.zero; rig.localRotation = Quaternion.identity;
+            rightHand.gameObject.SetActive(true); leftHand.gameObject.SetActive(true);
+            float route = DeadAirLadder.PathAge(age, up);
+            float cycle = (route - .35f) * Mathf.PI * 4.3f;
+            bool rungs = route > .35f && route < 3.45f;
+            float rightReach = rungs ? Mathf.Sin(cycle) * .11f : 0;
+            float leftReach = rungs ? Mathf.Sin(cycle + Mathf.PI) * .11f : 0;
+            // Reach one hand at a time with a quiet camera, rather than rolling
+            // the whole view from side to side as the old climb did.
+            RelaxHand(rightHand, new Vector3(.21f, -.15f + rightReach, .47f), new Vector3(12, -8, -6));
+            RelaxHand(leftHand, new Vector3(-.21f, -.15f + leftReach, .47f), new Vector3(12, 8, 6));
+            if (up && intactWindow && route >= 3.45f && route <= 3.80f)
+            {
+                float strike = Mathf.Sin(Mathf.Clamp01((route - 3.45f) / .35f) * Mathf.PI);
+                RelaxHand(rightHand, new Vector3(.19f - strike * .07f, -.12f + strike * .07f, .43f + strike * .20f),
+                    new Vector3(-8 + strike * 35, -8, -8));
+            }
+            else if (route >= 3.80f)
+            {
+                RelaxHand(rightHand, new Vector3(.28f, -.19f, .50f), new Vector3(24, -12, -15));
+                RelaxHand(leftHand, new Vector3(-.28f, -.19f, .50f), new Vector3(24, 12, 15));
+            }
+        }
+
         public void ConfigureRenderer(RenderTexture frame)
         {
             if (sourceCamera == null || equipmentCamera == null) return;

@@ -42,6 +42,19 @@ namespace DeadAir
         public float x, y, z;
         public int variant;
     }
+    [Serializable] public class DrawerData
+    {
+        public string id, propId, label;
+        public float x, y, z;
+        public Vector3 localPosition;
+        public float width, height, depth;
+        public bool directorKey;
+    }
+    [Serializable] public class BatteryData
+    {
+        public string id;
+        public float x, y, z;
+    }
     public static class DeadAirRoleItems
     {
         public static string ForClass(string classId) => classId == "operator" ? "cigarette-pack" :
@@ -79,6 +92,12 @@ namespace DeadAir
         // Rules, interaction prompts and presentation share exactly the same placements.
         public MushroomData[] Mushrooms => mushrooms ?? (mushrooms = DeadAirMushrooms.CreatePlacements(this));
         public MushroomData Mushroom(string id) => Array.Find(Mushrooms, item => item.id == id);
+        [NonSerialized] DrawerData[] drawers;
+        [NonSerialized] BatteryData[] batteries;
+        public DrawerData[] Drawers => drawers ?? (drawers = DeadAirDrawers.CreatePlacements(this));
+        public DrawerData Drawer(string id) => Array.Find(Drawers, item => item.id == id);
+        public BatteryData[] Batteries => batteries ?? (batteries = DeadAirSupplies.CreateVanBatteries(this));
+        public BatteryData Battery(string id) => Array.Find(Batteries, item => item.id == id);
 
         public static WorldData Load()
         {
@@ -136,6 +155,12 @@ namespace DeadAir
         public float mushroomTripStartedAt, mushroomTripUntil;
         public int mushroomTripSerial;
         public float uniqueActionAt = -100;
+        // Only the host drains/replaces an installed cell; clients render the snapshot.
+        public float flashlightCharge = DeadAirSupplies.FlashlightSeconds;
+        public int spareBatteries, coins, flashlightReloadSerial;
+        public bool ladderClimbing, ladderUp;
+        public float ladderStartedAt;
+        public float ladderFromX, ladderFromY, ladderFromZ;
         public List<string> inventory = new List<string>();
         public int selectedSlot;
         public int moveSequence;
@@ -147,6 +172,7 @@ namespace DeadAir
     {
         public string id, itemId, label;
         public float x, y, z;
+        public float flashlightCharge;
     }
     [Serializable] public class DoorState
     {
@@ -154,6 +180,12 @@ namespace DeadAir
         public bool locked, open;
         public float openedAt = -100;
         public float openSign = 1f;
+    }
+    [Serializable] public class DrawerState
+    {
+        public string id, loot;
+        public bool open, searched, lootTaken;
+        public int coins;
     }
     [Serializable] public class EnemyState
     {
@@ -183,11 +215,13 @@ namespace DeadAir
         public List<string> collected = new List<string>();
         public List<DroppedItem> droppedItems = new List<DroppedItem>();
         public List<DoorState> doors = new List<DoorState>();
+        public List<DrawerState> drawers = new List<DrawerState>();
         public QuestState quest = new QuestState();
         public EnemyState enemy = new EnemyState();
 
         public PlayerState Player(string id) { return players.Find(p => p.id == id); }
         public DoorState Door(string id) { return doors.Find(d => d.id == id); }
+        public DrawerState Drawer(string id) { return drawers?.Find(d => d.id == id); }
         public bool Collected(string id) { return collected.Contains(id) || tapes.Contains(id) || fuses.Contains(id) || keycards.Contains(id); }
     }
 

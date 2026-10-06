@@ -37,7 +37,27 @@ namespace DeadAir
 
         public static MushroomData[] CreatePlacements(WorldData world)
         {
-            return Array.Empty<MushroomData>();
+            var result = new List<MushroomData>();
+            if (world == null || world.rooms == null) return result.ToArray();
+            foreach (var room in world.rooms)
+            {
+                bool backyard = room.floorY == 0 && room.mapLabel == "GENERATOR";
+                bool basement = room.floorY < -1 && !DeadAirOfficeLayout.IsCirculation(room);
+                if (!backyard && !basement) continue;
+                int count = backyard || room.mapLabel == "BASEMENT" ? 3 : 1;
+                for (int i = 0; i < count; i++)
+                {
+                    float fx = count == 1 ? .55f : new[] { .2f, .5f, .8f }[i];
+                    float fz = count == 1 ? .5f : new[] { .3f, .65f, .4f }[i];
+                    string id = "mushroom-" + (backyard ? "backyard" : "basement") + "-" +
+                        Array.IndexOf(world.rooms, room) + "-" + i;
+                    string[] labels = { "Сигнальний мухомор", "Фіолетовий шептун", "М’ятна примара" };
+                    int variant = result.Count % labels.Length;
+                    AddPlacement(world, result, id, labels[variant], Mathf.Lerp(room.minX, room.maxX, fx),
+                        room.floorY, Mathf.Lerp(room.minZ, room.maxZ, fz), variant, true);
+                }
+            }
+            return result.ToArray();
         }
 
         static void AddPlacement(WorldData world, List<MushroomData> output, string id, string label,
@@ -51,6 +71,12 @@ namespace DeadAir
                 foreach (var node in world.navigationNodes)
                 {
                     if (Mathf.Abs(node.y - y) > .15f || OnStair(world, node.x, node.z)) continue;
+                    bool allowed = false;
+                    foreach (var room in world.rooms)
+                        if ((room.floorY < -1 || room.mapLabel == "GENERATOR") && Mathf.Abs(room.floorY - node.y) < .15f &&
+                            node.x > room.minX + .5f && node.x < room.maxX - .5f &&
+                            node.z > room.minZ + .5f && node.z < room.maxZ - .5f) { allowed = true; break; }
+                    if (!allowed) continue;
                     float distance = Vector2.Distance(new Vector2(x, z), new Vector2(node.x, node.z));
                     if (distance >= nearest) continue;
                     nearest = distance; position = new Vector3(node.x, node.y, node.z); found = true;

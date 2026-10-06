@@ -94,6 +94,9 @@ namespace DeadAir.Editor
             testPlayer.x = -9f; testPlayer.z = 7f; testPlayer.y = 0;
             if ((err = rules.Interact("host", "ladder-spot")) != null) throw new Exception("Failed to place ladder: " + err);
             if ((err = rules.Interact("host", "ladder-climb")) != null) throw new Exception("Failed to climb ladder: " + err);
+            for (int step = 0; testPlayer.ladderClimbing && step < 60; step++) rules.Tick(.1f);
+            if (testPlayer.ladderClimbing || !rules.State.windowBroken || Mathf.Abs(testPlayer.y - 4.2f) > .1f)
+                throw new Exception("Timed ladder climb did not break the window and finish on the director floor.");
             testPlayer.x = -11.22f; testPlayer.z = -1.5f; testPlayer.y = 4.2f;
             if ((err = rules.Interact("host", "drawer-director")) != null) throw new Exception("Failed to open drawer: " + err);
             if ((err = rules.Interact("host", "key-main")) != null) throw new Exception("Failed to pick up main key: " + err);
@@ -180,6 +183,7 @@ namespace DeadAir.Editor
             if (!host.flashlight || !guest.flashlight)
                 throw new Exception("Flashlight should be enabled on start.");
 
+            host.flashlightCharge = 42;
             var dropErr = rules.Drop("host", "flashlight");
             if (dropErr != null) throw new Exception("Drop flashlight failed: " + dropErr);
             if (host.HasItem("flashlight")) throw new Exception("Host should no longer have flashlight.");
@@ -187,9 +191,14 @@ namespace DeadAir.Editor
             if (rules.State.droppedItems.Count != 1) throw new Exception("Dropped items count should be 1.");
 
             var droppedFlashlight = rules.State.droppedItems[0];
+            if (droppedFlashlight.flashlightCharge != 42) throw new Exception("Dropped flashlight lost its installed charge.");
             guest.x = droppedFlashlight.x; guest.z = droppedFlashlight.z;guest.y=droppedFlashlight.y;
             var pickErr = rules.Interact("guest", "dropped:" + droppedFlashlight.id);
-            if (pickErr != null) throw new Exception("Guest pickup failed: " + pickErr);
+            if (pickErr == null || rules.State.droppedItems.Count != 1)
+                throw new Exception("A player who already owns a flashlight must leave the dropped lamp available.");
+            pickErr = rules.Interact("host", "dropped:" + droppedFlashlight.id);
+            if (pickErr != null || host.flashlightCharge != 42 || !host.HasItem("flashlight"))
+                throw new Exception("Owner pickup must restore the same lamp and preserve its installed charge: " + pickErr);
             if (rules.State.droppedItems.Count != 0) throw new Exception("Dropped items count should be 0.");
 
             var keyObj = world.Objective("keycard-engineer");

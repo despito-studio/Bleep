@@ -5,7 +5,7 @@ using UnityEngine;
 namespace DeadAir
 {
     // One instance runs only on the host (also for a solo game). Clients receive snapshots.
-    public sealed class DeadAirRules
+    public sealed partial class DeadAirRules
     {
         readonly WorldData world;
         readonly System.Random random = new System.Random();
@@ -25,7 +25,10 @@ namespace DeadAir
         Vector3 encounterReturnPosition;
         Vector3 patrolDestination;
         float nextPatrol;
-        float nextBreakerTrip = 30;
+        float nextBreakerTrip = 120;
+        int breakerTrips;
+        public const float BreakerProtectionSeconds = 120, BreakerCheckSeconds = 60;
+        public const int MaximumBreakerTrips = 2;
         readonly System.Collections.Generic.Dictionary<string,float> footstepsAt = new System.Collections.Generic.Dictionary<string,float>();
         const float DoorPassageDelay = .6f, SpiderChance = .25f, SpiderCooldown = 45;
         public bool Dirty { get; private set; }
@@ -46,6 +49,7 @@ namespace DeadAir
             State.message = "Сигнал установлено. Очікуємо на операторів.";
             foreach (var d in world.doors)
                 State.doors.Add(new DoorState { id = d.id, locked = !string.IsNullOrEmpty(d.requires), requiredKey = d.requires, openSign = 1f });
+            ResetDrawers();
             AddPlayer(hostId, name, classId);
         }
 
@@ -113,7 +117,7 @@ namespace DeadAir
         bool CanUseRoleItem(PlayerState player)
         {
             return State.phase == "playing" && !State.paused && player != null &&
-                !player.down && string.IsNullOrEmpty(player.hiding);
+                !player.down && !player.ladderClimbing && string.IsNullOrEmpty(player.hiding);
         }
 
         public void EquipUnique(string id, bool equipped)
@@ -129,7 +133,7 @@ namespace DeadAir
         {
             var player = State.Player(id);
             // A modal map must publish its equipment state even while a solo round is paused.
-            if (State.phase != "playing" || player == null || player.down || !string.IsNullOrEmpty(player.hiding)) return;
+            if (State.phase != "playing" || player == null || player.down || player.ladderClimbing || !string.IsNullOrEmpty(player.hiding)) return;
             player.mapOpen = open;
             if (open)
             {
@@ -206,12 +210,13 @@ namespace DeadAir
             State.tapes.Clear(); State.fuses.Clear(); State.keycards.Clear();
             State.collected.Clear();
             State.droppedItems.Clear();
+            ResetDrawers();
             State.canister = State.valveOpened = State.calibrated = State.power = State.broadcast = false;
             State.ladderPlaced = State.windowBroken = State.breakerOn = State.directorDrawerOpen = false;
             State.quest = new QuestState();
             State.enemy = new EnemyState { x = 0, y = 0, z = -34 };
             enemyRoute.Clear();enemyRouteCursor=0;nextRouteAttempt=0;
-            inspectedLockers.Clear();spiderCooldowns.Clear();footstepsAt.Clear();nextPeek=35;encounterEnds=0;nextPatrol=0;nextBreakerTrip=35;
+            inspectedLockers.Clear();spiderCooldowns.Clear();footstepsAt.Clear();nextPeek=35;encounterEnds=0;nextPatrol=0;nextBreakerTrip=BreakerProtectionSeconds;breakerTrips=0;
             foreach (var door in State.doors) { door.open = false; door.openedAt=-100; door.openSign = 1f; door.locked = !string.IsNullOrEmpty(door.requiredKey); }
             State.elapsed = 0;
             State.scare = 0;
@@ -228,11 +233,13 @@ namespace DeadAir
                 p.z = world.spawn.z + (i >= 2 ? .42f : 0);
                 p.yaw = p.pitch = 0;
                 p.sanity = p.stamina = 100;
-                p.down = p.sprinting = p.camera = false;
+                p.down = p.sprinting = p.camera = p.ladderClimbing = false;
                 p.inventory.Clear();
                 p.inventory.Add("flashlight");
                 p.selectedSlot = 0;
                 p.flashlight = true;
+                p.flashlightCharge = DeadAirSupplies.FlashlightSeconds;
+                p.spareBatteries = p.coins = p.flashlightReloadSerial = 0;
                 p.hiding = null;
                 p.invulnerableUntil = 8;
                 ResetRoleItem(p);
@@ -338,6 +345,7 @@ namespace DeadAir
             if (cmd == "breaker")
             {
                 State.breakerOn = State.quest.breakerOn = !State.breakerOn;
+                if (State.breakerOn) ProtectBreaker();
                 Dirty = true;
                 return State.breakerOn ? "Рубильник увімкнено (світло працює)!" : "Рубильник вимкнено";
             }
@@ -369,6 +377,7 @@ namespace DeadAir
                 p.moveSequence=input.moveSequence;
                 Dirty=true;
             }
+            if (p.ladderClimbing) return;
             if (float.IsNaN(input.x) || float.IsInfinity(input.x) ||
                 float.IsNaN(input.y) || float.IsInfinity(input.y) ||
                 float.IsNaN(input.z) || float.IsInfinity(input.z) ||
@@ -402,7 +411,8 @@ namespace DeadAir
                 p.yaw = centerYaw + Mathf.Clamp(Mathf.DeltaAngle(centerYaw * Mathf.Rad2Deg, input.yaw * Mathf.Rad2Deg), -18, 18) * Mathf.Deg2Rad;
                 p.pitch = Mathf.Clamp(input.pitch, -14 * Mathf.Deg2Rad, 14 * Mathf.Deg2Rad);
             }
-            p.flashlight = input.flashlight && string.IsNullOrEmpty(p.hiding) && p.HasItem("flashlight");
+            p.flashlight = input.flashlight && string.IsNullOrEmpty(p.hiding) && DeadAirSupplies.HasCharge(p) &&
+                (p.SelectedItem == "flashlight" || input.camera);
             p.camera = input.camera && string.IsNullOrEmpty(p.hiding);
             p.mapOpen = input.mapOpen && string.IsNullOrEmpty(p.hiding);
             if (p.mapOpen) p.camera = p.flashlight = false;
@@ -528,6 +538,7 @@ namespace DeadAir
         {
             var p = State.Player(id);
             if (State.phase != "playing" || State.paused || p == null || p.down) return "Ефір не активний.";
+            if (p.ladderClimbing) return "Дочекайтеся завершення підйому драбиною.";
             if (string.IsNullOrEmpty(objectId)) return "Невідомий предмет.";
             if (objectId == "exit-locker")
             {
@@ -535,6 +546,8 @@ namespace DeadAir
                 return null;
             }
             if (!string.IsNullOrEmpty(p.hiding)) return "Спочатку вийдіть із шафи.";
+            if (objectId.StartsWith("drawer", StringComparison.Ordinal)) return InteractDrawer(p, objectId);
+            if (objectId.StartsWith("van-battery-", StringComparison.Ordinal)) return CollectVanBattery(p, objectId);
             if (objectId.StartsWith("mushroom-", StringComparison.Ordinal))
                 return EatMushroom(p, objectId);
             if (objectId.StartsWith("dropped:"))
@@ -543,10 +556,12 @@ namespace DeadAir
                 var dropped = State.droppedItems.Find(d => d.id == droppedId);
                 if (dropped == null) return "Предмет уже забрали.";
                 if (!Near(p, dropped.x, dropped.y, dropped.z, 2.5f, 1)) return "Підійдіть ближче.";
-                State.droppedItems.Remove(dropped);
                 string actualItem = string.IsNullOrEmpty(dropped.itemId) ? dropped.id : dropped.itemId;
-                if (!p.inventory.Contains(actualItem)) p.inventory.Add(actualItem);
-                if (actualItem == "flashlight") p.flashlight = true;
+                if (actualItem == "flashlight" && p.HasItem("flashlight")) return "Ви вже маєте ліхтар.";
+                State.droppedItems.Remove(dropped);
+                if (actualItem == DeadAirSupplies.BatteryItem) AddBattery(p);
+                else if (!p.inventory.Contains(actualItem)) p.inventory.Add(actualItem);
+                if (actualItem == "flashlight") { p.flashlightCharge = dropped.flashlightCharge; p.flashlight = DeadAirSupplies.HasCharge(p); }
                 if (actualItem.StartsWith("fuse-") && !State.fuses.Contains(actualItem)) State.fuses.Add(actualItem);
                 if (actualItem.StartsWith("tape-") && !State.tapes.Contains(actualItem)) State.tapes.Add(actualItem);
                 if (actualItem.StartsWith("keycard-") && !State.keycards.Contains(actualItem)) State.keycards.Add(actualItem);
@@ -617,13 +632,6 @@ namespace DeadAir
                 State.message = doorData.label + (door.open ? ": відчинено." : ": зачинено.");
                 Dirty = true; return null;
             }
-            if (objectId == "drawer-director")
-            {
-                if (!Near(p, -11.22f, 4.2f, -1.52f, 2.8f, 0, "drawer-director")) return "Підійдіть ближче до столу директора.";
-                State.directorDrawerOpen = State.quest.directorDrawerOpen = !State.directorDrawerOpen;
-                State.message = State.directorDrawerOpen ? "Ящик столу директора відкрито." : "Ящик столу директора зачинено.";
-                Dirty = true; return null;
-            }
             if (objectId == "ladder-spot")
             {
                 if (!Near(p, -9f, 0f, 7f, 3.5f, 0, "ladder-spot")) return "Підійдіть до вікна зовні.";
@@ -637,27 +645,26 @@ namespace DeadAir
             {
                 if (!State.ladderPlaced) return "Спочатку встановіть драбину.";
                 if (!Near(p, -9f, 0f, 7f, 3.5f, 0, "ladder-climb") && !Near(p, -9f, 4.2f, 5.5f, 3.5f, 0, "ladder-climb")) return "Підійдіть до драбини.";
-                State.windowBroken = State.quest.windowBroken = true;
-                if (p.y > 2)
-                {
-                    p.x = -9f; p.y = 0f; p.z = 7.5f;
-                    p.yaw = Mathf.PI; p.pitch = 0;
-                    State.message = "Ви спустилися по драбині на передній двір.";
-                }
-                else
-                {
-                    p.x = -9f; p.y = 4.2f; p.z = 5.0f;
-                    p.yaw = 0; p.pitch = 0;
-                    HearNoise(-9f, 4.2f, 6f, 35, 10);
-                    State.message = "Вікно розбито! Ви проникли в кабінет директора.";
-                }
+                bool up = Mathf.Abs(p.y) < .75f && p.z >= 6.3f;
+                bool down = Mathf.Abs(p.y - 4.2f) < .75f && p.z <= 5.8f && State.windowBroken;
+                if (!up && !down) return "Підійдіть до нижнього або верхнього краю драбини.";
+                DeadAirLadder.Begin(p, State, up);
+                State.message = up ? "Підіймаєтеся до вікна директора." : "Спускаєтеся на передній двір.";
                 Dirty = true; return null;
             }
             var obj = world.Objective(objectId);
+            if (obj == null) return "Невідомий предмет.";
             float objRange = obj.id == "ladder" ? 3.5f : 2.5f;
             float objEyeOffset = obj.id == "ladder" ? 0.9f : 0f;
             if (!Near(p, obj.x, obj.y, obj.z, objRange, objEyeOffset, obj.id)) return "Підійдіть ближче.";
             if (State.Collected(objectId)) return null;
+            if (objectId == DeadAirPrisonBook.Id)
+            {
+                p.inventory.Add(DeadAirPrisonBook.Id);
+                State.collected.Add(objectId);
+                State.message = "Книгу взято. Оберіть її в інвентарі та натисніть R, щоб прочитати.";
+                Dirty = true; return null;
+            }
             if (objectId == "ladder")
             {
                 if (!p.inventory.Contains("ladder")) p.inventory.Add("ladder");
@@ -684,6 +691,7 @@ namespace DeadAir
             {
                 if (!State.power) return "Немає живлення. Спочатку увімкніть генератор на задньому дворі.";
                 State.breakerOn = State.quest.breakerOn = !State.breakerOn;
+                if (State.breakerOn) ProtectBreaker();
                 HearNoise(obj.x, obj.y, obj.z, 22, 6);
                 State.message = State.breakerOn ? "Рубильник увімкнено! Освітлення станції працює." : "Рубильник вимкнено. Світло згасло.";
                 Dirty = true; return null;
@@ -784,6 +792,7 @@ namespace DeadAir
             if (State.phase != "playing" || State.paused || p == null || p.down || !string.IsNullOrEmpty(p.hiding)) return "Не можна викинути зараз.";
             if (string.IsNullOrEmpty(itemId) || !p.HasItem(itemId)) return "Предмет відсутній в інвентарі.";
             if(DeadAirRoleItems.IsRoleItem(itemId))return "Особистий предмет залишається з персонажем.";
+            if (itemId == DeadAirSupplies.BatteryItem) return DropBattery(p);
             int removedSlot=p.inventory.IndexOf(itemId);
             p.inventory.Remove(itemId);
             if(removedSlot<p.selectedSlot)p.selectedSlot--;
@@ -794,7 +803,8 @@ namespace DeadAir
             if (itemId.StartsWith("keycard-")) State.keycards.Remove(itemId);
             string dropInstanceId = "drop_" + System.Guid.NewGuid().ToString("N").Substring(0, 6);
             string label = GetItemLabel(itemId);
-            State.droppedItems.Add(new DroppedItem { id = dropInstanceId, itemId = itemId, label = label, x = p.x, y = p.y, z = p.z });
+            State.droppedItems.Add(new DroppedItem { id = dropInstanceId, itemId = itemId, label = label, x = p.x, y = p.y, z = p.z,
+                flashlightCharge = itemId == "flashlight" ? p.flashlightCharge : 0 });
             State.message = p.name + " викинув: " + label;
             Dirty = true;
             return null;
@@ -803,6 +813,8 @@ namespace DeadAir
         public string GetItemLabel(string itemId)
         {
             if (itemId == "flashlight") return "Ліхтар";
+            if (itemId == DeadAirSupplies.BatteryItem) return "Батарейка для ліхтаря";
+            if (itemId == DeadAirPrisonBook.Id) return DeadAirPrisonBook.Title;
             if (itemId == "fuel-canister") return "Каністра";
             if (itemId == "ladder") return "Складна драбина";
             if (itemId == "key-main") return "Головний ключ станції";
@@ -822,6 +834,7 @@ namespace DeadAir
             if (State.phase!="playing" || State.paused || p == null || p.down || !string.IsNullOrEmpty(p.hiding)) return;
             p.selectedSlot = Mathf.Clamp(slot, 0, Mathf.Max(0, p.inventory.Count - 1));
             p.camera=p.mapOpen=false;
+            if (p.SelectedItem != "flashlight") p.flashlight = false;
             p.uniqueItemEquipped=p.HasSelectedRoleItem;
             if(!p.uniqueItemEquipped)p.uniqueActionCancelled=true;
             Dirty = true;
@@ -891,9 +904,17 @@ namespace DeadAir
 
         public void Tick(float dt)
         {
+            if (State.phase != "playing")
+            {
+                if (DeadAirLadder.Advance(State)) Dirty = true;
+                return;
+            }
             if (State.phase != "playing" || State.paused) return;
             dt = Mathf.Min(dt, .25f);
             State.elapsed += dt;
+            bool paneWasBroken = State.windowBroken;
+            if (DeadAirLadder.Advance(State)) Dirty = true;
+            if (!paneWasBroken && State.windowBroken) HearNoise(-9, 4.2f, 6, 35, 10);
             if (!State.creative && State.spawnCountdown > 0)
             {
                 State.spawnCountdown = Mathf.Max(0, State.spawnCountdown - dt);
@@ -908,6 +929,7 @@ namespace DeadAir
             for (int i = 0; i < State.players.Count; i++)
             {
                 var p = State.players[i];
+                DrainFlashlight(p, dt);
                 if (p.down) { ClearMushroomTrip(p); continue; }
                 if (State.creative) { p.sanity = 100; continue; }
                 if (!string.IsNullOrEmpty(p.hiding)) { p.sanity = Mathf.Min(100, p.sanity + 2.5f * dt); continue; }
@@ -927,8 +949,36 @@ namespace DeadAir
                 p.sanity = Mathf.Clamp(p.sanity + (recover - drain * world.GetClass(p.characterClass).bonuses.sanityResistance) * dt, 0, 100);
             }
             if (State.enemy.active) UpdateEnemy(dt);
+            if (DeadAirLadder.Advance(State)) Dirty = true;
             nextPublish += dt;
             if (nextPublish >= .1f) { Dirty = true; nextPublish = 0; }
+        }
+
+        void ProtectBreaker()
+        {
+            nextBreakerTrip = State.elapsed + BreakerProtectionSeconds;
+        }
+
+        // Sabotage requires the monster to reach the physical switch during patrol.
+        bool TrySabotageBreaker(int roll)
+        {
+            if (State.elapsed < nextBreakerTrip) return false;
+            nextBreakerTrip = State.elapsed + BreakerCheckSeconds;
+            var enemy = State.enemy;
+            var breaker = world.Objective("breaker");
+            if (State.creative || !State.power || !State.breakerOn || State.broadcast ||
+                breakerTrips >= MaximumBreakerTrips || breaker == null || !enemy.active ||
+                State.elapsed < enemy.stunnedUntil || State.elapsed < enemy.heardUntil ||
+                enemy.behaviour == "peek" || enemy.behaviour == "vanished" ||
+                !SameFloor(enemy.y, breaker.y - 1.1f) || Dist(enemy.x, enemy.z, breaker.x, breaker.z) > 3 ||
+                roll >= 10) return false;
+            State.breakerOn = State.quest.breakerOn = false;
+            breakerTrips++;
+            State.scare++;
+            State.message = "ДИКТОР ДІСТАВСЯ РУБИЛЬНИКА У ПІДВАЛІ! Світло згасло.";
+            HearNoise(breaker.x, enemy.y, breaker.z, 30, 8);
+            Dirty = true;
+            return true;
         }
 
         void UpdateEnemy(float dt)
@@ -950,19 +1000,7 @@ namespace DeadAir
             if (!hasLiving) { CheckDefeat(); return; }
             enemy.stunned = State.elapsed<enemy.stunnedUntil;
             if (enemy.stunned) return;
-            if (!State.creative && State.power && State.breakerOn && State.elapsed >= nextBreakerTrip)
-            {
-                nextBreakerTrip = State.elapsed + UnityEngine.Random.Range(20f, 35f);
-                if (random.Next(100) < 23)
-                {
-                    State.breakerOn = State.quest.breakerOn = false;
-                    State.scare++;
-                    State.message = "ДИКТОР ВИМКНУВ РУБИЛЬНИК У ПІДВАЛІ! Світло згасло.";
-                    var breakerObj = world.Objective("breaker");
-                    if (breakerObj != null) HearNoise(breakerObj.x, breakerObj.y, breakerObj.z, 30, 8);
-                    Dirty = true;
-                }
-            }
+            if (State.elapsed >= nextBreakerTrip) TrySabotageBreaker(random.Next(100));
             bool investigating=State.elapsed<enemy.heardUntil;
             if(!State.creative&&!State.broadcast&&!investigating&&State.elapsed>=nextPeek&&encounterPlayer!=null&&TryBeginPeek(encounterPlayer,false))return;
             Vector3 heard=new Vector3(enemy.heardX,enemy.heardY,enemy.heardZ);
@@ -1462,12 +1500,25 @@ namespace DeadAir
         float EnemyFloorHeight(float x, float z, float currentY)
         {
             if (world.stairs != null)
+            {
+                float height=currentY,nearest=2.5f;
+                bool onFlight=false;
                 foreach (var stair in world.stairs)
                 {
-                    if (stair.Contains(x, z, .12f) && Mathf.Abs(currentY - stair.HeightAt(z)) < 2.5f) return stair.HeightAt(z);
+                    if(!stair.Contains(x,z,.12f))continue;
+                    float candidate=stair.HeightAt(z),distance=Mathf.Abs(currentY-candidate);
+                    if(distance>=nearest)continue;
+                    height=candidate;nearest=distance;onFlight=true;
+                }
+                // Both flights occupy the same X/Z. Resolve the nearby flight before
+                // accepting a landing on a different flight at the actor's old height.
+                if(onFlight)return height;
+                foreach (var stair in world.stairs)
+                {
                     if (Mathf.Abs(currentY - stair.lowerY) < .4f) return stair.lowerY;
                     if (Mathf.Abs(currentY - stair.upperY) < .4f) return stair.upperY;
                 }
+            }
             return currentY;
         }
 

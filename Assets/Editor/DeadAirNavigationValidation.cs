@@ -18,7 +18,12 @@ namespace DeadAir.Editor
             foreach(var link in world.navigationLinks)
             {
                 Require(link.a>=0&&link.b>=0&&link.a<adjacency.Length&&link.b<adjacency.Length,"Navigation edge contains an invalid node index.");
-                Require(Mathf.Abs(world.navigationNodes[link.a].y-world.navigationNodes[link.b].y)<.4f,
+                var a=world.navigationNodes[link.a];var b=world.navigationNodes[link.b];
+                float maxRise=.4f;
+                foreach(var stair in world.stairs)
+                    if(stair.Contains(a.x,a.z)&&stair.Contains(b.x,b.z))
+                        maxRise=Mathf.Max(maxRise,(stair.upperY-stair.lowerY)/(stair.maxZ-stair.minZ)+.03f);
+                Require(Mathf.Abs(a.y-b.y)<maxRise,
                     "Navigation cannot cross a ceiling or skip the stair flight.");
                 adjacency[link.a].Add(link.b);adjacency[link.b].Add(link.a);
             }
@@ -27,7 +32,7 @@ namespace DeadAir.Editor
             while(queue.Count>0)foreach(int next in adjacency[queue.Dequeue()])if(reachable.Add(next))queue.Enqueue(next);
             foreach(var objective in world.objects)
             {
-                float floor=objective.y>=DeadAirOfficeLayout.FloorHeight?DeadAirOfficeLayout.FloorHeight:0;
+                float floor=objective.y< -1?-DeadAirOfficeLayout.FloorHeight:objective.y>=DeadAirOfficeLayout.FloorHeight?DeadAirOfficeLayout.FloorHeight:0;
                 Require(reachable.Contains(Nearest(world,objective.x,floor,objective.z)),
                     "The quest destination is disconnected from the entrance: "+objective.id);
             }
@@ -174,14 +179,18 @@ namespace DeadAir.Editor
                 foreach(int index in physical.reachable)
                 {
                     var p=physical.positions[index];float sourceX=-p.x;
-                    if(Mathf.Abs(p.y-room.floorY)<.3f&&sourceX>room.minX+.25f&&sourceX<room.maxX-.25f&&
+                    bool matchesFloor=Mathf.Abs(p.y-room.floorY)<.3f;
+                    if(room.mapLabel=="HALL BASEMENT STAIRS")
+                        foreach(var stair in world.stairs)
+                            if(stair.lowerY<0&&stair.Contains(sourceX,p.z)&&Mathf.Abs(p.y-stair.HeightAt(p.z))<.3f)matchesFloor=true;
+                    if(matchesFloor&&sourceX>room.minX+.25f&&sourceX<room.maxX-.25f&&
                         p.z>room.minZ+.25f&&p.z<room.maxZ-.25f){entered=true;break;}
                 }
                 Require(entered,"A generated room has no physically reachable interior: "+room.name);
             }
             foreach(var objective in world.objects)
             {
-                float floor=objective.y>=DeadAirOfficeLayout.FloorHeight?DeadAirOfficeLayout.FloorHeight:0;
+                float floor=objective.y< -1?-DeadAirOfficeLayout.FloorHeight:objective.y>=DeadAirOfficeLayout.FloorHeight?DeadAirOfficeLayout.FloorHeight:0;
                 float vertical=objective.y-floor-1;
                 float planarRange=Mathf.Sqrt(Mathf.Max(0,2.5f*2.5f-vertical*vertical));
                 var point=DeadAirOfficeLayout.Position(objective.x,floor,objective.z);

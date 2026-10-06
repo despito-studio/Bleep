@@ -9,7 +9,10 @@ namespace DeadAir
         public const float BuildingMinX = -18, BuildingMaxX = 18;
         public const float BuildingMinZ = -54, BuildingMaxZ = 6;
         public const float CorridorHalfWidth = 3;
-        public const int Version = 2;
+        public const float BasementMinX = -18, BasementMaxX = 18;
+        public const float BasementMinZ = -39.5f, BasementMaxZ = -27;
+        public const float BasementArea = (BasementMaxX - BasementMinX) * (BasementMaxZ - BasementMinZ);
+        public const int Version = 3;
         public int layoutVersion = Version;
         public static bool IsCirculation(RoomData room) => room != null && room.mapLabel != null && room.mapLabel.StartsWith("HALL", System.StringComparison.Ordinal);
         public static bool IsInterior(RoomData room) => room != null && (room.floorY < -1 || (room.minX >= BuildingMinX && room.maxX <= BuildingMaxX && room.minZ >= BuildingMinZ && room.maxZ <= BuildingMaxZ));

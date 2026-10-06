@@ -20,6 +20,9 @@ namespace DeadAir
         readonly List<Transform> smoke = new List<Transform>();
         Animation animationPlayer;
         Transform rightSocket, leftSocket, rightArm, leftArm, rightForearm, leftForearm, rightHand, leftHand, head, packLid, cigarette, lighter, flame, ember, compassNeedle, pendulum;
+        Transform rightThigh, leftThigh, rightShin, leftShin;
+        bool ladderClimbing, ladderUp;
+        float ladderAge;
         Vector3 rightGrip, leftGrip, mouthLocal = new Vector3(0, .092f, .132f);
         Material dark, metal, brass, paper, red, glass, smokeMaterial;
         Mesh boxMesh, tubeMesh;
@@ -40,7 +43,7 @@ namespace DeadAir
                 // Apply hand contacts after Unity's legacy animation evaluation and
                 // after the network view has moved/turned its root this frame.
                 SamplePose();
-                PoseEquipment();
+                if (ladderClimbing) PoseLadder(); else PoseEquipment();
                 return;
             }
             Initialize();
@@ -56,6 +59,9 @@ namespace DeadAir
             if (player == null) return;
             Initialize();
             preview = false;
+            ladderClimbing = player.ladderClimbing && !player.down;
+            ladderUp = player.ladderUp;
+            ladderAge = Mathf.Clamp(elapsed - player.ladderStartedAt, 0, DeadAirLadder.Duration);
             float dt = paused || player.down ? 0 : Mathf.Min(Time.deltaTime, .1f);
             var position = new Vector2(player.x, player.z);
             bool reset = !hasSnapshot || elapsed < lastElapsed || player.uniqueActionSequence < lastSequence;
@@ -87,14 +93,14 @@ namespace DeadAir
 
             if (!paused && !player.down)
             {
-                SelectClip(actionTime >= 0 ? "UseItem" : moveSpeed > .15f ? (player.sprinting ? "Run" : "Walk") : "Idle");
+                SelectClip(ladderClimbing ? "Idle" : actionTime >= 0 ? "UseItem" : moveSpeed > .15f ? (player.sprinting ? "Run" : "Walk") : "Idle");
                 Advance(dt);
                 if (actionTime >= 0 && animationPlayer != null && animationPlayer["UseItem"] != null)
                     clipTime = actionTime / duration * animationPlayer["UseItem"].length;
             }
             SamplePose();
             ShowEquipment(player);
-            PoseEquipment();
+            if (ladderClimbing) PoseLadder(); else PoseEquipment();
         }
 
         /// <summary>Samples the exact imported clip for editor captures without starting gameplay.</summary>
@@ -150,6 +156,10 @@ namespace DeadAir
                 else if (bone.name == "hand.R") rightHand = bone;
                 else if (bone.name == "hand.L") leftHand = bone;
                 else if (bone.name == "head") head = bone;
+                else if (bone.name == "thigh.R") rightThigh = bone;
+                else if (bone.name == "thigh.L") leftThigh = bone;
+                else if (bone.name == "shin.R") rightShin = bone;
+                else if (bone.name == "shin.L") leftShin = bone;
             }
             if (rightSocket == null || leftSocket == null) return;
             if (rightHand != null && leftHand != null)
@@ -299,7 +309,7 @@ namespace DeadAir
             if (props.Count == 0) return;
             string selected = player.inventory != null && player.selectedSlot >= 0 && player.selectedSlot < player.inventory.Count
                 ? player.inventory[player.selectedSlot] : "empty";
-            string mode = player.down || !string.IsNullOrEmpty(player.hiding) ? "empty" : player.mapOpen ? "map" : player.camera ? "camera"
+            string mode = player.down || player.ladderClimbing || !string.IsNullOrEmpty(player.hiding) ? "empty" : player.mapOpen ? "map" : player.camera ? "camera"
                 : player.uniqueItemEquipped ? classId : InventoryMode(selected);
             if (mode != propMode)
             {
@@ -515,6 +525,26 @@ namespace DeadAir
         }
 
         static bool Inside(Vector3 point, Vector3 centre, float radius) => Vector3.SqrMagnitude(point - centre) <= radius * radius + .0000001f;
+
+        void PoseLadder()
+        {
+            float route = DeadAirLadder.PathAge(ladderAge, ladderUp);
+            bool rungs = route > .35f && route < 3.45f;
+            float cycle = (route - .35f) * Mathf.PI * 4.3f;
+            float rightReach = rungs ? Mathf.Sin(cycle) : 0;
+            float leftReach = rungs ? Mathf.Sin(cycle + Mathf.PI) : 0;
+            float handHeight = route >= 3.80f ? 1.18f : 1.53f;
+            var rightRotation = transform.rotation * Quaternion.Euler(85, -8, 0);
+            var leftRotation = transform.rotation * Quaternion.Euler(85, 8, 0);
+            SolveHand(true, transform.TransformPoint(new Vector3(.22f, handHeight + rightReach * .11f, .37f)), rightRotation);
+            SolveHand(false, transform.TransformPoint(new Vector3(-.22f, handHeight + leftReach * .11f, .37f)), leftRotation);
+            float rightLift = rungs ? Mathf.Max(0, leftReach) : route >= 3.80f ? .75f : .15f;
+            float leftLift = rungs ? Mathf.Max(0, rightReach) : route >= 3.80f ? .75f : .15f;
+            if (rightThigh != null) rightThigh.rotation = Quaternion.AngleAxis(-25 * rightLift, transform.right) * rightThigh.rotation;
+            if (leftThigh != null) leftThigh.rotation = Quaternion.AngleAxis(-25 * leftLift, transform.right) * leftThigh.rotation;
+            if (rightShin != null) rightShin.rotation = Quaternion.AngleAxis(40 * rightLift, transform.right) * rightShin.rotation;
+            if (leftShin != null) leftShin.rotation = Quaternion.AngleAxis(40 * leftLift, transform.right) * leftShin.rotation;
+        }
 
         void SolveHand(bool right, Vector3 contact, Quaternion handRotation)
         {

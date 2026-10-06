@@ -382,20 +382,7 @@ namespace DeadAir.Editor
             Box(shell,"Basement stair rear wall",0,-2.1f,-51f,3.6f,4.2f,.22f,brick);
             Box(shell,"Basement stair foundation",0,-Storey-.18f,-45.25f,3.72f,.36f,11.5f,floor);
 
-            // Basement structure (room at z = -39.5 to -27, x = -6 to 6, floor at -Storey = -4.2)
-            float bCenterZ = -33.25f;
-            float bDepth = 12.5f;
-            float bWidth = 12.2f;
-            float bHeight = Storey - .40f; // 3.80m tall
-            float bMidY = -Storey + bHeight / 2;
-            Box(shell,"Basement floor slab",0,-Storey-.18f,bCenterZ,bWidth,.36f,bDepth,floor);
-            Box(shell,"Basement ceiling",0,-.43f,bCenterZ,bWidth,.06f,bDepth,ceilingPanel,false);
-            Box(shell,"Basement north wall",0,bMidY,-27f,bWidth,bHeight,.22f,brick);
-            Box(shell,"Basement south wall left",-3.9f,bMidY,-39.5f,4.4f,bHeight,.22f,brick);
-            Box(shell,"Basement south wall right",3.9f,bMidY,-39.5f,4.4f,bHeight,.22f,brick);
-            Box(shell,"Basement south header",0,-.40f-.5f,-39.5f,3.4f,1.0f,.22f,brick);
-            Box(shell,"Basement west wall",-6.1f,bMidY,bCenterZ,.22f,bHeight,bDepth,brick);
-            Box(shell,"Basement east wall",6.1f,bMidY,bCenterZ,.22f,bHeight,bDepth,brick);
+            BuildBasement(shell);
             Box(shell,"Upper left slab",-9.93f,Storey-.16f,-24,16.14f,.32f,60,carpet);
             Box(shell,"Upper right slab",9.93f,Storey-.16f,-24,16.14f,.32f,60,carpet);
             Box(shell,"Upper corridor front",0,Storey-.16f,-16.5f,3.72f,.32f,45,carpet);
@@ -428,6 +415,78 @@ namespace DeadAir.Editor
             // Lettering is in front of a physical backing fixed flush to the brick face.
             Sign(shell,"BLACKPINE\nBROADCAST CENTRE",new Vector3(0,7.68f,6.19f),Quaternion.identity,6,.48f);
             Sign(shell,"SERVICE / GENERATOR",new Vector3(5.5f,2.9f,-54.19f),Quaternion.Euler(0,180,0),3,.30f);
+        }
+
+        static void BuildBasement(Transform shell)
+        {
+            const float minX=DeadAirOfficeLayout.BasementMinX,maxX=DeadAirOfficeLayout.BasementMaxX;
+            const float minZ=DeadAirOfficeLayout.BasementMinZ,maxZ=DeadAirOfficeLayout.BasementMaxZ;
+            const float height=Storey-.40f;
+            float middleZ=(minZ+maxZ)/2,middleY=-Storey+height/2;
+            Box(shell,"Basement floor slab",0,-Storey-.18f,middleZ,maxX-minX+.22f,.36f,maxZ-minZ+.22f,floor);
+            Box(shell,"Basement ceiling",0,-.43f,middleZ,maxX-minX+.22f,.06f,maxZ-minZ+.22f,ceilingPanel,false);
+            Box(shell,"Basement north wall",0,middleY,maxZ+.11f,maxX-minX+.22f,height,.22f,brick);
+            // The unchanged stair shaft opens into the original electrical room.
+            foreach(int side in new[]{-1,1})
+            {
+                Box(shell,"Basement south wall "+side,side*(maxX+1.7f)/2,middleY,minZ-.11f,maxX-1.7f,height,.22f,brick);
+                Box(shell,"Basement exterior side "+side,side*(maxX+.11f),middleY,middleZ,.22f,height,maxZ-minZ+.22f,brick);
+            }
+            Box(shell,"Basement stair opening header",0,-Storey+3.35f,minZ,3.4f,.9f,.22f,brick);
+            foreach(int side in new[]{-1,1})
+            {
+                Partition(true,side*6,minZ,maxZ,false);
+                for(int i=0;i<3;i++)
+                {
+                    float a=maxZ-(i+1)*(maxZ-minZ)/3,b=maxZ-i*(maxZ-minZ)/3;
+                    Partition(true,side*11,a,b,true);
+                    if(i>0)Partition(false,b,side<0?minX:11,side<0?-11:maxX,false);
+                }
+            }
+
+            void Partition(bool vertical,float coordinate,float from,float to,bool bars)
+            {
+                var openings=world.doors.Where(d=>Mathf.Abs(d.y-1.4f+Storey)<.1f&&
+                    (vertical?Mathf.Abs(Mathf.Sin(d.rotation))<.1f&&Mathf.Abs(d.x-coordinate)<.1f:
+                    Mathf.Abs(Mathf.Cos(d.rotation))<.1f&&Mathf.Abs(d.z-coordinate)<.1f)&&
+                    (vertical?d.z:d.x)>from&&(vertical?d.z:d.x)<to).OrderBy(d=>vertical?d.z:d.x);
+                float cursor=from;
+                foreach(var doorway in openings)
+                {
+                    float center=vertical?doorway.z:doorway.x,half=doorway.w/2+.10f;
+                    Section(cursor,center-half,bars);
+                    Solid(center-half,center+half,2.88f,height-2.88f);
+                    cursor=center+half;
+                }
+                Section(cursor,to,bars);
+
+                void Section(float a,float b,bool barred)
+                {
+                    if(b-a<.001f)return;
+                    if(!barred){Solid(a,b,0,height);return;}
+                    float center=(a+b)/2,length=b-a;
+                    var grille=Group(shell,"Prison barred partition");
+                    grille.localPosition=DeadAirOfficeLayout.Position(vertical?coordinate:center,-Storey,vertical?center:coordinate);
+                    var blocker=grille.gameObject.AddComponent<BoxCollider>();
+                    blocker.center=new Vector3(0,1.44f,0);
+                    blocker.size=vertical?new Vector3(.10f,2.88f,length):new Vector3(length,2.88f,.10f);
+                    int count=Mathf.Max(2,Mathf.CeilToInt(length/.24f));
+                    for(int bar=0;bar<count;bar++)
+                    {
+                        float offset=-length/2+length*(bar+.5f)/count;
+                        Block(grille,"Cell vertical bar",new Vector3(vertical?0:offset,1.44f,vertical?offset:0),new Vector3(.055f,2.88f,.055f),metal,false);
+                    }
+                    foreach(float railY in new[]{.10f,1.02f,2.78f})
+                        Block(grille,"Cell cross rail",new Vector3(0,railY,0),vertical?new Vector3(.065f,.07f,length):new Vector3(length,.07f,.065f),metal,false);
+                    Solid(a,b,2.88f,height-2.88f);
+                }
+                void Solid(float a,float b,float bottom,float wallHeight)
+                {
+                    if(b-a<.001f)return;
+                    Box(shell,"Basement partition",vertical?coordinate:(a+b)/2,-Storey+bottom+wallHeight/2,vertical?(a+b)/2:coordinate,
+                        vertical?.22f:b-a,wallHeight,vertical?b-a:.22f,brick);
+                }
+            }
         }
 
         sealed class PartitionRun
@@ -567,7 +626,9 @@ namespace DeadAir.Editor
         {
             var root=Group(shell,"Window");root.localPosition=position;root.localRotation=rotation;
             bool isDirectorWindow = Mathf.Abs(position.x - 9f) < .25f && Mathf.Abs(position.y - 6.38f) < .25f && Mathf.Abs(position.z - 6f) < .25f;
-            Block(root,isDirectorWindow ? "window-director-glass" : "Recessed glass",Vector3.zero,new Vector3(width-.08f,height-.08f,.035f),glass,true);
+            // A breakable pane must retain its renderer and collider after shell batching.
+            var pane=isDirectorWindow?Group(root,"state:directorWindowPane"):root;
+            Block(pane,isDirectorWindow ? "window-director-glass" : "Recessed glass",Vector3.zero,new Vector3(width-.08f,height-.08f,.035f),glass,true);
             foreach(float x in new[]{-width/2+.025f,width/2-.025f})Block(root,"Window reveal side",new Vector3(x,0,0),new Vector3(.05f,height,.35f),trim,false);
             foreach(float y in new[]{-height/2+.025f,height/2-.025f})Block(root,"Window reveal horizontal",new Vector3(0,y,0),new Vector3(width,.05f,.35f),trim,false);
             foreach(float face in new[]{-.185f,.185f})
@@ -575,7 +636,7 @@ namespace DeadAir.Editor
                 foreach(float x in new[]{-width/2,width/2})Block(root,"Window frame side",new Vector3(x,0,face),new Vector3(.075f,height+.08f,.055f),trim,false);
                 foreach(float y in new[]{-height/2,height/2})Block(root,"Window frame horizontal",new Vector3(0,y,face),new Vector3(width+.075f,.075f,.055f),trim,false);
             }
-            Block(root,"Mullion",Vector3.zero,new Vector3(.045f,height,.35f),trim,false);
+            Block(pane,"Mullion",Vector3.zero,new Vector3(.045f,height,.35f),trim,false);
             Block(root,"Interior sill",new Vector3(0,-height/2-.045f,0),new Vector3(width+.15f,.08f,.46f),trim,false);
         }
 
@@ -878,7 +939,7 @@ namespace DeadAir.Editor
         {
             if(p.type=="locker")return; // The animated locker is generated once from LockerData.
             var root=PropRoot(p);
-            bool generated=p.type=="table"||p.type=="archivistDesk"||p.type=="chair"||p.type=="shelf"||p.type=="cardCatalog"||p.type=="serverRack"||p.type=="crt"||
+            bool generated=p.type=="table"||p.type=="archivistDesk"||p.type=="workstation"||p.type=="chair"||p.type=="shelf"||p.type=="cardCatalog"||p.type=="serverRack"||p.type=="crt"||
                 p.type=="dieselGenerator"||p.type=="fusePanel"||p.type=="monitorWall"||p.type=="mixingConsole"||p.type=="anchorDesk";
             if(!generated&&templates.TryGetValue(p.type,out var template))
             {
@@ -936,36 +997,22 @@ namespace DeadAir.Editor
                     Table(root,w,d);Monitor(root,new Vector3(.25f,.84f,-d*.27f));
                     Block(root,"Keyboard",new Vector3(.25f,.835f,d*.12f),new Vector3(.62f,.035f,.21f),paper,false);
                     Block(root,"Computer tower",new Vector3(w*.32f,.35f,-d*.18f),new Vector3(.34f,.70f,.52f),paper,true);
-                    bool isDirectorDesk = p.label.Contains("директора");
-                    if (isDirectorDesk)
-                    {
-                        Block(root,"Desk lower drawers",new Vector3(-w*.34f,.25f,0),new Vector3(.47f,.48f,d*.82f),trim,true);
-                        for(int i=0;i<2;i++)Block(root,"Drawer pull",new Vector3(-w*.34f,.18f+i*.21f,d*.43f),new Vector3(.21f,.03f,.045f),metal,false);
-                        var drawer=Group(root,"state:directorDrawer");
-                        drawer.localPosition=new Vector3(-w*.34f,.60f,0);
-                        float dw=.45f, dh=.18f, dd=d*.80f, t=.02f;
-                        // Hollow drawer box: bottom, back, left, right walls
-                        Block(drawer,"Drawer bottom",new Vector3(0,-dh/2+t/2,0),new Vector3(dw-t*2,t,dd-t*2),wood,false);
-                        Block(drawer,"Drawer back",new Vector3(0,0,-dd/2+t/2),new Vector3(dw,dh,t),wood,false);
-                        Block(drawer,"Drawer left",new Vector3(-dw/2+t/2,0,0),new Vector3(t,dh,dd),wood,false);
-                        Block(drawer,"Drawer right",new Vector3(dw/2-t/2,0,0),new Vector3(t,dh,dd),wood,false);
-                        Block(drawer,"Drawer front",new Vector3(0,0,dd/2+.012f),new Vector3(dw+.02f,dh+.03f,.025f),trim,true);
-                        Block(drawer,"Drawer pull",new Vector3(0,0,dd/2+.035f),new Vector3(.21f,.03f,.045f),metal,false);
-                        // Key card resting inside drawer tray
-                        var card=Group(drawer,"interactive:key-main");
-                        card.localPosition=new Vector3(0,-dh/2+t+.004f,.15f);
-                        card.localRotation=Quaternion.Euler(0,15,0);
-                        Block(card,"Access card body",Vector3.zero,new Vector3(.14f,.006f,.09f),paper,false);
-                        Block(card,"Card magnetic stripe",new Vector3(0,.0035f,.026f),new Vector3(.14f,.002f,.018f),trim,false);
-                        Block(card,"Card chip",new Vector3(-.035f,.0035f,-.012f),new Vector3(.028f,.002f,.024f),wood,false);
-                        Block(card,"Card photo badge",new Vector3(.035f,.0035f,-.012f),new Vector3(.032f,.002f,.036f),black,false);
-                    }
-                    else
-                    {
-                        Block(root,"Desk drawers",new Vector3(-w*.34f,.36f,0),new Vector3(.47f,.72f,d*.82f),trim,true);
-                        for(int i=0;i<3;i++)Block(root,"Drawer pull",new Vector3(-w*.34f,.18f+i*.21f,d*.43f),new Vector3(.21f,.03f,.045f),metal,false);
-                    }
+                    DeadAirDrawerPresentation.BuildFurnitureDrawers(root,p,wood,trim,metal,paper);
                     Paperwork(root,new Vector3(-w*.30f,.83f,d*.12f));break;
+                case "prisonBed":
+                    Block(root,"Steel bed frame",new Vector3(0,.37f,0),new Vector3(w,.12f,d),metal,true);
+                    Block(root,"Worn prison mattress",new Vector3(0,.49f,0),new Vector3(w-.12f,.14f,d-.10f),carpet,true);
+                    foreach(float x in new[]{-w*.44f,w*.44f})foreach(float z in new[]{-d*.38f,d*.38f})
+                        Block(root,"Bed leg",new Vector3(x,.18f,z),new Vector3(.07f,.36f,.07f),metal,true);
+                    Block(root,"Prison pillow",new Vector3(-w*.31f,.59f,0),new Vector3(.45f,.10f,d*.75f),wastePaper,false);
+                    Block(root,"Folded blanket",new Vector3(w*.29f,.59f,0),new Vector3(.56f,.08f,d*.85f),trim,false);break;
+                case "prisonSanitary":
+                    Block(root,"Cell toilet pedestal",new Vector3(0,.21f,.18f),new Vector3(.38f,.42f,.40f),paper,true);
+                    Block(root,"Cell toilet bowl",new Vector3(0,.43f,.20f),new Vector3(.50f,.15f,.61f),paper,true);
+                    Block(root,"Cell toilet seat",new Vector3(0,.515f,.20f),new Vector3(.43f,.025f,.49f),black,false);
+                    Block(root,"Cell cistern",new Vector3(0,.67f,-.21f),new Vector3(.48f,.50f,.19f),paper,true);
+                    Block(root,"Cell basin",new Vector3(0,.94f,-.21f),new Vector3(.55f,.12f,.34f),metal,true);
+                    Block(root,"Cell faucet",new Vector3(.14f,1.04f,-.28f),new Vector3(.05f,.14f,.05f),metal,false);break;
                 case "coffeeTable":
                     Block(root,"Low tabletop",new Vector3(0,.42f,0),new Vector3(w,.10f,d),wood,true);
                     foreach(float x in new[]{-w*.38f,w*.38f})Block(root,"Low table foot",new Vector3(x,.20f,0),new Vector3(.10f,.40f,d*.7f),metal,true);
@@ -1098,13 +1145,7 @@ namespace DeadAir.Editor
                     Block(root,"Chair back",new Vector3(0,.87f,-.27f),new Vector3(.6f,.65f,.08f),trim,true);
                     foreach(float x in new[]{-.24f,.24f})foreach(float z in new[]{-.24f,.24f})Block(root,"Chair leg",new Vector3(x,.23f,z),new Vector3(.045f,.46f,.045f),metal,true);break;
                 case "cardCatalog":
-                    Block(root,"Filing cabinet",new Vector3(0,.85f,0),new Vector3(w,1.7f,d),metal,true);
-                    for(int i=0;i<4;i++)for(int j=0;j<2;j++){
-                        float x=(j-.5f)*w*.48f,y=.23f+i*.40f;
-                        Block(root,"Card drawer",new Vector3(x,y,d/2+.012f),new Vector3(w*.46f,.37f,.023f),trim,false);
-                        Block(root,"Card drawer label",new Vector3(x,y+.06f,d/2+.03f),new Vector3(.20f,.07f,.015f),paper,false);
-                        Block(root,"Card drawer handle",new Vector3(x,y-.06f,d/2+.055f),new Vector3(.16f,.025f,.035f),metal,false);
-                    }break;
+                    DeadAirDrawerPresentation.BuildFurnitureDrawers(root,p,wood,trim,metal,paper);break;
                 case "serverRack":
                     Block(root,"Server chassis",new Vector3(0,1,0),new Vector3(w,2,d),metal,true);
                     for(int i=0;i<7;i++){
@@ -1155,8 +1196,23 @@ namespace DeadAir.Editor
             foreach(float z in new[]{-width/2-.055f,width/2+.055f})Block(casing,"Door jamb",new Vector3(0,1.4f,z),new Vector3(.3f,2.8f,.1f),trim,true);
             Block(casing,"Door head",new Vector3(0,2.83f,0),new Vector3(.3f,.1f,width+.2f),trim,true);
             var pivot=Group(casing,"door:"+d.id);pivot.localPosition=new Vector3(0,0,-width/2);
-            Block(pivot,"Door leaf",new Vector3(0,1.37f,width/2),new Vector3(.10f,2.74f,width-.08f),wood,true);
-            Block(pivot,"Door inset",new Vector3(.065f,1.55f,width/2),new Vector3(.02f,.78f,width*.48f),metal,false);
+            if(d.id.StartsWith("door-prison-",StringComparison.Ordinal))
+            {
+                var leaf=Group(pivot,"Door leaf");
+                var collider=leaf.gameObject.AddComponent<BoxCollider>();collider.center=new Vector3(0,1.37f,width/2);
+                collider.size=new Vector3(.10f,2.74f,width-.08f);
+                int bars=Mathf.CeilToInt((width-.12f)/.22f);
+                for(int i=0;i<bars;i++)
+                    Block(leaf,"Prison door bar",new Vector3(0,1.37f,.06f+(width-.12f)*(i+.5f)/bars),new Vector3(.055f,2.74f,.055f),metal,false);
+                foreach(float y in new[]{.10f,1.04f,2.64f})
+                    Block(leaf,"Prison door cross rail",new Vector3(0,y,width/2),new Vector3(.07f,.075f,width-.08f),metal,false);
+                Block(leaf,"Prison lock plate",new Vector3(.065f,1.17f,width-.25f),new Vector3(.07f,.32f,.28f),metal,false);
+            }
+            else
+            {
+                Block(pivot,"Door leaf",new Vector3(0,1.37f,width/2),new Vector3(.10f,2.74f,width-.08f),wood,true);
+                Block(pivot,"Door inset",new Vector3(.065f,1.55f,width/2),new Vector3(.02f,.78f,width*.48f),metal,false);
+            }
             foreach(float x in new[]{-.10f,.10f})Block(pivot,"Door handle",new Vector3(x,1.17f,width-.28f),new Vector3(.08f,.045f,.26f),metal,false);
             float ledFace=d.id=="door-front"||d.id=="door-rear"?.204f:.140f;
             var led=Block(casing,"door-led:"+d.id,new Vector3(ledFace,1.48f,-width/2-.28f),new Vector3(.055f,.07f,.12f),lightSurface,false);
@@ -1204,6 +1260,15 @@ namespace DeadAir.Editor
             root.localPosition=DeadAirOfficeLayout.Position(o.x,o.y,o.z);
             switch(o.type)
             {
+                case "book":
+                    root.localRotation=Quaternion.Euler(0,-12,0);
+                    Block(root,"Diary pages",Vector3.zero,new Vector3(.22f,.045f,.30f),wastePaper,false);
+                    foreach(float y in new[]{-.032f,.032f})
+                        Block(root,"Diary cloth cover",new Vector3(0,y,0),new Vector3(.24f,.012f,.32f),trim,false);
+                    Block(root,"Diary spine",new Vector3(-.115f,0,0),new Vector3(.025f,.075f,.32f),trim,false);
+                    Block(root,"Diary cover label",new Vector3(0,.040f,0),new Vector3(.16f,.003f,.09f),paper,false);
+                    for(int line=0;line<3;line++)
+                        Block(root,"Diary label line",new Vector3(0,.042f,-.026f+line*.026f),new Vector3(.12f,.002f,.007f),black,false);break;
                 case "key":
                     Block(root,"Key bow",Vector3.zero,new Vector3(.06f,.012f,.06f),wood,false);
                     Block(root,"Key shaft",new Vector3(0,0,.045f),new Vector3(.018f,.010f,.06f),metal,false);
@@ -1381,7 +1446,7 @@ namespace DeadAir.Editor
             while(t!=null&&t!=boundary)
             {
                 if(t.name.StartsWith("interactive:")||t.name.StartsWith("door:")||t.name.StartsWith("door-led:")||
-                   t.name.StartsWith("locker-door:")||t.name.StartsWith("state:")||t.name.StartsWith("fan:")||t.name.StartsWith("monitor:")||
+                   t.name.StartsWith("locker-door:")||t.name.StartsWith("drawer:")||t.name.StartsWith("state:")||t.name.StartsWith("fan:")||t.name.StartsWith("monitor:")||
                    t.name.StartsWith("headlamp-lens:")||t.name.StartsWith("Cobweb:")) return true;
                 t=t.parent;
             }
