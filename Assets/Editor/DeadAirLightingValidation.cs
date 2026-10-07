@@ -131,7 +131,7 @@ namespace DeadAir.Editor
 
         static bool LegitimateEmitter(string name)
         {
-            if(name=="light-panel")return true;
+            if(name=="light-panel" || name.StartsWith("light-panel"))return true;
             if(!name.StartsWith("surface_"))return false;
             string number=name.Substring(8).Split(' ')[0];
             if(!int.TryParse(number,out int id))return false;

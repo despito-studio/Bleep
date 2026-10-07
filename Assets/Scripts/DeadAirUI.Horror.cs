@@ -371,8 +371,8 @@ namespace DeadAir
             if(id=="ladder")return "Складна драбина для проникнення всередину.";
             if(id.StartsWith("tape"))return "Касета для передавача.";
             if(id.StartsWith("keycard") || id.StartsWith("key-"))return "Картка доступу до замкнених приміщень.";
-            if(id.StartsWith("fuse"))return "Запобіжник для генератора.";
-            if(id=="fuel-canister")return "Пальне для генератора в задньому дворі.";
+            if(id.StartsWith("fuse"))return "Запобіжник 380В для рубильника освітлення в підвалі.";
+            if(id.StartsWith("fuel-canister"))return "Дизельне пальне для генератора на задньому дворі (потрібно 3 шт).";
             return "Особистий предмет оператора.";
         }
 

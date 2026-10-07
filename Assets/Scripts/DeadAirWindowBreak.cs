@@ -12,13 +12,16 @@ namespace DeadAir
             public Quaternion rotation;
         }
         readonly GameObject pane;
+        readonly GameObject brokenFrame;
         readonly List<Shard> shards = new List<Shard>();
         bool observed, wasBroken;
         float burstAge = 2;
 
-        public DeadAirWindowBreak(GameObject pane)
+        public DeadAirWindowBreak(GameObject pane, GameObject brokenFrame = null)
         {
             this.pane = pane;
+            this.brokenFrame = brokenFrame;
+            if (brokenFrame != null) brokenFrame.SetActive(false);
             if (pane == null) return;
             var source = pane.GetComponentInChildren<MeshRenderer>(true);
             if (source == null)
@@ -36,7 +39,7 @@ namespace DeadAir
                 color = new Color(.57f, .72f, .78f, .67f),
                 renderQueue = 3005
             };
-            material.SetColor("_EmissionColor", new Color(.13f, .19f, .21f));
+            material.SetColor("_EmissionColor", Color.black);
             material.SetFloat("_Glossiness", .92f);
             material.SetFloat("_Metallic", .03f);
             material.SetFloat("_SurfaceGrain", 0);
@@ -77,6 +80,7 @@ namespace DeadAir
             // One root owns both rendered glass and its collider. The frame and
             // sill stay in the facade, and the burst has no blocking colliders.
             pane.SetActive(!broken);
+            if (brokenFrame != null) brokenFrame.SetActive(broken);
             if (observed && broken && !wasBroken)
             {
                 burstAge = 0; DeadAirAudio.Play("window-shatter");

@@ -27,7 +27,7 @@
             DeadAir.Editor.DeadAirEditorSetup.ValidateLan();
             System.IO.File.WriteAllText(progress, "Saving playable scene and building Windows\n");
             DeadAir.Editor.DeadAirEditorSetup.CreateScene();
-            UnityEditor.PlayerSettings.bundleVersion = "1.7.1";
+            UnityEditor.PlayerSettings.bundleVersion = "1.7.2";
             UnityEditor.AssetDatabase.SaveAssets();
             DeadAir.Editor.DeadAirEditorSetup.BuildWindows();
             System.IO.File.WriteAllText(result, "PASSED: imported world; saved rebuilt station/exterior; mushrooms; drawers/battery rules; breaker protection and cap; physical basement cells and diary; navigation; Windows build. Runtime capture still required.\n");

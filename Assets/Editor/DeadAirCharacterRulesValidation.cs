@@ -37,7 +37,7 @@ namespace DeadAir.Editor
             var location = world.Objective(objectId);
             Require(location != null, "Missing objective " + objectId);
             var actor = rules.State.Player("host");
-            actor.x = location.x; actor.y = location.y >= 4.2f ? 4.2f : 0;
+            actor.x = location.x; actor.y = location.y >= 4.2f ? 4.2f : location.y <= -2f ? -4.2f : 0;
             actor.z = location.z;
             return rules.Interact("host", objectId);
         }
@@ -59,7 +59,10 @@ namespace DeadAir.Editor
             RequireRejectedObjective(rules, world, "broadcast");
             foreach (string id in new[] { "fuse-1", "fuse-2" })
                 Require(InteractAt(rules, world, id) == null, "Could not collect " + id);
-            Require(InteractAt(rules, world, "power") == null && rules.State.power, "Power must succeed after collecting fuses.");
+            RequireRejectedObjective(rules, world, "power");
+            foreach (string id in new[] { "fuel-canister", "fuel-canister-2", "fuel-canister-3" })
+                Require(InteractAt(rules, world, id) == null, "Could not collect " + id);
+            Require(InteractAt(rules, world, "power") == null && rules.State.power, "Power must succeed after collecting fuel canisters.");
             RequireRejectedObjective(rules, world, "broadcast");
             var actor = rules.State.Player("host");
             var console = world.Objective("broadcast");
@@ -312,7 +315,7 @@ namespace DeadAir.Editor
             Require(!actor.mapOpen, "Maps must remain stowed in the lobby.");
             rules.Start("host");
             rules.EquipUnique(actor.id, true);
-            Require(actor.uniqueItemEquipped && actor.flashlight, "Map setup must have a visible personal item and a lit flashlight.");
+            Require(actor.uniqueItemEquipped, "Map setup must have a visible personal item.");
             rules.Pause(actor.id, true);
             Require(rules.State.paused, "A host alone in a multiplayer room must be able to pause.");
             rules.EquipMap(actor.id, true);

@@ -23,7 +23,7 @@ namespace DeadAir.Editor
         static GameObject station, exterior;
         static int meshSerial;
         static Font signFont;
-        static Material plaster, brick, trim, floor, carpet, ceilingPanel, metal, wood, asphalt, grass, glass, lightSurface, paper, black, signLetters, cobwebSilk, wastePaper;
+        static Material plaster, brick, trim, floor, carpet, ceilingPanel, metal, wood, doorWood, asphalt, grass, glass, lightSurface, paper, black, signLetters, cobwebSilk, wastePaper;
 
         [MenuItem("Dead Air/Refresh Volumetric Cobwebs")]
         public static void RefreshCobwebGeometry()
@@ -282,6 +282,7 @@ namespace DeadAir.Editor
             ceilingPanel = Surface("acoustic-ceiling",new Color(.60f,.63f,.56f),6);
             metal = Surface("steel",new Color(.3f,.34f,.32f),2);
             wood = Surface("wood",new Color(.31f,.23f,.15f),5);
+            doorWood = Surface("door-wood",new Color(.26f,.18f,.12f),10);
             asphalt = Surface("asphalt",new Color(.19f,.22f,.19f),4);
             grass = Surface("grass",new Color(.15f,.23f,.14f),4);
             glass = Surface("dark-window",new Color(.22f,.35f,.38f),2,null,0.28f);
@@ -304,7 +305,7 @@ namespace DeadAir.Editor
         static Material Surface(string name, Color color, int pattern, Color? emission = null, float alpha = 1f)
         {
             string texturePath = Folder + "/Textures/" + name + ".png";
-            const int resolution = 64;
+            int resolution = pattern == 10 ? 256 : 64;
             var texture = new Texture2D(resolution,resolution,TextureFormat.RGBA32,false);
             var colors = new Color[resolution * resolution];
             for(int z=0;z<resolution;z++) for(int x=0;x<resolution;x++)
@@ -321,6 +322,13 @@ namespace DeadAir.Editor
                 {
                     if(x%20==0||z%20==0)shade=.66f;
                     else if(x%3==1&&z%3==1)shade=.90f;
+                }
+                if(pattern==10)
+                {
+                    float grain = Mathf.Sin(x * .65f + Mathf.Sin(z * .04f) * 2.5f) * .075f;
+                    float ring = Mathf.Sin(x * 1.8f + z * .08f) * .035f;
+                    float fine = ((hash & 255) / 255f - .5f) * .025f;
+                    shade = 1f + grain + ring + fine;
                 }
                 colors[z*resolution+x] = color*shade; colors[z*resolution+x].a=alpha;
             }
@@ -628,7 +636,7 @@ namespace DeadAir.Editor
             bool isDirectorWindow = Mathf.Abs(position.x - 9f) < .25f && Mathf.Abs(position.y - 6.38f) < .25f && Mathf.Abs(position.z - 6f) < .25f;
             // A breakable pane must retain its renderer and collider after shell batching.
             var pane=isDirectorWindow?Group(root,"state:directorWindowPane"):root;
-            Block(pane,isDirectorWindow ? "window-director-glass" : "Recessed glass",Vector3.zero,new Vector3(width-.08f,height-.08f,.035f),glass,true);
+            Block(pane,"Recessed glass",Vector3.zero,new Vector3(width-.08f,height-.08f,.035f),glass,true);
             foreach(float x in new[]{-width/2+.025f,width/2-.025f})Block(root,"Window reveal side",new Vector3(x,0,0),new Vector3(.05f,height,.35f),trim,false);
             foreach(float y in new[]{-height/2+.025f,height/2-.025f})Block(root,"Window reveal horizontal",new Vector3(0,y,0),new Vector3(width,.05f,.35f),trim,false);
             foreach(float face in new[]{-.185f,.185f})
@@ -638,6 +646,35 @@ namespace DeadAir.Editor
             }
             Block(pane,"Mullion",Vector3.zero,new Vector3(.045f,height,.35f),trim,false);
             Block(root,"Interior sill",new Vector3(0,-height/2-.045f,0),new Vector3(width+.15f,.08f,.46f),trim,false);
+            if (isDirectorWindow)
+            {
+                var brokenRoot = Group(root, "state:directorWindowBroken");
+                float halfW = (width - .08f) / 2, halfH = (height - .08f) / 2;
+                // Jagged perimeter shards along the bottom sill
+                Block(brokenRoot, "Broken glass bottom 1", new Vector3(-halfW * .65f, -halfH + .20f, 0), new Vector3(.45f, .40f, .035f), glass, false);
+                Block(brokenRoot, "Broken glass bottom 2", new Vector3(-halfW * .15f, -halfH + .14f, 0), new Vector3(.38f, .28f, .035f), glass, false);
+                Block(brokenRoot, "Broken glass bottom 3", new Vector3(halfW * .35f, -halfH + .18f, 0), new Vector3(.42f, .36f, .035f), glass, false);
+                Block(brokenRoot, "Broken glass bottom 4", new Vector3(halfW * .75f, -halfH + .26f, 0), new Vector3(.35f, .52f, .035f), glass, false);
+                // Jagged shards hanging from top frame
+                Block(brokenRoot, "Broken glass top 1", new Vector3(-halfW * .55f, halfH - .20f, 0), new Vector3(.48f, .40f, .035f), glass, false);
+                Block(brokenRoot, "Broken glass top 2", new Vector3(halfW * .10f, halfH - .15f, 0), new Vector3(.40f, .30f, .035f), glass, false);
+                Block(brokenRoot, "Broken glass top 3", new Vector3(halfW * .65f, halfH - .24f, 0), new Vector3(.42f, .48f, .035f), glass, false);
+                // Jagged shards on side reveals
+                Block(brokenRoot, "Broken glass left", new Vector3(-halfW + .10f, 0, 0), new Vector3(.20f, halfH * .8f, .035f), glass, false);
+                Block(brokenRoot, "Broken glass right", new Vector3(halfW - .10f, 0, 0), new Vector3(.20f, halfH * .85f, .035f), glass, false);
+                // Broken mullion remnants at top and bottom (leaving the middle open)
+                Block(brokenRoot, "Broken mullion top", new Vector3(0, halfH - .22f, 0), new Vector3(.045f, .44f, .35f), trim, false);
+                Block(brokenRoot, "Broken mullion bottom", new Vector3(0, -halfH + .18f, 0), new Vector3(.045f, .36f, .35f), trim, false);
+                // Shattered debris on the sill
+                Block(brokenRoot, "Sill glass shard 1", new Vector3(-.35f, -height / 2 - .025f, .08f), new Vector3(.25f, .018f, .16f), glass, false);
+                Block(brokenRoot, "Sill glass shard 2", new Vector3(.42f, -height / 2 - .025f, -.06f), new Vector3(.28f, .018f, .18f), glass, false);
+                Block(brokenRoot, "Sill glass shard 3", new Vector3(.05f, -height / 2 - .025f, .12f), new Vector3(.20f, .018f, .14f), glass, false);
+                // Fallen glass shards on the carpeted floor inside
+                Block(brokenRoot, "Floor glass debris 1", new Vector3(-.3f, -height / 2 - .55f, -.45f), new Vector3(.32f, .014f, .26f), glass, false);
+                Block(brokenRoot, "Floor glass debris 2", new Vector3(.45f, -height / 2 - .55f, -.65f), new Vector3(.28f, .014f, .22f), glass, false);
+                Block(brokenRoot, "Floor glass debris 3", new Vector3(0, -height / 2 - .55f, -.85f), new Vector3(.38f, .014f, .30f), glass, false);
+                brokenRoot.gameObject.SetActive(false);
+            }
         }
 
         static void BuildStair(Transform shell)
@@ -657,16 +694,32 @@ namespace DeadAir.Editor
                     foreach(float x in new[]{stair.minX-.04f, stair.maxX+.04f})
                         Box(shell, "Stair side wall", x, stair.lowerY + wallH / 2, stair.maxZ - (i + .5f) * depth, .08f, wallH, depth, trim);
 
-                    if(i%3==0) foreach(float x in new[]{stair.minX-.05f,stair.maxX+.05f})
+                    if(i%2==0 || i==count-1) foreach(float x in new[]{stair.minX-.05f,stair.maxX+.05f})
                         Box(shell,"Stair handrail post",x,top+.52f,stair.maxZ-(i+.5f)*depth,.05f,1.04f,.05f,metal);
                 }
                 // Continuous handrails follow the exact stair slope; ground bypasses remain on either side.
                 foreach(float x in new[]{stair.minX-.05f,stair.maxX+.05f})
-                    Beam(shell,"Sloping handrail",DeadAirOfficeLayout.Position(x,stair.lowerY+1.06f,stair.maxZ),DeadAirOfficeLayout.Position(x,stair.upperY+1.06f,stair.minZ),.06f,metal);
+                {
+                    Vector3 lowerPos = DeadAirOfficeLayout.Position(x,stair.lowerY+1.06f,stair.maxZ);
+                    Vector3 upperPos = DeadAirOfficeLayout.Position(x,stair.upperY+1.06f,stair.minZ);
+                    Beam(shell,"Sloping handrail",lowerPos,upperPos,.06f,metal);
+                    Beam(shell,"Sloping mid rail",DeadAirOfficeLayout.Position(x,stair.lowerY+.54f,stair.maxZ),DeadAirOfficeLayout.Position(x,stair.upperY+.54f,stair.minZ),.04f,metal);
+
+                    // Solid physical collision barrier preventing players from falling off the sides of the stair
+                    Vector3 pA = DeadAirOfficeLayout.Position(x, stair.lowerY + .60f, stair.maxZ);
+                    Vector3 pB = DeadAirOfficeLayout.Position(x, stair.upperY + .60f, stair.minZ);
+                    var guard = Block(shell, "Stair safety barrier", (pA + pB) / 2, new Vector3(.09f, 1.20f, Vector3.Distance(pA, pB)), metal, true);
+                    guard.transform.localRotation = Quaternion.LookRotation(pB - pA);
+                }
                 if (stair.upperY >= Storey)
                 {
                     foreach(float x in new[]{stair.minX-.08f,stair.maxX+.08f})
+                    {
                         Beam(shell,"Upper opening rail",DeadAirOfficeLayout.Position(x,Storey+1.05f,stair.maxZ),DeadAirOfficeLayout.Position(x,Storey+1.05f,stair.minZ),.055f,metal);
+                        Beam(shell,"Upper opening mid rail",DeadAirOfficeLayout.Position(x,Storey+.52f,stair.maxZ),DeadAirOfficeLayout.Position(x,Storey+.52f,stair.minZ),.04f,metal);
+                        // Continuous physical barrier along upper mezzanine edge
+                        Block(shell,"Upper guard collider",DeadAirOfficeLayout.Position(x,Storey+.6f,(stair.maxZ+stair.minZ)/2),new Vector3(.10f,1.2f,Mathf.Abs(stair.maxZ-stair.minZ)),metal,true);
+                    }
                     for(int i=0;i<7;i++) foreach(float x in new[]{stair.minX-.08f,stair.maxX+.08f})
                         Box(shell,"Upper guard post",x,Storey+.52f,stair.minZ+i*2,.05f,1.04f,.05f,metal);
                     HangingSign(shell,"2 FLOOR  /  STUDIO + CONTROL",new Vector3(0,3.36f,-37.9f),3.4f,.4f,Storey-.355f);
@@ -1210,19 +1263,32 @@ namespace DeadAir.Editor
             }
             else
             {
-                Block(pivot,"Door leaf",new Vector3(0,1.37f,width/2),new Vector3(.10f,2.74f,width-.08f),wood,true);
-                Block(pivot,"Door inset",new Vector3(.065f,1.55f,width/2),new Vector3(.02f,.78f,width*.48f),metal,false);
+                Block(pivot,"Door leaf",new Vector3(0,1.37f,width/2),new Vector3(.10f,2.74f,width-.08f),doorWood,true);
+                // Architectural recessed molded panels on both faces
+                float panelW = width * .42f;
+                foreach(float face in new[]{-.052f, .052f})
+                {
+                    Block(pivot,"Door upper panel",new Vector3(face,1.92f,width/2),new Vector3(.012f,.96f,panelW),trim,false);
+                    Block(pivot,"Door lower panel",new Vector3(face,.68f,width/2),new Vector3(.012f,.82f,panelW),trim,false);
+                }
             }
-            foreach(float x in new[]{-.10f,.10f})Block(pivot,"Door handle",new Vector3(x,1.17f,width-.28f),new Vector3(.08f,.045f,.26f),metal,false);
+            foreach(float x in new[]{-.06f,.06f})
+            {
+                Block(pivot,"Door handle plate",new Vector3(x,1.17f,width-.28f),new Vector3(.016f,.28f,.07f),metal,false);
+                Block(pivot,"Door handle",new Vector3(x*1.6f,1.17f,width-.28f),new Vector3(.06f,.035f,.18f),metal,false);
+            }
             float ledFace=d.id=="door-front"||d.id=="door-rear"?.204f:.140f;
             var led=Block(casing,"door-led:"+d.id,new Vector3(ledFace,1.48f,-width/2-.28f),new Vector3(.055f,.07f,.12f),lightSurface,false);
             var lamp=Group(casing,"door-light:"+d.id);lamp.localPosition=led.transform.localPosition+Vector3.right*.05f;
             var light=lamp.gameObject.AddComponent<Light>();light.type=LightType.Point;light.range=.7f;light.intensity=.07f;light.shadows=LightShadows.None;
             string text=d.label.Replace("Двері: ","");
             // Signs fit above the casing, with their board proud of the wall. Both corridor sides can be read.
+            // Width clamped to avoid protruding into perpendicular walls.
             float signFace=d.id=="door-front"||d.id=="door-rear"?.188f:.123f;
-            Sign(casing,text,new Vector3(signFace,3.15f,0),Quaternion.Euler(0,90,0),2.25f,.4f);
-            Sign(casing,text,new Vector3(-signFace,3.15f,0),Quaternion.Euler(0,-90,0),2.25f,.4f);
+            float signW=Mathf.Clamp(width*.55f,.95f,1.25f);
+            float signH=0.28f;
+            Sign(casing,text,new Vector3(signFace,3.15f,0),Quaternion.Euler(0,90,0),signW,signH);
+            Sign(casing,text,new Vector3(-signFace,3.15f,0),Quaternion.Euler(0,-90,0),signW,signH);
         }
 
         static void BuildLocker(LockerData l)
@@ -1304,8 +1370,17 @@ namespace DeadAir.Editor
                     Block(root,"Ceramic fuse",Vector3.zero,new Vector3(.08f,.07f,.23f),paper,false);
                     foreach(float z in new[]{-.11f,.11f})Block(root,"Fuse terminal",new Vector3(0,0,z),new Vector3(.10f,.09f,.035f),metal,false);break;
                 case "canister":
-                    if(templates.TryGetValue("fuelCanister",out var canister)){var copy=UnityEngine.Object.Instantiate(canister,root,false);copy.transform.localPosition=Vector3.down*o.y;}
-                    else{Block(root,"Fuel canister",Vector3.zero,new Vector3(.42f,.65f,.3f),trim,false);Block(root,"Canister handle",new Vector3(0,.38f,0),new Vector3(.3f,.08f,.08f),metal,false);}break;
+                    if(templates.TryGetValue("fuelCanister",out var canister))
+                    {
+                        var copy=UnityEngine.Object.Instantiate(canister,root,false);
+                        copy.transform.localPosition=Vector3.up*(baseY-o.y);
+                    }
+                    else
+                    {
+                        Block(root,"Fuel canister",Vector3.up*(baseY-o.y+.325f),new Vector3(.42f,.65f,.3f),trim,false);
+                        Block(root,"Canister handle",Vector3.up*(baseY-o.y+.705f),new Vector3(.3f,.08f,.08f),metal,false);
+                    }
+                    break;
                 case "valve":
                     // A wheel and pipe assembly faces back into the room, away from the outside wall.
                     root.localRotation=Quaternion.Euler(0,90,0);
@@ -1381,10 +1456,13 @@ namespace DeadAir.Editor
         static void Sign(Transform parent,string text,Vector3 position,Quaternion rotation,float width,float height)
         {
             var sign=Group(parent,"Fitted sign: "+text.Replace('\n',' '));sign.localPosition=position;sign.localRotation=rotation;
-            Block(sign,"Sign backing",Vector3.zero,new Vector3(width,height,.025f),paper,false);
-            var letters=Group(sign,"Sign lettering");letters.localPosition=new Vector3(0,0,.022f);letters.localRotation=Quaternion.Euler(0,180,0);
-            var mesh=letters.gameObject.AddComponent<TextMesh>();mesh.text=text;mesh.fontSize=64;mesh.characterSize=.05f;
-            mesh.anchor=TextAnchor.MiddleCenter;mesh.alignment=TextAlignment.Center;mesh.color=new Color(.07f,.11f,.09f);
+            // Sleek metallic/trim border around the plaque
+            Block(sign,"Sign frame",Vector3.zero,new Vector3(width+.02f,height+.02f,.022f),trim,false);
+            // High-contrast elegant dark backing
+            Block(sign,"Sign backing",new Vector3(0,0,.002f),new Vector3(width,height,.020f),black,false);
+            var letters=Group(sign,"Sign lettering");letters.localPosition=new Vector3(0,0,.018f);letters.localRotation=Quaternion.Euler(0,180,0);
+            var mesh=letters.gameObject.AddComponent<TextMesh>();mesh.text=text;mesh.fontSize=128;mesh.characterSize=.025f;
+            mesh.anchor=TextAnchor.MiddleCenter;mesh.alignment=TextAlignment.Center;mesh.color=new Color(.92f,.91f,.88f);
             if(signFont!=null)
             {
                 mesh.font=signFont;
@@ -1394,7 +1472,7 @@ namespace DeadAir.Editor
             var renderer=letters.GetComponent<MeshRenderer>();renderer.shadowCastingMode=ShadowCastingMode.Off;
             // TextMesh's font em varies by typeface: fit measured local bounds to the physical board.
             var bounds=renderer.bounds;
-            float scale=Mathf.Min(width*.88f/Mathf.Max(.01f,bounds.size.x),height*.75f/Mathf.Max(.01f,bounds.size.y));
+            float scale=Mathf.Min(width*.85f/Mathf.Max(.01f,bounds.size.x),height*.75f/Mathf.Max(.01f,bounds.size.y));
             if(scale>0&&!float.IsInfinity(scale)&&!float.IsNaN(scale))letters.localScale=Vector3.one*scale;
         }
 

@@ -144,7 +144,8 @@ namespace DeadAir
                         break;
                     }
             var pane = stateViews.TryGetValue("directorWindowPane", out var breakablePane) ? breakablePane.gameObject : windowDirectorGlass;
-            directorWindow = new DeadAirWindowBreak(pane);
+            var brokenFrame = stateViews.TryGetValue("directorWindowBroken", out var bFrame) ? bFrame.gameObject : null;
+            directorWindow = new DeadAirWindowBreak(pane, brokenFrame);
             sky = new DeadAirSky(root);
             var moon=root.Find("Dead Air Night Sky & Moon/Directional moonlight")?.GetComponent<Light>();
             if(moon!=null)
@@ -542,8 +543,7 @@ namespace DeadAir
             foreach(var obj in data.objects)
             {
                 if(!interactables.TryGetValue(obj.id,out var view))continue;
-                if(obj.type=="tape"||obj.type=="fuse"||obj.type=="keycard"||obj.type=="key"||obj.type=="ladder")view.gameObject.SetActive(!state.Collected(obj.id));
-                if(obj.id=="fuel-canister")view.gameObject.SetActive(!state.canister&&!state.quest.fuelAdded);
+                if(obj.type=="tape"||obj.type=="fuse"||obj.type=="keycard"||obj.type=="key"||obj.type=="ladder"||obj.type=="canister")view.gameObject.SetActive(!state.Collected(obj.id));
                 if(obj.id=="pressure-valve")view.localRotation=interactionRotations[obj.id]*Quaternion.Euler(0,0,state.valveOpened?180:0);
             }
             bool flicker=DeadAirSettings.Flicker;

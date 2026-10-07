@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 namespace DeadAir.Editor
@@ -164,6 +165,7 @@ namespace DeadAir.Editor
 
         static void ValidateOfficePeek()
         {
+            EditorSceneManager.OpenScene("Assets/Scenes/Blackpine.unity");
             var world=WorldData.Load();var rules=Start(world);var actor=rules.State.Player("host");
             var openedLeaves=new List<Collider>();
             try

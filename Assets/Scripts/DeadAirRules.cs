@@ -207,7 +207,7 @@ namespace DeadAir
         {
             State.phase = "playing";
             State.paused = false;
-            State.tapes.Clear(); State.fuses.Clear(); State.keycards.Clear();
+            State.tapes.Clear(); State.fuses.Clear(); State.keycards.Clear(); State.canisters.Clear();
             State.collected.Clear();
             State.droppedItems.Clear();
             ResetDrawers();
@@ -277,7 +277,7 @@ namespace DeadAir
             }
             if (cmd == "give")
             {
-                if (parts.Length < 2) return "Використання: give <ladder|key-main|key-basement|all>";
+                if (parts.Length < 2) return "Використання: give <ladder|key-main|key-basement|fuel|fuse|all>";
                 string item = parts[1].ToLowerInvariant();
                 if (item == "all")
                 {
@@ -286,11 +286,22 @@ namespace DeadAir
                     if (!p.inventory.Contains("key-basement")) p.inventory.Add("key-basement");
                     if (!p.inventory.Contains("keycard-guard")) p.inventory.Add("keycard-guard");
                     if (!p.inventory.Contains("keycard-engineer")) p.inventory.Add("keycard-engineer");
+                    if (!p.inventory.Contains("fuel-canister")) p.inventory.Add("fuel-canister");
+                    if (!p.inventory.Contains("fuel-canister-2")) p.inventory.Add("fuel-canister-2");
+                    if (!p.inventory.Contains("fuel-canister-3")) p.inventory.Add("fuel-canister-3");
+                    if (!p.inventory.Contains("fuse-1")) p.inventory.Add("fuse-1");
+                    if (!p.inventory.Contains("fuse-2")) p.inventory.Add("fuse-2");
                     State.collected.Add("ladder");
                     State.collected.Add("key-main");
                     State.collected.Add("key-basement");
+                    if (!State.canisters.Contains("fuel-canister")) State.canisters.Add("fuel-canister");
+                    if (!State.canisters.Contains("fuel-canister-2")) State.canisters.Add("fuel-canister-2");
+                    if (!State.canisters.Contains("fuel-canister-3")) State.canisters.Add("fuel-canister-3");
+                    if (!State.fuses.Contains("fuse-1")) State.fuses.Add("fuse-1");
+                    if (!State.fuses.Contains("fuse-2")) State.fuses.Add("fuse-2");
+                    State.canister = State.quest.fuelAdded = true;
                     Dirty = true;
-                    return "Видано всі ключі та драбину!";
+                    return "Видано всі ключі, драбину, запобіжники та дизельне пальне!";
                 }
                 if (item == "ladder" || item == "драбина")
                 {
@@ -312,6 +323,27 @@ namespace DeadAir
                     State.collected.Add("key-basement");
                     Dirty = true;
                     return "Ключ від підвалу додано в інвентар!";
+                }
+                if (item == "fuel" || item == "canister" || item == "fuel-canister" || item == "паливо" || item == "каністра")
+                {
+                    if (!p.inventory.Contains("fuel-canister")) p.inventory.Add("fuel-canister");
+                    if (!p.inventory.Contains("fuel-canister-2")) p.inventory.Add("fuel-canister-2");
+                    if (!p.inventory.Contains("fuel-canister-3")) p.inventory.Add("fuel-canister-3");
+                    if (!State.canisters.Contains("fuel-canister")) State.canisters.Add("fuel-canister");
+                    if (!State.canisters.Contains("fuel-canister-2")) State.canisters.Add("fuel-canister-2");
+                    if (!State.canisters.Contains("fuel-canister-3")) State.canisters.Add("fuel-canister-3");
+                    State.canister = State.quest.fuelAdded = true;
+                    Dirty = true;
+                    return "3 каністри дизельного палива додано в інвентар!";
+                }
+                if (item == "fuse" || item == "fuses" || item == "запобіжник")
+                {
+                    if (!p.inventory.Contains("fuse-1")) p.inventory.Add("fuse-1");
+                    if (!p.inventory.Contains("fuse-2")) p.inventory.Add("fuse-2");
+                    if (!State.fuses.Contains("fuse-1")) State.fuses.Add("fuse-1");
+                    if (!State.fuses.Contains("fuse-2")) State.fuses.Add("fuse-2");
+                    Dirty = true;
+                    return "2 запобіжники 380В додано в інвентар!";
                 }
                 if (!p.inventory.Contains(item)) p.inventory.Add(item);
                 State.collected.Add(item);
@@ -565,6 +597,11 @@ namespace DeadAir
                 if (actualItem.StartsWith("fuse-") && !State.fuses.Contains(actualItem)) State.fuses.Add(actualItem);
                 if (actualItem.StartsWith("tape-") && !State.tapes.Contains(actualItem)) State.tapes.Add(actualItem);
                 if (actualItem.StartsWith("keycard-") && !State.keycards.Contains(actualItem)) State.keycards.Add(actualItem);
+                if (actualItem.StartsWith("fuel-canister") && !State.canisters.Contains(actualItem))
+                {
+                    State.canisters.Add(actualItem);
+                    State.canister = State.quest.fuelAdded = State.canisters.Count >= 3;
+                }
                 State.message = p.name + " підібрав: " + dropped.label;
                 Dirty = true;
                 return null;
@@ -689,11 +726,12 @@ namespace DeadAir
             }
             if (objectId == "breaker")
             {
-                if (!State.power) return "Немає живлення. Спочатку увімкніть генератор на задньому дворі.";
+                if (!State.power) return "Немає живлення. Спочатку заправте та увімкніть дизельний генератор у дворі.";
+                if (State.fuses.Count < 2) return "У щитку відсутні запобіжники 380В! Знайдіть 2 запобіжники (" + State.fuses.Count + "/2), щоб увімкнути світло.";
                 State.breakerOn = State.quest.breakerOn = !State.breakerOn;
                 if (State.breakerOn) ProtectBreaker();
                 HearNoise(obj.x, obj.y, obj.z, 22, 6);
-                State.message = State.breakerOn ? "Рубильник увімкнено! Освітлення станції працює." : "Рубильник вимкнено. Світло згасло.";
+                State.message = State.breakerOn ? "Запобіжники встановлено, рубильник увімкнено! Освітлення станції та підвалу працює." : "Рубильник вимкнено. Світло згасло.";
                 Dirty = true; return null;
             }
             if (objectId.StartsWith("keycard-"))
@@ -718,18 +756,19 @@ namespace DeadAir
                 State.scare++;
                 State.message = "ЗАПОБІЖНИК 380В ЗНАЙДЕНО (" + State.fuses.Count + "/2).";
             }
-            else if (objectId == "fuel-canister")
+            else if (objectId.StartsWith("fuel-canister"))
             {
-                State.canister = State.quest.fuelAdded = true;
+                if (!State.canisters.Contains(objectId)) State.canisters.Add(objectId);
                 if (!p.inventory.Contains(objectId)) p.inventory.Add(objectId);
-                State.message = "Каністру знайдено.";
+                State.canister = State.quest.fuelAdded = State.canisters.Count >= 3;
+                State.message = "Каністру з дизелем знайдено (" + State.canisters.Count + "/3).";
             }
             else if (objectId == "pressure-valve") { State.valveOpened = State.quest.valveOpened = true; State.message = "Вентиль тиску відкрито."; }
             else if (objectId == "power")
             {
-                if (State.fuses.Count < 2) return "Потрібні 2 запобіжники 380В.";
+                if (State.canisters.Count < 3) return "Для запуску генератора потрібно 3 каністри дизельного палива (" + State.canisters.Count + "/3).";
                 State.power = State.quest.power = true;
-                State.message = "Живлення відновлено. Передавач готовий.";
+                State.message = "Генератор заправлено дизелем та успішно запущено!";
             }
             else if (objectId == "broadcast")
             {
@@ -801,6 +840,7 @@ namespace DeadAir
             if(!p.uniqueItemEquipped)p.uniqueActionCancelled=true;
             if (itemId == "flashlight") p.flashlight = false;
             if (itemId.StartsWith("keycard-")) State.keycards.Remove(itemId);
+            if (itemId.StartsWith("fuel-canister")) { State.canisters.Remove(itemId); State.canister = State.quest.fuelAdded = State.canisters.Count >= 3; }
             string dropInstanceId = "drop_" + System.Guid.NewGuid().ToString("N").Substring(0, 6);
             string label = GetItemLabel(itemId);
             State.droppedItems.Add(new DroppedItem { id = dropInstanceId, itemId = itemId, label = label, x = p.x, y = p.y, z = p.z,
@@ -815,7 +855,7 @@ namespace DeadAir
             if (itemId == "flashlight") return "Ліхтар";
             if (itemId == DeadAirSupplies.BatteryItem) return "Батарейка для ліхтаря";
             if (itemId == DeadAirPrisonBook.Id) return DeadAirPrisonBook.Title;
-            if (itemId == "fuel-canister") return "Каністра";
+            if (itemId.StartsWith("fuel-canister")) return "Каністра з дизелем";
             if (itemId == "ladder") return "Складна драбина";
             if (itemId == "key-main") return "Головний ключ станції";
             if (itemId == "key-basement" || itemId == "keycard-basement") return "Картка Під.";

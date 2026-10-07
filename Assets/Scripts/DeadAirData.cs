@@ -212,6 +212,7 @@ namespace DeadAir
         public int scare, radioSequence;
         public List<PlayerState> players = new List<PlayerState>();
         public List<string> tapes = new List<string>(), fuses = new List<string>(), keycards = new List<string>();
+        public List<string> canisters = new List<string>();
         public List<string> collected = new List<string>();
         public List<DroppedItem> droppedItems = new List<DroppedItem>();
         public List<DoorState> doors = new List<DoorState>();
@@ -222,7 +223,7 @@ namespace DeadAir
         public PlayerState Player(string id) { return players.Find(p => p.id == id); }
         public DoorState Door(string id) { return doors.Find(d => d.id == id); }
         public DrawerState Drawer(string id) { return drawers?.Find(d => d.id == id); }
-        public bool Collected(string id) { return collected.Contains(id) || tapes.Contains(id) || fuses.Contains(id) || keycards.Contains(id); }
+        public bool Collected(string id) { return collected.Contains(id) || tapes.Contains(id) || fuses.Contains(id) || keycards.Contains(id) || canisters.Contains(id); }
     }
 
     [Serializable] public class NetPacket

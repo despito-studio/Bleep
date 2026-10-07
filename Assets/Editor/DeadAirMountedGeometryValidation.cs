@@ -16,11 +16,11 @@ namespace DeadAir.Editor
             var exterior=AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Resources/World/exterior.prefab");
             Require(station!=null&&exterior!=null,"Saved office prefabs are missing.");
             var transforms=station.GetComponentsInChildren<Transform>(true).Concat(exterior.GetComponentsInChildren<Transform>(true)).ToArray();
-            var walls=station.GetComponentsInChildren<BoxCollider>(true).Where(c=>c.name=="Office partition"||c.name=="Entrance header"||c.name.Contains("facade")||c.name.Contains("Facade")||c.name.Contains("window pier")).ToArray();
+            var walls=station.GetComponentsInChildren<BoxCollider>(true).Where(c=>c.name.Contains("partition")||c.name=="Entrance header"||c.name.Contains("facade")||c.name.Contains("Facade")||c.name.Contains("window pier")||c.name.Contains("Under-stairs")).ToArray();
             int windowCount=0,mountedCount=0;
             foreach(var window in transforms.Where(t=>t.name=="Window"))
             {
-                var pane=window.Find("Recessed glass").GetComponent<BoxCollider>();
+                var pane=(window.Find("Recessed glass") ?? window.Find("state:directorWindowPane/Recessed glass"))?.GetComponent<BoxCollider>();
                 Require(pane!=null,"Window has no glazing collision envelope.");
                 float width=pane.size.x+.08f;
                 bool side=Mathf.Abs(window.position.x)>17;

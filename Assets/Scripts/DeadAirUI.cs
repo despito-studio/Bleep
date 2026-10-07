@@ -269,14 +269,14 @@ namespace DeadAir
             float mushroomTime=DeadAirMushrooms.Remaining(state,me);
             statusText.text=mushroomTime>0&&!me.down?"ГРИБНИЙ ТРІП  ·  "+Mathf.CeilToInt(mushroomTime)+" с":"";
             statusText.color=mushroomTime>0?new Color(.64f,.91f,.76f):Muted;
-            evidenceText.text=state.tapes.Count+" / 3  КАСЕТИ\n\n"+state.fuses.Count+" / 2  ЗАПОБІЖНИКИ";
+            evidenceText.text=state.tapes.Count+" / 3  КАСЕТИ\n\n"+state.canisters.Count+" / 3  ПАЛИВО\n\n"+state.fuses.Count+" / 2  ЗАПОБІЖНИКИ";
             sanityBar.fillAmount=Mathf.Clamp01(me.sanity/100);staminaBar.fillAmount=Mathf.Clamp01(player.Stamina/100);
             var forward=player.ViewCamera.transform.forward;float compass=Mathf.Repeat(Mathf.Atan2(forward.x,forward.z)*Mathf.Rad2Deg,360);
             string[] directions={"Пн","Пн-Сх","Сх","Пд-Сх","Пд","Пд-Зх","Зх","Пн-Зх"};compassText.text=directions[Mathf.RoundToInt(compass/45)%8]+"   ·   "+Mathf.RoundToInt(compass).ToString("000")+"°";
-            objectiveText.text=state.broadcast?"Поверніться до фургона":state.power?"Передавач: 96.4 МГц":state.fuses.Count>=2?"Увімкніть генератор у задньому дворі":"Знайдіть касети та запобіжники";
+            objectiveText.text=state.broadcast?"Поверніться до фургона":state.breakerOn?"Передавач: 96.4 МГц":state.power?(state.fuses.Count>=2?"Увімкніть рубильник у підвалі":"Знайдіть 2 запобіжники для щитка"):state.canisters.Count>=3?"Заправте та увімкніть генератор у дворі":"Знайдіть 3 каністри дизеля для генератора";
             messageText.text=me.down?"ВАС ЗБИТО. ЧЕКАЙТЕ НА ДОПОМОГУ.":!string.IsNullOrEmpty(me.hiding)?"ВИ У СХОВАНЦІ  /  E — ВИЙТИ":"";
             interactionText.text=string.IsNullOrEmpty(player.InteractionId)?"":"[ E ]  "+player.InteractionLabel;
-            mapLocation.text="ВИ ЗАРАЗ: "+room.ToUpperInvariant()+"    /    КАСЕТИ "+state.tapes.Count+"/3    /    ЗАПОБІЖНИКИ "+state.fuses.Count+"/2";
+            mapLocation.text="ВИ ЗАРАЗ: "+room.ToUpperInvariant()+"    /    КАСЕТИ "+state.tapes.Count+"/3    /    ПАЛИВО "+state.canisters.Count+"/3    /    ЗАПОБІЖНИКИ "+state.fuses.Count+"/2";
             roleItemText.text=me.uniqueItemEquipped?"R — "+(me.characterClass=="operator"?"Закурити ("+me.cigarettesRemaining+")":"Використати"):"";
             RefreshSupplies(state,me);
             compassText.gameObject.SetActive(me.characterClass=="dispatcher"&&me.uniqueItemEquipped);
@@ -307,7 +307,7 @@ namespace DeadAir
             if (itemId == "wrench") return "Ключ";
             if (itemId == "recorder") return "Диктофон";
             if (itemId == "compass") return "Компас";
-            if (itemId == "fuel-canister") return "Каністра";
+            if (itemId.StartsWith("fuel-canister")) return "Каністра";
             if (itemId == "keycard-guard") return "Картка Охр.";
             if (itemId == "keycard-engineer") return "Картка Інж.";
             if (itemId == "key-basement" || itemId == "keycard-basement") return "Картка Під.";

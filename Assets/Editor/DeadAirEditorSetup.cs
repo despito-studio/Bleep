@@ -78,11 +78,11 @@ namespace DeadAir.Editor
             var rules = new DeadAirRules(world, "host", "Victor", "engineer", true, false);
             rules.Start("host");
             foreach (string id in new[] { "keycard-guard", "keycard-engineer", "tape-1", "tape-2", "tape-3",
-                "fuse-1", "fuse-2", "fuel-canister", "pressure-valve", "power" })
+                "fuse-1", "fuse-2", "fuel-canister", "fuel-canister-2", "fuel-canister-3", "pressure-valve", "power" })
             {
                 var obj = world.Objective(id);
                 var player = rules.State.Player("host");
-                player.x = obj.x; player.z = obj.z; player.y = obj.y > 4 ? 4.2f : 0;
+                player.x = obj.x; player.z = obj.z; player.y = obj.y < -1 ? -4.2f : obj.y > 4 ? 4.2f : 0;
                 var error = rules.Interact("host", id);
                 if (error != null) throw new Exception(id + ": " + error);
             }
