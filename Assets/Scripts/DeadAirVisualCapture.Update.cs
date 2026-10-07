@@ -11,7 +11,7 @@ namespace DeadAir
         {
             Application.targetFrameRate = 30;
             yield return new WaitForSecondsRealtime(1.5f);
-            Require(Application.version == "1.7.1", "Runtime is the new v1.7.1 build.");
+            Require(Application.version == DeadAirVersion.Current, "Runtime version must match the compiled release version " + DeadAirVersion.Current + ".");
             yield return Save("update-00-menu");
             session.Host("Update verifier", "engineer", true, true);
             session.Command(new NetPacket { type = "start" });

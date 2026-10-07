@@ -352,6 +352,7 @@ namespace DeadAir
             if (propMode == "empty" || string.IsNullOrEmpty(propMode)) return;
             if (propMode == "map") { PoseMap(); return; }
             if (propMode == "camera") { PoseCamera(); return; }
+            if (propMode == "fuel-canister") { PoseFuelCanister(); return; }
             if (propMode == "operator" && actionTime >= 0) { PoseSmoking(); return; }
             if (propMode == "dispatcher" && actionTime >= 0) { PoseCompass(); return; }
             if ((propMode == "engineer" || propMode == "journalist") && actionTime >= 0) { PosePersonalInspection(); return; }
@@ -371,6 +372,22 @@ namespace DeadAir
             if (propMode == "flashlight" && rightHand != null)
                 rightHand.rotation = Quaternion.LookRotation(-transform.forward, -transform.up);
             if (propMode == "dispatcher") PoseCompass();
+        }
+
+        void PoseFuelCanister()
+        {
+            if (rightArm == null || rightForearm == null || rightHand == null) return;
+            // Carry the weight beside the coat, rather than using the inward
+            // cassette pose. The shoulder-relative target also fits the
+            // engineer's shorter arms while following the sampled walk/run.
+            Vector3 contact = rightArm.position + transform.right * .27f
+                - transform.up * .18f + transform.forward * .20f;
+            // The hand points down through the handle. Together with the
+            // handle's 180-degree anchor this leaves the can upright, with
+            // its label facing forward, and keeps the prop on the finger pads.
+            Quaternion rotation = Quaternion.LookRotation(transform.forward, -transform.up);
+            FitSingleHandContact(ref contact, rotation);
+            SolveHand(true, contact, rotation);
         }
 
         void PoseCompass()
@@ -584,7 +601,8 @@ namespace DeadAir
         static string InventoryMode(string id)
         {
             if (string.IsNullOrEmpty(id) || id == "empty") return "empty";
-            if (id == "flashlight" || id == "fuel-canister") return id;
+            if (id == "flashlight") return id;
+            if (id.StartsWith("fuel-canister", StringComparison.Ordinal)) return "fuel-canister";
             if (id.StartsWith("keycard", StringComparison.Ordinal) || id.StartsWith("key-", StringComparison.Ordinal)) return "keycard";
             if (id.StartsWith("fuse", StringComparison.Ordinal)) return "fuse";
             return "tape";

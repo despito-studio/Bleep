@@ -72,6 +72,7 @@ namespace DeadAir.Editor
             PrepareMaterials();
             signFont = Resources.Load<Font>("Fonts/IBMPlexMono-Regular");
             materials.Clear(); meshes.Clear(); sectors.Clear(); meshSerial = 0;
+            RepairFuelCanisterTemplate();
             station = new GameObject("station");
             exterior = new GameObject("exterior");
             station.AddComponent<DeadAirOfficeLayout>();
@@ -270,6 +271,62 @@ namespace DeadAir.Editor
             foreach (var t in copy.GetComponentsInChildren<Transform>(true))
                 if (t.name.Contains(":")) t.name = "detail " + t.name.Replace(":", " ");
             foreach (var light in copy.GetComponentsInChildren<Light>(true)) UnityEngine.Object.DestroyImmediate(light);
+        }
+
+        static void RepairFuelCanisterTemplate()
+        {
+            // The web exporter batched the metal body outside its label group.
+            // A cached prefab may therefore exist while containing only that plane.
+            if (templates.TryGetValue("fuelCanister", out var saved) && HasFuelCanisterBody(saved.transform, out _)) return;
+            var replacement = new GameObject("fuelCanister");
+            try
+            {
+                BuildFuelCanister(replacement.transform);
+                if (!HasFuelCanisterBody(replacement.transform, out _)) throw new InvalidOperationException("Generated diesel canister has no solid body.");
+                string path = Library + "/fuelCanister.prefab";
+                PrefabUtility.SaveAsPrefabAsset(replacement, path);
+                templates["fuelCanister"] = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                Debug.Log("Rebuilt incomplete fuel-canister template with a metal body, cap, carry handle and diesel labels.");
+            }
+            finally { UnityEngine.Object.DestroyImmediate(replacement); }
+        }
+
+        static void BuildFuelCanister(Transform parent)
+        {
+            Block(parent, "Fuel canister body", new Vector3(0, .26f, 0), new Vector3(.42f, .52f, .30f), trim, false);
+            Block(parent, "Canister shoulder", new Vector3(0, .5575f, 0), new Vector3(.38f, .075f, .29f), trim, false);
+            foreach (float x in new[] { -.115f, .115f })
+                Block(parent, "Carry handle support", new Vector3(x, .645f, 0), new Vector3(.04f, .10f, .075f), metal, false);
+            Block(parent, "Carry handle", new Vector3(0, .7125f, 0), new Vector3(.27f, .035f, .075f), metal, false);
+            Block(parent, "Diesel screw cap", new Vector3(.145f, .6175f, -.075f), new Vector3(.08f, .045f, .08f), metal, false);
+            foreach (float face in new[] { -1f, 1f })
+            {
+                Block(parent, "Pressed metal rib", new Vector3(0, .10f, face * .155f), new Vector3(.30f, .025f, .012f), metal, false);
+                Block(parent, "Pressed metal rib", new Vector3(0, .455f, face * .155f), new Vector3(.30f, .025f, .012f), metal, false);
+                Sign(parent, "DIESEL\nBUREAU 9", new Vector3(0, .28f, face * .166f), Quaternion.Euler(0, face < 0 ? 180 : 0, 0), .27f, .14f);
+            }
+        }
+
+        static bool HasFuelCanisterBody(Transform root, out Bounds bounds)
+        {
+            bounds = new Bounds();
+            bool initialized = false, solidMesh = false;
+            foreach (var filter in root.GetComponentsInChildren<MeshFilter>(true))
+            {
+                var mesh = filter.sharedMesh;
+                if (mesh == null) continue;
+                Vector3 size = mesh.bounds.size;
+                solidMesh |= size.x > .05f && size.y > .05f && size.z > .05f;
+                Matrix4x4 local = root.worldToLocalMatrix * filter.transform.localToWorldMatrix;
+                Vector3 center = mesh.bounds.center, extent = mesh.bounds.extents;
+                foreach (float x in new[] { -1f, 1f }) foreach (float y in new[] { -1f, 1f }) foreach (float z in new[] { -1f, 1f })
+                {
+                    Vector3 point = local.MultiplyPoint3x4(center + Vector3.Scale(extent, new Vector3(x, y, z)));
+                    if (!initialized) { bounds = new Bounds(point, Vector3.zero); initialized = true; }
+                    else bounds.Encapsulate(point);
+                }
+            }
+            return initialized && solidMesh && bounds.size.x >= .30f && bounds.size.y >= .60f && bounds.size.z >= .20f;
         }
 
         static void PrepareMaterials()
@@ -1377,8 +1434,9 @@ namespace DeadAir.Editor
                     }
                     else
                     {
-                        Block(root,"Fuel canister",Vector3.up*(baseY-o.y+.325f),new Vector3(.42f,.65f,.3f),trim,false);
-                        Block(root,"Canister handle",Vector3.up*(baseY-o.y+.705f),new Vector3(.3f,.08f,.08f),metal,false);
+                        var fallback = Group(root, "fuelCanister");
+                        fallback.localPosition = Vector3.up * (baseY - o.y);
+                        BuildFuelCanister(fallback);
                     }
                     break;
                 case "valve":
@@ -1595,7 +1653,44 @@ namespace DeadAir.Editor
                 if(importer.filterMode!=FilterMode.Point||importer.wrapMode!=TextureWrapMode.Repeat||importer.npotScale!=TextureImporterNPOTScale.None)
                     throw new Exception("Inconsistent office texture sampling: "+texturePath);
             }
+            ValidateDieselCanisters();
             Debug.Log("Expanded office validated: saved prefabs, matching objectives and hinged doors, physical locker sight gaps, uniform point-filtered tile textures.");
+        }
+
+        [MenuItem("Dead Air/Validate Diesel Canister Geometry")]
+        public static void ValidateDieselCanisters()
+        {
+            var data = WorldData.Load();
+            var cached = AssetDatabase.LoadAssetAtPath<GameObject>(Library + "/fuelCanister.prefab");
+            if (cached == null || !HasFuelCanisterBody(cached.transform, out _))
+                throw new InvalidOperationException("Cached fuel canister must contain a full 3D body, not only its imported label.");
+            // Reproduce the exact previous failure without modifying its saved asset.
+            var flat = new GameObject("Flat fuel label regression");
+            var label = new Mesh();
+            try
+            {
+                label.vertices = new[] { new Vector3(-.12f, -.06f, 0), new Vector3(.12f, -.06f, 0), new Vector3(.12f, .06f, 0), new Vector3(-.12f, .06f, 0) };
+                label.triangles = new[] { 0, 1, 2, 0, 2, 3 }; label.RecalculateBounds();
+                flat.AddComponent<MeshFilter>().sharedMesh = label;
+                if (HasFuelCanisterBody(flat.transform, out _)) throw new InvalidOperationException("A flat imported label must never satisfy the fuel-body cache check.");
+            }
+            finally { UnityEngine.Object.DestroyImmediate(flat); UnityEngine.Object.DestroyImmediate(label); }
+            var roots = new[] { "Assets/Resources/World/station.prefab", "Assets/Resources/World/exterior.prefab" }
+                .Select(AssetDatabase.LoadAssetAtPath<GameObject>).Where(p => p != null)
+                .SelectMany(p => p.GetComponentsInChildren<Transform>(true)).ToArray();
+            var canisters = data.objects.Where(o => o.type == "canister").ToArray();
+            if (canisters.Length != 3) throw new InvalidOperationException("The saved world must contain all three diesel canisters.");
+            foreach (var objective in canisters)
+            {
+                var root = roots.Single(t => t.name == "interactive:" + objective.id);
+                if (!HasFuelCanisterBody(root, out var bounds)) throw new InvalidOperationException("Saved fuel objective has no volumetric body: " + objective.id);
+                float expectedFloor = objective.y < -1 ? -Storey : objective.y >= Storey ? Storey : 0;
+                if (Mathf.Abs(root.TransformPoint(bounds.min).y - expectedFloor) > .02f)
+                    throw new InvalidOperationException("Fuel canister is not supported by its floor: " + objective.id);
+                if (root.GetComponentsInChildren<Transform>(true).All(t => t.name != "Carry handle"))
+                    throw new InvalidOperationException("Saved fuel canister has no carry handle: " + objective.id);
+            }
+            Debug.Log("DEAD AIR DIESEL GEOMETRY PASSED: repaired persistent template; flat-label regression rejected; all three saved objectives have a full body, carry handle and floor support.");
         }
     }
 }

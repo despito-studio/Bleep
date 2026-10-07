@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
@@ -15,9 +16,10 @@ namespace DeadAir.Editor
             ValidateUniqueCancellation(world);
             ValidateRoleChangesAndRestrictions(world);
             ValidateInventoryAndSerialization(world);
+            ValidateFuelCanisterPresentation(world);
             ValidateCameraFlashlightStun(world);
             ValidatePausedMapAndLateJoin(world);
-            Debug.Log("DEAD AIR CHARACTER RULES PASSED: objective retries, role items, cooldowns, depletion, restart, cancellation, restrictions, inventory, network serialization, blind enemy ignores camera/light, explicit timed engineer defence, paused maps and late joins.");
+            Debug.Log("DEAD AIR CHARACTER RULES PASSED: objective retries, role items, cooldowns, depletion, restart, cancellation, restrictions, inventory, network serialization, all fuel canisters in first/third person, blind enemy ignores camera/light, explicit timed engineer defence, paused maps and late joins.");
         }
 
         static DeadAirRules Started(WorldData world, string role)
@@ -236,6 +238,24 @@ namespace DeadAir.Editor
             Require(packet.uniqueEquipped && packet.mapOpen, "Equipment commands must survive network packet serialization.");
             rules.EquipUnique("host", true);
             Require(actor.uniqueItemEquipped && !actor.mapOpen && !actor.camera, "Equipping a personal item must lower the map and camera.");
+        }
+
+        static void ValidateFuelCanisterPresentation(WorldData world)
+        {
+            var firstPersonMode = typeof(DeadAirFirstPersonRig).GetMethod("InventoryMode", BindingFlags.NonPublic | BindingFlags.Static);
+            var thirdPersonMode = typeof(DeadAirCharacterMotion).GetMethod("InventoryMode", BindingFlags.NonPublic | BindingFlags.Static);
+            Require(firstPersonMode != null && thirdPersonMode != null, "Missing equipped item presentation mapping.");
+            var rules = Started(world, "operator");
+            var actor = rules.State.Player("host");
+            foreach (string id in new[] { "fuel-canister", "fuel-canister-2", "fuel-canister-3" })
+            {
+                Require(InteractAt(rules, world, id) == null, "Could not collect " + id + " for presentation validation.");
+                rules.SelectSlot(actor.id, actor.inventory.IndexOf(id));
+                Require(actor.SelectedItem == id, "The selected fuel slot must retain its item identity: " + id);
+                var selected = new object[] { actor.SelectedItem };
+                Require((string)firstPersonMode.Invoke(null, selected) == "fuel-canister", id + " must show a canister in the owner's hands.");
+                Require((string)thirdPersonMode.Invoke(null, selected) == "fuel-canister", id + " must show a canister to other players.");
+            }
         }
 
         static void CameraMove(DeadAirRules rules, PlayerState actor, bool flashlight, bool camera, float yaw = 0)

@@ -136,6 +136,7 @@ namespace DeadAir.Editor
         [MenuItem("Dead Air/Build Windows")]
         public static void BuildWindows()
         {
+            PlayerSettings.bundleVersion = DeadAirVersion.Current;
             // The Built-in renderer needs no DirectX 12 features. DirectX 11
             // also supports older GPUs whose DX12 driver can fail creating HDR targets.
             PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.StandaloneWindows64, false);
@@ -143,17 +144,22 @@ namespace DeadAir.Editor
                 new[] { UnityEngine.Rendering.GraphicsDeviceType.Direct3D11 });
             AssetDatabase.SaveAssets();
             EditorSceneManager.OpenScene("Assets/Scenes/Blackpine.unity");
-            Directory.CreateDirectory("Builds/Windows");
+            string executable = DeadAirReleaseBuild.OutputPath();
+            Directory.CreateDirectory(Path.GetDirectoryName(executable));
+            // A failed rebuild must not leave a previous success manifest usable.
+            File.WriteAllText(Path.Combine(Path.GetDirectoryName(executable), "build-info.json"),
+                "{\"schemaVersion\":2,\"version\":\"" + DeadAirVersion.Current + "\",\"buildResult\":\"Building\",\"runtimeVerification\":\"pending\"}\n");
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
                 scenes = new[] { "Assets/Scenes/Blackpine.unity" },
-                locationPathName = "Builds/Windows/DeadAir.exe",
+                locationPathName = executable,
                 target = BuildTarget.StandaloneWindows64,
                 options = BuildOptions.None
             });
             if (report.summary.result != BuildResult.Succeeded)
                 throw new Exception("Windows build failed: " + report.summary.result);
-            Debug.Log("Dead Air Windows build succeeded: Builds/Windows/DeadAir.exe");
+            DeadAirReleaseBuild.WriteManifest(executable, report);
+            Debug.Log("Dead Air Windows build succeeded: " + executable);
         }
 
         public static void PrepareAndBuild()

@@ -269,7 +269,9 @@ namespace DeadAir
             float mushroomTime=DeadAirMushrooms.Remaining(state,me);
             statusText.text=mushroomTime>0&&!me.down?"ГРИБНИЙ ТРІП  ·  "+Mathf.CeilToInt(mushroomTime)+" с":"";
             statusText.color=mushroomTime>0?new Color(.64f,.91f,.76f):Muted;
-            evidenceText.text=state.tapes.Count+" / 3  КАСЕТИ\n\n"+state.canisters.Count+" / 3  ПАЛИВО\n\n"+state.fuses.Count+" / 2  ЗАПОБІЖНИКИ";
+            evidenceText.text=state.tapes.Count+" / 3  КАСЕТИ";
+            fuelEvidenceText.text=state.canisters.Count+" / 3  ПАЛИВО";
+            fuseEvidenceText.text=state.fuses.Count+" / 2  ЗАПОБІЖНИКИ";
             sanityBar.fillAmount=Mathf.Clamp01(me.sanity/100);staminaBar.fillAmount=Mathf.Clamp01(player.Stamina/100);
             var forward=player.ViewCamera.transform.forward;float compass=Mathf.Repeat(Mathf.Atan2(forward.x,forward.z)*Mathf.Rad2Deg,360);
             string[] directions={"Пн","Пн-Сх","Сх","Пд-Сх","Пд","Пд-Зх","Зх","Пн-Зх"};compassText.text=directions[Mathf.RoundToInt(compass/45)%8]+"   ·   "+Mathf.RoundToInt(compass).ToString("000")+"°";

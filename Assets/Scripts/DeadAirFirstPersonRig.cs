@@ -476,7 +476,8 @@ namespace DeadAir
         static string InventoryMode(string id)
         {
             if (string.IsNullOrEmpty(id) || id == "empty") return "empty";
-            if (id == "flashlight" || id == "fuel-canister") return id;
+            if (id == "flashlight") return id;
+            if (id.StartsWith("fuel-canister", StringComparison.Ordinal)) return "fuel-canister";
             if (id.StartsWith("keycard", StringComparison.Ordinal) || id.StartsWith("key-", StringComparison.Ordinal)) return "keycard";
             if (id.StartsWith("tape", StringComparison.Ordinal)) return "tape";
             if (id.StartsWith("fuse", StringComparison.Ordinal)) return "fuse";

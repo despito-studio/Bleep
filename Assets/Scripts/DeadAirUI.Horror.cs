@@ -247,8 +247,12 @@ namespace DeadAir
             Art(p,"Stamina track","bar",121,963,315,13,new Color(.13f,.19f,.13f,.8f));
             staminaBar=Art(p,"Stamina","bar",121,963,315,13,new Color(.54f,.68f,.46f));staminaBar.type=Image.Type.Filled;staminaBar.fillMethod=Image.FillMethod.Horizontal;
             statusText=Text(p,"Status","",15,60,1009,710,47);statusText.color=Muted;
-            Art(p,"Evidence tape","tape",57,768,34,32,Ink);Art(p,"Evidence fuse","fuse",59,818,30,32,Ink);
-            evidenceText=Text(p,"Evidence counts","",19,110,770,420,95);evidenceText.color=Ink;
+            Art(p,"Evidence tape","tape",57,768,34,32,Ink);
+            Art(p,"Evidence fuel","fuel",57,812,34,32,Ink);
+            Art(p,"Evidence fuse","fuse",59,856,30,32,Ink);
+            evidenceText=Text(p,"Evidence counts","",19,110,768,326,32,TextAnchor.MiddleLeft);
+            fuelEvidenceText=Text(p,"Fuel counts","",19,110,812,326,32,TextAnchor.MiddleLeft);
+            fuseEvidenceText=Text(p,"Fuse counts","",19,110,856,326,32,TextAnchor.MiddleLeft);
             inventoryCaption=Text(p,"Inventory caption","",12,1180,891,680,24,TextAnchor.UpperRight);inventoryCaption.color=Muted;
             roleItemText=Text(p,"Personal item","",14,1110,821,750,57,TextAnchor.MiddleRight);roleItemText.color=Muted;
             for(int i=0;i<5;i++)
@@ -265,7 +269,7 @@ namespace DeadAir
             interactionText=Text(p,"Interaction","",22,480,792,960,63,TextAnchor.MiddleCenter);interactionText.color=Ink;
             Art(p,"Reticle","cross",956,536,8,8,new Color(.9f,.86f,.78f,.65f));hudPanel.SetActive(false);
         }
-        Text evidenceText;
+        Text evidenceText, fuelEvidenceText, fuseEvidenceText;
 
         void BuildHorrorPause()
         {
@@ -356,7 +360,7 @@ namespace DeadAir
             if(id.StartsWith("tape"))return "tape";if(id.StartsWith("fuse"))return "fuse";
             if(id.StartsWith("keycard") || id.StartsWith("key-"))return "key";
             if(id=="cigarette-pack"||id=="wrench"||id=="recorder"||id=="compass"||id=="ladder")return id;
-            return id=="flashlight"?"flashlight":id=="fuel-canister"?"fuel":"chapter";
+            return id=="flashlight"?"flashlight":id.StartsWith("fuel-canister")?"fuel":"chapter";
         }
         static string ItemDescription(string id)
         {
