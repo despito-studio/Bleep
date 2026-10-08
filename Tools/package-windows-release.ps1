@@ -4,7 +4,7 @@ param(
     [Parameter(Mandatory)][string]$UpdateReport,
     [Parameter(Mandatory)][string]$GeometryReport,
     [Parameter(Mandatory)][string]$RulesReport,
-    [string]$ExpectedVersion = '1.7.3'
+    [string]$ExpectedVersion = '1.7.4'
 )
 
 $ErrorActionPreference = 'Stop'

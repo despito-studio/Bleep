@@ -200,14 +200,16 @@ namespace DeadAir
     {
         public int stage = 1;
         public bool fuelAdded, valveOpened, calibrated, power, broadcast;
-        public bool ladderPlaced, windowBroken, breakerOn, directorDrawerOpen;
+        public bool ladderPlaced, breakerOn, directorDrawerOpen;
+        public bool windowBroken = true;
     }
     [Serializable] public class RoomState
     {
         public string code, hostId, phase = "lobby", message, radioSenderId;
         public string chapterId = DeadAirChapters.DefaultId;
         public bool solo, creative, paused, canister, valveOpened, calibrated, power, broadcast;
-        public bool ladderPlaced, windowBroken, breakerOn, directorDrawerOpen;
+        public bool ladderPlaced, breakerOn, directorDrawerOpen;
+        public bool windowBroken = true;
         public float spawnCountdown = 35, elapsed;
         public int scare, radioSequence;
         public List<PlayerState> players = new List<PlayerState>();

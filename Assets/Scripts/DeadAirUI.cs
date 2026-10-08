@@ -304,7 +304,7 @@ namespace DeadAir
             if (string.IsNullOrEmpty(itemId)) return "—";
             if (itemId == "flashlight") return "Ліхтар";
             if (itemId == DeadAirSupplies.BatteryItem) return "Батарейки";
-            if (itemId == DeadAirPrisonBook.Id) return "Щоденник";
+            if (itemId == DeadAirPrisonBook.Id) return "Справа №07";
             if (itemId == "cigarette-pack") return "Сигарети";
             if (itemId == "wrench") return "Ключ";
             if (itemId == "recorder") return "Диктофон";

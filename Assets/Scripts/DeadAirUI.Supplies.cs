@@ -36,7 +36,7 @@ namespace DeadAir
             bagSuppliesText.text = "МОНЕТКИ: " + playerState.coins + "    /    ЗАПАСНІ БАТАРЕЙКИ: " + playerState.spareBatteries;
             if (playerState.SelectedItem == "flashlight" || playerState.SelectedItem == DeadAirSupplies.BatteryItem)
                 roleItemText.text = "R — замінити батарейку";
-            else if (playerState.SelectedItem == DeadAirPrisonBook.Id) roleItemText.text = "R — прочитати щоденник";
+            else if (playerState.SelectedItem == DeadAirPrisonBook.Id) roleItemText.text = "R — читати справу";
             if (Active(bookPanel) && (playerState.down || !playerState.HasItem(DeadAirPrisonBook.Id))) Close(bookPanel);
         }
 

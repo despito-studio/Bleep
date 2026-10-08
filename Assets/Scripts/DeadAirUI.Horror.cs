@@ -349,7 +349,7 @@ namespace DeadAir
             inventoryDescription.text=ItemDescription(selected);
             if(selected=="flashlight")inventoryDescription.text+="\nЗаряд: "+Mathf.CeilToInt(me.flashlightCharge/DeadAirSupplies.FlashlightSeconds*100)+"%. Запас: "+me.spareBatteries+".";
             var equipLabel=inventoryPanel.transform.Find("Inventory card/Equip item/Label").GetComponent<Text>();
-            equipLabel.text=selected==DeadAirPrisonBook.Id?"ПРОЧИТАТИ КНИГУ":"ОБРАТИ ПРЕДМЕТ";
+            equipLabel.text=selected==DeadAirPrisonBook.Id?"ЧИТАТИ СПРАВУ":"ОБРАТИ ПРЕДМЕТ";
         }
 
         static string ItemIcon(string id)
@@ -367,7 +367,7 @@ namespace DeadAir
             if(string.IsNullOrEmpty(id))return "";
             if(id=="flashlight")return "F — увімкнути / вимкнути. R — замінити батарейку. Однієї вистачає на 3 хвилини світла.";
             if(id==DeadAirSupplies.BatteryItem)return "Запасні батарейки для ліхтаря. R — вставити одну. G — викинути одну для іншого оператора.";
-            if(id==DeadAirPrisonBook.Id)return "Записи наглядача з підвальних камер. Натисніть «Прочитати книгу» або R, тримаючи її.";
+            if(id==DeadAirPrisonBook.Id)return "Медична картка та біографія ув'язненого з підвалу. Натисніть «Читати справу» або R.";
             if(id=="cigarette-pack")return "R — дістати сигарету й закурити.";
             if(id=="wrench")return "Гайковий ключ. R — оглянути.";
             if(id=="recorder")return "Диктофон. R — увімкнути.";

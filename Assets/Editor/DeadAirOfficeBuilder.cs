@@ -23,7 +23,7 @@ namespace DeadAir.Editor
         static GameObject station, exterior;
         static int meshSerial;
         static Font signFont;
-        static Material plaster, brick, trim, floor, carpet, ceilingPanel, metal, wood, doorWood, asphalt, grass, glass, lightSurface, paper, black, signLetters, cobwebSilk, wastePaper;
+        static Material plaster, brick, trim, floor, carpet, ceilingPanel, metal, wood, doorWood, asphalt, grass, glass, lightSurface, paper, black, signLetters, cobwebSilk, wastePaper, doorSteelWhite, signPlateWhite, blood;
 
         [MenuItem("Dead Air/Refresh Volumetric Cobwebs")]
         public static void RefreshCobwebGeometry()
@@ -350,6 +350,10 @@ namespace DeadAir.Editor
             cobwebSilk.mainTexture=null;cobwebSilk.color=new Color(.39f,.42f,.37f);
             cobwebSilk.SetFloat("_Glossiness",.10f);
             wastePaper = Surface("waste-paper",new Color(.57f,.54f,.43f),0);
+            doorSteelWhite = Surface("door-frame-steel", new Color(.86f, .88f, .90f), 2);
+            signPlateWhite = Surface("sign-plate-white", new Color(.94f, .95f, .94f), 0);
+            blood = Surface("blood-pool", new Color(.30f, .03f, .03f), 0);
+            blood.SetFloat("_Glossiness", .85f);
             string signPath=Folder+"/Materials/sign-font.mat";
             signLetters=AssetDatabase.LoadAssetAtPath<Material>(signPath);
             var signShader=Shader.Find("Dead Air/World Sign");
@@ -429,17 +433,17 @@ namespace DeadAir.Editor
         {
             var shell=Group(station.transform,"shell");
             // Ground slab sections with opening under stairs for basement descent
-            Box(shell,"Ground left slab",-9.925f,-.18f,-24,16.15f,.36f,60,floor);
-            Box(shell,"Ground right slab",9.925f,-.18f,-24,16.15f,.36f,60,floor);
+            Box(shell,"Ground left slab",-9.90f,-.18f,-24,16.20f,.36f,60,floor);
+            Box(shell,"Ground right slab",9.90f,-.18f,-24,16.20f,.36f,60,floor);
             Box(shell,"Ground corridor front",0,-.18f,-16.5f,3.70f,.36f,45,floor);
             Box(shell,"Ground rear landing",0,-.18f,-52.5f,3.70f,.36f,3,floor);
             // Landing under door-basement from z = -51 to z = -49.5 at y = 0
             Box(shell,"Basement landing slab",0,-.18f,-50.25f,3.70f,.36f,1.5f,floor);
 
             // Wall enclosing under-stairs space at z = -51 (with doorway for door-basement)
-            Box(shell,"Under-stairs wall left",-1.425f,2.1f,-51f,.75f,4.2f,.22f,trim);
-            Box(shell,"Under-stairs wall right",1.425f,2.1f,-51f,.75f,4.2f,.22f,trim);
-            Box(shell,"Under-stairs wall header",0,3.5f,-51f,2.1f,1.4f,.22f,trim);
+            Box(shell,"Under-stairs wall left",-1.425f,2.1f,-51f,.75f,4.2f,.22f,brick);
+            Box(shell,"Under-stairs wall right",1.425f,2.1f,-51f,.75f,4.2f,.22f,brick);
+            Box(shell,"Under-stairs wall header",0,3.5f,-51f,2.1f,1.4f,.22f,brick);
 
             // Basement stair shaft enclosure (walls and foundation from z = -51 to z = -39.5)
             Box(shell,"Basement stair west wall",-1.75f,-2.1f,-45.25f,.22f,4.2f,11.5f,brick);
@@ -722,14 +726,6 @@ namespace DeadAir.Editor
                 // Broken mullion remnants at top and bottom (leaving the middle open)
                 Block(brokenRoot, "Broken mullion top", new Vector3(0, halfH - .22f, 0), new Vector3(.045f, .44f, .35f), trim, false);
                 Block(brokenRoot, "Broken mullion bottom", new Vector3(0, -halfH + .18f, 0), new Vector3(.045f, .36f, .35f), trim, false);
-                // Shattered debris on the sill
-                Block(brokenRoot, "Sill glass shard 1", new Vector3(-.35f, -height / 2 - .025f, .08f), new Vector3(.25f, .018f, .16f), glass, false);
-                Block(brokenRoot, "Sill glass shard 2", new Vector3(.42f, -height / 2 - .025f, -.06f), new Vector3(.28f, .018f, .18f), glass, false);
-                Block(brokenRoot, "Sill glass shard 3", new Vector3(.05f, -height / 2 - .025f, .12f), new Vector3(.20f, .018f, .14f), glass, false);
-                // Fallen glass shards on the carpeted floor inside
-                Block(brokenRoot, "Floor glass debris 1", new Vector3(-.3f, -height / 2 - .55f, -.45f), new Vector3(.32f, .014f, .26f), glass, false);
-                Block(brokenRoot, "Floor glass debris 2", new Vector3(.45f, -height / 2 - .55f, -.65f), new Vector3(.28f, .014f, .22f), glass, false);
-                Block(brokenRoot, "Floor glass debris 3", new Vector3(0, -height / 2 - .55f, -.85f), new Vector3(.38f, .014f, .30f), glass, false);
                 brokenRoot.gameObject.SetActive(false);
             }
         }
@@ -746,12 +742,8 @@ namespace DeadAir.Editor
                     float top=stair.lowerY+(i+1)*rise;
                     Box(shell,"Stair tread "+(i+1),(stair.minX+stair.maxX)/2,top-.09f,stair.maxZ-(i+.5f)*depth,width,.18f,depth,trim);
                     Box(shell,"Stair riser "+(i+1),(stair.minX+stair.maxX)/2,top-rise/2,stair.maxZ-i*depth,width,rise,.055f,metal);
-                    // Solid side walls matching stair color so stairs do not float
-                    float wallH = Mathf.Max(0.01f, top - stair.lowerY - .18f);
-                    foreach(float x in new[]{stair.minX-.04f, stair.maxX+.04f})
-                        Box(shell, "Stair side wall", x, stair.lowerY + wallH / 2, stair.maxZ - (i + .5f) * depth, .08f, wallH, depth, trim);
 
-                    if(i%2==0 || i==count-1) foreach(float x in new[]{stair.minX-.05f,stair.maxX+.05f})
+                    if(i%3==0) foreach(float x in new[]{stair.minX-.05f,stair.maxX+.05f})
                         Box(shell,"Stair handrail post",x,top+.52f,stair.maxZ-(i+.5f)*depth,.05f,1.04f,.05f,metal);
                 }
                 // Continuous handrails follow the exact stair slope; ground bypasses remain on either side.
@@ -760,23 +752,27 @@ namespace DeadAir.Editor
                     Vector3 lowerPos = DeadAirOfficeLayout.Position(x,stair.lowerY+1.06f,stair.maxZ);
                     Vector3 upperPos = DeadAirOfficeLayout.Position(x,stair.upperY+1.06f,stair.minZ);
                     Beam(shell,"Sloping handrail",lowerPos,upperPos,.06f,metal);
-                    Beam(shell,"Sloping mid rail",DeadAirOfficeLayout.Position(x,stair.lowerY+.54f,stair.maxZ),DeadAirOfficeLayout.Position(x,stair.upperY+.54f,stair.minZ),.04f,metal);
-
-                    // Solid physical collision barrier preventing players from falling off the sides of the stair
-                    Vector3 pA = DeadAirOfficeLayout.Position(x, stair.lowerY + .60f, stair.maxZ);
-                    Vector3 pB = DeadAirOfficeLayout.Position(x, stair.upperY + .60f, stair.minZ);
-                    var guard = Block(shell, "Stair safety barrier", (pA + pB) / 2, new Vector3(.09f, 1.20f, Vector3.Distance(pA, pB)), metal, true);
-                    guard.transform.localRotation = Quaternion.LookRotation(pB - pA);
                 }
                 if (stair.upperY >= Storey)
                 {
-                    foreach(float x in new[]{stair.minX-.08f,stair.maxX+.08f})
+                    // Solid sloped soffit / ceiling sealing the underside of the upper stair flight so there is no hole/void
+                    Vector3 soffitA = DeadAirOfficeLayout.Position((stair.minX + stair.maxX) / 2, stair.lowerY - .08f, stair.maxZ);
+                    Vector3 soffitB = DeadAirOfficeLayout.Position((stair.minX + stair.maxX) / 2, stair.upperY - .08f, stair.minZ);
+                    var soffit = Block(shell, "Stair flight soffit", (soffitA + soffitB) / 2, new Vector3(width, .10f, Vector3.Distance(soffitA, soffitB)), brick, true);
+                    soffit.transform.localRotation = Quaternion.LookRotation(soffitB - soffitA);
+
+                    // Solid side walls enclosing the basement descent under the stairs and matching brick texture on the sides
+                    for(int i = 0; i < count; i++)
                     {
-                        Beam(shell,"Upper opening rail",DeadAirOfficeLayout.Position(x,Storey+1.05f,stair.maxZ),DeadAirOfficeLayout.Position(x,Storey+1.05f,stair.minZ),.055f,metal);
-                        Beam(shell,"Upper opening mid rail",DeadAirOfficeLayout.Position(x,Storey+.52f,stair.maxZ),DeadAirOfficeLayout.Position(x,Storey+.52f,stair.minZ),.04f,metal);
-                        // Continuous physical barrier along upper mezzanine edge
-                        Block(shell,"Upper guard collider",DeadAirOfficeLayout.Position(x,Storey+.6f,(stair.maxZ+stair.minZ)/2),new Vector3(.10f,1.2f,Mathf.Abs(stair.maxZ-stair.minZ)),metal,true);
+                        float top = stair.lowerY + (i + 1) * rise;
+                        float wallH = Mathf.Max(0.01f, top - stair.lowerY);
+                        float zPos = stair.maxZ - (i + .5f) * depth;
+                        foreach(float x in new[]{-1.75f, 1.75f})
+                            Box(shell, "Stair side wall " + (x < 0 ? "west " : "east ") + (i + 1), x, stair.lowerY + wallH / 2, zPos, .22f, wallH, depth, brick);
                     }
+
+                    foreach(float x in new[]{stair.minX-.08f,stair.maxX+.08f})
+                        Beam(shell,"Upper opening rail",DeadAirOfficeLayout.Position(x,Storey+1.05f,stair.maxZ),DeadAirOfficeLayout.Position(x,Storey+1.05f,stair.minZ),.055f,metal);
                     for(int i=0;i<7;i++) foreach(float x in new[]{stair.minX-.08f,stair.maxX+.08f})
                         Box(shell,"Upper guard post",x,Storey+.52f,stair.minZ+i*2,.05f,1.04f,.05f,metal);
                     HangingSign(shell,"2 FLOOR  /  STUDIO + CONTROL",new Vector3(0,3.36f,-37.9f),3.4f,.4f,Storey-.355f);
@@ -796,6 +792,19 @@ namespace DeadAir.Editor
             for(int step = 0; step < 18; step++)
                 Block(placedLadderRoot, "Placed ladder rung", new Vector3(0, .32f + step * .30f, 0), new Vector3(.48f, .035f, .035f), metal, false);
             Box(shell,"Rear yard",0,-.18f,-65,60,.36f,22,asphalt);
+            // Ground broken glass shards directly under the director's window (small glass fragments only)
+            var groundGlass = Group(shell, "Director window ground glass");
+            groundGlass.localPosition = new Vector3(9f, 0.01f, 7.1f);
+            for (int g = 0; g < 32; g++)
+            {
+                float gx = Mathf.Sin(g * 1.57f) * (0.15f + (g % 5) * 0.14f);
+                float gz = Mathf.Cos(g * 1.93f) * (0.12f + (g % 4) * 0.16f);
+                float rot = g * 47f;
+                float sq = 0.045f + (g % 5) * 0.012f;
+                float sq2 = 0.040f + ((g + 2) % 4) * 0.014f;
+                var shard = Block(groundGlass, "Ground glass shard " + g, new Vector3(gx, 0.003f, gz), new Vector3(sq, 0.004f, sq2), glass, false);
+                shard.transform.localRotation = Quaternion.Euler(0, rot, 0);
+            }
             Box(shell,"Left service path",-24,-.18f,-24,12,.36f,60,asphalt);
             Box(shell,"Right service path",24,-.18f,-24,12,.36f,60,asphalt);
             // Raised kerbs define the entrance path and parking without overlapping the ground plane.
@@ -930,6 +939,42 @@ namespace DeadAir.Editor
                     if(!ClearDressingFloor(x,0,z)||Mathf.Abs(x)<4.7f&&z>6&&z<25)continue;
                     FloorLitter(parent,"Floor litter:"+(litterIndex++),x,0,z,random.Next(4),(float)random.NextDouble()*360);
                     break;
+                }
+            }
+            // Blood pool and splatters on the floor under the broken window where we climb inside
+            var entryRoom = world.rooms.FirstOrDefault(r => r.floorY > 4f && 9f >= r.minX && 9f <= r.maxX && 4.5f >= r.minZ && 4.5f <= r.maxZ);
+            if (entryRoom != null && sectors.TryGetValue(SectorKey(entryRoom), out var entrySector))
+            {
+                var bloodRoot = Group(entrySector, "Window entry blood");
+                bloodRoot.localPosition = DeadAirOfficeLayout.Position(9f, entryRoom.floorY + 0.016f, 4.2f);
+                // Large irregular pool
+                Block(bloodRoot, "Blood main pool", Vector3.zero, new Vector3(0.95f, 0.005f, 0.75f), blood, false);
+                Block(bloodRoot, "Blood pool streak 1", new Vector3(-0.35f, 0.001f, -0.25f), new Vector3(0.55f, 0.004f, 0.40f), blood, false);
+                Block(bloodRoot, "Blood pool streak 2", new Vector3(0.28f, 0.001f, 0.22f), new Vector3(0.42f, 0.004f, 0.35f), blood, false);
+                // Droplets and smears leading into the room
+                for (int d = 0; d < 8; d++)
+                {
+                    float dx = Mathf.Sin(d * 1.7f) * 0.75f;
+                    float dz = -0.4f - d * 0.22f + Mathf.Cos(d * 1.3f) * 0.25f;
+                    float sz = 0.08f + (d % 3) * 0.04f;
+                    Block(bloodRoot, "Blood splatter " + d, new Vector3(dx, 0.001f, dz), new Vector3(sz, 0.003f, sz * 0.8f), blood, false);
+                }
+            }
+
+            // Blood in Director's office (КАБІНЕТ ДИРЕКТОРА) on the floor
+            var dirRoom = world.rooms.FirstOrDefault(r => r.name.Contains("ДИРЕКТОР") || r.mapLabel == "DIRECTOR");
+            if (dirRoom != null && sectors.TryGetValue(SectorKey(dirRoom), out var dirSector))
+            {
+                var dirBlood = Group(dirSector, "Director office blood");
+                dirBlood.localPosition = DeadAirOfficeLayout.Position(-12f, dirRoom.floorY + 0.016f, 0f);
+                Block(dirBlood, "Director blood pool", Vector3.zero, new Vector3(1.10f, 0.005f, 0.85f), blood, false);
+                Block(dirBlood, "Director blood lobe", new Vector3(0.35f, 0.001f, -0.2f), new Vector3(0.60f, 0.004f, 0.45f), blood, false);
+                for (int d = 0; d < 10; d++)
+                {
+                    float dx = Mathf.Sin(d * 2.1f) * 0.85f;
+                    float dz = Mathf.Cos(d * 1.6f) * 0.70f;
+                    float sz = 0.07f + (d % 4) * 0.035f;
+                    Block(dirBlood, "Director blood drop " + d, new Vector3(dx, 0.001f, dz), new Vector3(sz, 0.003f, sz * 0.9f), blood, false);
                 }
             }
         }
@@ -1303,8 +1348,8 @@ namespace DeadAir.Editor
             var casing=Group(station.transform.Find("shell"),"Door frame "+d.id);
             casing.localPosition=DeadAirOfficeLayout.Position(d.x,baseY,d.z);
             casing.localRotation=DeadAirOfficeLayout.Rotation(d.rotation);
-            foreach(float z in new[]{-width/2-.055f,width/2+.055f})Block(casing,"Door jamb",new Vector3(0,1.4f,z),new Vector3(.3f,2.8f,.1f),trim,true);
-            Block(casing,"Door head",new Vector3(0,2.83f,0),new Vector3(.3f,.1f,width+.2f),trim,true);
+            foreach(float z in new[]{-width/2-.055f,width/2+.055f})Block(casing,"Door jamb",new Vector3(0,1.4f,z),new Vector3(.3f,2.8f,.1f),doorWood,true);
+            Block(casing,"Door head",new Vector3(0,2.83f,0),new Vector3(.3f,.1f,width+.2f),doorWood,true);
             var pivot=Group(casing,"door:"+d.id);pivot.localPosition=new Vector3(0,0,-width/2);
             if(d.id.StartsWith("door-prison-",StringComparison.Ordinal))
             {
@@ -1320,14 +1365,8 @@ namespace DeadAir.Editor
             }
             else
             {
+                // Solid wooden door leaf without white border or panels
                 Block(pivot,"Door leaf",new Vector3(0,1.37f,width/2),new Vector3(.10f,2.74f,width-.08f),doorWood,true);
-                // Architectural recessed molded panels on both faces
-                float panelW = width * .42f;
-                foreach(float face in new[]{-.052f, .052f})
-                {
-                    Block(pivot,"Door upper panel",new Vector3(face,1.92f,width/2),new Vector3(.012f,.96f,panelW),trim,false);
-                    Block(pivot,"Door lower panel",new Vector3(face,.68f,width/2),new Vector3(.012f,.82f,panelW),trim,false);
-                }
             }
             foreach(float x in new[]{-.06f,.06f})
             {
@@ -1340,10 +1379,11 @@ namespace DeadAir.Editor
             var light=lamp.gameObject.AddComponent<Light>();light.type=LightType.Point;light.range=.7f;light.intensity=.07f;light.shadows=LightShadows.None;
             string text=d.label.Replace("Двері: ","");
             // Signs fit above the casing, with their board proud of the wall. Both corridor sides can be read.
-            // Width clamped to avoid protruding into perpendicular walls.
+            // Width enlarged to cleanly contain full names like "КАБІНЕТ ДИРЕКТОРА".
             float signFace=d.id=="door-front"||d.id=="door-rear"?.188f:.123f;
-            float signW=Mathf.Clamp(width*.55f,.95f,1.25f);
-            float signH=0.28f;
+            float neededWidth = Mathf.Max(1.45f, text.Length * 0.11f + 0.35f);
+            float signW = Mathf.Clamp(neededWidth, 1.45f, Mathf.Min(width + 0.2f, 2.15f));
+            float signH = 0.32f;
             Sign(casing,text,new Vector3(signFace,3.15f,0),Quaternion.Euler(0,90,0),signW,signH);
             Sign(casing,text,new Vector3(-signFace,3.15f,0),Quaternion.Euler(0,-90,0),signW,signH);
         }
@@ -1384,14 +1424,18 @@ namespace DeadAir.Editor
             switch(o.type)
             {
                 case "book":
-                    root.localRotation=Quaternion.Euler(0,-12,0);
-                    Block(root,"Diary pages",Vector3.zero,new Vector3(.22f,.045f,.30f),wastePaper,false);
-                    foreach(float y in new[]{-.032f,.032f})
-                        Block(root,"Diary cloth cover",new Vector3(0,y,0),new Vector3(.24f,.012f,.32f),trim,false);
-                    Block(root,"Diary spine",new Vector3(-.115f,0,0),new Vector3(.025f,.075f,.32f),trim,false);
-                    Block(root,"Diary cover label",new Vector3(0,.040f,0),new Vector3(.16f,.003f,.09f),paper,false);
-                    for(int line=0;line<3;line++)
-                        Block(root,"Diary label line",new Vector3(0,.042f,-.026f+line*.026f),new Vector3(.12f,.002f,.007f),black,false);break;
+                    root.localRotation=Quaternion.Euler(0,-16,0);
+                    // Real folder/dossier lying on the floor in the basement
+                    Block(root,"Folder bottom cover",new Vector3(0,-.012f,0),new Vector3(.26f,.006f,.34f),paper,false);
+                    Block(root,"Folder pages",new Vector3(.005f,0,0),new Vector3(.24f,.018f,.32f),wastePaper,false);
+                    Block(root,"Folder top cover",new Vector3(0,.012f,0),new Vector3(.26f,.006f,.34f),paper,false);
+                    Block(root,"Folder spine tape",new Vector3(-.125f,0,0),new Vector3(.016f,.032f,.34f),black,false);
+                    Block(root,"Folder metal clip",new Vector3(-.08f,.016f,.12f),new Vector3(.035f,.008f,.04f),metal,false);
+                    Block(root,"Folder label plate",new Vector3(.02f,.016f,-.02f),new Vector3(.17f,.003f,.12f),signPlateWhite,false);
+                    Block(root,"Folder red stamp",new Vector3(.06f,.018f,.02f),new Vector3(.045f,.002f,.028f),trim,false);
+                    for(int line=0;line<4;line++)
+                        Block(root,"Folder label text "+line,new Vector3(-.01f,.018f,-.05f+line*.022f),new Vector3(.10f,.002f,.006f),black,false);
+                    break;
                 case "key":
                     Block(root,"Key bow",Vector3.zero,new Vector3(.06f,.012f,.06f),wood,false);
                     Block(root,"Key shaft",new Vector3(0,0,.045f),new Vector3(.018f,.010f,.06f),metal,false);
@@ -1514,13 +1558,14 @@ namespace DeadAir.Editor
         static void Sign(Transform parent,string text,Vector3 position,Quaternion rotation,float width,float height)
         {
             var sign=Group(parent,"Fitted sign: "+text.Replace('\n',' '));sign.localPosition=position;sign.localRotation=rotation;
-            // Sleek metallic/trim border around the plaque
-            Block(sign,"Sign frame",Vector3.zero,new Vector3(width+.02f,height+.02f,.022f),trim,false);
-            // High-contrast elegant dark backing
-            Block(sign,"Sign backing",new Vector3(0,0,.002f),new Vector3(width,height,.020f),black,false);
+            // Sleek metallic frame border around the plaque
+            Block(sign,"Sign frame",Vector3.zero,new Vector3(width+.02f,height+.02f,.022f),metal,false);
+            // High-contrast clean white backing plate
+            Block(sign,"Sign backing",new Vector3(0,0,.002f),new Vector3(width,height,.020f),signPlateWhite,false);
             var letters=Group(sign,"Sign lettering");letters.localPosition=new Vector3(0,0,.018f);letters.localRotation=Quaternion.Euler(0,180,0);
             var mesh=letters.gameObject.AddComponent<TextMesh>();mesh.text=text;mesh.fontSize=128;mesh.characterSize=.025f;
-            mesh.anchor=TextAnchor.MiddleCenter;mesh.alignment=TextAlignment.Center;mesh.color=new Color(.92f,.91f,.88f);
+            mesh.anchor=TextAnchor.MiddleCenter;mesh.alignment=TextAlignment.Center;
+            mesh.color=new Color(.08f,.08f,.08f,1f); // Black text on white backing
             if(signFont!=null)
             {
                 mesh.font=signFont;
@@ -1528,10 +1573,19 @@ namespace DeadAir.Editor
             }
             mesh.richText=false;
             var renderer=letters.GetComponent<MeshRenderer>();renderer.shadowCastingMode=ShadowCastingMode.Off;
-            // TextMesh's font em varies by typeface: fit measured local bounds to the physical board.
-            var bounds=renderer.bounds;
-            float scale=Mathf.Min(width*.85f/Mathf.Max(.01f,bounds.size.x),height*.75f/Mathf.Max(.01f,bounds.size.y));
-            if(scale>0&&!float.IsInfinity(scale)&&!float.IsNaN(scale))letters.localScale=Vector3.one*scale;
+            // Scale text to cleanly fit inside the physical plaque without ever protruding
+            int maxLineChars = 0;
+            string[] lines = text.Split('\n');
+            foreach (var l in lines) if (l.Length > maxLineChars) maxLineChars = l.Length;
+            // IBMPlexMono character advance at fontSize 128 & characterSize 0.025 is ~0.192m wide, ~0.385m tall
+            float approxTextW = Mathf.Max(0.1f, maxLineChars * 0.192f);
+            float approxTextH = Mathf.Max(0.1f, lines.Length * 0.385f);
+            if (renderer.localBounds.size.x > 0.1f)
+                approxTextW = Mathf.Max(approxTextW, renderer.localBounds.size.x);
+            if (renderer.localBounds.size.y > 0.1f)
+                approxTextH = Mathf.Max(approxTextH, renderer.localBounds.size.y);
+            float fitScale = Mathf.Min((width * 0.82f) / approxTextW, (height * 0.75f) / approxTextH);
+            letters.localScale = Vector3.one * Mathf.Clamp(fitScale, 0.04f, 1.0f);
         }
 
         static GameObject Box(Transform parent,string name,float x,float y,float z,float w,float h,float d,Material material,bool collide=true)

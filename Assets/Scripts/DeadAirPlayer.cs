@@ -53,6 +53,9 @@ namespace DeadAir
         Vector2 verificationAxes;
         public int MovementCorrectionCount { get; private set; }
         public float LastMovementCorrectionDistance { get; private set; }
+        bool windowCutscenePlayed, windowCutsceneActive;
+        float windowCutsceneTimer, cutsceneStartYaw, cutsceneStartPitch;
+        GameObject cutsceneMonster;
 
         public void Initialize(WorldData data, DeadAirSession game, DeadAirUI gameUI)
         {
@@ -133,6 +136,9 @@ namespace DeadAir
             if (previousPhase != state.phase && state.phase == "playing")
             {
                 pausedLocally = false;
+                windowCutscenePlayed = false;
+                windowCutsceneActive = false;
+                if (cutsceneMonster != null) { Destroy(cutsceneMonster); cutsceneMonster = null; }
                 yaw = pitch = 0; stamina = 100; cameraUp = false; lightOn = true;
                 observedFlashlightReload = me.flashlightReloadSerial;
                 firstPerson.ResetPresentation();
@@ -385,8 +391,98 @@ namespace DeadAir
                 flashlight.transform.SetPositionAndRotation(position,rotation);
         }
 
+        void CheckWindowCutsceneTrigger(PlayerState me)
+        {
+            if (windowCutscenePlayed || windowCutsceneActive || me == null || me.down || climbingLadder || !string.IsNullOrEmpty(me.hiding)) return;
+            float dx = transform.position.x - 9f;
+            float dz = transform.position.z - 7.1f;
+            if (dx * dx + dz * dz < 1.7f * 1.7f && transform.position.y < 1.0f)
+            {
+                StartWindowCutscene();
+            }
+        }
+
+        void StartWindowCutscene()
+        {
+            windowCutscenePlayed = true;
+            windowCutsceneActive = true;
+            windowCutsceneTimer = 0f;
+            cutsceneStartYaw = yaw;
+            cutsceneStartPitch = pitch;
+            DeadAirAudio.Play("window-shatter");
+            DeadAirAudio.Play("scare");
+
+            var prefab = Resources.Load<GameObject>("World/monster");
+            if (prefab != null)
+            {
+                cutsceneMonster = Instantiate(prefab);
+                cutsceneMonster.name = "Director window cutscene monster";
+                cutsceneMonster.transform.position = new Vector3(9f, 4.2f, 5.4f);
+                cutsceneMonster.transform.rotation = Quaternion.Euler(0, 0, 0);
+                foreach (var col in cutsceneMonster.GetComponentsInChildren<Collider>()) Destroy(col);
+                var glow = new GameObject("Monster gaze glow").AddComponent<Light>();
+                glow.transform.SetParent(cutsceneMonster.transform, false);
+                glow.transform.localPosition = new Vector3(0, 1.8f, 0.3f);
+                glow.type = LightType.Point;
+                glow.range = 3.5f;
+                glow.intensity = 1.2f;
+                glow.color = new Color(0.85f, 0.95f, 1f);
+            }
+        }
+
+        void UpdateWindowCutscene()
+        {
+            windowCutsceneTimer += Time.deltaTime;
+            Vector3 eyePos = transform.position + Vector3.up * 1.65f;
+            Vector3 toWindow = (new Vector3(9f, 6.0f, 5.6f) - eyePos).normalized;
+            float targetYaw = Mathf.Atan2(-toWindow.x, -toWindow.z);
+            float targetPitch = Mathf.Asin(Mathf.Clamp(toWindow.y, -1f, 1f));
+
+            if (windowCutsceneTimer <= 0.65f)
+            {
+                float t = Mathf.SmoothStep(0, 1, windowCutsceneTimer / 0.65f);
+                yaw = Mathf.LerpAngle(cutsceneStartYaw * Mathf.Rad2Deg, targetYaw * Mathf.Rad2Deg, t) * Mathf.Deg2Rad;
+                pitch = Mathf.Lerp(cutsceneStartPitch, targetPitch, t);
+            }
+            else if (windowCutsceneTimer <= 2.2f)
+            {
+                yaw = targetYaw;
+                pitch = targetPitch;
+            }
+            else if (windowCutsceneTimer <= 2.8f)
+            {
+                if (cutsceneMonster != null)
+                {
+                    DeadAirAudio.Play("vanish");
+                    Destroy(cutsceneMonster);
+                    cutsceneMonster = null;
+                }
+                float t = Mathf.SmoothStep(0, 1, (windowCutsceneTimer - 2.2f) / 0.6f);
+                pitch = Mathf.Lerp(targetPitch, 0f, t);
+            }
+            else
+            {
+                if (cutsceneMonster != null)
+                {
+                    Destroy(cutsceneMonster);
+                    cutsceneMonster = null;
+                }
+                windowCutsceneActive = false;
+            }
+
+            transform.rotation = Quaternion.Euler(0, 180 - yaw * Mathf.Rad2Deg, 0);
+            view.transform.localRotation = Quaternion.Euler(-pitch * Mathf.Rad2Deg, 0, 0);
+            ApplyGravity(Vector3.zero);
+        }
+
         void Move(PlayerState me, RoomState state)
         {
+            CheckWindowCutsceneTrigger(me);
+            if (windowCutsceneActive)
+            {
+                UpdateWindowCutscene();
+                return;
+            }
             if(!verificationMovement)ReadLook();
             transform.rotation = Quaternion.Euler(0, 180 - yaw * Mathf.Rad2Deg, 0);
             view.transform.localRotation = Quaternion.Euler(-pitch * Mathf.Rad2Deg, 0, 0);

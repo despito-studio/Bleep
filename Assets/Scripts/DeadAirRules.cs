@@ -212,7 +212,8 @@ namespace DeadAir
             State.droppedItems.Clear();
             ResetDrawers();
             State.canister = State.valveOpened = State.calibrated = State.power = State.broadcast = false;
-            State.ladderPlaced = State.windowBroken = State.breakerOn = State.directorDrawerOpen = false;
+            State.ladderPlaced = State.breakerOn = State.directorDrawerOpen = false;
+            State.windowBroken = State.quest.windowBroken = true;
             State.quest = new QuestState();
             State.enemy = new EnemyState { x = 0, y = 0, z = -34 };
             enemyRoute.Clear();enemyRouteCursor=0;nextRouteAttempt=0;
