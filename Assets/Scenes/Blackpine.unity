@@ -119,13 +119,46 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1001 &597594654
+--- !u!1 &8418017
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8418018}
+  m_Layer: 0
+  m_Name: BLACKPINE / original web scene
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8418018
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8418017}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 144876207}
+  - {fileID: 21509569}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &21509568
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 1488053938}
+    m_TransformParent: {fileID: 8418018}
     m_Modifications:
     - target: {fileID: 6228223698660395323, guid: 3a26e77b13d5bf847817d8d0038e9ebe, type: 3}
       propertyPath: m_LocalPosition.x
@@ -176,18 +209,18 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 3a26e77b13d5bf847817d8d0038e9ebe, type: 3}
---- !u!4 &597594655 stripped
+--- !u!4 &21509569 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 6228223698660395323, guid: 3a26e77b13d5bf847817d8d0038e9ebe, type: 3}
-  m_PrefabInstance: {fileID: 597594654}
+  m_PrefabInstance: {fileID: 21509568}
   m_PrefabAsset: {fileID: 0}
---- !u!1001 &743961688
+--- !u!1001 &144876206
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 1488053938}
+    m_TransformParent: {fileID: 8418018}
     m_Modifications:
     - target: {fileID: 889691949831359314, guid: 00041916e044a874c8c7669ee935e07a, type: 3}
       propertyPath: m_Name
@@ -238,12 +271,12 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 00041916e044a874c8c7669ee935e07a, type: 3}
---- !u!4 &743961689 stripped
+--- !u!4 &144876207 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1725637845640156341, guid: 00041916e044a874c8c7669ee935e07a, type: 3}
-  m_PrefabInstance: {fileID: 743961688}
+  m_PrefabInstance: {fileID: 144876206}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &1349514439
+--- !u!1 &1250170859
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -251,8 +284,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1349514441}
-  - component: {fileID: 1349514440}
+  - component: {fileID: 1250170861}
+  - component: {fileID: 1250170860}
   m_Layer: 0
   m_Name: Dead Air / Runtime bootstrap
   m_TagString: Untagged
@@ -260,25 +293,25 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1349514440
+--- !u!114 &1250170860
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1349514439}
+  m_GameObject: {fileID: 1250170859}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 35830149db6321843b19c62fb4dbed51, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DeadAir.DeadAirBootstrap
---- !u!4 &1349514441
+--- !u!4 &1250170861
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1349514439}
+  m_GameObject: {fileID: 1250170859}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -287,42 +320,9 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1488053937
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1488053938}
-  m_Layer: 0
-  m_Name: BLACKPINE / original web scene
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1488053938
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1488053937}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 743961689}
-  - {fileID: 597594655}
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 1349514441}
-  - {fileID: 1488053938}
+  - {fileID: 1250170861}
+  - {fileID: 8418018}
