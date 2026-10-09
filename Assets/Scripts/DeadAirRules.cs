@@ -446,7 +446,7 @@ namespace DeadAir
                 if (movementBudgets.TryGetValue(id, out var budget))
                     budget.distance = Mathf.Max(0, budget.distance - delta);
                 p.x = input.x; p.y = input.y; p.z = input.z;
-                p.yaw = input.yaw; p.pitch = Mathf.Clamp(input.pitch, -1.35f, 1.35f);
+                p.yaw = input.yaw; p.pitch = Mathf.Clamp(input.pitch, DeadAirLocomotion.MaximumDownwardPitch, 1.35f);
                 if(delta>.025f&&(!footstepsAt.TryGetValue(id,out float footstepAt)||State.elapsed>=footstepAt))
                 {
                     // monsterHearingRange is the operator's listening perk; using it

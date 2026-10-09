@@ -10,6 +10,20 @@ namespace DeadAir
     {
         IEnumerator CaptureFirstPersonBody()
         {
+            var captures = new Stack<IEnumerator>(); captures.Push(CaptureFirstPersonBodyFrames());
+            while (captures.Count > 0)
+            {
+                object current = null; bool moved = false; System.Exception failure = null;
+                try { moved = captures.Peek().MoveNext(); if (moved) current = captures.Peek().Current; }
+                catch (System.Exception error) { failure = error; }
+                if (failure != null) { Debug.LogException(failure); Application.Quit(2); yield break; }
+                if (!moved) { captures.Pop(); continue; }
+                if (current is IEnumerator nested) captures.Push(nested); else yield return current;
+            }
+        }
+
+        IEnumerator CaptureFirstPersonBodyFrames()
+        {
             QualitySettings.vSyncCount = 0; Application.targetFrameRate = 30;
             yield return new WaitForSecondsRealtime(1);
             var checks = new List<string>(); var data = WorldData.Load();
@@ -25,19 +39,21 @@ namespace DeadAir
                 session.Host("Body verifier", role, true, true); session.Command(new NetPacket { type = "start" });
                 session.State.elapsed = DeadAirVanPresentation.ArrivalDuration + 1;
                 session.State.enemy.active = false;
-                player.SetInspectionPose(0, 24, Mathf.PI, -1.35f);
+                yield return null; yield return null;
+                player.SetInspectionPose(0, 24, Mathf.PI, DeadAirLocomotion.MaximumDownwardPitch);
                 yield return Save("body-01-" + role + "-standing-look-down");
                 var body = player.FirstPersonBody;
                 Require(body != null && body.Avatar != null && body.Avatar.activeInHierarchy && body.VisibleTriangles > 500 && body.HiddenTriangles > 0,
                     role + " has no actual visible authored torso/legs.");
                 Require(body.Avatar.GetComponent<DeadAirAppearance>().CurrentMask == DeadAirClothing.DefaultMask(role), role + " body lost its original outfit.");
-                Require(body.Avatar.GetComponentsInChildren<Light>(true).All(light => !light.enabled || !light.gameObject.activeInHierarchy),
+                Require(body.Avatar.GetComponentsInChildren<Light>(true).All(light => light.name == "Subtle first person body bounce" ?
+                    light.cullingMask == 1 << 27 && light.shadows == LightShadows.None : !light.enabled || !light.gameObject.activeInHierarchy),
                     role + " local body duplicates its flashlight.");
                 if (role == "engineer")
                 {
                     player.SetInspectionPose(0, 24, Mathf.PI, 0);
                     yield return Save("body-02-engineer-level-view");
-                    player.SetInspectionPose(0, 24, Mathf.PI, -1.35f);
+                    player.SetInspectionPose(0, 24, Mathf.PI, DeadAirLocomotion.MaximumDownwardPitch);
                 }
                 player.EndInspection(); player.SetVerificationMovement(Vector2.zero, false); player.SetVerificationCrouching(true);
                 yield return new WaitForSecondsRealtime(.45f);
@@ -72,7 +88,7 @@ namespace DeadAir
                     "Replicated head nod/glance");
                 Require(Mathf.Abs(Mathf.DeltaAngle(bodyBefore, remote.BodyYawDegrees)) < 3.1f, "Small glance rotates idle feet rather than the head.");
                 yield return Save("body-04-coop-head-nod");
-                peer.Command(new NetPacket { type = "move", x = spawn.x, y = spawn.y, z = spawn.z, yaw = 0, pitch = -1.35f, moveSequence = 3 });
+                peer.Command(new NetPacket { type = "move", x = spawn.x, y = spawn.y, z = spawn.z, yaw = 0, pitch = DeadAirLocomotion.MaximumDownwardPitch, moveSequence = 3 });
                 yield return Until(() => guest.moveSequence >= 3, "Network 180-degree turn");
                 float deadline = Time.realtimeSinceStartup + 2.2f;
                 while (Time.realtimeSinceStartup < deadline)

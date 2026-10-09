@@ -214,7 +214,8 @@ namespace DeadAir.Editor
             foreach (var renderer in avatar.GetComponentsInChildren<MeshRenderer>(true))
                 Require(!renderer.enabled || !renderer.gameObject.activeInHierarchy, role + " camera body duplicated visible equipment: " + renderer.name);
             foreach (var light in avatar.GetComponentsInChildren<Light>(true))
-                Require(!light.enabled || !light.gameObject.activeInHierarchy, role + " camera body duplicated an equipment light: " + light.name);
+                Require(light.name == "Subtle first person body bounce" ? light.cullingMask == 1 << 27 && light.shadows == LightShadows.None && light.intensity <= .5f :
+                    !light.enabled || !light.gameObject.activeInHierarchy, role + " camera body duplicated an equipment light: " + light.name);
         }
         static Transform Find(GameObject avatar, string name)
         { foreach (var bone in avatar.GetComponentsInChildren<Transform>(true)) if (bone.name == name) return bone; return null; }

@@ -101,7 +101,7 @@ namespace DeadAir
 
         public void ResetGaze(float yaw, float pitch = 0)
         {
-            currentYaw = yaw; aimPitch = Mathf.Clamp(pitch, -1.35f, 1.35f);
+            currentYaw = yaw; aimPitch = Mathf.Clamp(pitch, DeadAirLocomotion.MaximumDownwardPitch, 1.35f);
             gaze.Step(yaw, pitch, 0, 0, true); previousGazeMode = -1;
         }
 
@@ -122,7 +122,7 @@ namespace DeadAir
             crouching = player.crouching && !player.down && !player.ladderClimbing;
             motionPaused = paused || player.down;
             currentYaw = player.yaw;
-            aimPitch = Mathf.Clamp(player.pitch, -1.35f, 1.35f);
+            aimPitch = Mathf.Clamp(player.pitch, DeadAirLocomotion.MaximumDownwardPitch, 1.35f);
             flashlightRequested = playing && player.flashlight && DeadAirSupplies.HasCharge(player) &&
                 !player.down && !player.ladderClimbing && !player.mapOpen && !player.uniqueItemEquipped && string.IsNullOrEmpty(player.hiding);
             ladderClimbing = player.ladderClimbing && !player.down;
@@ -213,7 +213,7 @@ namespace DeadAir
         public void SetGazePreview(float yaw, float pitch, float dt, float horizontalSpeed = 0, bool reset = false)
         {
             Initialize(); preview = true; gazeEnabled = true; currentYaw = yaw;
-            aimPitch = Mathf.Clamp(pitch, -1.35f, 1.35f);
+            aimPitch = Mathf.Clamp(pitch, DeadAirLocomotion.MaximumDownwardPitch, 1.35f);
             gaze.Step(yaw, pitch, horizontalSpeed, dt, reset);
             transform.rotation = gaze.BodyRotation;
             SamplePose(); PoseEquipment(); UpdateFlashlightPose();
@@ -226,7 +226,7 @@ namespace DeadAir
             DeadAirClothing.Apply(gameObject, -1, classId);
             appearance = GetComponent<DeadAirAppearance>();
             crouching = equipment.crouching;
-            aimPitch = Mathf.Clamp(equipment.pitch, -1.35f, 1.35f);
+            aimPitch = Mathf.Clamp(equipment.pitch, DeadAirLocomotion.MaximumDownwardPitch, 1.35f);
             SamplePose();
             ShowEquipment(equipment);
             PoseEquipment();

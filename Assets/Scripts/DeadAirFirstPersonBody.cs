@@ -12,6 +12,7 @@ namespace DeadAir
         GameObject avatar;
         string role;
         DeadAirCharacterMotion motion;
+        Light bodyBounce;
         Vector3 previousFeet;
         bool hasFeet;
         public GameObject Avatar => avatar;
@@ -29,7 +30,7 @@ namespace DeadAir
             avatar.SetActive(true);
             // Put the view just in front of the neckline, rather than inside the
             // imported head. Feet stay close to the actual collision capsule.
-            avatar.transform.position = feet.position - feet.forward * .16f;
+            avatar.transform.position = feet.position - feet.forward * .12f;
             float seated = DeadAirVanPresentation.SeatedWeight(state);
             if (player.ladderClimbing || seated > .001f) avatar.transform.rotation = feet.rotation;
             pose.characterClass = player.characterClass;
@@ -43,6 +44,7 @@ namespace DeadAir
             motion.SetLocomotionPose(crouching, speed);
             motion.SetTransitPose(seated);
             motion.Present(pose, state.elapsed, state.paused, true);
+            bodyBounce.transform.rotation = avatar.transform.rotation * Quaternion.Euler(35, 180, 0);
             previousFeet = feet.position; hasFeet = true;
         }
 
@@ -58,6 +60,12 @@ namespace DeadAir
             motion.ClassId = role;
             motion.SetFirstPersonPresentation(true);
             DeadAirClothing.Apply(avatar, -1, role);
+            foreach (var part in avatar.GetComponentsInChildren<Transform>(true)) part.gameObject.layer = 27;
+            bodyBounce = new GameObject("Subtle first person body bounce").AddComponent<Light>();
+            bodyBounce.transform.SetParent(avatar.transform, false);
+            bodyBounce.type = LightType.Directional; bodyBounce.cullingMask = 1 << 27;
+            bodyBounce.color = new Color32(192, 202, 215, 255); bodyBounce.intensity = .48f;
+            bodyBounce.shadows = LightShadows.None; bodyBounce.renderMode = LightRenderMode.ForcePixel;
             foreach (var bone in avatar.GetComponentsInChildren<Transform>(true))
                 if (bone.name == "head")
                 {
@@ -85,6 +93,7 @@ namespace DeadAir
                 // never draws the owner's head or a second pair of arms on screen.
                 var shadow = new GameObject("Full operative shadow").AddComponent<SkinnedMeshRenderer>();
                 shadow.transform.SetParent(renderer.transform, false);
+                shadow.gameObject.layer = 27;
                 shadow.sharedMesh = source; shadow.sharedMaterials = renderer.sharedMaterials;
                 shadow.bones = renderer.bones; shadow.rootBone = renderer.rootBone; shadow.localBounds = renderer.localBounds;
                 shadow.shadowCastingMode = ShadowCastingMode.ShadowsOnly; shadow.receiveShadows = false;

@@ -555,7 +555,7 @@ namespace DeadAir
         {
             // Legacy mouse axes already scale pixel motion by 0.1; restore the web game's 0.002 rad/pixel.
             yaw -= Mathf.Clamp(Input.GetAxisRaw("Mouse X"), -8, 8) * .02f * DeadAirSettings.Sensitivity;
-            pitch = Mathf.Clamp(pitch + Mathf.Clamp(Input.GetAxisRaw("Mouse Y"), -8, 8) * .02f * DeadAirSettings.Sensitivity, -1.35f, 1.35f);
+            pitch = Mathf.Clamp(pitch + Mathf.Clamp(Input.GetAxisRaw("Mouse Y"), -8, 8) * .02f * DeadAirSettings.Sensitivity, DeadAirLocomotion.MaximumDownwardPitch, 1.35f);
             if (Input.GetKey(KeyCode.LeftArrow)) yaw += Time.deltaTime * 1.6f;
             if (Input.GetKey(KeyCode.RightArrow)) yaw -= Time.deltaTime * 1.6f;
             if (Input.GetKey(KeyCode.UpArrow)) pitch = Mathf.Min(1.3f, pitch + Time.deltaTime);
