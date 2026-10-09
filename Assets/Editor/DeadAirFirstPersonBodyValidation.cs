@@ -117,10 +117,12 @@ namespace DeadAir.Editor
                     if (poseIndex == 0) { standingLeft = left; standingRight = right; }
                     if (fixture.crouching)
                     {
-                        Require(body.Motion.FirstPersonHeadHeight <= .90f && body.Motion.FirstPersonChestHeight < DeadAirLocomotion.CrouchingEye,
-                            role + " crouch put the camera inside the source neck/chest.");
-                        Require(Vector3.Distance(standingLeft, left) < .045f && Vector3.Distance(standingRight, right) < .045f,
-                            role + " crouch failed to plant both source feet.");
+                        Require(body.Motion.FirstPersonEyeHeight <= .93f && body.Motion.FirstPersonChestHeight < DeadAirLocomotion.CrouchingEye,
+                            role + " crouch put the camera inside the actual source eyes/chest.");
+                        // Visual rig fitting follows the bent source face in XZ;
+                        // collision feet stay fixed and both visible soles stay grounded.
+                        Require(Mathf.Abs(standingLeft.y - left.y) < .045f && Mathf.Abs(standingRight.y - right.y) < .045f,
+                            role + " crouch lifted the source feet off their floor contacts.");
                     }
                     poseIndex++;
                 }

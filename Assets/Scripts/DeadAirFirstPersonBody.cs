@@ -16,6 +16,7 @@ namespace DeadAir
         string role;
         DeadAirCharacterMotion motion;
         Light bodyBounce;
+        float eyeClearance;
         Vector3 previousFeet;
         bool hasFeet;
         public GameObject Avatar => avatar;
@@ -32,8 +33,8 @@ namespace DeadAir
             if (avatar == null) return;
             if (bodyView == null) bodyView = new MaterialPropertyBlock();
             avatar.SetActive(true);
-            // Put the view just in front of the neckline, rather than inside the
-            // imported head. Feet stay close to the actual collision capsule.
+            // Sample at the collision feet, then fit the visual rig to its actual
+            // source eye. Bone pivots and face depth differ between the models.
             avatar.transform.position = feet.position - feet.forward * .12f;
             float seated = DeadAirVanPresentation.SeatedWeight(state);
             if (player.ladderClimbing || seated > .001f) avatar.transform.rotation = feet.rotation;
@@ -52,10 +53,13 @@ namespace DeadAir
             Quaternion look = camera != null ? camera.transform.rotation : DeadAirGaze.ViewRotation(yaw, pitch);
             Vector3 eye = camera != null ? camera.transform.position : feet.position + Vector3.up *
                 (crouching ? DeadAirLocomotion.CrouchingEye : DeadAirLocomotion.StandingEye) + feet.forward * .08f;
+            Vector3 eyeDelta = eye - motion.FirstPersonEyePosition - avatar.transform.forward * eyeClearance;
+            eyeDelta.y = 0;
+            avatar.transform.position += eyeDelta;
             bodyView.SetVector("_DeadAirOwnerBodyEye", new Vector4(eye.x, eye.y, eye.z, 1));
             bodyView.SetVector("_DeadAirOwnerBodyUp", look * Vector3.up);
             bodyView.SetVector("_DeadAirOwnerBodyForward", look * Vector3.forward);
-            bodyView.SetVector("_DeadAirOwnerBodyClearance", new Vector4(.18f, .10f, .02f, .12f));
+            bodyView.SetVector("_DeadAirOwnerBodyClearance", new Vector4(.06f, .04f, 0, .12f));
             foreach (var surface in ownerSurfaces) surface.SetPropertyBlock(bodyView);
             previousFeet = feet.position; hasFeet = true;
         }
@@ -78,13 +82,9 @@ namespace DeadAir
             bodyBounce.type = LightType.Directional; bodyBounce.cullingMask = 1 << 27;
             bodyBounce.color = new Color32(192, 202, 215, 255); bodyBounce.intensity = .48f;
             bodyBounce.shadows = LightShadows.None; bodyBounce.renderMode = LightRenderMode.ForcePixel;
-            foreach (var bone in avatar.GetComponentsInChildren<Transform>(true))
-                if (bone.name == "head")
-                {
-                    float sourceEyeHeight = avatar.transform.InverseTransformPoint(bone.position).y + .12f;
-                    avatar.transform.localScale *= Mathf.Clamp(1.65f / sourceEyeHeight, .85f, 1.05f);
-                    break;
-                }
+            Vector3 sourceEye = DeadAirBodyFit.SourceEye(role);
+            avatar.transform.localScale *= DeadAirLocomotion.StandingEye / sourceEye.y;
+            eyeClearance = Mathf.Max(.08f, (DeadAirBodyFit.TorsoFront(role) - sourceEye.z) * avatar.transform.lossyScale.z + .08f);
             VisibleTriangles = HiddenTriangles = 0;
             foreach (var renderer in avatar.GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {

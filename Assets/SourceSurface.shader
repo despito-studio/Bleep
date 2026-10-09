@@ -20,7 +20,7 @@ Shader "Dead Air/Source Surface"
         _DeadAirOwnerBodyEye("Owner body camera", Vector) = (0,0,0,0)
         _DeadAirOwnerBodyUp("Owner body view up", Vector) = (0,1,0,0)
         _DeadAirOwnerBodyForward("Owner body view forward", Vector) = (0,0,1,0)
-        _DeadAirOwnerBodyClearance("Owner camera clearance", Vector) = (0.18,0.10,0.02,0.12)
+        _DeadAirOwnerBodyClearance("Owner camera clearance", Vector) = (0.06,0.04,0,0.12)
     }
     SubShader
     {
@@ -67,12 +67,10 @@ Shader "Dead Air/Source Surface"
             {
                 float3 fromEye = IN.worldPos - _DeadAirOwnerBodyEye.xyz;
                 // Only the owner's clipped surface has this property block.
-                // Keep clothing out of the lens and the upper half of the view;
-                // the complete shadow and all remote bodies remain untouched.
+                // Keep the lens and the hidden neck clear. Visual body fitting
+                // uses the source eyes, without cutting a line across the view.
                 clip(length(fromEye) - _DeadAirOwnerBodyClearance.x);
                 clip(-fromEye.y - _DeadAirOwnerBodyClearance.y);
-                clip(-dot(fromEye, _DeadAirOwnerBodyUp.xyz) -
-                    max(0, dot(fromEye, _DeadAirOwnerBodyForward.xyz)) * _DeadAirOwnerBodyClearance.z);
             }
             half reflections = 1 - saturate(_DeadAirReflectionsDisabled);
             half metallic = _Metallic * reflections;

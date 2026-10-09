@@ -21,6 +21,9 @@ namespace DeadAir
         public bool TurningInPlace => gaze.TurningInPlace;
         public float FirstPersonHeadHeight => head == null ? 0 : Vector3.Dot(head.position - transform.position, transform.up);
         public float FirstPersonChestHeight => chest == null ? 0 : Vector3.Dot(chest.position - transform.position, transform.up);
+        public Vector3 FirstPersonEyePosition => head == null ? transform.position : head.TransformPoint(headLocalEye);
+        public float FirstPersonEyeHeight => Vector3.Dot(FirstPersonEyePosition - transform.position, transform.up);
+        public float FirstPersonChestForward => chest == null ? 0 : Vector3.Dot(chest.position - transform.position, transform.forward);
         public float FirstPersonCrouchLeanDegrees { get; private set; }
 
         readonly List<UnityEngine.Object> owned = new List<UnityEngine.Object>();
@@ -45,6 +48,7 @@ namespace DeadAir
         Vector3 pelvisRestPosition;
         Quaternion spineRest = Quaternion.identity;
         Vector3 spineRestPosition;
+        Vector3 headLocalEye;
         Vector3 compassHeading = Vector3.forward;
         float ladderAge;
         Vector3 rightGrip, leftGrip, mouthLocal = new Vector3(0, .092f, .132f);
@@ -276,7 +280,13 @@ namespace DeadAir
                 else if (bone.name == "spine") spine = bone;
                 else if (bone.name == "chest") chest = bone;
             }
-            if (head != null) headRest = head.localRotation;
+            if (head != null)
+            {
+                headRest = head.localRotation;
+                // SourceEye is measured on the actual supplied mesh. Cache it in
+                // head space before the owner adapter normalizes avatar scale.
+                headLocalEye = head.InverseTransformPoint(transform.TransformPoint(DeadAirBodyFit.SourceEye(classId)));
+            }
             if (chest != null) chestRest = chest.localRotation;
             if (pelvis != null) { pelvisRest = pelvis.localRotation; pelvisRestPosition = pelvis.localPosition; }
             if (spine != null) { spineRest = spine.localRotation; spineRestPosition = spine.localPosition; }
@@ -476,7 +486,7 @@ namespace DeadAir
                 // Imported rigs have different pelvis heights (especially the
                 // short-legged engineer). Place hips using their real world
                 // height, then lean the connected upper body around that pelvis
-                // until the head base is below the actual crouched camera eye.
+                // until its actual source eye is below the crouched camera eye.
                 // Feet are solved back to the unchanged contacts after the lean.
                 float sourceHip = Vector3.Dot(pelvis.position - transform.position, transform.up);
                 float floorContact = (Vector3.Dot(rightTarget - transform.position, transform.up) +
@@ -486,11 +496,11 @@ namespace DeadAir
                 float minimumHip = classId == "engineer" ? .40f : .33f;
                 float targetHip = Mathf.Max(floorContact + .23f, Mathf.Clamp(sourceHip * .48f, minimumHip, .42f));
                 pelvis.position -= transform.up * Mathf.Max(0, sourceHip - targetHip);
-                Vector3 headOffset = head.position - pelvis.position;
-                float vertical = Vector3.Dot(headOffset, transform.up), forward = Vector3.Dot(headOffset, transform.forward);
+                Vector3 eyeOffset = FirstPersonEyePosition - pelvis.position;
+                float vertical = Vector3.Dot(eyeOffset, transform.up), forward = Vector3.Dot(eyeOffset, transform.forward);
                 float radius = Mathf.Sqrt(vertical * vertical + forward * forward);
-                float targetHead = DeadAirLocomotion.CrouchingEye - .14f;
-                float angle = radius > .01f ? Mathf.Acos(Mathf.Clamp((targetHead - targetHip) / radius, -1, 1)) - Mathf.Atan2(forward, vertical) : 0;
+                float targetEye = DeadAirLocomotion.CrouchingEye - .08f;
+                float angle = radius > .01f ? Mathf.Acos(Mathf.Clamp((targetEye - targetHip) / radius, -1, 1)) - Mathf.Atan2(forward, vertical) : 0;
                 FirstPersonCrouchLeanDegrees = Mathf.Clamp(angle * Mathf.Rad2Deg, 18, 68);
                 Quaternion lean = Quaternion.AngleAxis(FirstPersonCrouchLeanDegrees, transform.right);
                 Transform upperBody = spine != null ? spine : chest;
@@ -504,7 +514,7 @@ namespace DeadAir
                 }
                 // A backward-leaning authored gait pose may need a small extra
                 // hip bend after the bounded torso lean. Keep hip-to-floor room.
-                float excess = FirstPersonHeadHeight - targetHead;
+                float excess = FirstPersonEyeHeight - targetEye;
                 float hipRoom = Vector3.Dot(pelvis.position - transform.position, transform.up) - floorContact - .20f;
                 if (excess > 0) pelvis.position -= transform.up * Mathf.Min(excess, Mathf.Max(0, hipRoom));
             }
