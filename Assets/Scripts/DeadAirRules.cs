@@ -159,6 +159,59 @@ namespace DeadAir
         {
             var player = State.Player(id);
             if (!CanUseRoleItem(player)) return "Особистий предмет зараз недоступний.";
+            bool isCh2 = DeadAirChapters.IsChapter2(State.chapterId);
+            if (isCh2)
+            {
+                string sel = player.SelectedItem;
+                if (sel == "pills")
+                {
+                    player.sanity = Mathf.Min(100f, player.sanity + 50f);
+                    DeadAirAudio.Play("pill-consume");
+                    State.message = player.name + " прийняв заспокійливе (+50% розсудку).";
+                    Dirty = true;
+                    return null;
+                }
+                if (sel == "camera" || player.camera)
+                {
+                    DeadAirAudio.Play("camera-snap");
+                    var enemy = State.enemy;
+                    if (enemy.active && enemy.behaviour != "vanished")
+                    {
+                        float dist = Dist(player.x, player.z, enemy.x, enemy.z);
+                        if (dist < 16f && SameFloor(player.y, enemy.y))
+                        {
+                            enemy.stunnedUntil = State.elapsed + 4.0f;
+                            enemy.attackPlayerId = null;
+                            State.message = "СПАЛАХ КАМЕРИ! Тек-Тек приголомшено фотоспалахом!";
+                            Dirty = true;
+                            return null;
+                        }
+                    }
+                    State.message = "Зроблено фотознімок аномальної зони.";
+                    Dirty = true;
+                    return null;
+                }
+                if (sel == "recorder")
+                {
+                    UseRecorder(player);
+                    Dirty = true;
+                    return null;
+                }
+                if (sel == "emf-detector")
+                {
+                    var enemy = State.enemy;
+                    if (enemy.active && enemy.behaviour != "vanished")
+                    {
+                        float dist = Dist(player.x, player.z, enemy.x, enemy.z);
+                        if (dist < 8f) State.message = "ДЕТЕКТОР ЕРС: КРИТИЧНИЙ РІВЕНЬ 5! ТЕК-ТЕК ДУЖЕ БЛИЗЬКО!";
+                        else if (dist < 18f) State.message = "ДЕТЕКТОР ЕРС: Сильні електромагнітні сплески (Рівень 3).";
+                        else State.message = "ДЕТЕКТОР ЕРС: Слабкі коливання вдалині (Рівень 1).";
+                    }
+                    else State.message = "ДЕТЕКТОР ЕРС: Спокійний фон (Рівень 0).";
+                    Dirty = true;
+                    return null;
+                }
+            }
             if (!player.uniqueItemEquipped || !player.HasSelectedRoleItem || player.camera || player.mapOpen)
                 return "Оберіть особистий предмет в інвентарі.";
             bool cigarettes = player.characterClass == "operator";
@@ -244,38 +297,58 @@ namespace DeadAir
             bool isCh2 = DeadAirChapters.IsChapter2(State.chapterId);
             State.spawnCountdown = State.creative ? 999999 : isCh2 ? 10 : 35;
             State.message = State.creative ? "РЕЖИМ ДОСЛІДЖЕННЯ: загроза пасивна." :
-                isCh2 ? "ЯПОНСЬКА ШКОЛА: Дослідіть школу й парк. Шукайте пігулки для розсудку!" :
+                isCh2 ? "ЯПОНСЬКА ШКОЛА: Ви — журналісти-розслідувачі. Знайдіть 5 касет-доказів про Тек-Тек у школі та парку! Зберігайте розсудок пігулками." :
                 "Група прибула. До прориву сигналу 35 секунд.";
-            if (isCh2) State.enemy = new EnemyState { x = 0, y = 0.1f, z = -10f };
+            if (isCh2)
+            {
+                State.enemy = new EnemyState { x = 0, y = 0.1f, z = -10f };
+                State.quest.stage = 1;
+            }
             for (int i = 0; i < State.players.Count; i++)
             {
                 var p = State.players[i];
                 if (isCh2)
                 {
-                    p.x = 0; p.y = 0.5f; p.z = 36f;
+                    p.x = 0; p.y = 0.5f; p.z = 40f;
                     p.yaw = Mathf.PI; p.pitch = 0;
+                    p.characterClass = "journalist";
+                    p.sanity = p.stamina = 100;
+                    p.down = p.sprinting = p.crouching = p.camera = p.ladderClimbing = false;
+                    p.inventory.Clear();
+                    p.inventory.Add("flashlight");
+                    p.inventory.Add("camera");
+                    p.inventory.Add("recorder");
+                    p.inventory.Add("emf-detector");
+                    p.inventory.Add("pills");
+                    p.selectedSlot = 0;
+                    p.flashlight = true;
+                    p.flashlightCharge = DeadAirSupplies.FlashlightSeconds;
+                    p.spareBatteries = 2; p.coins = p.flashlightReloadSerial = 0;
+                    p.hiding = null;
+                    p.invulnerableUntil = 8;
+                    p.uniqueItemEquipped = p.mapOpen = false;
                 }
                 else
                 {
                     var spawn = DeadAirVanPresentation.SpawnPoint(world, i);
                     p.x = spawn.x; p.y = spawn.y; p.z = spawn.z;
                     p.yaw = DeadAirVanPresentation.SpawnYaw; p.pitch = 0;
+                    p.sanity = p.stamina = 100;
+                    p.down = p.sprinting = p.crouching = p.camera = p.ladderClimbing = false;
+                    p.inventory.Clear();
+                    p.inventory.Add("flashlight");
+                    p.selectedSlot = 0;
+                    p.flashlight = true;
+                    p.flashlightCharge = DeadAirSupplies.FlashlightSeconds;
+                    p.spareBatteries = p.coins = p.flashlightReloadSerial = 0;
+                    p.hiding = null;
+                    p.invulnerableUntil = 8;
+                    ResetRoleItem(p);
                 }
-                p.sanity = p.stamina = 100;
-                p.down = p.sprinting = p.crouching = p.camera = p.ladderClimbing = false;
-                p.inventory.Clear();
-                p.inventory.Add("flashlight");
-                p.selectedSlot = 0;
-                p.flashlight = true;
-                p.flashlightCharge = DeadAirSupplies.FlashlightSeconds;
-                p.spareBatteries = p.coins = p.flashlightReloadSerial = 0;
-                p.hiding = null;
-                p.invulnerableUntil = 8;
-                ResetRoleItem(p);
                 p.moveSequence = 0;
-                p.spiderScareSerial=p.spiderScareAt=0;
-                p.mushroomTripStartedAt=p.mushroomTripUntil=0;
-                p.mushroomTripSerial=0;
+                p.spiderScareSerial = p.spiderScareAt = 0;
+                p.mushroomTripStartedAt = p.mushroomTripUntil = 0;
+                p.mushroomTripSerial = 0;
                 ResetMovementBudget(p);
             }
             nextScare = 35;
@@ -510,7 +583,7 @@ namespace DeadAir
         bool Walkable(float x, float y, float z)
         {
             if (DeadAirChapters.IsChapter2(State.chapterId))
-                return x >= -45f && x <= 45f && z >= -25f && z <= 100f && y >= -1f && y <= 6f;
+                return x >= -60f && x <= 60f && z >= -80f && z <= 115f && y >= -1f && y <= 8f;
             if (x < world.courtyard.minX + .2f || x > world.courtyard.maxX - .2f ||
                 z > world.courtyard.maxZ - .2f || z < world.courtyard.minZ + .2f) return false;
             if (DeadAirVanPresentation.TryFloorHeight(world, x, z, out float vanFloor) && Mathf.Abs(y - vanFloor) <= .28f) return true;
@@ -719,6 +792,41 @@ namespace DeadAir
                 State.message = up ? "Підіймаєтеся до вікна директора." : "Спускаєтеся на передній двір.";
                 Dirty = true; return null;
             }
+            if (DeadAirChapters.IsChapter2(State.chapterId))
+            {
+                if (objectId == "van-exit")
+                {
+                    if (State.tapes.Count < 5)
+                        return "Потрібно зібрати всі 5 касет з доказами для репортажу! (Зібрано " + State.tapes.Count + "/5).";
+                    State.phase = "won";
+                    State.message = "РЕПОРТАЖ ЗАВЕРШЕНО! Ви зібрали всі 5 доказів про легенду Тек-Тек та успішно виїхали на фургоні!";
+                    Dirty = true;
+                    return null;
+                }
+                if (objectId.StartsWith("tape-", StringComparison.Ordinal))
+                {
+                    if (State.Collected(objectId)) return "Цю касету вже забрано.";
+                    State.tapes.Add(objectId);
+                    State.collected.Add(objectId);
+                    if (!p.inventory.Contains(objectId)) p.inventory.Add(objectId);
+                    State.scare++;
+                    if (!State.creative) State.enemy.active = true;
+                    HearNoise(p.x, p.y, p.z, 30, 10);
+                    DeadAirAudio.Play("cassette");
+                    if (State.tapes.Count >= 5)
+                    {
+                        State.quest.stage = 4;
+                        State.message = "ВСІ 5 КАСЕТ ЗІБРАНО! Біжіть до фургона журналістів на дорозі для евакуації!";
+                    }
+                    else
+                    {
+                        State.quest.stage = 2;
+                        State.message = "КАСЕТУ-ДОКАЗ ЗНАЙДЕНО (" + State.tapes.Count + "/5). Тек-Тек чує ваші кроки!";
+                    }
+                    Dirty = true;
+                    return null;
+                }
+            }
             var obj = world.Objective(objectId);
             if (obj == null) return "Невідомий предмет.";
             float objRange = obj.id == "ladder" ? 3.5f : 2.5f;
@@ -911,6 +1019,10 @@ namespace DeadAir
             if (itemId == "ladder") return "Складна драбина";
             if (itemId == "key-main") return "Головний ключ станції";
             if (itemId == "key-basement" || itemId == "keycard-basement") return "Картка Під.";
+            if (itemId == "camera") return "Репортерська камера";
+            if (itemId == "emf-detector") return "Детектор аномалій";
+            if (itemId == "pills" || itemId.StartsWith("pill-")) return "Заспокійливі пігулки";
+            if (itemId.StartsWith("tape-")) return "Касета-доказ";
             if(DeadAirRoleItems.IsRoleItem(itemId))return DeadAirRoleItems.Label(itemId);
             var obj = world.Objective(itemId);
             if (obj != null) return obj.label;
@@ -971,8 +1083,15 @@ namespace DeadAir
 
         void UpdateQuest()
         {
-            State.quest.stage = State.broadcast || State.phase == "won" ? 4 : State.power ? 3 :
-                State.tapes.Count > 0 || State.keycards.Count > 0 ? 2 : 1;
+            if (DeadAirChapters.IsChapter2(State.chapterId))
+            {
+                State.quest.stage = State.phase == "won" ? 4 : State.tapes.Count >= 5 ? 3 : State.tapes.Count > 0 ? 2 : 1;
+            }
+            else
+            {
+                State.quest.stage = State.broadcast || State.phase == "won" ? 4 : State.power ? 3 :
+                    State.tapes.Count > 0 || State.keycards.Count > 0 ? 2 : 1;
+            }
         }
 
         void CheckDefeat()

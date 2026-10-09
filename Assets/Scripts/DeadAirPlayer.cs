@@ -223,11 +223,15 @@ namespace DeadAir
                     }
                 }
                 if (Input.GetKeyDown(KeyCode.V)) { cameraUp = !cameraUp; session.Command(new NetPacket { type = "unique-equip", uniqueEquipped = false }); DeadAirAudio.Play("camera-equip"); }
+                if (Input.GetMouseButtonDown(0) && (cameraUp || me.SelectedItem == "camera"))
+                {
+                    session.Command(new NetPacket { type = "unique-use" });
+                }
                 if (Input.GetKeyDown(KeyCode.R))
                 {
                     if (HoldingFlashlight(me) || me.SelectedItem == DeadAirSupplies.BatteryItem) session.Command(new NetPacket { type = "reload" });
                     else if (me.inventory != null && me.selectedSlot >= 0 && me.selectedSlot < me.inventory.Count && me.inventory[me.selectedSlot] == "prison-book") ui.ShowBook();
-                    else if (me.uniqueItemEquipped) session.Command(new NetPacket { type = "unique-use" });
+                    else session.Command(new NetPacket { type = "unique-use" });
                 }
                 if (Input.GetKeyDown(KeyCode.Q)) ui.ToggleRadio();
                 if (ui.RadioOpen)
@@ -688,6 +692,50 @@ namespace DeadAir
             float nearest = 2.5f;
             var origin = new Vector2(-transform.position.x, transform.position.z);
             var forward = new Vector2(-transform.forward.x, transform.forward.z);
+            if (state.droppedItems != null)
+            {
+                for (int i = 0; i < state.droppedItems.Count; i++)
+                {
+                    var dropped = state.droppedItems[i];
+                    if (!InteractionInReach(dropped.x, dropped.y, dropped.z, 2.2f, origin, forward, nearest, 1)) continue;
+                    ConsiderInteraction("dropped:" + dropped.id, "Підняти: " + dropped.label, dropped.x, dropped.y, dropped.z, 2.2f, origin, forward, ref nearest, 1);
+                }
+            }
+            foreach (var other in state.players)
+                if (other.id != session.LocalId && other.down && InteractionInReach(other.x, other.y, other.z, 2.2f, origin, forward, nearest, 1))
+                    ConsiderInteraction("revive:" + other.id, "Підняти " + other.name, other.x, other.y, other.z, 2.2f, origin, forward, ref nearest, 1);
+
+            if (DeadAirChapters.IsChapter2(state.chapterId))
+            {
+                var bootstrap = UnityEngine.Object.FindAnyObjectByType<DeadAirBootstrap>();
+                var school = bootstrap != null && bootstrap.World != null ? bootstrap.World.SchoolWorld : null;
+                if (school != null)
+                {
+                    foreach (var pill in school.Pills)
+                    {
+                        if (!state.Collected(pill.id) && InteractionInReach(pill.position.x, pill.position.y, pill.position.z, 2.5f, origin, forward, nearest))
+                        {
+                            ConsiderInteraction(pill.id, "Прийняти заспокійливе (відновити розсудок)", pill.position.x, pill.position.y, pill.position.z, 2.5f, origin, forward, ref nearest);
+                        }
+                    }
+                    foreach (var tape in school.EvidenceTapes)
+                    {
+                        if (!state.Collected(tape.id) && InteractionInReach(tape.position.x, tape.position.y, tape.position.z, 2.5f, origin, forward, nearest))
+                        {
+                            ConsiderInteraction(tape.id, "Підібрати доказ: " + tape.label, tape.position.x, tape.position.y, tape.position.z, 2.5f, origin, forward, ref nearest);
+                        }
+                    }
+                }
+                if (InteractionInReach(0f, 0.5f, 43f, 4.5f, origin, forward, nearest))
+                {
+                    string vanLabel = state.tapes.Count >= 5
+                        ? "Фургон журналістів: Евакуюватися з доказами (E)"
+                        : "Фургон журналістів: Необхідно 5 касет-доказів (" + state.tapes.Count + "/5)";
+                    ConsiderInteraction("van-exit", vanLabel, 0f, 0.5f, 43f, 4.5f, origin, forward, ref nearest);
+                }
+                return;
+            }
+
             for (int i = 0; i < world.lockers.Length; i++)
             {
                 var locker = world.lockers[i];
@@ -703,15 +751,6 @@ namespace DeadAir
                 bool locked = current != null && current.locked && !me.HasItem(current.requiredKey);
                 string label = open ? (locked ? labels.lockedOpen : labels.open) : (locked ? labels.lockedClosed : labels.closed);
                 ConsiderInteraction(door.id, label, door.x, door.y, door.z, 2.5f, origin, forward, ref nearest);
-            }
-            if (state.droppedItems != null)
-            {
-                for (int i = 0; i < state.droppedItems.Count; i++)
-                {
-                    var dropped = state.droppedItems[i];
-                    if (!InteractionInReach(dropped.x, dropped.y, dropped.z, 2.2f, origin, forward, nearest, 1)) continue;
-                    ConsiderInteraction("dropped:" + dropped.id, "Підняти: " + dropped.label, dropped.x, dropped.y, dropped.z, 2.2f, origin, forward, ref nearest, 1);
-                }
             }
             foreach (var obj in world.objects)
             {
@@ -744,28 +783,11 @@ namespace DeadAir
             foreach (var battery in world.Batteries)
                 if (InteractionInReach(battery.x, battery.y, battery.z, 2.5f, origin, forward, nearest) && !state.Collected(battery.id))
                     ConsiderInteraction(battery.id, "Взяти батарейку для ліхтаря", battery.x, battery.y, battery.z, 2.5f, origin, forward, ref nearest);
-            if (DeadAirChapters.IsChapter2(state.chapterId))
-            {
-                var bootstrap = UnityEngine.Object.FindAnyObjectByType<DeadAirBootstrap>();
-                var school = bootstrap != null && bootstrap.World != null ? bootstrap.World.SchoolWorld : null;
-                if (school != null)
-                {
-                    foreach (var pill in school.Pills)
-                    {
-                        if (!state.Collected(pill.id) && InteractionInReach(pill.position.x, pill.position.y, pill.position.z, 2.5f, origin, forward, nearest))
-                        {
-                            ConsiderInteraction(pill.id, "Прийняти заспокійливе (відновити розсудок)", pill.position.x, pill.position.y, pill.position.z, 2.5f, origin, forward, ref nearest);
-                        }
-                    }
-                }
-            }
             for (int i = 0; i < world.Mushrooms.Length; i++)
             {
                 var mushroom = world.Mushrooms[i];
                 if (!InteractionInReach(mushroom.x, mushroom.y, mushroom.z, DeadAirMushrooms.EatRange, origin, forward, nearest, DeadAirMushrooms.EyeOffset)) continue;
                 if (state.Collected(mushroom.id) || Mathf.Abs(me.y - mushroom.y) >= 1) continue;
-                // A nearby floor patch must not steal E from the book or an item
-                // the player is actually looking at above it.
                 var mushroomTarget = new Vector3(-mushroom.x, mushroom.y + DeadAirMushrooms.EyeOffset, mushroom.z);
                 var mushroomRay = mushroomTarget - view.transform.position;
                 if (mushroomRay.sqrMagnitude < .0001f || Vector3.Dot(view.transform.forward, mushroomRay.normalized) < .96f) continue;
@@ -773,9 +795,6 @@ namespace DeadAir
                     mushroom.x, mushroom.y, mushroom.z, DeadAirMushrooms.EatRange, origin, forward, ref nearest,
                     DeadAirMushrooms.EyeOffset);
             }
-            foreach (var other in state.players)
-                if (other.id != session.LocalId && other.down && InteractionInReach(other.x, other.y, other.z, 2.2f, origin, forward, nearest, 1))
-                    ConsiderInteraction("revive:" + other.id, "Підняти " + other.name, other.x, other.y, other.z, 2.2f, origin, forward, ref nearest, 1);
             FindAimedDrawer(state);
         }
 
