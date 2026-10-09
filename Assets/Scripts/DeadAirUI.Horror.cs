@@ -12,6 +12,10 @@ namespace DeadAir
         GameObject chapterPanel, preparationPanel, networkPanel, inventoryPanel, quitPanel;
         Text preparationChapter, lobbyChapter, compassText, inventoryName, inventoryDescription;
         Text inventoryPageLabel;
+        Text inventoryEquipLabel;
+        Text lobbyStartLabel;
+        Button lobbyChapterButton;
+        Button previousInventoryPage,nextInventoryPage;
         Image inventoryPreview;
         Button chapterContinue;
         Text chapterDescription;
@@ -21,8 +25,12 @@ namespace DeadAir
         readonly List<Image> bagIcons = new List<Image>();
         readonly List<Text> bagLabels = new List<Text>();
         string selectedChapter = DeadAirChapters.DefaultId;
+        string renderedSelectedChapter,renderedLobbyChapter;
         bool preparingHost, chapterFromLobby;
         int bagSelection, bagPage;
+        readonly string[] renderedBagItems=new string[12];
+        int renderedBagPage=-1,renderedBagSelection=-1,renderedBagCount=-1,renderedBagBatteries=-1,renderedBagCigarettes=-1,renderedBagCharge=-1;
+        string renderedBagSelectedItem;
         public string SelectedChapter => selectedChapter;
         public bool InventoryOpen => Active(inventoryPanel);
 
@@ -204,12 +212,21 @@ namespace DeadAir
 
         void RefreshChapterLabels()
         {
-            var chapter=DeadAirChapters.Find(selectedChapter)??DeadAirChapters.Find(DeadAirChapters.DefaultId);
-            if(preparationChapter!=null)preparationChapter.text="Глава "+chapter.number+" — "+chapter.title;
-            var current=DeadAirChapters.Find(session.State?.chapterId??selectedChapter)??chapter;
-            if(lobbyChapter!=null)lobbyChapter.text="Глава "+current.number+" — "+current.title;
-            if(chapterDescription!=null)chapterDescription.text=chapter.description;
-            foreach(var pair in chapterCards)pair.Value.SetChosen(pair.Key==selectedChapter);
+            bool selectedChanged=renderedSelectedChapter!=selectedChapter;
+            if(selectedChanged)
+            {
+                var chapter=DeadAirChapters.Find(selectedChapter)??DeadAirChapters.Find(DeadAirChapters.DefaultId);
+                if(preparationChapter!=null)preparationChapter.text="Глава "+chapter.number+" — "+chapter.title;
+                if(chapterDescription!=null)chapterDescription.text=chapter.description;
+                foreach(var pair in chapterCards)pair.Value.SetChosen(pair.Key==selectedChapter);
+                renderedSelectedChapter=selectedChapter;
+            }
+            string currentId=session.State?.chapterId??selectedChapter;
+            if(lobbyChapter!=null&&(selectedChanged||renderedLobbyChapter!=currentId))
+            {
+                var current=DeadAirChapters.Find(currentId)??DeadAirChapters.Find(selectedChapter)??DeadAirChapters.Find(DeadAirChapters.DefaultId);
+                lobbyChapter.text="Глава "+current.number+" — "+current.title;renderedLobbyChapter=currentId;
+            }
         }
 
         void BuildNetwork()
@@ -227,17 +244,19 @@ namespace DeadAir
             lobbyInfo=Text(p,"Room code","",25,115,234,720,88);lobbyInfo.color=Gold;
             lobbyPlayers=Text(p,"Team","",22,119,358,740,450);
             lobbyChapter=Text(p,"Lobby chapter","",22,720,626,470,184);lobbyChapter.color=Ink;
-            Button(p,"Lobby chapters","ЗМІНИТИ ГЛАВУ",721,830,467,52,ShowChapters);
+            lobbyChapterButton=Button(p,"Lobby chapters","ЗМІНИТИ ГЛАВУ",721,830,467,52,ShowChapters);
             Fill(p,"Lobby footer",0,894,1920,186,new Color(.045f,.032f,.031f,.92f));
             ClassPicker(p,116,963,896);
             startButton=Button(p,"Start operation","ПОЧАТИ ГЛАВУ",1170,954,350,62,()=>session.Command(new NetPacket{type="start"}),true);
+            lobbyStartLabel=startButton.GetComponentInChildren<Text>();
             Button(p,"Leave lobby","ВИЙТИ ІЗ СЕАНСУ",1538,954,260,62,()=>session.Leave());lobbyPanel.SetActive(false);
         }
 
         void BuildHorrorHud()
         {
             hudPanel=FullScreen("HUD",Color.clear);hudPanel.GetComponent<Image>().raycastTarget=false;var p=hudPanel.transform;
-            objectiveText=Text(p,"Objective","",20,58,52,790,54);
+            Art(p,"Objective marker","frame",58,58,22,22,Ink);
+            objectiveText=Text(p,"Objective","",20,96,52,750,54);
             roomText=Text(p,"Location","",17,1270,49,590,79,TextAnchor.UpperRight);roomText.color=Muted;
             compassText=Text(p,"Compass","",14,812,24,296,27,TextAnchor.MiddleCenter);compassText.color=Muted;
             Art(p,"Sanity eye","eye",58,905,44,34,Ink);
@@ -247,22 +266,23 @@ namespace DeadAir
             Art(p,"Stamina track","bar",121,963,315,13,new Color(.13f,.19f,.13f,.8f));
             staminaBar=Art(p,"Stamina","bar",121,963,315,13,new Color(.54f,.68f,.46f));staminaBar.type=Image.Type.Filled;staminaBar.fillMethod=Image.FillMethod.Horizontal;
             statusText=Text(p,"Status","",15,60,1009,710,47);statusText.color=Muted;
-            Art(p,"Evidence tape","tape",57,768,34,32,Ink);
-            Art(p,"Evidence fuel","fuel",57,812,34,32,Ink);
-            Art(p,"Evidence fuse","fuse",59,856,30,32,Ink);
+            Art(p,"Evidence tape","tape",55,764,40,40,Ink);
+            Art(p,"Evidence fuel","fuel",55,808,40,40,Ink);
+            Art(p,"Evidence fuse","fuse",55,852,40,40,Ink);
             evidenceText=Text(p,"Evidence counts","",19,110,768,326,32,TextAnchor.MiddleLeft);
             fuelEvidenceText=Text(p,"Fuel counts","",19,110,812,326,32,TextAnchor.MiddleLeft);
             fuseEvidenceText=Text(p,"Fuse counts","",19,110,856,326,32,TextAnchor.MiddleLeft);
-            inventoryCaption=Text(p,"Inventory caption","",12,1180,891,680,24,TextAnchor.UpperRight);inventoryCaption.color=Muted;
-            roleItemText=Text(p,"Personal item","",14,1110,821,750,57,TextAnchor.MiddleRight);roleItemText.color=Muted;
+            inventoryCaption=Text(p,"Inventory caption","F — ліхтар    ·    TAB / I — інвентар",16,1110,884,750,30,TextAnchor.UpperRight);inventoryCaption.color=Ink;
+            roleItemText=Text(p,"Personal item","",17,1110,821,750,57,TextAnchor.MiddleRight);roleItemText.color=Muted;
             for(int i=0;i<5;i++)
             {
                 float x=1394+i*94;
-                var bg=Art(p,"Slot "+i,"button",x,930,86,72,new Color(.14f,.12f,.11f,.8f));
+                var bg=Art(p,"Slot "+i,"button",x,924,86,88,new Color(.14f,.14f,.13f,.85f));
                 var outline=bg.gameObject.AddComponent<Outline>();outline.effectColor=new Color(.5f,.4f,.3f,.2f);outline.effectDistance=Vector2.one;
-                Text(bg.transform,"Num",(i+1).ToString(),12,5,3,20,18).color=Muted;
-                var icon=Art(bg.transform,"Item icon","tape",29,8,30,29,Ink);quickIcons.Add(icon);
-                var item=Text(bg.transform,"Item","—",12,3,45,80,25,TextAnchor.MiddleCenter);
+                Text(bg.transform,"Num",(i+1).ToString(),14,5,3,20,20).color=Ink;
+                var icon=Art(bg.transform,"Item icon","tape",23,8,40,37,Ink);quickIcons.Add(icon);
+                var item=Text(bg.transform,"Item","—",14,3,49,80,34,TextAnchor.MiddleCenter);
+                item.resizeTextForBestFit=true;item.resizeTextMinSize=11;item.resizeTextMaxSize=14;
                 inventorySlotBgs[i]=bg;inventorySlotOutlines[i]=outline;inventorySlotLabels[i]=item;
             }
             messageText=Text(p,"Transmission","",20,480,872,960,57,TextAnchor.MiddleCenter);messageText.color=Ink;
@@ -299,14 +319,14 @@ namespace DeadAir
                 var label=button.transform.Find("Label").GetComponent<Text>();label.fontSize=13;label.rectTransform.anchoredPosition=new Vector2(3,-55);label.rectTransform.sizeDelta=new Vector2(142,25);
                 bagSlots.Add(button);bagIcons.Add(icon);bagLabels.Add(label);
             }
-            Button(p,"Previous inventory page","‹",42,512,58,42,()=>{bagPage=Mathf.Max(0,bagPage-1);bagSelection=bagPage*12;RefreshInventory();});
+            previousInventoryPage=Button(p,"Previous inventory page","‹",42,512,58,42,()=>{bagPage=Mathf.Max(0,bagPage-1);bagSelection=bagPage*12;RefreshInventory();});
             inventoryPageLabel=Text(p,"Inventory page","",15,110,512,510,42,TextAnchor.MiddleCenter);inventoryPageLabel.color=Muted;
-            Button(p,"Next inventory page","›",628,512,58,42,()=>{var me=session.State?.Player(session.LocalId);if(me!=null&&((bagPage+1)*12)<me.inventory.Count)bagPage++;bagSelection=bagPage*12;RefreshInventory();});
+            nextInventoryPage=Button(p,"Next inventory page","›",628,512,58,42,()=>{var me=session.State?.Player(session.LocalId);if(me!=null&&((bagPage+1)*12)<me.inventory.Count)bagPage++;bagSelection=bagPage*12;RefreshInventory();});
             Rule(p,42,579,644);
             inventoryPreview=Art(p,"Selected item","tape",43,611,66,66,Ink);
             inventoryName=Text(p,"Item name","",27,130,608,548,47,title:true);
             inventoryDescription=Text(p,"Item description","",17,130,660,548,85);inventoryDescription.color=Muted;
-            Button(p,"Equip item","ОБРАТИ ПРЕДМЕТ",42,761,644,51,EquipInventorySelection,true);
+            inventoryEquipLabel=Button(p,"Equip item","ОБРАТИ ПРЕДМЕТ",42,761,644,51,EquipInventorySelection,true).GetComponentInChildren<Text>();
             inventoryPanel.SetActive(false);
         }
 
@@ -332,24 +352,42 @@ namespace DeadAir
         {
             var me=session.State?.Player(session.LocalId);if(me==null)return;
             bagSelection=Mathf.Clamp(bagSelection,0,Mathf.Max(0,me.inventory.Count-1));
+            bool initial=renderedBagPage<0;
+            bool selectionChanged=initial||renderedBagPage!=bagPage||renderedBagSelection!=bagSelection;
+            bool batteriesChanged=renderedBagBatteries!=me.spareBatteries;
             for(int i=0;i<bagSlots.Count;i++)
             {
                 int slot=bagPage*12+i;bool has=slot<me.inventory.Count;string id=has?me.inventory[slot]:null;
-                bagSlots[i].interactable=has;bagIcons[i].enabled=has;
-                if(has)bagIcons[i].sprite=DeadAirUIArt.Sprite(ItemIcon(id));
-                bagLabels[i].text=has?StackItemName(id,me):"—";
-                var colors=bagSlots[i].colors;colors.normalColor=slot==bagSelection?new Color(.43f,.17f,.13f,.95f):new Color(.14f,.12f,.12f,.8f);bagSlots[i].colors=colors;
+                if(initial||renderedBagItems[i]!=id)
+                {
+                    bagSlots[i].interactable=has;bagIcons[i].enabled=has;
+                    if(has)bagIcons[i].sprite=DeadAirUIArt.Sprite(ItemIcon(id));
+                }
+                if(initial||renderedBagItems[i]!=id||(id==DeadAirSupplies.BatteryItem&&batteriesChanged))
+                    bagLabels[i].text=has?StackItemName(id,me):"—";
+                if(selectionChanged){var colors=bagSlots[i].colors;colors.normalColor=slot==bagSelection?new Color(.43f,.17f,.13f,.95f):new Color(.14f,.12f,.12f,.8f);bagSlots[i].colors=colors;}
+                renderedBagItems[i]=id;
             }
-            inventoryPageLabel.text=me.inventory.Count>12?(bagPage+1)+" / "+Mathf.CeilToInt(me.inventory.Count/12f):"";
-            inventoryPanel.transform.Find("Inventory card/Previous inventory page").gameObject.SetActive(me.inventory.Count>12);
-            inventoryPanel.transform.Find("Inventory card/Next inventory page").gameObject.SetActive(me.inventory.Count>12);
+            if(initial||renderedBagPage!=bagPage||renderedBagCount!=me.inventory.Count)
+            {
+                inventoryPageLabel.text=me.inventory.Count>12?(bagPage+1)+" / "+Mathf.CeilToInt(me.inventory.Count/12f):"";
+                previousInventoryPage.gameObject.SetActive(me.inventory.Count>12);
+                nextInventoryPage.gameObject.SetActive(me.inventory.Count>12);
+            }
             string selected=bagSelection<me.inventory.Count?me.inventory[bagSelection]:null;
-            inventoryName.text=selected=="cigarette-pack"?"Сигарети · "+me.cigarettesRemaining:selected!=null?StackItemName(selected,me):"Сумка порожня";
-            inventoryPreview.enabled=selected!=null;if(selected!=null)inventoryPreview.sprite=DeadAirUIArt.Sprite(ItemIcon(selected));
-            inventoryDescription.text=ItemDescription(selected);
-            if(selected=="flashlight")inventoryDescription.text+="\nЗаряд: "+Mathf.CeilToInt(me.flashlightCharge/DeadAirSupplies.FlashlightSeconds*100)+"%. Запас: "+me.spareBatteries+".";
-            var equipLabel=inventoryPanel.transform.Find("Inventory card/Equip item/Label").GetComponent<Text>();
-            equipLabel.text=selected==DeadAirPrisonBook.Id?"ЧИТАТИ СПРАВУ":"ОБРАТИ ПРЕДМЕТ";
+            bool itemChanged=initial||renderedBagSelectedItem!=selected;
+            if(itemChanged||(selected=="cigarette-pack"&&renderedBagCigarettes!=me.cigarettesRemaining)||(selected==DeadAirSupplies.BatteryItem&&batteriesChanged))
+                inventoryName.text=selected=="cigarette-pack"?"Сигарети · "+me.cigarettesRemaining:selected!=null?StackItemName(selected,me):"Сумка порожня";
+            if(itemChanged)
+            {
+                inventoryPreview.enabled=selected!=null;if(selected!=null)inventoryPreview.sprite=DeadAirUIArt.Sprite(ItemIcon(selected));
+                inventoryEquipLabel.text=selected==DeadAirPrisonBook.Id?"ЧИТАТИ СПРАВУ":"ОБРАТИ ПРЕДМЕТ";
+            }
+            int charge=Mathf.CeilToInt(me.flashlightCharge/DeadAirSupplies.FlashlightSeconds*100);
+            if(itemChanged||(selected=="flashlight"&&(charge!=renderedBagCharge||batteriesChanged)))
+                inventoryDescription.text=ItemDescription(selected)+(selected=="flashlight"?"\nЗаряд: "+charge+"%. Запас: "+me.spareBatteries+".":"");
+            renderedBagPage=bagPage;renderedBagSelection=bagSelection;renderedBagCount=me.inventory.Count;
+            renderedBagBatteries=me.spareBatteries;renderedBagCigarettes=me.cigarettesRemaining;renderedBagCharge=charge;renderedBagSelectedItem=selected;
         }
 
         static string ItemIcon(string id)
@@ -391,7 +429,9 @@ namespace DeadAir
         {
             if(EventSystem.current==null||panel==null)return;
             Selectable fallback=null;
-            foreach(var control in panel.GetComponentsInChildren<Selectable>())
+            if(!panelControls.TryGetValue(panel,out var controls))
+            {controls=panel.GetComponentsInChildren<Selectable>(true);panelControls.Add(panel,controls);}
+            foreach(var control in controls)
             {
                 if(!control.IsActive()||!control.IsInteractable())continue;
                 if(control.name.StartsWith("Close"))
@@ -405,31 +445,44 @@ namespace DeadAir
         }
 
         GameObject[] focusPanels;
+        CanvasGroup[] focusGroups;
+        CanvasGroup hudFocusGroup;
+        readonly Dictionary<GameObject,Selectable[]> panelControls=new Dictionary<GameObject,Selectable[]>();
         GameObject focusedPanel;
+        GameObject selectedControlObject;
+        Selectable selectedControl;
+        bool interfaceHidden;
 
         void RefreshModalInput(bool focus=false)
         {
             // Raycast overlays stop pointer clicks, but Unity's automatic keyboard
             // navigation also needs underlying Selectables to be non-interactable.
-            if(focusPanels==null)focusPanels=new[]{menuPanel,lobbyPanel,pausePanel,mapPanel,calibrationPanel,
-                endingPanel,settingsPanel,dossierPanel,joinPanel,chapterPanel,preparationPanel,networkPanel,inventoryPanel,quitPanel};
+            if(focusPanels==null)
+            {
+                focusPanels=new[]{menuPanel,lobbyPanel,pausePanel,mapPanel,calibrationPanel,
+                    endingPanel,settingsPanel,dossierPanel,joinPanel,chapterPanel,preparationPanel,networkPanel,inventoryPanel,quitPanel};
+                focusGroups=new CanvasGroup[focusPanels.Length];
+                for(int i=0;i<focusPanels.Length;i++)
+                {
+                    if(focusPanels[i]==null)continue;
+                    var group=focusPanels[i].GetComponent<CanvasGroup>();
+                    focusGroups[i]=group!=null?group:focusPanels[i].AddComponent<CanvasGroup>();
+                }
+                if(hudPanel!=null){hudFocusGroup=hudPanel.GetComponent<CanvasGroup>();if(hudFocusGroup==null)hudFocusGroup=hudPanel.AddComponent<CanvasGroup>();}
+            }
             GameObject top=null;
             foreach(var panel in focusPanels)
                 if(Active(panel)&&(top==null||panel.transform.GetSiblingIndex()>top.transform.GetSiblingIndex()))top=panel;
-            foreach(var panel in focusPanels)
+            for(int i=0;i<focusPanels.Length;i++)
             {
-                if(panel==null)continue;
-                var group=panel.GetComponent<CanvasGroup>();
-                if(group==null)group=panel.AddComponent<CanvasGroup>();
-                group.interactable=panel==top;
+                var group=focusGroups[i];if(group==null)continue;
+                group.interactable=focusPanels[i]==top;
                 group.blocksRaycasts=true;
             }
             focusedPanel=top;
-            if(hudPanel!=null)
+            if(hudFocusGroup!=null)
             {
-                var hudGroup=hudPanel.GetComponent<CanvasGroup>();
-                if(hudGroup==null)hudGroup=hudPanel.AddComponent<CanvasGroup>();
-                hudGroup.alpha=top==null?1:0;hudGroup.blocksRaycasts=top==null;
+                hudFocusGroup.alpha=top==null?1:0;hudFocusGroup.blocksRaycasts=top==null;
             }
             if(EventSystem.current==null)return;
             if(top==null)
@@ -445,8 +498,8 @@ namespace DeadAir
         {
             var selected=EventSystem.current.currentSelectedGameObject;
             if(selected==null||!selected.activeInHierarchy||!selected.transform.IsChildOf(panel.transform))return false;
-            var control=selected.GetComponent<Selectable>();
-            return control!=null&&control.IsActive()&&control.IsInteractable();
+            if(selected!=selectedControlObject){selectedControlObject=selected;selectedControl=selected.GetComponent<Selectable>();}
+            return selectedControl!=null&&selectedControl.IsActive()&&selectedControl.IsInteractable();
         }
 
         void LateUpdate()
@@ -454,10 +507,11 @@ namespace DeadAir
             // One parent CanvasGroup hides all HUD, inventory, radio, prompts
             // and notifications together for exactly the full-screen scare.
             bool hidden=DeadAirScarePresentation.FullscreenActive;
-            if(interfaceGroup!=null)
+            if(interfaceGroup!=null&&hidden!=interfaceHidden)
             {
                 interfaceGroup.alpha=hidden?0:1;
                 interfaceGroup.interactable=!hidden;interfaceGroup.blocksRaycasts=!hidden;
+                interfaceHidden=hidden;
             }
             if(hidden)return;
             // Clicking blank modal space clears Unity's selection. Restore it only
@@ -469,7 +523,7 @@ namespace DeadAir
     public sealed class DeadAirChapterCard : MonoBehaviour,IPointerEnterHandler,IPointerExitHandler,ISelectHandler,IDeselectHandler
     {
         RectTransform card;Image border,marker;Vector2 restingPosition;
-        bool playable,chosen,pointer,focused;
+        bool playable,chosen,pointer,focused,animating;
 
         public void Initialize(RectTransform visual,Image edge,Image mark,bool available)
         {
@@ -477,8 +531,8 @@ namespace DeadAir
             restingPosition=card.anchoredPosition;Paint(true);
         }
 
-        public void SetChosen(bool selected){chosen=selected&&playable;Paint(!isActiveAndEnabled);}
-        void Update(){Paint(false);}
+        public void SetChosen(bool selected){bool next=selected&&playable;if(chosen==next)return;chosen=next;animating=true;Paint(!isActiveAndEnabled);}
+        void Update(){if(animating)Paint(false);}
         void OnEnable(){pointer=focused=false;Paint(true);}
         void OnDisable(){pointer=focused=false;}
         void Paint(bool snap)
@@ -494,11 +548,13 @@ namespace DeadAir
             card.localRotation=Quaternion.Slerp(card.localRotation,rotation,blend);
             border.color=chosen?new Color(.65f,.38f,.28f):new Color(.26f,.23f,.21f);
             marker.color=chosen?new Color(.85f,.70f,.55f):new Color(.38f,.37f,.35f);
+            if(snap||((card.anchoredPosition-target).sqrMagnitude<.0001f&&(card.localScale-Vector3.one*size).sqrMagnitude<1e-10f&&Quaternion.Angle(card.localRotation,rotation)<.01f))
+            {card.anchoredPosition=target;card.localScale=Vector3.one*size;card.localRotation=rotation;animating=false;}
         }
-        public void OnPointerEnter(PointerEventData e){pointer=true;}
-        public void OnPointerExit(PointerEventData e){pointer=false;}
-        public void OnSelect(BaseEventData e){focused=true;}
-        public void OnDeselect(BaseEventData e){focused=false;}
+        public void OnPointerEnter(PointerEventData e){pointer=true;animating=true;}
+        public void OnPointerExit(PointerEventData e){pointer=false;animating=true;}
+        public void OnSelect(BaseEventData e){focused=true;animating=true;}
+        public void OnDeselect(BaseEventData e){focused=false;animating=true;}
     }
 
     public sealed class DeadAirMenuHover : MonoBehaviour,IPointerEnterHandler,IPointerExitHandler,ISelectHandler,IDeselectHandler

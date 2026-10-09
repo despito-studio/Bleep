@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace DeadAir
 {
-    // Deterministic synthesis: every score, ambience bed and effect is built locally.
+    // File-backed cues; musical layers share a DSP clock in DeadAirAdaptiveScore.
     public sealed partial class DeadAirAudio : MonoBehaviour
     {
         const int Rate = 32000;
@@ -15,7 +15,7 @@ namespace DeadAir
         readonly Dictionary<string, AudioSource> roleVoices = new Dictionary<string, AudioSource>();
         readonly Dictionary<AudioSource, string> voiceOwners = new Dictionary<AudioSource, string>();
         AudioSource hum, air, radio, dread, tinnitus, generator, fluorescent, scareVoice, tripLoop;
-        AudioSource menuScore, explorationScore, tensionScore, pursuitScore;
+        DeadAirAdaptiveScore adaptiveScore;
         string phase = "menu", surface = "tile", enemyBehaviour;
         bool outside, down, gameplayPaused;
         float musicDuckUntil, scareLevel = 1, tripIntensity, tripOnsetUntil;
@@ -29,7 +29,7 @@ namespace DeadAir
         {
             if (clips.Count > 0) return;
             instance = this;
-            BuildInstruments();
+            LoadImportedCues();
             for (int i = 0; i < 32; i++)
             {
                 var voice = Source("Effect voice " + (i + 1), false);
@@ -51,12 +51,8 @@ namespace DeadAir
             generator.spatialBlend = 1; generator.minDistance = 2.5f; generator.maxDistance = 24;
             var powerObject = WorldData.Load().Objective("power");
             if (powerObject != null) generator.transform.position = new Vector3(-powerObject.x, powerObject.y + .8f, powerObject.z);
-            // All score stems share one musical clock; threat can rise without restarting a phrase.
-            double musicStart = AudioSettings.dspTime + .1;
-            menuScore = Score("Menu / detuned piano and bowed drone", "music-menu", musicStart);
-            explorationScore = Score("Exploration / empty station", "music-exploration", musicStart);
-            tensionScore = Score("Threat / dissonant tremolo", "music-tension", musicStart);
-            pursuitScore = Score("Pursuit / urgent low percussion", "music-pursuit", musicStart);
+            adaptiveScore = new DeadAirAdaptiveScore(transform);
+            InitializeRooms();
             nextKnock = Time.unscaledTime + UnityEngine.Random.Range(14, 26);
             ApplySettings();
             DeadAirSettings.Changed += ApplySettings;
@@ -87,14 +83,6 @@ namespace DeadAir
             return source;
         }
 
-        AudioSource Score(string title, string clip, double start)
-        {
-            var source = Source(title, true);
-            source.clip = clips[clip]; source.priority = 170;
-            if (Application.isPlaying) source.PlayScheduled(start);
-            return source;
-        }
-
         public void SetContext(string currentPhase, bool isOutside, bool isDown, string behaviour, bool onStairs)
         {
             phase = currentPhase; outside = isOutside; down = isDown; enemyBehaviour = behaviour;
@@ -111,7 +99,10 @@ namespace DeadAir
             if (instance.scareVoice != null) instance.scareVoice.volume = instance.master * instance.effects * .95f * instance.scareLevel;
             if (instance.tripLoop != null) instance.tripLoop.volume = instance.tripPaused ? 0 : instance.master * instance.effects * instance.tripIntensity * .6f;
             if (instance.master <= 0)
+            {
+                instance.adaptiveScore?.MuteImmediately();
                 foreach (var source in instance.GetComponentsInChildren<AudioSource>()) source.volume = 0;
+            }
         }
 
         public static void Play(string kind)
@@ -178,8 +169,8 @@ namespace DeadAir
             scareVoice.Play();
             musicDuckUntil = Time.unscaledTime + clip.length + .25f;
             // The sting starts in this frame; the score must make room in this frame too.
-            foreach (var score in new[] { menuScore, explorationScore, tensionScore, pursuitScore })
-                if (score != null) score.volume *= .14f;
+            adaptiveScore?.DuckImmediately(.14f);
+            DuckRooms(.3f);
             foreach (var bed in new[] { hum, air, radio, dread, tinnitus, generator, fluorescent })
                 if (bed != null) bed.volume *= .3f;
             if (tripLoop != null) tripLoop.volume *= .25f;
@@ -230,7 +221,18 @@ namespace DeadAir
                 var candidate = voices[(voiceIndex + i) % voices.Count];
                 if (!candidate.isPlaying) { source = candidate; voiceIndex = (voiceIndex + i + 1) % voices.Count; break; }
             }
-            if (source == null) { source = voices[voiceIndex]; voiceIndex = (voiceIndex + 1) % voices.Count; source.Stop(); }
+            if (source == null)
+            {
+                // Dialogue and a character's full fall must survive busy multiplayer foley.
+                for (int i = 0; i < voices.Count; i++)
+                {
+                    var candidate = voices[(voiceIndex + i) % voices.Count];
+                    if (candidate.priority <= 40 || voiceOwners.ContainsKey(candidate)) continue;
+                    source = candidate; voiceIndex = (voiceIndex + i + 1) % voices.Count; break;
+                }
+                if (source == null) return;
+                source.Stop();
+            }
             // Ownership follows the pooled source, so cancelling one actor cannot stop a later cue.
             if (voiceOwners.TryGetValue(source, out string previousOwner))
             {
@@ -245,7 +247,7 @@ namespace DeadAir
             source.clip = clip;
             voiceLevels[source] = Mathf.Clamp01(level);
             source.volume *= voiceLevels[source];
-            source.priority = 100;
+            source.priority = ownerId != null || kind.StartsWith("fall-", StringComparison.Ordinal) ? 40 : 100;
             source.Play();
             if (kind == "mushroom-trip") tripOnsetUntil = Time.unscaledTime + clip.length;
         }
@@ -269,14 +271,11 @@ namespace DeadAir
             Fade(generator, bed * (power ? .95f : 0), 1.1f);
             Fade(fluorescent, bed * (power && breakerOn && !outside ? .11f : 0), .7f);
             bool inRun = phase == "playing";
-            float score = master * ambience * duck;
             float danger = Mathf.Clamp01(threat * 1.15f + Mathf.Max(0, insanity - .35f) * .55f);
             float pursuit = inRun && !paused && !down && !hiding && monsterPosition.HasValue &&
                 (enemyBehaviour == "pursuit" || broadcast || threat > .78f) ? Mathf.Max(.6f, threat) : 0;
-            Fade(menuScore, !inRun && (phase == "menu" || phase == "lobby") ? score * .8f : 0, 1.8f);
-            Fade(explorationScore, inRun && !paused ? score * .42f * (1 - pursuit * .8f) * (hiding ? .6f : 1) : 0, 1.4f);
-            Fade(tensionScore, inRun && !paused ? score * danger * .6f * (down ? .35f : 1) : 0, .75f);
-            Fade(pursuitScore, score * pursuit * .66f, .4f);
+            adaptiveScore.Tick(phase, paused, moving, sprinting, hiding, down, danger, pursuit, master * ambience * duck);
+            TickRooms(paused || !inRun, bed);
             if (paused)
             {
                 wasMoving = false;
@@ -332,6 +331,7 @@ namespace DeadAir
         public void ResetRun()
         {
             StopScare(); gameplayPaused = false;
+            adaptiveScore?.ResetRun();
             tripIntensity = tripOnsetUntil = 0; tripPaused = false;
             if (tripLoop != null) { tripLoop.Stop(); tripLoop.volume = 0; }
             foreach (var source in voices) source.Stop();
@@ -342,12 +342,16 @@ namespace DeadAir
             nextKnock = now + UnityEngine.Random.Range(14, 26); wasMoving = false;
         }
 
-        // Used by the opt-in render check, so a successful build also verifies the generated sound data.
+        // Streaming/compressed clips are audited from source WAVs by the Editor validator.
         public void ValidateInstruments()
         {
             float largestPeak = 0;
             foreach (var entry in clips)
             {
+                if (entry.Value.samples <= 0 || entry.Value.frequency != 48000)
+                    throw new InvalidOperationException("Invalid imported audio metadata: " + entry.Key);
+                if (entry.Value.loadType != AudioClipLoadType.DecompressOnLoad) continue;
+                if (entry.Value.loadState != AudioDataLoadState.Loaded) entry.Value.LoadAudioData();
                 var values = new float[entry.Value.samples * entry.Value.channels];
                 if (!entry.Value.GetData(values, 0)) throw new InvalidOperationException("Cannot read audio: " + entry.Key);
                 double energy = 0;
@@ -360,7 +364,7 @@ namespace DeadAir
                 }
                 double rms = Math.Sqrt(energy / values.Length);
                 if (peak > 1 || rms < .000001) throw new InvalidOperationException("Clipped or silent audio: " + entry.Key);
-                if (IsScare(entry.Key) || entry.Key == "mushroom-eat" || entry.Key == "mushroom-trip")
+                if (IsScare(entry.Key))
                 {
                     double tailEnergy = 0;
                     int tail = Mathf.Min(values.Length, entry.Value.frequency * entry.Value.channels / 50);
@@ -373,21 +377,31 @@ namespace DeadAir
                 largestPeak = Mathf.Max(largestPeak, peak);
                 Debug.Log("DEAD AIR AUDIO: " + entry.Key + " peak=" + peak.ToString("F5", System.Globalization.CultureInfo.InvariantCulture) + " rms=" + rms.ToString("F5", System.Globalization.CultureInfo.InvariantCulture));
             }
-            Debug.Log("DEAD AIR AUDIO VALIDATED: " + clips.Count + " non-silent finite clips, maximum peak=" + largestPeak.ToString("F5", System.Globalization.CultureInfo.InvariantCulture));
+            Debug.Log("DEAD AIR AUDIO VALIDATED: " + clips.Count + " imported cues; decoded short cues finite, maximum peak=" + largestPeak.ToString("F5", System.Globalization.CultureInfo.InvariantCulture));
         }
 
         public int GeneratedClipCount => clips.Count;
 
-        // Also makes every instrument reviewable outside Play Mode, without an asset download.
+        // In the Editor, copy lossless source files so streamed clips need no PCM decode.
         public int ExportLibrary(string folder)
         {
             System.IO.Directory.CreateDirectory(folder);
             var looping = new HashSet<AudioClip>();
             foreach (var source in GetComponentsInChildren<AudioSource>())
                 if (source.loop && source.clip != null) looping.Add(source.clip);
-            foreach (var entry in clips)
+            var exportClips = new Dictionary<string, AudioClip>(clips);
+            foreach (var clip in Resources.LoadAll<AudioClip>("Audio/Music")) exportClips[clip.name] = clip;
+            foreach (var entry in exportClips)
             {
                 AudioClip clip = entry.Value;
+#if UNITY_EDITOR
+                string assetPath = UnityEditor.AssetDatabase.GetAssetPath(clip);
+                if (!string.IsNullOrEmpty(assetPath))
+                {
+                    System.IO.File.Copy(assetPath, System.IO.Path.Combine(folder, entry.Key + ".wav"), true);
+                    continue;
+                }
+#endif
                 var values = new float[clip.samples * clip.channels];
                 if (!clip.GetData(values, 0)) throw new InvalidOperationException("Cannot export audio: " + entry.Key);
                 bool isLoop = looping.Contains(clip);
@@ -409,15 +423,15 @@ namespace DeadAir
                     }
                 }
             }
-            return clips.Count;
+            return exportClips.Count;
         }
 
         void OnDestroy()
         {
             DeadAirSettings.Changed -= ApplySettings;
             if (instance == this) instance = null;
-            foreach (var clip in clips.Values)
-                if (Application.isPlaying) Destroy(clip); else DestroyImmediate(clip);
+            // Resources owns imported clips. Destroying them breaks other listeners/export tools.
+            clips.Clear();
         }
 
         void Add(string key, Action<Instrument> compose, float seconds = 4)

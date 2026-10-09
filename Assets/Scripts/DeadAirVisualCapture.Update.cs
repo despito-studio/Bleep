@@ -16,9 +16,13 @@ namespace DeadAir
             session.Host("Update verifier", "engineer", true, true);
             session.Command(new NetPacket { type = "start" });
             yield return Until(() => session.State?.phase == "playing", "Solo update start");
+            // The released chapter begins with fractured director glass. This opt-in
+            // fixture restores the intact pane to measure glazing and timed breaking.
+            session.State.windowBroken = session.State.quest.windowBroken = false;
             var data = WorldData.Load();
             var me = session.State.Player(session.LocalId);
             me.invulnerableUntil = 99999;
+            yield return CaptureV175Fixes(data);
             var firstBattery = data.Batteries[0];
             InspectToward(firstBattery.x, firstBattery.z - 1.2f, 0, firstBattery.x, firstBattery.y, firstBattery.z);
             yield return Save("update-01a-four-van-batteries");
@@ -128,31 +132,63 @@ namespace DeadAir
 
             // Verify new fields over a real loopback LAN session, including a guest climb.
             player.EndInspection(); ui.ReturnToMenu(); yield return null;
+            var observerObject=new GameObject("Update solo observer fixture");
+            var observer=observerObject.AddComponent<DeadAirSession>();observer.Initialize(data);
+            int localNotifications=0;observer.StateChanged+=()=>{if(observer.State!=null)localNotifications++;};
+            try
+            {
+                observer.Host("Observer verifier","engineer",true,true);
+                Require(localNotifications==1&&observer.State?.phase=="lobby","Solo host creation still notifies local state observers without network serialization.");
+                int notificationsBefore=localNotifications;
+                var localState=observer.State;
+                observer.Command(new NetPacket{type="chapter",chapterId=localState.chapterId});
+                Require(localNotifications==notificationsBefore+1&&ReferenceEquals(localState,observer.State),
+                    "Publishing unchanged solo chapter data still notifies local observers with the authoritative state.");
+            }
+            finally{observer.Leave();Destroy(observerObject);}
             var peerObject = new GameObject("Update loopback peer");
             var peer = peerObject.AddComponent<DeadAirSession>(); peer.Initialize(data);
+            var secondPeerObject=new GameObject("Update second loopback peer");
+            var secondPeer=secondPeerObject.AddComponent<DeadAirSession>();secondPeer.Initialize(data);
             try
             {
                 session.Host("Update host", "engineer", false, true);
                 peer.Join("127.0.0.1", session.State.code, "Update guest", "operator");
-                yield return Until(() => peer.State != null && session.State.players.Count == 2, "Update LAN join");
+                secondPeer.Join("127.0.0.1",session.State.code,"Update second guest","dispatcher");
+                yield return Until(() => peer.State != null && secondPeer.State != null && session.State.players.Count == 3&&
+                    peer.State.players.Count==3&&secondPeer.State.players.Count==3, "Both update LAN guests join");
+                Require(peer.State.phase=="lobby"&&secondPeer.State.phase=="lobby"&&
+                    peer.State.code==session.State.code&&secondPeer.State.code==session.State.code&&
+                    peer.State.chapterId==session.State.chapterId&&secondPeer.State.chapterId==session.State.chapterId&&
+                    peer.LocalId!=secondPeer.LocalId&&!ReferenceEquals(peer.State,secondPeer.State),
+                    "Both actual guests receive independent matching joining and chapter snapshots.");
                 session.Command(new NetPacket { type = "start" });
-                yield return Until(() => peer.State?.phase == "playing", "Update LAN start");
+                yield return Until(() => peer.State?.phase == "playing"&&secondPeer.State?.phase=="playing", "Both update LAN guests start");
+                Require(peer.State.chapterId==session.State.chapterId&&secondPeer.State.chapterId==session.State.chapterId,
+                    "The shared state envelope fans out the playing chapter to both guests.");
+                session.State.windowBroken = session.State.quest.windowBroken = false;
+                yield return Until(() => !peer.State.windowBroken&&!secondPeer.State.windowBroken, "Intact window fixture reaches both guests");
                 var guest = session.State.Player(peer.LocalId);
                 var battery = data.Batteries[0]; guest.x = battery.x; guest.y = 0; guest.z = battery.z - 1;
                 peer.Command(new NetPacket { type = "interact", id = battery.id });
-                yield return Until(() => peer.State.Player(peer.LocalId).spareBatteries == 1, "Guest battery replicated");
-                Require(session.State.Collected(battery.id) && peer.State.Collected(battery.id), "Van pickup is shared across LAN.");
+                yield return Until(() => peer.State.Player(peer.LocalId).spareBatteries == 1&&secondPeer.State.Player(peer.LocalId).spareBatteries==1, "Guest battery reaches both snapshots");
+                Require(session.State.Collected(battery.id) && peer.State.Collected(battery.id)&&secondPeer.State.Collected(battery.id), "Van pickup progress is shared with both LAN guests.");
                 guest.flashlightCharge = 0;
                 peer.Command(new NetPacket { type = "reload" });
-                yield return Until(() => peer.State.Player(peer.LocalId).flashlightReloadSerial == 1, "Guest reload replicated");
+                yield return Until(() => peer.State.Player(peer.LocalId).flashlightReloadSerial == 1&&secondPeer.State.Player(peer.LocalId).flashlightReloadSerial==1, "Guest reload reaches both snapshots");
+                Require(peer.State.Player(peer.LocalId).spareBatteries==0&&secondPeer.State.Player(peer.LocalId).spareBatteries==0,
+                    "Both guests observe the same authoritative reload consumption.");
                 session.State.ladderPlaced = true; guest.x = -9; guest.y = 0; guest.z = 7.55f;
+                Require(!session.State.windowBroken && !peer.State.windowBroken&&!secondPeer.State.windowBroken, "The guest must begin its climb before the actual pane breaks.");
                 peer.Command(new NetPacket { type = "interact", id = "ladder-climb" });
-                yield return Until(() => peer.State.Player(peer.LocalId).ladderClimbing, "Guest climb replicated");
-                yield return Until(() => peer.State.windowBroken, "Guest breaks shared pane");
-                yield return Until(() => !peer.State.Player(peer.LocalId).ladderClimbing, "Guest climb completes");
-                Require(Mathf.Abs(peer.State.Player(peer.LocalId).y - 4.2f) < .1f, "Guest arrives on correct floor.");
+                yield return Until(() => peer.State.Player(peer.LocalId).ladderClimbing&&secondPeer.State.Player(peer.LocalId).ladderClimbing, "Guest climb reaches both snapshots");
+                Require(peer.State.ladderPlaced&&secondPeer.State.ladderPlaced,"Both guests receive shared ladder placement progress.");
+                yield return Until(() => peer.State.windowBroken&&secondPeer.State.windowBroken, "Guest breaks the pane for both snapshots");
+                Require(peer.State.quest.windowBroken&&secondPeer.State.quest.windowBroken,"Both guests receive the same broken-window quest state.");
+                yield return Until(() => !peer.State.Player(peer.LocalId).ladderClimbing&&!secondPeer.State.Player(peer.LocalId).ladderClimbing, "Guest climb completes for both snapshots");
+                Require(Mathf.Abs(peer.State.Player(peer.LocalId).y - 4.2f) < .1f&&Mathf.Abs(secondPeer.State.Player(peer.LocalId).y-4.2f)<.1f, "Both guests observe arrival on the correct floor.");
             }
-            finally { peer.Leave(); Destroy(peerObject); session.Leave(); }
+            finally { secondPeer.Leave();Destroy(secondPeerObject);peer.Leave(); Destroy(peerObject); session.Leave(); }
 
             session.Host("Book verifier", "engineer", true, true);
             session.Command(new NetPacket { type = "start" });
@@ -171,7 +207,7 @@ namespace DeadAir
             Require(ui.HasModal && session.State.paused, "Book reader pauses solo simulation.");
             player.EndInspection(); ui.ReturnToMenu();
             File.WriteAllText(Path.Combine(output, "update-runtime-report.txt"),
-                "PASSED: v" + Application.version + "; GPU menu/van/ladder/climb/glass/director and filing drawers/backyard trip/prison cells/basement mushrooms/book reader; real 4-battery pickup and reload; timed host climb up/down with controller restoration; glass renderer/collider disabled with 24 fragments; all 3 desk and 8 catalog fronts aim correctly at 1/1.5 m; actual mushroom/book E prompts; loopback guest battery/reload/ladder/window snapshots; solo reader pause.\n");
+                "PASSED: v" + Application.version + "; steel stair/opening guard views; actual door/plaque views and measured glyph fit; two generator canisters and one basement canister with actual host pickups; GPU glass contrast transmission across power/flashlight states; GPU menu/van/ladder/climb/glass/director and filing drawers/backyard trip/prison cells/basement mushrooms/book reader; real 4-battery pickup and reload; timed host climb up/down with controller restoration; glass renderer/collider disabled with 24 fragments; all 3 desk and 8 catalog fronts aim correctly at 1/1.5 m; actual mushroom/book E prompts; two real loopback guests receive matching joining/playing/chapter/battery/reload/ladder/window snapshots; unchanged solo local observer notification; solo reader pause.\n");
             Debug.Log("DEAD AIR UPDATE RUNTIME PASSED");
             Application.Quit(0);
         }

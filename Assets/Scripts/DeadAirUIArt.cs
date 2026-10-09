@@ -4,20 +4,21 @@ using UnityEngine;
 
 namespace DeadAir
 {
-    /// <summary>Small, cached monochrome UI marks. Tint with Image.color; all distress is alpha.</summary>
+    /// <summary>Cached, clean monochrome UI marks with soft edge sampling.</summary>
     public static class DeadAirUIArt
     {
-        static readonly Dictionary<string, Sprite> Cache = new Dictionary<string, Sprite>();
+        static readonly Dictionary<string, Sprite> Cache = new Dictionary<string, Sprite>(System.StringComparer.OrdinalIgnoreCase);
 
         public static Sprite Sprite(string id)
         {
-            id = string.IsNullOrEmpty(id) ? "frame" : id.ToLowerInvariant();
+            id = string.IsNullOrEmpty(id) ? "frame" : id;
             if (Cache.TryGetValue(id, out var cached) && cached != null) return cached;
+            id=id.ToLowerInvariant();
             var width = id == "bar" || id == "divider" ? 512 : id == "frame" || id == "button" ? 256 : id == "paper" || id == "grain" ? 256 : 128;
             var height = id == "bar" ? 32 : id == "divider" ? 12 : id == "frame" || id == "button" ? 128 : width;
             var art = new Mark(width, height);
             var border = Vector4.zero;
-            var distress = .12f;
+            var distress = 0f;
             switch (id)
             {
                 case "eye": Eye(art); break;
@@ -46,22 +47,22 @@ namespace DeadAir
                 case "close": art.Line(30, 30, 98, 98, 5); art.Line(98, 30, 30, 98, 5); break;
                 case "cross":
                     art.Polygon(51, 15, 77, 15, 77, 50, 112, 50, 112, 77, 77, 77, 77, 112, 51, 112, 51, 77, 16, 77, 16, 50, 51, 50);
-                    distress = .24f; break;
+                    break;
                 case "bar":
-                    Bar(art); distress = .14f; break;
+                    Bar(art); break;
                 case "divider":
                     art.Line(3, 6, 509, 6, 1.55f);
                     art.Line(25, 8, 183, 6, .65f, .32f);
                     art.Line(336, 5, 497, 4, .65f, .42f);
-                    distress = .16f; break;
+                    break;
                 case "paper":
                     Paper(art, .94f); border = new Vector4(12, 12, 12, 12); distress = .05f; break;
                 case "grain":
                     Grain(art); distress = 0; break;
                 case "button":
-                    Paper(art, .8f); border = new Vector4(12, 12, 12, 12); distress = .12f; break;
+                    art.Box(0,0,width,height);border = new Vector4(12,12,12,12);break;
                 default:
-                    Frame(art); border = new Vector4(12, 12, 12, 12); distress = .16f; break;
+                    Frame(art); border = new Vector4(12, 12, 12, 12);break;
             }
             var texture = art.Texture("Dead Air / UI / " + id, distress);
             var sprite = UnityEngine.Sprite.Create(texture, new Rect(0, 0, width, height), new Vector2(.5f, .5f), 100, 0, SpriteMeshType.FullRect, border);
@@ -193,18 +194,9 @@ namespace DeadAir
 
         static void Bar(Mark m)
         {
-            for (var x = 3; x < m.Width - 3; x++)
-            {
-                var top = 3 + Mathf.RoundToInt(1.2f * Mathf.Sin(x * .14f) + Mark.Noise(x / 3, 23) * 1.5f);
-                var bottom = m.Height - 4 + Mathf.RoundToInt(Mathf.Sin(x * .11f) - Mark.Noise(x / 4, 53));
-                m.Line(x, top, x, bottom, 1.1f);
-            }
-            // Fine irregular fractures; fillAmount still crops this as a continuous meter.
-            for (var x = 58; x < 500; x += 71)
-            {
-                m.PathErase(1.5f, x, 3, x - 5, 9, x + 2, 16, x - 2, 22, x + 2, 29);
-                m.PathErase(.8f, x + 1, 16, x + 14, 12, x + 20, 12);
-            }
+            m.Box(3,4,m.Width-6,m.Height-8);
+            // Regular gaps remain visible when fillAmount crops the continuous meter.
+            for(int x=74;x<m.Width-8;x+=73)m.PathErase(4,x,3,x,m.Height-3);
         }
 
         static void Paper(Mark m, float opacity)

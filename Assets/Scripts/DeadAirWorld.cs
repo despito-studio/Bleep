@@ -14,10 +14,12 @@ namespace DeadAir
         readonly Dictionary<string, DeadAirHingedDoor> doorAnimations = new Dictionary<string, DeadAirHingedDoor>();
         readonly Dictionary<string, DeadAirHingedDoor> lockerAnimations = new Dictionary<string, DeadAirHingedDoor>();
         readonly HashSet<string> occupiedLockers = new HashSet<string>();
+        readonly HashSet<string> currentOccupiedLockers = new HashSet<string>();
         readonly Dictionary<string, Transform> stateViews = new Dictionary<string, Transform>();
         readonly Dictionary<string, Quaternion> interactionRotations = new Dictionary<string, Quaternion>();
         readonly Dictionary<string, Renderer> doorLeds = new Dictionary<string, Renderer>();
         readonly Dictionary<string, Light> doorLights = new Dictionary<string, Light>();
+        readonly Dictionary<string, byte> doorTintStates = new Dictionary<string, byte>();
         readonly List<Transform> fans = new List<Transform>();
         readonly List<Renderer> monitors = new List<Renderer>();
         readonly List<Practical> lamps = new List<Practical>();
@@ -34,7 +36,12 @@ namespace DeadAir
         readonly DeadAirSky sky;
         readonly DeadAirCulling culling;
         Camera renderCamera;
-        sealed class Practical { public Light light; public float intensity; public Color color; public bool interior; }
+        sealed class Practical
+        {
+            public Light light; public float intensity; public Color color; public bool interior;
+            public float appliedIntensity=float.NaN;
+            public Color appliedColor;
+        }
 
         public DeadAirWorld(WorldData data)
         {
@@ -49,7 +56,7 @@ namespace DeadAir
             // No skybox is assigned, so there is no baked sky probe to refresh.
             // Supply a small real diffuse ambient term for unlit ceiling faces.
             var ambientProbe=new SphericalHarmonicsL2();
-            ambientProbe.AddAmbientLight(new Color(.018f,.021f,.027f));
+            ambientProbe.AddAmbientLight(new Color(.024f,.034f,.056f));
             RenderSettings.ambientIntensity=1;
             RenderSettings.ambientProbe=ambientProbe;
             RenderSettings.reflectionIntensity = 0;
@@ -57,15 +64,14 @@ namespace DeadAir
             RenderSettings.fogMode = FogMode.ExponentialSquared;
             ColorUtility.TryParseHtmlString("#101621",out var night);
             RenderSettings.fogColor = night;
-            RenderSettings.fogDensity = .014f;
+            RenderSettings.fogDensity = .008f;
             // Practical lamps must shade the middle of the room, rather than only
             // the corners of the large floor meshes used by the office.
-            QualitySettings.pixelLightCount = 8;
+            ApplyGraphicsQuality();
+            DeadAirSettings.Changed -= ApplyGraphicsQuality;
+            DeadAirSettings.Changed += ApplyGraphicsQuality;
             QualitySettings.vSyncCount = 0;
-            QualitySettings.shadowDistance = 45f;
             QualitySettings.shadowCascades = 2;
-            QualitySettings.shadows = ShadowQuality.All;
-            QualitySettings.shadowResolution = ShadowResolution.High;
             if(root.Find("station")==null) Instantiate("station").name="station";
             if(root.Find("exterior")==null) Instantiate("exterior").name="exterior";
             DiscardOriginalVanBeams(root.Find("exterior"));
@@ -147,6 +153,8 @@ namespace DeadAir
             var brokenFrame = stateViews.TryGetValue("directorWindowBroken", out var bFrame) ? bFrame.gameObject : null;
             directorWindow = new DeadAirWindowBreak(pane, brokenFrame);
             sky = new DeadAirSky(root);
+            foreach(var worldLight in root.GetComponentsInChildren<Light>(true))
+                worldLight.cullingMask &= ~((1 << 28) | (1 << 29) | (1 << 30));
             var moon=root.Find("Dead Air Night Sky & Moon/Directional moonlight")?.GetComponent<Light>();
             if(moon!=null)
             {
@@ -204,14 +212,11 @@ namespace DeadAir
                         material.shader=litShader;
                         bool monitor=IsMonitorMaterial(source);
                         material.SetColor("_EmissionColor",monitor?new Color(.12f,.16f,.13f):Color.black);
-                        material.SetFloat("_LightBanding",monitor?.12f:.38f);
-                        material.SetFloat("_SurfaceGrain",monitor?0:.025f);
-                        material.SetColor("_ShadowTint",new Color(.86f,.95f,1.08f));
                         // Labels converted from the unlit export need a matte
                         // response. Preserve the authored finish on physical props.
                         if(shaderName=="Dead Air/Source Unlit")
                         {
-                            material.SetFloat("_Glossiness",monitor?.22f:.045f);
+                            material.SetFloat("_Glossiness",monitor?.32f:.16f);
                             material.SetFloat("_Metallic",0);
                         }
                         copies.Add(source,material);
@@ -254,6 +259,8 @@ namespace DeadAir
             {
                 if(!light.name.StartsWith("lamp:"))continue;
                 if(light.name.StartsWith("lamp:van-headlamp-"))continue;
+                if(interior && light.name.StartsWith("lamp:zone-")) light.intensity *= .7f;
+                else if(interior && light.name.StartsWith("lamp:bounce-zone-")) light.intensity *= .8f;
                 if(interior && light.name.StartsWith("lamp:zone-"))
                 {
                     // Equipment rooms retain a cold tube hue; the occupied
@@ -262,16 +269,25 @@ namespace DeadAir
                         light.name.Contains("МОНТАЖНА") || light.name.Contains("САНВУЗОЛ");
                     bool passage=light.name.Contains("ХОЛ") || light.name.Contains("ГАЛЕРЕЯ") ||
                         light.name.Contains("ПРОХІД");
-                    light.color=equipment?new Color(.78f,.9f,1f):
-                        passage?new Color(.90f,.94f,.82f):new Color(1f,.89f,.71f);
+                    light.color=equipment?new Color(.88f,.94f,1f):
+                        passage?new Color(1f,.85f,.64f):new Color(1f,.82f,.58f);
                 }
                 else if(!interior && light.type!=LightType.Directional)
                     light.color=new Color(1f,.87f,.67f);
                 if(light.shadows==LightShadows.None)continue;
                 light.shadows=LightShadows.Soft;
                 light.shadowBias=.018f;
-                light.shadowNormalBias=interior?.06f:.04f;
+                light.shadowNormalBias=.035f;
             }
+        }
+
+        static void ApplyGraphicsQuality()
+        {
+            QualitySettings.pixelLightCount = DeadAirSettings.GraphicsQuality == 0 ? 6 : 10;
+            QualitySettings.shadows = DeadAirSettings.ShadowQuality == 0 ? ShadowQuality.Disable : ShadowQuality.All;
+            QualitySettings.shadowResolution = DeadAirSettings.ShadowQuality == 2 ? ShadowResolution.High : ShadowResolution.Medium;
+            QualitySettings.shadowDistance = DeadAirSettings.ShadowQuality == 2 ? 30 : 20;
+            QualitySettings.anisotropicFiltering = AnisotropicFiltering.ForceEnable;
         }
 
         static void DiscardOriginalVanBeams(Transform exterior)
@@ -386,7 +402,7 @@ namespace DeadAir
             bool glass=name.Contains("glass"),metal=name.Contains("metal");
             material.SetFloat("_Glossiness",glass?.48f:metal?.32f:.12f);
             material.SetFloat("_Metallic",metal?.65f:0);
-            material.SetFloat("_SurfaceGrain",glass?0:.025f);return material;
+            return material;
         }
 
         static void VehiclePart(Transform parent,string name,Mesh mesh,Material material,Vector3 position,Vector3 scale)
@@ -499,8 +515,8 @@ namespace DeadAir
                 light.type=LightType.Spot;light.range=18;light.intensity=3.6f;
                 light.spotAngle=36;light.innerSpotAngle=23;
                 light.color=new Color(1,.87f,.66f);
-                light.renderMode=LightRenderMode.ForcePixel;
-                light.shadows=LightShadows.Hard;light.shadowCustomResolution=512;
+            light.renderMode=LightRenderMode.ForcePixel;
+                light.shadows=LightShadows.Soft;light.shadowCustomResolution=512;
                 light.shadowBias=.012f;light.shadowNormalBias=.025f;light.shadowNearPlane=.06f;
                 var block=new MaterialPropertyBlock();lens.GetPropertyBlock(block);
                 block.SetColor("_EmissionColor",new Color(.62f,.48f,.28f));
@@ -524,15 +540,23 @@ namespace DeadAir
             foreach(var door in state.doors)
             {
                 if(doorAnimations.TryGetValue(door.id,out var animation))animation.SetOpen(door.open, door.openSign);
-                var color=door.locked?new Color(.88f,.27f,.20f):door.open?new Color(.31f,.78f,.47f):new Color(.84f,.74f,.47f);
-                if(doorLeds.TryGetValue(door.id,out var led)&&led!=null) SetTint(led,color);
-                if(doorLights.TryGetValue(door.id,out var light)&&light!=null)light.color=color;
+                byte tintState=door.locked?(byte)0:door.open?(byte)1:(byte)2;
+                if(!doorTintStates.TryGetValue(door.id,out var previousTint)||previousTint!=tintState)
+                {
+                    var color=door.locked?new Color(.88f,.27f,.20f):door.open?new Color(.31f,.78f,.47f):new Color(.84f,.74f,.47f);
+                    if(doorLeds.TryGetValue(door.id,out var led)&&led!=null) SetTint(led,color);
+                    if(doorLights.TryGetValue(door.id,out var light)&&light!=null)light.color=color;
+                    doorTintStates[door.id]=tintState;
+                }
             }
             float animationDelta=state.paused?0:Time.deltaTime;
             foreach(var animation in doorAnimations.Values)animation.Advance(animationDelta);
+            currentOccupiedLockers.Clear();
+            foreach(var actor in state.players)
+                if(!string.IsNullOrEmpty(actor.hiding))currentOccupiedLockers.Add(actor.hiding);
             foreach(var entry in lockerAnimations)
             {
-                bool occupied=state.players.Exists(p=>p.hiding==entry.Key);
+                bool occupied=currentOccupiedLockers.Contains(entry.Key);
                 if(occupied!=occupiedLockers.Contains(entry.Key))
                 {
                     entry.Value.PlayAccessCycle();
@@ -550,12 +574,16 @@ namespace DeadAir
             for(int i=0;i<lamps.Count;i++)
             {
                 var lamp=lamps[i];float time=Time.time+i*3.77f;
-                lamp.light.color=state.broadcast&&lamp.interior?new Color(1,.36f,.19f):lamp.color;
+                Color color=state.broadcast&&lamp.interior?new Color(1,.36f,.19f):lamp.color;
+                if(float.IsNaN(lamp.appliedIntensity)||lamp.appliedColor!=color)
+                { lamp.light.color=color;lamp.appliedColor=color; }
                 float wave=flicker?Mathf.Sin(time*1.7f)*Mathf.Sin(time*13.6f):0;
                 float supply=lamp.interior?((state.power && state.breakerOn)?1f:0f):1f;
                 float flutter=wave>.94f?.72f:1f;
                 if(state.broadcast&&lamp.interior)flutter*=flicker?.86f+Mathf.Sin(Time.time*3)*.08f:.9f;
-                lamp.light.intensity=lamp.intensity*supply*flutter;
+                float intensity=lamp.intensity*supply*flutter;
+                if(lamp.appliedIntensity!=intensity)
+                { lamp.light.intensity=intensity;lamp.appliedIntensity=intensity; }
             }
             if(state.power && state.breakerOn)
                 foreach(var fan in fans)fan.Rotate(0,0,-Time.deltaTime*14*Mathf.Rad2Deg,Space.Self);
@@ -574,8 +602,8 @@ namespace DeadAir
                 bool lit = state.power && state.breakerOn;
                 if(interiorLampMaterial!=null)
                 {
-                    Color emission = lit ? (state.broadcast ? new Color(1f, .36f, .19f) * 0.85f : new Color(.65f, .70f, .55f)) : Color.black;
-                    Color albedo = lit ? (state.broadcast ? new Color(1f, .55f, .45f, 1f) : new Color(.85f, .88f, .75f, 1f)) : new Color(.20f, .22f, .18f, 1f);
+                    Color emission = lit ? (state.broadcast ? new Color(1.5f, .42f, .18f) : new Color(1.8f, 1.27f, .64f)) : Color.black;
+                    Color albedo = lit ? (state.broadcast ? new Color(1f, .55f, .45f, 1f) : new Color(.92f, .83f, .65f, 1f)) : new Color(.20f, .22f, .18f, 1f);
                     interiorLampMaterial.SetColor("_EmissionColor", emission);
                     interiorLampMaterial.SetColor("_Color", albedo);
                 }
@@ -671,6 +699,7 @@ namespace DeadAir
                 lightObj.transform.localRotation=Quaternion.Euler(-90,0,0);
                 l.type = LightType.Spot;
                 l.range = 15;
+                l.cullingMask = ~((1 << 28) | (1 << 29) | (1 << 30));
                 l.spotAngle=48;l.innerSpotAngle=23;
                 l.intensity = 1.55f;
                 l.shadows=LightShadows.Soft;l.shadowBias=.015f;l.shadowNormalBias=.025f;

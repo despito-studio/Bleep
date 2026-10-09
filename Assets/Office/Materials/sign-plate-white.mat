@@ -23,6 +23,10 @@ Material:
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
+    - _BumpMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _EmissionMap:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
@@ -31,16 +35,21 @@ Material:
         m_Texture: {fileID: 2800000, guid: 4d1a56edfc547424b839e05ff0444a49, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _SurfaceMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
     - _Cull: 2
     - _Cutoff: 0
     - _DstBlend: 0
     - _Glossiness: 0.03
-    - _LightBanding: 0.38
+    - _LightBanding: 0
     - _Metallic: 0
+    - _PlanarReflection: 0
     - _SrcBlend: 1
-    - _SurfaceGrain: 0.025
+    - _SurfaceGrain: 0
     - _ZTest: 4
     - _ZWrite: 1
     m_Colors:

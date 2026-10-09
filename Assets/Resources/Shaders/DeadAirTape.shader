@@ -13,8 +13,31 @@ Shader "Hidden/DeadAir/Tape"
             sampler2D _MainTex, _BloomTex;
             float4 _MainTex_TexelSize;
             float _BloomStrength, _Trip, _TripClock;
+            float _Antialiasing;
             float _Clock, _Aspect, _Grain, _Scanlines, _Threat, _Insanity, _Nightmare, _Recording, _Flicker, _Flash, _Exposure;
             float noise(float2 p) { return frac(sin(dot(p, float2(12.9898, 78.233))) * 43758.5453); }
+            float3 sceneAt(float2 uv)
+            {
+                float3 center = tex2D(_MainTex, uv).rgb;
+                if (_Antialiasing < .5) return center;
+                float2 pixel = abs(_MainTex_TexelSize.xy);
+                float3 nw = tex2D(_MainTex, uv + float2(-1, 1) * pixel).rgb;
+                float3 ne = tex2D(_MainTex, uv + float2(1, 1) * pixel).rgb;
+                float3 sw = tex2D(_MainTex, uv + float2(-1, -1) * pixel).rgb;
+                float3 se = tex2D(_MainTex, uv + float2(1, -1) * pixel).rgb;
+                float3 luma = float3(.299, .587, .114);
+                float a = dot(nw, luma), b = dot(ne, luma), c = dot(sw, luma), d = dot(se, luma), m = dot(center, luma);
+                float minimum = min(m, min(min(a, b), min(c, d)));
+                float maximum = max(m, max(max(a, b), max(c, d)));
+                if (maximum - minimum < max(.025, maximum * .13)) return center;
+                float2 direction = float2(-(a + b - c - d), a + c - b - d);
+                float reduction = max((a + b + c + d) * .03125, .0078125);
+                direction = clamp(direction / (min(abs(direction.x), abs(direction.y)) + reduction), -8, 8) * pixel;
+                float3 narrow = .5 * (tex2D(_MainTex, uv - direction / 6).rgb + tex2D(_MainTex, uv + direction / 6).rgb);
+                float3 wide = narrow * .5 + .25 * (tex2D(_MainTex, uv - direction * .5).rgb + tex2D(_MainTex, uv + direction * .5).rgb);
+                float wideLuma = dot(wide, luma);
+                return wideLuma < minimum || wideLuma > maximum ? narrow : wide;
+            }
             float3 aces(float3 color)
             {
                 // ACES fitted transform and exposure match Three's renderer.
@@ -34,7 +57,7 @@ Shader "Hidden/DeadAir/Tape"
                 uv += trip * float2(sin(p.y * 13 + clock * 1.6), cos(p.x * 11 - clock * 1.3)) * .009;
                 uv = clamp(uv, _MainTex_TexelSize.xy, 1 - _MainTex_TexelSize.xy);
                 float2 split = float2(.005 * trip * (1 + .3 * sin(clock)), 0);
-                float3 scene = tex2D(_MainTex, uv).rgb;
+                float3 scene = sceneAt(uv);
                 if (trip > .001)
                 {
                     scene.r = tex2D(_MainTex, clamp(uv + split, 0, 1)).r;

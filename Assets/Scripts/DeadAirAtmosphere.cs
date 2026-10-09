@@ -107,11 +107,12 @@ namespace DeadAir
             bool stairs = playing && IsOnStairs(me.x, me.y, me.z);
             bool outside = playing && !stairs && IsOutside(me.x, me.y, me.z);
             audioEngine.SetContext(phase, outside, playing && me.down, playing ? state.enemy.behaviour : null, stairs);
+            if (playing) audioEngine.SetRoomContext(audioWorld.RoomAt(me.x, me.z, me.y), me.y);
             audioEngine.Tick(paused, moving, playing && player.Sprinting, hiding, player.Stamina, playing ? me.sanity : 100,
                 threat, playing && player.CameraUp, playing && state.power, playing && state.broadcast, enemyPosition, distance, playing && state.breakerOn);
             if (tape != null)
             {
-                tape.Threat = Mathf.Lerp(tape.Threat, paused ? 0 : threat, Time.unscaledDeltaTime * 2);
+                tape.Threat = playing ? Mathf.Lerp(tape.Threat, paused ? 0 : threat, Time.unscaledDeltaTime * 2) : 0;
                 tape.Insanity = playing ? 1 - me.sanity / 100 : 0;
                 tape.Recording = playing && player.CameraUp;
                 tape.Nightmare = playing && state.enemy.bloody ? 1 : 0;
@@ -223,7 +224,14 @@ namespace DeadAir
                 if (playerHiding.TryGetValue(actor.id, out string hiding) && actor.hiding != hiding)
                     audioEngine.Emit(string.IsNullOrEmpty(actor.hiding) ? "locker-exit" : "locker-enter", 1, 0, local ? (Vector3?)null : position);
                 if (playerDown.TryGetValue(actor.id, out bool previousDown) && actor.down != previousDown)
-                    audioEngine.Emit(actor.down ? "down" : "revive", 1, 0, local ? (Vector3?)null : position);
+                {
+                    if (actor.down)
+                    {
+                        audioEngine.StopRoleAction(actor.id);
+                        audioEngine.PlayCharacterFall(actor.characterClass, local ? (Vector3?)null : position);
+                    }
+                    else audioEngine.Emit("revive", 1, 0, local ? (Vector3?)null : position);
+                }
                 if (!local && !actor.down && string.IsNullOrEmpty(actor.hiding) && remotePositions.TryGetValue(actor.id, out var previous))
                 {
                     bool moved = new Vector2(position.x - previous.x, position.z - previous.z).sqrMagnitude > .0001f;

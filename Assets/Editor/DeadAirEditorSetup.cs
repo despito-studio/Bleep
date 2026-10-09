@@ -36,6 +36,7 @@ namespace DeadAir.Editor
             EditorSceneManager.SaveScene(scene, "Assets/Scenes/Blackpine.unity");
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene("Assets/Scenes/Blackpine.unity", true) };
             PlayerSettings.companyName = "BUREAU-9";
+            PlayerSettings.colorSpace = ColorSpace.Linear;
             PlayerSettings.productName = "Dead Air: Blackpine Broadcast";
             PlayerSettings.defaultScreenWidth = 1920;
             PlayerSettings.defaultScreenHeight = 1080;
@@ -142,6 +143,7 @@ namespace DeadAir.Editor
             PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.StandaloneWindows64, false);
             PlayerSettings.SetGraphicsAPIs(BuildTarget.StandaloneWindows64,
                 new[] { UnityEngine.Rendering.GraphicsDeviceType.Direct3D11 });
+            DeadAirOfficeBuilder.RepairGeneratedMeshTangents();
             AssetDatabase.SaveAssets();
             EditorSceneManager.OpenScene("Assets/Scenes/Blackpine.unity");
             string executable = DeadAirReleaseBuild.OutputPath();

@@ -9,10 +9,13 @@ namespace DeadAir
         Text suppliesText, bagSuppliesText, bookBody, bookPageLabel;
         Button previousBookPage, nextBookPage;
         int bookPage;
+        int supplyCharge=-1,supplyBatteries=-1,supplyCoins=-1,stackBatteries=-1;
+        bool supplyHasFlashlight;
+        string batteryStackName;
 
         void BuildSupplies()
         {
-            suppliesText = Text(hudPanel.transform, "Flashlight supplies", "", 15, 1070, 790, 790, 28, TextAnchor.MiddleRight);
+            suppliesText = Text(hudPanel.transform, "Flashlight supplies", "", 17, 1070, 782, 790, 32, TextAnchor.MiddleRight);
             suppliesText.color = Muted;
             bagSuppliesText = Text(inventoryPanel.transform.Find("Inventory card"), "Bag supplies", "", 16, 42, 139, 644, 35);
             bagSuppliesText.color = Muted;
@@ -24,19 +27,25 @@ namespace DeadAir
             nextBookPage = Button(card, "Next page", "НАСТУПНА ›", 770, 714, 280, 56, () => { bookPage++; RefreshBook(); });
         }
 
-        static string StackItemName(string itemId, PlayerState player) => itemId == DeadAirSupplies.BatteryItem ?
-            "Батарейки ×" + player.spareBatteries : FormatItemName(itemId);
+        string StackItemName(string itemId, PlayerState player)
+        {
+            if(itemId!=DeadAirSupplies.BatteryItem)return FormatItemName(itemId);
+            if(player.spareBatteries!=stackBatteries||batteryStackName==null)
+            {stackBatteries=player.spareBatteries;batteryStackName="Батарейки ×"+stackBatteries;}
+            return batteryStackName;
+        }
 
         void RefreshSupplies(RoomState state, PlayerState playerState)
         {
             int charge = Mathf.CeilToInt(Mathf.Clamp01(playerState.flashlightCharge / DeadAirSupplies.FlashlightSeconds) * 100);
-            suppliesText.text = playerState.HasItem("flashlight") ?
-                "ЛІХТАР " + charge + "%  ·  БАТАРЕЙКИ " + playerState.spareBatteries : "БАТАРЕЙКИ " + playerState.spareBatteries;
-            suppliesText.color = charge <= 15 && playerState.HasItem("flashlight") ? Gold : Muted;
-            bagSuppliesText.text = "МОНЕТКИ: " + playerState.coins + "    /    ЗАПАСНІ БАТАРЕЙКИ: " + playerState.spareBatteries;
-            if (playerState.SelectedItem == "flashlight" || playerState.SelectedItem == DeadAirSupplies.BatteryItem)
-                roleItemText.text = "R — замінити батарейку";
-            else if (playerState.SelectedItem == DeadAirPrisonBook.Id) roleItemText.text = "R — читати справу";
+            bool hasFlashlight=playerState.HasItem("flashlight");
+            if(charge!=supplyCharge||playerState.spareBatteries!=supplyBatteries||hasFlashlight!=supplyHasFlashlight)
+                suppliesText.text = hasFlashlight ?
+                    "ЛІХТАР " + charge + "%  ·  БАТАРЕЙКИ " + playerState.spareBatteries : "БАТАРЕЙКИ " + playerState.spareBatteries;
+            suppliesText.color = charge <= 15 && hasFlashlight ? Gold : Muted;
+            if(playerState.coins!=supplyCoins||playerState.spareBatteries!=supplyBatteries)
+                bagSuppliesText.text = "МОНЕТКИ: " + playerState.coins + "    /    ЗАПАСНІ БАТАРЕЙКИ: " + playerState.spareBatteries;
+            supplyCharge=charge;supplyBatteries=playerState.spareBatteries;supplyCoins=playerState.coins;supplyHasFlashlight=hasFlashlight;
             if (Active(bookPanel) && (playerState.down || !playerState.HasItem(DeadAirPrisonBook.Id))) Close(bookPanel);
         }
 

@@ -35,8 +35,8 @@ namespace DeadAir
                 // Author the upper sky as linear radiance above the tape tone
                 // mapper's black floor, while the exact horizon still meets fog.
                 material.SetVector("_FogEdge", Linear(new Color32(16, 22, 33, 255)));
-                material.SetVector("_Horizon", new Vector4(.016f, .023f, .038f, 1));
-                material.SetVector("_Zenith", new Vector4(.007f, .010f, .019f, 1));
+                material.SetVector("_Horizon", new Vector4(.028f, .047f, .085f, 1));
+                material.SetVector("_Zenith", new Vector4(.012f, .020f, .045f, 1));
                 material.SetVector("_MoonDirection", MoonDirection);
                 material.SetFloat("_MoonRadius", .012f);
                 var renderer = dome.GetComponent<MeshRenderer>();

@@ -14,8 +14,18 @@ namespace DeadAir.Editor
     {
         public static void BuildFixedWindows()
         {
+            PrepareFixedScene();
+            Progress("Building Windows " + DeadAirVersion.Current);
+            DeadAirEditorSetup.BuildWindows();
+            Progress("Windows build complete; GPU runtime verification pending");
+        }
+
+        // A separate preparation run releases the generated/editor validation
+        // objects before BuildPlayer on machines with limited available memory.
+        public static void PrepareFixedScene()
+        {
             Directory.CreateDirectory("Logs");
-            Progress("Rebuilding canisters and saved office geometry");
+            Progress("Rebuilding reference graphics, soft lighting and stair/basement geometry");
             PlayerSettings.bundleVersion = DeadAirVersion.Current;
             DeadAirOfficeBuilder.Build();
             DeadAirEditorSetup.CreateScene();
@@ -26,12 +36,15 @@ namespace DeadAir.Editor
             DeadAirBreakerValidation.Validate();
             DeadAirBasementValidation.Validate();
             DeadAirNavigationValidation.Validate();
+            DeadAirV175Validation.Validate();
+            DeadAirV176LayoutValidation.Validate();
+            DeadAirLightingValidation.Validate();
+            DeadAirV176PresentationValidation.Validate();
+            DeadAirOfficeBuilder.ValidateDoorsAndGlass();
             DeadAirEditorSetup.ValidateMigration();
             DeadAirEditorSetup.ValidateInventory();
             DeadAirEditorSetup.ValidateLan();
-            Progress("Building Windows " + DeadAirVersion.Current);
-            DeadAirEditorSetup.BuildWindows();
-            Progress("Windows build complete; GPU runtime verification pending");
+            Progress("Prepared scene and saved assets passed all release checks");
         }
 
         static void Progress(string message)

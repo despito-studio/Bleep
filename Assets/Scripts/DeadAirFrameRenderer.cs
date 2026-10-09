@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace DeadAir
 {
-    // Draw the scene at the selected VHS resolution, then present it beneath the full-size UI.
+    // Render the world at the selected scale beneath the native-resolution UI.
     [DefaultExecutionOrder(1000)]
     public sealed class DeadAirFrameRenderer : MonoBehaviour
     {
@@ -13,6 +13,7 @@ namespace DeadAir
         RenderTexture previousTarget;
         bool previousMsaa;
         float previousAspect;
+        RenderingPath previousRenderingPath;
 
         public Camera OutputCamera { get; private set; }
         public RenderTexture SceneFrame { get; private set; }
@@ -32,10 +33,14 @@ namespace DeadAir
             previousTarget = camera.targetTexture;
             previousMsaa = camera.allowMSAA;
             previousAspect = camera.aspect;
+            previousRenderingPath = camera.renderingPath;
             camera.allowMSAA = false;
             camera.allowHDR = true;
+            camera.depthTextureMode |= DepthTextureMode.DepthNormals;
+            camera.gameObject.AddComponent<DeadAirAmbientOcclusion>();
+            camera.gameObject.AddComponent<DeadAirPlanarReflections>();
 
-            var output = new GameObject("VHS output camera");
+            var output = new GameObject("Dead Air presentation camera");
             output.transform.SetParent(camera.transform, false);
             OutputCamera = output.AddComponent<Camera>();
             OutputCamera.cullingMask = 0;
@@ -57,10 +62,17 @@ namespace DeadAir
         public void EnsureTargets()
         {
             if (worldCamera == null || OutputCamera == null) return;
+            // Many overlapping practical lights repeatedly redraw room geometry in
+            // Forward. Deferred shades those pixels without one mesh pass per light.
+            // The small menu and Low preset keep the cheaper Forward setup.
+            bool menu=(worldCamera.cullingMask & (1 << 28))!=0;
+            var path=!menu && DeadAirSettings.GraphicsQuality>0 && SystemInfo.supportedRenderTargetCount>=4
+                ? RenderingPath.DeferredShading : RenderingPath.Forward;
+            if(worldCamera.renderingPath!=path)worldCamera.renderingPath=path;
             int screenWidth = Mathf.Max(1, Screen.width);
             int screenHeight = Mathf.Max(1, Screen.height);
             float aspect = screenWidth / (float)screenHeight;
-            int height = Mathf.Min(screenHeight, Mathf.Max(240, DeadAirSettings.Quality));
+            int height = Mathf.Max(240, Mathf.RoundToInt(screenHeight * DeadAirSettings.RenderScale));
             int width = Mathf.Max(1, Mathf.RoundToInt(height * aspect));
 
             if (SceneFrame == null || SceneFrame.width != width || SceneFrame.height != height)
@@ -72,7 +84,7 @@ namespace DeadAir
                 var next = new RenderTexture(width, height, 24, format, RenderTextureReadWrite.Linear)
                 {
                     name = "DEAD AIR scene frame",
-                    filterMode = FilterMode.Point,
+                    filterMode = FilterMode.Bilinear,
                     wrapMode = TextureWrapMode.Clamp,
                     antiAliasing = 1,
                     useMipMap = false,
@@ -119,6 +131,7 @@ namespace DeadAir
                 if (worldCamera.targetTexture == SceneFrame) worldCamera.targetTexture = previousTarget;
                 worldCamera.allowMSAA = previousMsaa;
                 worldCamera.aspect = previousAspect;
+                worldCamera.renderingPath = previousRenderingPath;
             }
             if (tape != null) tape.SourceFrame = null;
             DestroyTexture(SceneFrame);

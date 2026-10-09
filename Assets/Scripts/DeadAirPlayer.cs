@@ -18,6 +18,11 @@ namespace DeadAir
         string menuClass;
         readonly Dictionary<string, GameObject> remoteViews = new Dictionary<string, GameObject>();
         readonly Dictionary<string, string> remoteClasses = new Dictionary<string, string>();
+        readonly Dictionary<string, DeadAirCharacterMotion> remoteMotions = new Dictionary<string, DeadAirCharacterMotion>();
+        readonly HashSet<string> activeRemoteIds = new HashSet<string>();
+        string[] lockerInteractionLabels, mushroomInteractionLabels;
+        DoorInteractionLabels[] doorInteractionLabels;
+        struct DoorInteractionLabels { public string open, closed, lockedOpen, lockedClosed; }
         readonly Dictionary<string, Vector3> drawerSlideOffsets = new Dictionary<string, Vector3>();
         readonly Dictionary<string, Transform> drawerAimFronts = new Dictionary<string, Transform>();
         public string InteractionId { get; private set; }
@@ -60,6 +65,17 @@ namespace DeadAir
         public void Initialize(WorldData data, DeadAirSession game, DeadAirUI gameUI)
         {
             world = data; session = game; ui = gameUI;
+            lockerInteractionLabels = new string[data.lockers.Length];
+            for (int i = 0; i < data.lockers.Length; i++) lockerInteractionLabels[i] = "Сховатися: " + data.lockers[i].label;
+            doorInteractionLabels = new DoorInteractionLabels[data.doors.Length];
+            for (int i = 0; i < data.doors.Length; i++)
+            {
+                string open = data.doors[i].label + " — зачинити", closed = data.doors[i].label + " — відчинити";
+                doorInteractionLabels[i] = new DoorInteractionLabels { open = open, closed = closed,
+                    lockedOpen = open + " (потрібна картка або ключ)", lockedClosed = closed + " (потрібна картка або ключ)" };
+            }
+            mushroomInteractionLabels = new string[data.Mushrooms.Length];
+            for (int i = 0; i < data.Mushrooms.Length; i++) mushroomInteractionLabels[i] = "З’їсти " + data.Mushrooms[i].label + " · дивний ефект";
             if (data.props != null)
                 foreach (var prop in data.props)
                     drawerSlideOffsets[prop.id] = DeadAirOfficeLayout.Rotation(prop.rotation) * Vector3.forward * .38f;
@@ -72,7 +88,7 @@ namespace DeadAir
                     if (front != null) drawerAimFronts[part.name.Substring("drawer:".Length)] = front;
                 }
             foreach(var argument in Environment.GetCommandLineArgs())
-                if(argument=="-deadAirCapture"||argument=="-deadAirOfficeCapture"||argument=="-deadAirMenuCapture"||argument=="-deadAirRepairCapture"||argument=="-deadAirLightingCapture"||argument=="-deadAirHorrorCapture"||argument=="-deadAirMovementVerification"||argument=="-deadAirIndieCapture")verificationAllowed=true;
+                if(argument=="-deadAirCapture"||argument=="-deadAirOfficeCapture"||argument=="-deadAirMenuCapture"||argument=="-deadAirRepairCapture"||argument=="-deadAirLightingCapture"||argument=="-deadAirHorrorCapture"||argument=="-deadAirMovementVerification"||argument=="-deadAirIndieCapture"||argument=="-deadAirUpdateCapture"||argument=="-deadAirGraphicsCapture")verificationAllowed=true;
             controller = gameObject.AddComponent<CharacterController>();
             controller.height = 1.7f; controller.radius = .22f; controller.center = new Vector3(0, .85f, 0);
             controller.stepOffset = .28f; controller.slopeLimit = 48; controller.skinWidth = .035f;
@@ -90,12 +106,12 @@ namespace DeadAir
             flashlight = new GameObject("Flashlight").AddComponent<Light>();
             flashlight.transform.SetParent(view.transform, false);
             flashlight.type = LightType.Spot;
-            flashlight.range = 24; flashlight.spotAngle = 55.4f; flashlight.innerSpotAngle = 22;
+            flashlight.range = 24; flashlight.spotAngle = 62; flashlight.innerSpotAngle = 17;
             flashlight.color = new Color32(255, 239, 211, 255);
-            flashlight.intensity = 1.25f;
-            flashlight.cullingMask = ~(1 << 30);
+            flashlight.intensity = 1.45f;
+            flashlight.cullingMask = ~((1 << 28) | (1 << 29) | (1 << 30));
             flashlight.shadows = LightShadows.Soft;
-            flashlight.shadowStrength = .8f; flashlight.shadowBias = .018f;
+            flashlight.shadowStrength = .78f; flashlight.shadowBias = .012f;
             flashlight.shadowNormalBias = .04f; flashlight.renderMode = LightRenderMode.ForcePixel;
             flashlight.transform.localPosition = new Vector3(.16f, -.12f, .15f);
             firstPerson = gameObject.AddComponent<DeadAirFirstPersonRig>();
@@ -129,7 +145,7 @@ namespace DeadAir
                 previousPhase = previousHiding = null; pausedLocally = false;
                 sentMovement.Clear();reconciledMoveSequence=0;verificationMovement=false;
                 foreach (var remote in remoteViews.Values) Destroy(remote);
-                remoteViews.Clear();remoteClasses.Clear();ShowMenuCamera();return;
+                remoteViews.Clear();remoteClasses.Clear();remoteMotions.Clear();activeRemoteIds.Clear();ShowMenuCamera();return;
             }
             var me = state.Player(session.LocalId);
             if (me == null) { EndLadderPresentation(null); ShowMenuCamera(); return; }
@@ -241,7 +257,7 @@ namespace DeadAir
             flashlight.enabled = lightOn && DeadAirSupplies.HasCharge(me) && HoldingFlashlight(me) && !me.down && string.IsNullOrEmpty(me.hiding) && !climbingLadder;
             flashlight.range = classData.bonuses.flashlightDist;
             flashlight.spotAngle = classData.bonuses.flashlightAngle * Mathf.Rad2Deg * 2;
-            flashlight.innerSpotAngle = flashlight.spotAngle * .52f;
+            flashlight.innerSpotAngle = flashlight.spotAngle * .28f;
             UpdateEquipment(me, state, moving ? (Sprinting ? 1.7f : 1f) : 0);
             FindInteraction(me, state);
             if (Input.GetKeyDown(KeyCode.E) && !state.paused && !me.down && !ui.HasModal && !DeadAirConsole.IsOpen && !pausedLocally && !string.IsNullOrEmpty(InteractionId) && !climbingLadder)
@@ -620,11 +636,21 @@ namespace DeadAir
             }
         }
 
-        void ConsiderInteraction(string id, string label, float x, float y, float z, float range, Vector2 origin, Vector2 forward, ref float nearest, float eyeOffset = 0)
+        bool InteractionInReach(float x, float y, float z, float range, Vector2 origin, Vector2 forward, float nearest, float eyeOffset = 0)
         {
             var offset = new Vector2(x, z) - origin;
-            float distance = Mathf.Sqrt(offset.sqrMagnitude + Mathf.Pow(y + eyeOffset - transform.position.y - 1, 2));
-            if (distance >= nearest || distance > range || (distance > .9f && Vector2.Dot(forward, offset.normalized) < .35f)) return;
+            float vertical = y + eyeOffset - transform.position.y - 1;
+            float squared = offset.sqrMagnitude + vertical * vertical;
+            if (squared >= nearest * nearest || squared > range * range) return false;
+            return squared <= .9f * .9f || Vector2.Dot(forward, offset.normalized) >= .35f;
+        }
+
+        void ConsiderInteraction(string id, string label, float x, float y, float z, float range, Vector2 origin, Vector2 forward, ref float nearest, float eyeOffset = 0)
+        {
+            if (!InteractionInReach(x, y, z, range, origin, forward, nearest, eyeOffset)) return;
+            var offset = new Vector2(x, z) - origin;
+            float vertical = y + eyeOffset - transform.position.y - 1;
+            float distance = Mathf.Sqrt(offset.sqrMagnitude + vertical * vertical);
             if (!DeadAirRules.HasInteractionSightline(transform.position + Vector3.up * 1.4f,
                 new Vector3(-x, y + eyeOffset, z), id)) return;
             nearest = distance; InteractionId = id; InteractionLabel = label;
@@ -638,13 +664,20 @@ namespace DeadAir
             float nearest = 2.5f;
             var origin = new Vector2(-transform.position.x, transform.position.z);
             var forward = new Vector2(-transform.forward.x, transform.forward.z);
-            foreach (var locker in world.lockers)
-                ConsiderInteraction(locker.id, "Сховатися: " + locker.label, locker.x, locker.y, locker.z, 2.2f, origin, forward, ref nearest, 1);
-            foreach (var door in world.doors)
+            for (int i = 0; i < world.lockers.Length; i++)
             {
+                var locker = world.lockers[i];
+                ConsiderInteraction(locker.id, lockerInteractionLabels[i], locker.x, locker.y, locker.z, 2.2f, origin, forward, ref nearest, 1);
+            }
+            for (int i = 0; i < world.doors.Length; i++)
+            {
+                var door = world.doors[i];
+                if (!InteractionInReach(door.x, door.y, door.z, 2.5f, origin, forward, nearest)) continue;
                 var current = state.Door(door.id);
-                string label = door.label + (current != null && current.open ? " — зачинити" : " — відчинити");
-                if (current != null && current.locked && !me.HasItem(current.requiredKey)) label += " (потрібна картка або ключ)";
+                var labels = doorInteractionLabels[i];
+                bool open = current != null && current.open;
+                bool locked = current != null && current.locked && !me.HasItem(current.requiredKey);
+                string label = open ? (locked ? labels.lockedOpen : labels.open) : (locked ? labels.lockedClosed : labels.closed);
                 ConsiderInteraction(door.id, label, door.x, door.y, door.z, 2.5f, origin, forward, ref nearest);
             }
             if (state.droppedItems != null)
@@ -652,11 +685,15 @@ namespace DeadAir
                 for (int i = 0; i < state.droppedItems.Count; i++)
                 {
                     var dropped = state.droppedItems[i];
+                    if (!InteractionInReach(dropped.x, dropped.y, dropped.z, 2.2f, origin, forward, nearest, 1)) continue;
                     ConsiderInteraction("dropped:" + dropped.id, "Підняти: " + dropped.label, dropped.x, dropped.y, dropped.z, 2.2f, origin, forward, ref nearest, 1);
                 }
             }
             foreach (var obj in world.objects)
             {
+                float objRange = obj.id == "ladder" ? 3.5f : 2.5f;
+                float objEyeOffset = obj.id == "ladder" ? 0.9f : 0f;
+                if (!InteractionInReach(obj.x, obj.y, obj.z, objRange, origin, forward, nearest, objEyeOffset)) continue;
                 if (obj.id == "exit" && !state.broadcast) continue;
                 if (state.Collected(obj.id) || obj.id == "power" && state.power || obj.id == "broadcast" && state.broadcast ||
                     obj.id == "fuel-canister" && state.canister || obj.id == "pressure-valve" && state.valveOpened) continue;
@@ -664,8 +701,6 @@ namespace DeadAir
                 string label = obj.label;
                 if (obj.id == "breaker")
                     label = "Рубильник освітлення (" + (state.breakerOn ? "увімкнено — вимкнути" : "вимкнено — увімкнути") + ")";
-                float objRange = obj.id == "ladder" ? 3.5f : 2.5f;
-                float objEyeOffset = obj.id == "ladder" ? 0.9f : 0f;
                 ConsiderInteraction(obj.id, label, obj.x, obj.y, obj.z, objRange, origin, forward, ref nearest, objEyeOffset);
             }
             if (!state.ladderPlaced)
@@ -683,22 +718,24 @@ namespace DeadAir
                     ConsiderInteraction("ladder-climb", "Спуститися по драбині назовні", -9f, 4.2f, 5.8f, 3.5f, origin, forward, ref nearest);
             }
             foreach (var battery in world.Batteries)
-                if (!state.Collected(battery.id))
+                if (InteractionInReach(battery.x, battery.y, battery.z, 2.5f, origin, forward, nearest) && !state.Collected(battery.id))
                     ConsiderInteraction(battery.id, "Взяти батарейку для ліхтаря", battery.x, battery.y, battery.z, 2.5f, origin, forward, ref nearest);
-            foreach (var mushroom in world.Mushrooms)
+            for (int i = 0; i < world.Mushrooms.Length; i++)
             {
+                var mushroom = world.Mushrooms[i];
+                if (!InteractionInReach(mushroom.x, mushroom.y, mushroom.z, DeadAirMushrooms.EatRange, origin, forward, nearest, DeadAirMushrooms.EyeOffset)) continue;
                 if (state.Collected(mushroom.id) || Mathf.Abs(me.y - mushroom.y) >= 1) continue;
                 // A nearby floor patch must not steal E from the book or an item
                 // the player is actually looking at above it.
                 var mushroomTarget = new Vector3(-mushroom.x, mushroom.y + DeadAirMushrooms.EyeOffset, mushroom.z);
                 var mushroomRay = mushroomTarget - view.transform.position;
                 if (mushroomRay.sqrMagnitude < .0001f || Vector3.Dot(view.transform.forward, mushroomRay.normalized) < .96f) continue;
-                ConsiderInteraction(mushroom.id, "З’їсти " + mushroom.label + " · дивний ефект",
+                ConsiderInteraction(mushroom.id, mushroomInteractionLabels[i],
                     mushroom.x, mushroom.y, mushroom.z, DeadAirMushrooms.EatRange, origin, forward, ref nearest,
                     DeadAirMushrooms.EyeOffset);
             }
             foreach (var other in state.players)
-                if (other.id != session.LocalId && other.down)
+                if (other.id != session.LocalId && other.down && InteractionInReach(other.x, other.y, other.z, 2.2f, origin, forward, nearest, 1))
                     ConsiderInteraction("revive:" + other.id, "Підняти " + other.name, other.x, other.y, other.z, 2.2f, origin, forward, ref nearest, 1);
             FindAimedDrawer(state);
         }
@@ -755,14 +792,14 @@ namespace DeadAir
         readonly List<string> remoteIdsToRemove = new List<string>();
         void SyncRemote(RoomState state)
         {
-            var active = new HashSet<string>();
+            activeRemoteIds.Clear();
             foreach (var p in state.players)
             {
                 if (p.id == session.LocalId) continue;
-                active.Add(p.id);
+                activeRemoteIds.Add(p.id);
                 if (remoteViews.TryGetValue(p.id, out var oldView) && remoteClasses[p.id] != p.characterClass)
                 {
-                    Destroy(oldView); remoteViews.Remove(p.id); remoteClasses.Remove(p.id);
+                    Destroy(oldView); remoteViews.Remove(p.id); remoteClasses.Remove(p.id); remoteMotions.Remove(p.id);
                 }
                 if (!remoteViews.TryGetValue(p.id, out var viewObject))
                 {
@@ -775,9 +812,10 @@ namespace DeadAir
                     foreach (var collider in viewObject.GetComponentsInChildren<Collider>()) Destroy(collider);
                     remoteViews.Add(p.id, viewObject);
                     remoteClasses[p.id] = p.characterClass;
+                    remoteMotions[p.id] = viewObject.GetComponent<DeadAirCharacterMotion>();
                     viewObject.transform.position = new Vector3(-p.x, p.y, p.z);
                 }
-                var motion = viewObject.GetComponent<DeadAirCharacterMotion>();
+                remoteMotions.TryGetValue(p.id, out var motion);
                 if (motion != null) motion.Present(p, state.elapsed, state.paused);
                 viewObject.transform.position = Vector3.Lerp(viewObject.transform.position, new Vector3(-p.x, p.y + (p.down ? .2f : 0), p.z), Time.deltaTime * 12);
                 viewObject.transform.rotation = p.ladderClimbing && !p.down ?
@@ -787,13 +825,14 @@ namespace DeadAir
             }
             remoteIdsToRemove.Clear();
             foreach (var id in remoteViews.Keys)
-                if (!active.Contains(id)) remoteIdsToRemove.Add(id);
+                if (!activeRemoteIds.Contains(id)) remoteIdsToRemove.Add(id);
             for (int i = 0; i < remoteIdsToRemove.Count; i++)
             {
                 var id = remoteIdsToRemove[i];
                 Destroy(remoteViews[id]);
                 remoteViews.Remove(id);
                 remoteClasses.Remove(id);
+                remoteMotions.Remove(id);
             }
             remoteIdsToRemove.Clear();
         }
@@ -845,8 +884,8 @@ namespace DeadAir
             menuCharacter.transform.rotation = DeadAirMenuBackdrop.OperativeRotation;
             foreach (var collider in menuCharacter.GetComponentsInChildren<Collider>()) Destroy(collider);
             foreach (var part in menuCharacter.GetComponentsInChildren<Transform>(true)) part.gameObject.layer = 29;
-            AddMenuCharacterLight("Operative preview key", new Vector3(1.3f, 2.5f, 2.2f), new Color32(209, 199, 177, 255), .9f);
-            AddMenuCharacterLight("Operative preview rim", new Vector3(-1.7f, 2.25f, -1.3f), new Color32(194, 39, 31, 255), 1.35f);
+            AddMenuCharacterLight("Operative preview key", new Vector3(1.3f, 2.5f, 2.2f), new Color32(235, 213, 180, 255), .9f);
+            AddMenuCharacterLight("Operative preview rim", new Vector3(-1.7f, 2.25f, -1.3f), new Color32(152, 177, 197, 255), .8f);
         }
 
         void AddMenuCharacterLight(string name, Vector3 position, Color color, float intensity)
@@ -868,6 +907,7 @@ namespace DeadAir
         // Coordinates and angles here use the original web map convention, like network state.
         public void SetInspectionPose(float sourceX, float z, float sourceYaw, float sourcePitch, bool equipment = false, float floorY = 0)
         {
+            if(menuBackdrop!=null)menuBackdrop.SetVisible(false);
             inspectionPose = true;
             yaw = sourceYaw; pitch = sourcePitch;
             Teleport(sourceX, floorY, z);

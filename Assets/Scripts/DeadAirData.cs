@@ -91,13 +91,28 @@ namespace DeadAir
         [NonSerialized] MushroomData[] mushrooms;
         // Rules, interaction prompts and presentation share exactly the same placements.
         public MushroomData[] Mushrooms => mushrooms ?? (mushrooms = DeadAirMushrooms.CreatePlacements(this));
-        public MushroomData Mushroom(string id) => Array.Find(Mushrooms, item => item.id == id);
+        public MushroomData Mushroom(string id)
+        {
+            var placements = Mushrooms;
+            for (int i = 0; i < placements.Length; i++) if (placements[i].id == id) return placements[i];
+            return null;
+        }
         [NonSerialized] DrawerData[] drawers;
         [NonSerialized] BatteryData[] batteries;
         public DrawerData[] Drawers => drawers ?? (drawers = DeadAirDrawers.CreatePlacements(this));
-        public DrawerData Drawer(string id) => Array.Find(Drawers, item => item.id == id);
+        public DrawerData Drawer(string id)
+        {
+            var placements = Drawers;
+            for (int i = 0; i < placements.Length; i++) if (placements[i].id == id) return placements[i];
+            return null;
+        }
         public BatteryData[] Batteries => batteries ?? (batteries = DeadAirSupplies.CreateVanBatteries(this));
-        public BatteryData Battery(string id) => Array.Find(Batteries, item => item.id == id);
+        public BatteryData Battery(string id)
+        {
+            var placements = Batteries;
+            for (int i = 0; i < placements.Length; i++) if (placements[i].id == id) return placements[i];
+            return null;
+        }
 
         public static WorldData Load()
         {
@@ -222,9 +237,22 @@ namespace DeadAir
         public QuestState quest = new QuestState();
         public EnemyState enemy = new EnemyState();
 
-        public PlayerState Player(string id) { return players.Find(p => p.id == id); }
-        public DoorState Door(string id) { return doors.Find(d => d.id == id); }
-        public DrawerState Drawer(string id) { return drawers?.Find(d => d.id == id); }
+        public PlayerState Player(string id)
+        {
+            for (int i = 0; i < players.Count; i++) if (players[i].id == id) return players[i];
+            return null;
+        }
+        public DoorState Door(string id)
+        {
+            for (int i = 0; i < doors.Count; i++) if (doors[i].id == id) return doors[i];
+            return null;
+        }
+        public DrawerState Drawer(string id)
+        {
+            if (drawers != null)
+                for (int i = 0; i < drawers.Count; i++) if (drawers[i].id == id) return drawers[i];
+            return null;
+        }
         public bool Collected(string id) { return collected.Contains(id) || tapes.Contains(id) || fuses.Contains(id) || keycards.Contains(id) || canisters.Contains(id); }
     }
 

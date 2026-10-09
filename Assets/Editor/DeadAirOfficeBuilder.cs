@@ -23,7 +23,26 @@ namespace DeadAir.Editor
         static GameObject station, exterior;
         static int meshSerial;
         static Font signFont;
-        static Material plaster, brick, trim, floor, carpet, ceilingPanel, metal, wood, doorWood, asphalt, grass, glass, lightSurface, paper, black, signLetters, cobwebSilk, wastePaper, doorSteelWhite, signPlateWhite, blood;
+        static Material plaster, brick, trim, floor, carpet, ceilingPanel, metal, wood, doorWood, asphalt, grass, glass, darkScreen, lightSurface, paper, black, signLetters, cobwebSilk, wastePaper, signPlateWhite, blood;
+
+        [MenuItem("Dead Air/Repair Generated Mesh Tangents")]
+        public static void RepairGeneratedMeshTangents()
+        {
+            int repaired=0,existing=0,skipped=0;
+            foreach(string guid in AssetDatabase.FindAssets("t:Mesh",new[]{Folder+"/Meshes"}))
+            {
+                var mesh=AssetDatabase.LoadAssetAtPath<Mesh>(AssetDatabase.GUIDToAssetPath(guid));
+                if(mesh==null||!mesh.isReadable||mesh.vertexCount==0||
+                   !mesh.HasVertexAttribute(VertexAttribute.Normal)||!mesh.HasVertexAttribute(VertexAttribute.TexCoord0))
+                {skipped++;continue;}
+                if(mesh.HasVertexAttribute(VertexAttribute.Tangent)){existing++;continue;}
+                // Preserve saved geometry, UVs, sharp normals and prefab references.
+                // Both source boxes and persisted combined surfaces need a tangent basis.
+                mesh.RecalculateTangents();EditorUtility.SetDirty(mesh);repaired++;
+            }
+            AssetDatabase.SaveAssets();
+            Debug.Log("Dead Air generated mesh tangents: repaired="+repaired+", existing="+existing+", skipped="+skipped+".");
+        }
 
         [MenuItem("Dead Air/Refresh Volumetric Cobwebs")]
         public static void RefreshCobwebGeometry()
@@ -177,7 +196,7 @@ namespace DeadAir.Editor
             var light=lamp.GetComponent<Light>();if(light==null)light=lamp.gameObject.AddComponent<Light>();
             light.type=LightType.Spot;light.color=new Color(.95f,.82f,.63f);light.range=5.5f;
             light.spotAngle=115;light.innerSpotAngle=80;light.intensity=2.1f;light.renderMode=LightRenderMode.ForcePixel;
-            light.shadows=LightShadows.Hard;light.shadowBias=.02f;light.shadowNormalBias=.10f;
+            light.shadows=LightShadows.Soft;light.shadowBias=.012f;light.shadowNormalBias=.035f;
             if(shelter.Find("Generator service lamp housing")==null)
             {
                 var housingMaterial=metal??AssetDatabase.LoadAssetAtPath<Material>(Folder+"/Materials/steel.mat");
@@ -204,7 +223,7 @@ namespace DeadAir.Editor
             var fill=flood.GetComponent<Light>();if(fill==null)fill=flood.gameObject.AddComponent<Light>();
             fill.type=LightType.Spot;fill.color=new Color(.99f,.91f,.73f);fill.range=7;
             fill.spotAngle=90;fill.innerSpotAngle=62;fill.intensity=3.2f;fill.renderMode=LightRenderMode.ForcePixel;
-            fill.shadows=LightShadows.Hard;fill.shadowBias=.02f;fill.shadowNormalBias=.10f;
+            fill.shadows=LightShadows.Soft;fill.shadowBias=.012f;fill.shadowNormalBias=.035f;
         }
 
         static void CacheFurniture()
@@ -275,9 +294,8 @@ namespace DeadAir.Editor
 
         static void RepairFuelCanisterTemplate()
         {
-            // The web exporter batched the metal body outside its label group.
-            // A cached prefab may therefore exist while containing only that plane.
-            if (templates.TryGetValue("fuelCanister", out var saved) && HasFuelCanisterBody(saved.transform, out _)) return;
+            // This tiny generated template is always refreshed so cached releases cannot retain
+            // either the exported label-only body or obsolete unfitted sign components.
             var replacement = new GameObject("fuelCanister");
             try
             {
@@ -286,7 +304,7 @@ namespace DeadAir.Editor
                 string path = Library + "/fuelCanister.prefab";
                 PrefabUtility.SaveAsPrefabAsset(replacement, path);
                 templates["fuelCanister"] = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-                Debug.Log("Rebuilt incomplete fuel-canister template with a metal body, cap, carry handle and diesel labels.");
+                Debug.Log("Refreshed fuel-canister template with a metal body, cap, carry handle and fitted diesel labels.");
             }
             finally { UnityEngine.Object.DestroyImmediate(replacement); }
         }
@@ -331,18 +349,29 @@ namespace DeadAir.Editor
 
         static void PrepareMaterials()
         {
-            plaster = Surface("plaster", new Color(.57f,.59f,.52f), 0);
-            brick = Surface("brick",new Color(.32f,.35f,.29f),1);
-            trim = Surface("painted-trim",new Color(.22f,.29f,.27f),2);
-            floor = Surface("floor-tile",new Color(.43f,.46f,.39f),3);
-            carpet = Surface("office-carpet",new Color(.24f,.28f,.26f),4);
-            ceilingPanel = Surface("acoustic-ceiling",new Color(.60f,.63f,.56f),6);
+            plaster = Surface("plaster", new Color(.60f,.57f,.49f), 0);
+            brick = Surface("brick",new Color(.38f,.36f,.31f),1);
+            trim = Surface("painted-trim",new Color(.21f,.25f,.25f),2);
+            floor = Surface("floor-tile",new Color(.40f,.38f,.33f),3);
+            carpet = Surface("office-carpet",new Color(.20f,.23f,.24f),4);
+            ceilingPanel = Surface("acoustic-ceiling",new Color(.51f,.50f,.44f),6);
             metal = Surface("steel",new Color(.3f,.34f,.32f),2);
             wood = Surface("wood",new Color(.31f,.23f,.15f),5);
-            doorWood = Surface("door-wood",new Color(.26f,.18f,.12f),10);
+            doorWood = Surface("door-wood",new Color(.23f,.145f,.085f),10);
+            doorWood.SetFloat("_Glossiness",.015f);
+            doorWood.SetFloat("_Metallic",0);
             asphalt = Surface("asphalt",new Color(.19f,.22f,.19f),4);
             grass = Surface("grass",new Color(.15f,.23f,.14f),4);
-            glass = Surface("dark-window",new Color(.22f,.35f,.38f),2,null,0.28f);
+            darkScreen = Surface("dark-window",new Color(.085f,.14f,.16f),0);
+            var glassShader=Shader.Find("Dead Air/Window Glass");
+            if(glassShader==null)throw new InvalidOperationException("Transparent window glass shader is missing.");
+            string glassPath=Folder+"/Materials/window-glass.mat";
+            glass=AssetDatabase.LoadAssetAtPath<Material>(glassPath);
+            if(glass==null){glass=new Material(glassShader);AssetDatabase.CreateAsset(glass,glassPath);}
+            glass.shader=glassShader;glass.color=new Color(.12f,.18f,.19f,.18f);
+            glass.SetFloat("_Glossiness",.8f);glass.SetFloat("_ReflectionStrength",.12f);
+            glass.renderQueue=3000;glass.enableInstancing=true;
+            EditorUtility.SetDirty(glass);
             lightSurface = Surface("light-panel",new Color(.20f,.22f,.18f),0, Color.black);
             paper = Surface("sign-board",new Color(.8f,.78f,.62f),0);
             black = Surface("dark-detail",new Color(.07f,.09f,.08f),0);
@@ -350,10 +379,17 @@ namespace DeadAir.Editor
             cobwebSilk.mainTexture=null;cobwebSilk.color=new Color(.39f,.42f,.37f);
             cobwebSilk.SetFloat("_Glossiness",.10f);
             wastePaper = Surface("waste-paper",new Color(.57f,.54f,.43f),0);
-            doorSteelWhite = Surface("door-frame-steel", new Color(.86f, .88f, .90f), 2);
             signPlateWhite = Surface("sign-plate-white", new Color(.94f, .95f, .94f), 0);
             blood = Surface("blood-pool", new Color(.30f, .03f, .03f), 0);
             blood.SetFloat("_Glossiness", .85f);
+            plaster.SetFloat("_Glossiness", .12f);
+            brick.SetFloat("_Glossiness", .08f);
+            trim.SetFloat("_Glossiness", .38f);
+            metal.SetFloat("_Glossiness", .52f); metal.SetFloat("_Metallic", .65f);
+            wood.SetFloat("_Glossiness", .26f); doorWood.SetFloat("_Glossiness", .22f);
+            floor.SetFloat("_Glossiness", .86f); floor.SetFloat("_PlanarReflection", 1);
+            carpet.SetFloat("_Glossiness", .035f); ceilingPanel.SetFloat("_Glossiness", .08f);
+            BuildFloorSurfaceMaps();
             string signPath=Folder+"/Materials/sign-font.mat";
             signLetters=AssetDatabase.LoadAssetAtPath<Material>(signPath);
             var signShader=Shader.Find("Dead Air/World Sign");
@@ -361,12 +397,51 @@ namespace DeadAir.Editor
             if(signLetters==null){signLetters=new Material(signShader);AssetDatabase.CreateAsset(signLetters,signPath);}
             signLetters.shader=signShader;signLetters.color=Color.white;signLetters.mainTexture=null;
             EditorUtility.SetDirty(signLetters);
+            foreach(var texturePath in AssetDatabase.FindAssets("t:Texture2D",new[]{Folder+"/Textures"}).Select(AssetDatabase.GUIDToAssetPath))
+            {
+                var importer=AssetImporter.GetAtPath(texturePath) as TextureImporter;
+                if(importer==null||importer.filterMode==FilterMode.Bilinear&&importer.anisoLevel>=4)continue;
+                importer.filterMode=FilterMode.Bilinear;importer.anisoLevel=4;importer.SaveAndReimport();
+            }
+        }
+
+        static void BuildFloorSurfaceMaps()
+        {
+            const int size = 256;
+            var normal = new Texture2D(size, size, TextureFormat.RGBA32, true);
+            var finish = new Texture2D(size, size, TextureFormat.RGBA32, true);
+            for (int y = 0; y < size; y++) for (int x = 0; x < size; x++)
+            {
+                float patch = Mathf.PerlinNoise(x / 43f, y / 39f);
+                bool grout = x % 64 < 2 || y % 64 < 2;
+                float nx = x % 64 == 2 ? -.18f : x % 64 == 63 ? .18f : 0;
+                float ny = y % 64 == 2 ? -.18f : y % 64 == 63 ? .18f : 0;
+                var direction = new Vector3(nx, ny, 1).normalized;
+                normal.SetPixel(x, y, new Color(direction.x * .5f + .5f, direction.y * .5f + .5f, direction.z * .5f + .5f, 1));
+                float smoothness = grout ? .18f : Mathf.Lerp(.64f, 1, patch);
+                finish.SetPixel(x, y, new Color(smoothness, smoothness, smoothness, 1));
+            }
+            foreach (var pair in new[] { (texture: normal, name: "floor-tile-normal", type: TextureImporterType.NormalMap),
+                (texture: finish, name: "floor-tile-finish", type: TextureImporterType.Default) })
+            {
+                string path = Folder + "/Textures/" + pair.name + ".png";
+                pair.texture.Apply(); File.WriteAllBytes(path, pair.texture.EncodeToPNG());
+                UnityEngine.Object.DestroyImmediate(pair.texture);
+                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+                var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+                importer.textureType = pair.type; importer.sRGBTexture = false;
+                importer.filterMode = FilterMode.Bilinear; importer.anisoLevel = 4;
+                importer.wrapMode = TextureWrapMode.Repeat; importer.mipmapEnabled = true;
+                importer.textureCompression = TextureImporterCompression.Uncompressed; importer.SaveAndReimport();
+                floor.SetTexture(pair.type == TextureImporterType.NormalMap ? "_BumpMap" : "_SurfaceMap", AssetDatabase.LoadAssetAtPath<Texture2D>(path));
+            }
+            EditorUtility.SetDirty(floor);
         }
 
         static Material Surface(string name, Color color, int pattern, Color? emission = null, float alpha = 1f)
         {
             string texturePath = Folder + "/Textures/" + name + ".png";
-            int resolution = pattern == 10 ? 256 : 64;
+            int resolution = pattern == 10 || pattern == 3 ? 256 : 64;
             var texture = new Texture2D(resolution,resolution,TextureFormat.RGBA32,false);
             var colors = new Color[resolution * resolution];
             for(int z=0;z<resolution;z++) for(int x=0;x<resolution;x++)
@@ -377,7 +452,7 @@ namespace DeadAir.Editor
                 float shade = 1 + noise;
                 if(pattern==1 && (z%12==0 || (x+(z/12%2)*16)%32==0)) shade=.69f;
                 if(pattern==2 && z%16==0) shade=.87f;
-                if(pattern==3 && (x%16==0 || z%16==0)) shade=.73f;
+                if(pattern==3 && (x%64<2 || z%64<2)) shade=.76f;
                 if(pattern==5) shade+= Mathf.Sin(z*.42f+x*.035f)*.11f;
                 if(pattern==6)
                 {
@@ -397,9 +472,9 @@ namespace DeadAir.Editor
             UnityEngine.Object.DestroyImmediate(texture);
             AssetDatabase.ImportAsset(texturePath, ImportAssetOptions.ForceSynchronousImport);
             var importer = (TextureImporter)AssetImporter.GetAtPath(texturePath);
-            importer.filterMode=FilterMode.Point; importer.wrapMode=TextureWrapMode.Repeat;
+            importer.filterMode=FilterMode.Bilinear; importer.wrapMode=TextureWrapMode.Repeat;
             importer.mipmapEnabled=true; importer.textureCompression=TextureImporterCompression.Uncompressed;
-            importer.npotScale=TextureImporterNPOTScale.None; importer.anisoLevel=0; importer.SaveAndReimport();
+            importer.npotScale=TextureImporterNPOTScale.None; importer.anisoLevel=4; importer.SaveAndReimport();
             string materialPath = Folder + "/Materials/" + name + ".mat";
             var material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
             var shader = Shader.Find("Dead Air/Source Surface");
@@ -407,7 +482,8 @@ namespace DeadAir.Editor
             if(material==null){material=new Material(shader);AssetDatabase.CreateAsset(material,materialPath);}
             material.shader=shader; material.color=new Color(1,1,1,alpha);
             material.mainTexture=AssetDatabase.LoadAssetAtPath<Texture2D>(texturePath);
-            material.mainTextureScale=Vector2.one; material.SetFloat("_Glossiness",alpha<.99f?.85f:.03f);
+            material.mainTextureScale=Vector2.one;material.mainTextureOffset=Vector2.zero; material.SetFloat("_Glossiness",alpha<.99f?.85f:.03f);
+            material.SetFloat("_Metallic", 0); material.SetFloat("_PlanarReflection", 0);
             material.SetFloat("_Cull",2); material.SetFloat("_ZWrite",alpha<.99f?0:1);
             material.SetFloat("_SrcBlend",(float)(alpha<.99f?BlendMode.SrcAlpha:BlendMode.One));
             material.SetFloat("_DstBlend",(float)(alpha<.99f?BlendMode.OneMinusSrcAlpha:BlendMode.Zero));
@@ -574,7 +650,7 @@ namespace DeadAir.Editor
             {
                 Edge(true,room.minX,room.minZ,room.maxZ);Edge(true,room.maxX,room.minZ,room.maxZ);
                 Edge(false,room.minZ,room.minX,room.maxX);Edge(false,room.maxZ,room.minX,room.maxX);
-                bool tiled=room.mapLabel=="WC"||room.mapLabel=="KITCHEN"||room.mapLabel=="MAINTENANCE";
+                bool tiled=room.mapLabel=="ARCHIVE"||room.mapLabel=="WC"||room.mapLabel=="KITCHEN"||room.mapLabel=="MAINTENANCE";
                 Box(shell,"Room floor "+room.mapLabel,(room.minX+room.maxX)/2,baseY+.008f,(room.minZ+room.maxZ)/2,
                     room.maxX-room.minX-.26f,.016f,room.maxZ-room.minZ-.26f,tiled?floor:carpet,false);
             }
@@ -743,16 +819,22 @@ namespace DeadAir.Editor
                     Box(shell,"Stair tread "+(i+1),(stair.minX+stair.maxX)/2,top-.09f,stair.maxZ-(i+.5f)*depth,width,.18f,depth,trim);
                     Box(shell,"Stair riser "+(i+1),(stair.minX+stair.maxX)/2,top-rise/2,stair.maxZ-i*depth,width,rise,.055f,metal);
 
-                    if(i%3==0) foreach(float x in new[]{stair.minX-.05f,stair.maxX+.05f})
-                        Box(shell,"Stair handrail post",x,top+.52f,stair.maxZ-(i+.5f)*depth,.05f,1.04f,.05f,metal);
                 }
-                // Continuous handrails follow the exact stair slope; ground bypasses remain on either side.
-                foreach(float x in new[]{stair.minX-.05f,stair.maxX+.05f})
+                string level = stair.lowerY < 0 ? "basement" : "upper";
+                var flightRails = Group(shell, "Steel stair rails:" + level);
+                // Keep basement rails inside the existing below-ground shaft walls.
+                foreach(float x in new[]{stair.minX+.09f,stair.maxX-.09f})
                 {
-                    Vector3 lowerPos = DeadAirOfficeLayout.Position(x,stair.lowerY+1.06f,stair.maxZ);
-                    Vector3 upperPos = DeadAirOfficeLayout.Position(x,stair.upperY+1.06f,stair.minZ);
-                    Beam(shell,"Sloping handrail",lowerPos,upperPos,.06f,metal);
+                    SteelGuardrail(flightRails, "Sloping " + (x < 0 ? "west" : "east"),
+                        DeadAirOfficeLayout.Position(x,stair.lowerY,stair.maxZ),
+                        DeadAirOfficeLayout.Position(x,stair.upperY,stair.minZ));
                 }
+                var openingRails = Group(shell, "Steel opening rails:" + level);
+                // Both side galleries overlook the opening; the landing at minZ stays clear.
+                foreach(float x in new[]{-1.89f,1.89f})
+                    SteelGuardrail(openingRails, "Opening " + (x < 0 ? "west" : "east"),
+                        DeadAirOfficeLayout.Position(x,stair.upperY,stair.minZ),
+                        DeadAirOfficeLayout.Position(x,stair.upperY,stair.maxZ));
                 if (stair.upperY >= Storey)
                 {
                     // Solid sloped soffit / ceiling sealing the underside of the upper stair flight so there is no hole/void
@@ -761,20 +843,23 @@ namespace DeadAir.Editor
                     var soffit = Block(shell, "Stair flight soffit", (soffitA + soffitB) / 2, new Vector3(width, .10f, Vector3.Distance(soffitA, soffitB)), brick, true);
                     soffit.transform.localRotation = Quaternion.LookRotation(soffitB - soffitA);
 
-                    // Solid side walls enclosing the basement descent under the stairs and matching brick texture on the sides
-                    for(int i = 0; i < count; i++)
+                    // Enclose only the space below the upper treads. The masonry
+                    // stops at their undersides; the steel guards stay open above.
+                    var undercroft = Group(shell, "Upper stair undercroft");
+                    for (int i = 0; i < count; i++)
                     {
-                        float top = stair.lowerY + (i + 1) * rise;
-                        float wallH = Mathf.Max(0.01f, top - stair.lowerY);
-                        float zPos = stair.maxZ - (i + .5f) * depth;
-                        foreach(float x in new[]{-1.75f, 1.75f})
-                            Box(shell, "Stair side wall " + (x < 0 ? "west " : "east ") + (i + 1), x, stair.lowerY + wallH / 2, zPos, .22f, wallH, depth, brick);
+                        float wallH = (i + 1) * rise - .175f;
+                        if (wallH <= .001f) continue;
+                        float z = stair.maxZ - (i + .5f) * depth;
+                        foreach (float x in new[] { stair.minX + .05f, stair.maxX - .05f })
+                            Box(undercroft, "Undercroft brick " + (x < 0 ? "west " : "east ") + (i + 1),
+                                x, stair.lowerY + wallH / 2, z, .22f, wallH, depth, brick);
                     }
 
-                    foreach(float x in new[]{stair.minX-.08f,stair.maxX+.08f})
-                        Beam(shell,"Upper opening rail",DeadAirOfficeLayout.Position(x,Storey+1.05f,stair.maxZ),DeadAirOfficeLayout.Position(x,Storey+1.05f,stair.minZ),.055f,metal);
-                    for(int i=0;i<7;i++) foreach(float x in new[]{stair.minX-.08f,stair.maxX+.08f})
-                        Box(shell,"Upper guard post",x,Storey+.52f,stair.minZ+i*2,.05f,1.04f,.05f,metal);
+                    // Close the far edge of the mezzanine too, without blocking stair access.
+                    SteelGuardrail(openingRails, "Opening front",
+                        DeadAirOfficeLayout.Position(-1.89f,Storey,stair.maxZ),
+                        DeadAirOfficeLayout.Position(1.89f,Storey,stair.maxZ));
                     HangingSign(shell,"2 FLOOR  /  STUDIO + CONTROL",new Vector3(0,3.36f,-37.9f),3.4f,.4f,Storey-.355f);
                 }
             }
@@ -1080,7 +1165,7 @@ namespace DeadAir.Editor
             var mesh=AssetDatabase.LoadAssetAtPath<Mesh>(path);
             if(mesh==null){mesh=new Mesh();AssetDatabase.CreateAsset(mesh,path);}
             mesh.Clear();mesh.name=key;mesh.SetVertices(vertices);mesh.SetUVs(0,uv);mesh.SetTriangles(triangles,0);
-            mesh.RecalculateNormals();mesh.RecalculateBounds();EditorUtility.SetDirty(mesh);meshes[key]=mesh;return mesh;
+            mesh.RecalculateNormals();mesh.RecalculateTangents();mesh.RecalculateBounds();EditorUtility.SetDirty(mesh);meshes[key]=mesh;return mesh;
         }
 
         static Transform PropRoot(PropData p)
@@ -1192,7 +1277,7 @@ namespace DeadAir.Editor
                     if(p.type=="directory")Sign(root,"BLACKPINE / FLOOR "+(p.y>1?"02":"01")+"\nWEST  /  EAST  /  STAIRS",new Vector3(0,1.82f,.11f),Quaternion.identity,w-.2f,.75f);break;
                 case "mirror":
                     Block(root,"Mirror frame",new Vector3(0,1.85f,0),new Vector3(w,1.1f,.08f),metal,false);
-                    Block(root,"Dark mirror",new Vector3(0,1.85f,.052f),new Vector3(w-.1f,1,.022f),glass,false);break;
+                    Block(root,"Dark mirror",new Vector3(0,1.85f,.052f),new Vector3(w-.1f,1,.022f),darkScreen,false);break;
                 case "copier":
                     Block(root,"Copier body",new Vector3(0,.52f,0),new Vector3(w,1.04f,d),paper,true);
                     Block(root,"Copier lid",new Vector3(0,1.07f,-.06f),new Vector3(w+.06f,.12f,d*.78f),trim,true);
@@ -1205,7 +1290,7 @@ namespace DeadAir.Editor
                     else Block(root,"Cleaning bucket",new Vector3(0,.91f,0),new Vector3(.45f,.45f,.45f),trim,false);break;
                 case "wardrobe":case "radioCabinet":case "vendingMachine":
                     Block(root,"Equipment cabinet",new Vector3(0,1,0),new Vector3(w,2,d),trim,true);
-                    Block(root,"Cabinet inset",new Vector3(0,1.27f,d/2+.02f),new Vector3(w*.77f,1.05f,.025f),p.type=="vendingMachine"?glass:black,false);
+                    Block(root,"Cabinet inset",new Vector3(0,1.27f,d/2+.02f),new Vector3(w*.77f,1.05f,.025f),p.type=="vendingMachine"?darkScreen:black,false);
                     for(int i=0;i<4;i++)Block(root,"Equipment label",new Vector3(-w*.15f,.84f+i*.24f,d/2+.04f),new Vector3(w*.34f,.05f,.018f),paper,false);
                     Block(root,"Cabinet handle",new Vector3(w*.34f,1.0f,d/2+.065f),new Vector3(.035f,.25f,.04f),metal,false);break;
                 case "kitchen":
@@ -1280,7 +1365,7 @@ namespace DeadAir.Editor
                     {
                         float x=(j-.5f)*w*.46f,y=.44f+i*.74f;
                         Block(root,"CRT surround",new Vector3(x,y,.31f),new Vector3(w*.44f,.63f,.12f),trim,false);
-                        Block(root,"monitor:screen "+i+"-"+j,new Vector3(x,y,.378f),new Vector3(w*.36f,.46f,.022f),glass,false);
+                        Block(root,"monitor:screen "+i+"-"+j,new Vector3(x,y,.378f),new Vector3(w*.36f,.46f,.022f),darkScreen,false);
                     }
                     break;
                 case "dieselGenerator":
@@ -1337,7 +1422,7 @@ namespace DeadAir.Editor
         {
             Block(parent,"CRT stand",position+new Vector3(0,.05f,0),new Vector3(.34f,.1f,.29f),metal,false);
             Block(parent,"CRT housing",position+new Vector3(0,.34f,-.06f),new Vector3(.62f,.52f,.49f),paper,false);
-            Block(parent,"CRT screen",position+new Vector3(0,.35f,.195f),new Vector3(.48f,.36f,.022f),glass,false);
+            Block(parent,"CRT screen",position+new Vector3(0,.35f,.195f),new Vector3(.48f,.36f,.022f),darkScreen,false);
             for(int i=0;i<4;i++)Block(parent,"CRT signal line",position+new Vector3(-.04f,.45f-i*.062f,.210f),new Vector3(.28f,.014f,.01f),trim,false);
         }
 
@@ -1350,6 +1435,16 @@ namespace DeadAir.Editor
             casing.localRotation=DeadAirOfficeLayout.Rotation(d.rotation);
             foreach(float z in new[]{-width/2-.055f,width/2+.055f})Block(casing,"Door jamb",new Vector3(0,1.4f,z),new Vector3(.3f,2.8f,.1f),doorWood,true);
             Block(casing,"Door head",new Vector3(0,2.83f,0),new Vector3(.3f,.1f,width+.2f),doorWood,true);
+            // The oak architrave covers the pale cut edges of the wall on both
+            // faces, including the thicker outside facade. It overlaps the
+            // reveal so there is no bright line between the frame and leaf.
+            float casingFace=d.id=="door-front"||d.id=="door-rear"?.21f:.17f;
+            foreach(float x in new[]{-casingFace,casingFace})
+            {
+                foreach(float z in new[]{-width/2-.045f,width/2+.045f})
+                    Block(casing,"Oak casing side",new Vector3(x,1.4f,z),new Vector3(.04f,2.8f,.20f),doorWood,false);
+                Block(casing,"Oak casing head",new Vector3(x,2.805f,0),new Vector3(.04f,.17f,width+.29f),doorWood,false);
+            }
             var pivot=Group(casing,"door:"+d.id);pivot.localPosition=new Vector3(0,0,-width/2);
             if(d.id.StartsWith("door-prison-",StringComparison.Ordinal))
             {
@@ -1378,12 +1473,13 @@ namespace DeadAir.Editor
             var lamp=Group(casing,"door-light:"+d.id);lamp.localPosition=led.transform.localPosition+Vector3.right*.05f;
             var light=lamp.gameObject.AddComponent<Light>();light.type=LightType.Point;light.range=.7f;light.intensity=.07f;light.shadows=LightShadows.None;
             string text=d.label.Replace("Двері: ","");
-            // Signs fit above the casing, with their board proud of the wall. Both corridor sides can be read.
-            // Width enlarged to cleanly contain full names like "КАБІНЕТ ДИРЕКТОРА".
+            // Long room names use two balanced lines rather than shrinking to unreadable lettering.
+            // The physical plaque remains above the casing and is readable from either side.
+            text=RoomSignText(text);
             float signFace=d.id=="door-front"||d.id=="door-rear"?.188f:.123f;
-            float neededWidth = Mathf.Max(1.45f, text.Length * 0.11f + 0.35f);
+            float neededWidth = Mathf.Max(1.45f, text.Split('\n').Max(line=>line.Length) * 0.11f + 0.35f);
             float signW = Mathf.Clamp(neededWidth, 1.45f, Mathf.Min(width + 0.2f, 2.15f));
-            float signH = 0.32f;
+            float signH = text.Contains("\n") ? .42f : .32f;
             Sign(casing,text,new Vector3(signFace,3.15f,0),Quaternion.Euler(0,90,0),signW,signH);
             Sign(casing,text,new Vector3(-signFace,3.15f,0),Quaternion.Euler(0,-90,0),signW,signH);
         }
@@ -1532,10 +1628,11 @@ namespace DeadAir.Editor
         {
             Box(parent,"Fluorescent housing",x,floorY+Ceiling-.14f,z,1.7f,.12f,.45f,metal,false);
             Box(parent,"Fluorescent diffuser",x,floorY+Ceiling-.22f,z,1.52f,.04f,.30f,lightSurface,false);
-            var light=Practical(parent,"lamp:"+id,DeadAirOfficeLayout.Position(x,floorY+Ceiling-.38f,z),7.5f,intensity,new Color(.94f,.95f,.82f));
-            light.type=LightType.Spot;light.transform.localRotation=Quaternion.Euler(90,0,0);
-            light.spotAngle=120;light.innerSpotAngle=85;light.renderMode=LightRenderMode.ForcePixel;
-            light.shadows=LightShadows.Hard;light.shadowBias=.02f;light.shadowNormalBias=.1f;
+            var light=Practical(parent,"lamp:"+id,DeadAirOfficeLayout.Position(x,floorY+Ceiling-.48f,z),10.5f,intensity*.88f,new Color(1f,.82f,.58f));
+            light.type=LightType.Point;light.renderMode=LightRenderMode.ForcePixel;
+            light.shadows=LightShadows.Soft;light.shadowBias=.012f;light.shadowNormalBias=.035f;
+            light.shadowStrength=.82f;
+            Practical(parent,"lamp:bounce-"+id,DeadAirOfficeLayout.Position(x,floorY+1.35f,z),6.5f,.22f,new Color(1f,.86f,.67f));
         }
 
         static Light Practical(Transform parent,string name,Vector3 position,float range,float intensity,Color color)
@@ -1563,29 +1660,48 @@ namespace DeadAir.Editor
             // High-contrast clean white backing plate
             Block(sign,"Sign backing",new Vector3(0,0,.002f),new Vector3(width,height,.020f),signPlateWhite,false);
             var letters=Group(sign,"Sign lettering");letters.localPosition=new Vector3(0,0,.018f);letters.localRotation=Quaternion.Euler(0,180,0);
-            var mesh=letters.gameObject.AddComponent<TextMesh>();mesh.text=text;mesh.fontSize=128;mesh.characterSize=.025f;
+            var mesh=letters.gameObject.AddComponent<TextMesh>();mesh.fontSize=128;mesh.characterSize=.025f;
             mesh.anchor=TextAnchor.MiddleCenter;mesh.alignment=TextAlignment.Center;
             mesh.color=new Color(.08f,.08f,.08f,1f); // Black text on white backing
-            if(signFont!=null)
-            {
-                mesh.font=signFont;
-                letters.gameObject.AddComponent<DeadAirOfficeSign>().Initialize(signFont,signLetters);
-            }
+            if(signFont==null)throw new InvalidOperationException("Office plaque font is missing.");
+            mesh.font=signFont;
             mesh.richText=false;
+            mesh.text=text;
             var renderer=letters.GetComponent<MeshRenderer>();renderer.shadowCastingMode=ShadowCastingMode.Off;
-            // Scale text to cleanly fit inside the physical plaque without ever protruding
-            int maxLineChars = 0;
-            string[] lines = text.Split('\n');
-            foreach (var l in lines) if (l.Length > maxLineChars) maxLineChars = l.Length;
-            // IBMPlexMono character advance at fontSize 128 & characterSize 0.025 is ~0.192m wide, ~0.385m tall
-            float approxTextW = Mathf.Max(0.1f, maxLineChars * 0.192f);
-            float approxTextH = Mathf.Max(0.1f, lines.Length * 0.385f);
-            if (renderer.localBounds.size.x > 0.1f)
-                approxTextW = Mathf.Max(approxTextW, renderer.localBounds.size.x);
-            if (renderer.localBounds.size.y > 0.1f)
-                approxTextH = Mathf.Max(approxTextH, renderer.localBounds.size.y);
-            float fitScale = Mathf.Min((width * 0.82f) / approxTextW, (height * 0.75f) / approxTextH);
-            letters.localScale = Vector3.one * Mathf.Clamp(fitScale, 0.04f, 1.0f);
+            letters.gameObject.AddComponent<DeadAirOfficeSign>().Initialize(signFont,signLetters,width,height);
+        }
+
+        static void SteelGuardrail(Transform parent, string name, Vector3 floorA, Vector3 floorB)
+        {
+            var root = Group(parent, name);
+            foreach(float height in new[]{.24f,.64f,1.06f})
+            {
+                Vector3 a = floorA + Vector3.up * height, b = floorB + Vector3.up * height;
+                var rail = Block(root, "Steel rail " + height, (a+b)/2,
+                    new Vector3(.06f,.06f,Vector3.Distance(a,b)), metal, true);
+                rail.transform.localRotation = Quaternion.LookRotation(b-a);
+            }
+            int spans = Mathf.CeilToInt(new Vector2(floorB.x-floorA.x,floorB.z-floorA.z).magnitude/.9f);
+            for(int i=0;i<=spans;i++)
+                Block(root, "Steel guard post " + i,
+                    Vector3.Lerp(floorA,floorB,i/(float)spans) + Vector3.up*.54f,
+                    new Vector3(.055f,1.08f,.055f),metal,true);
+        }
+
+        static string RoomSignText(string text)
+        {
+            if(text.Length<=18||text.Contains("\n"))return text;
+            // A service entrance qualifier belongs on its own line.
+            int separator=text.IndexOf(" · ",StringComparison.Ordinal);
+            if(separator>0)return text.Substring(0,separator)+"\n"+text.Substring(separator+3);
+            int split=-1,bestLength=int.MaxValue;
+            for(int i=1;i<text.Length-1;i++)
+            {
+                if(text[i]!=' ')continue;
+                int longest=Mathf.Max(i,text.Length-i-1);
+                if(longest<bestLength){bestLength=longest;split=i;}
+            }
+            return split<0?text:text.Substring(0,split)+"\n"+text.Substring(split+1);
         }
 
         static GameObject Box(Transform parent,string name,float x,float y,float z,float w,float h,float d,Material material,bool collide=true)
@@ -1609,7 +1725,7 @@ namespace DeadAir.Editor
                 Face(v,uv,indices,new Vector3(-half.x,-half.y,-half.z),new Vector3(0,0,size.z),new Vector3(0,size.y,0));
                 Face(v,uv,indices,new Vector3(-half.x,half.y,half.z),new Vector3(size.x,0,0),new Vector3(0,0,-size.z));
                 Face(v,uv,indices,new Vector3(-half.x,-half.y,-half.z),new Vector3(size.x,0,0),new Vector3(0,0,size.z));
-                mesh.SetVertices(v);mesh.SetUVs(0,uv);mesh.SetTriangles(indices,0);mesh.RecalculateNormals();mesh.RecalculateBounds();EditorUtility.SetDirty(mesh);meshes[key]=mesh;meshSerial++;
+                mesh.SetVertices(v);mesh.SetUVs(0,uv);mesh.SetTriangles(indices,0);mesh.RecalculateNormals();mesh.RecalculateTangents();mesh.RecalculateBounds();EditorUtility.SetDirty(mesh);meshes[key]=mesh;meshSerial++;
             }
             obj.AddComponent<MeshFilter>().sharedMesh=mesh;
             var renderer=obj.AddComponent<MeshRenderer>();renderer.sharedMaterial=material;
@@ -1645,12 +1761,25 @@ namespace DeadAir.Editor
 
         // Persist merged meshes rather than relying on runtime static batching. This keeps the larger
         // shell/fences cheap to render, and leaves each room as an independent culling sector.
+        static bool IsGeometryAnchor(string name)
+        {
+            // Saved geometry validation uses these authored positions and dimensions.
+            switch(name)
+            {
+                case "Oak casing side": case "Oak casing head": case "Window reveal side":
+                case "Window frame side": case "Interior sill": case "Radiator recess":
+                case "Wayfinding sign hanger": case "Discarded page": case "Flattened cardboard":
+                case "Abandoned file cover": case "Tipped paper cup": return true;
+                default: return name.StartsWith("Distant ground ",StringComparison.Ordinal);
+            }
+        }
+
         static void BatchStaticGeometry(Transform parent,string groupId)
         {
             if(parent==null)return;
             var sources=parent.GetComponentsInChildren<MeshRenderer>(true).Where(r=>r.gameObject.activeInHierarchy&&
                 r.GetComponent<TextMesh>()==null&&r.TryGetComponent<MeshFilter>(out var filter)&&filter.sharedMesh!=null&&
-                !AnimatedAncestor(r.transform,parent)).ToArray();
+                !AnimatedAncestor(r.transform,parent)&&r.sharedMaterials.All(m=>m==null||m.renderQueue<2500)).ToArray();
             var groups=new Dictionary<Material,List<CombineInstance>>();
             foreach(var renderer in sources)
             {
@@ -1671,7 +1800,7 @@ namespace DeadAir.Editor
                 if(combined==null){combined=new Mesh();AssetDatabase.CreateAsset(combined,path);}
                 combined.Clear();combined.name="Office static "+groupId+" / "+entry.Key.name;
                 combined.indexFormat=IndexFormat.UInt32;combined.CombineMeshes(entry.Value.ToArray(),true,true,false);
-                combined.RecalculateBounds();EditorUtility.SetDirty(combined);
+                combined.RecalculateTangents();combined.RecalculateBounds();EditorUtility.SetDirty(combined);
                 var obj=new GameObject("Batched surfaces / "+entry.Key.name);obj.transform.SetParent(parent,false);
                 obj.AddComponent<MeshFilter>().sharedMesh=combined;
                 var renderer=obj.AddComponent<MeshRenderer>();renderer.sharedMaterial=entry.Key;
@@ -1679,8 +1808,16 @@ namespace DeadAir.Editor
             }
             foreach(var renderer in sources)
             {
-                UnityEngine.Object.DestroyImmediate(renderer.GetComponent<MeshFilter>());
+                // Keep the plaque's physical dimensions inspectable after its surface is batched.
+                // The renderer is still removed, so this adds no draw calls.
+                bool plaque=renderer.transform.parent!=null&&renderer.transform.parent.name.StartsWith("Fitted sign:",StringComparison.Ordinal);
+                var leaf=renderer.gameObject;
+                if(!plaque)UnityEngine.Object.DestroyImmediate(renderer.GetComponent<MeshFilter>());
                 UnityEngine.Object.DestroyImmediate(renderer);
+                // A merged decorative leaf with only its Transform has no remaining
+                // geometry, collider, script, child or runtime identity to preserve.
+                if(!plaque && !IsGeometryAnchor(leaf.name) && leaf.transform.childCount==0 && leaf.GetComponents<Component>().Length==1)
+                    UnityEngine.Object.DestroyImmediate(leaf);
             }
         }
 
@@ -1704,12 +1841,15 @@ namespace DeadAir.Editor
             foreach(var texturePath in AssetDatabase.FindAssets("t:Texture2D",new[]{Folder+"/Textures"}).Select(AssetDatabase.GUIDToAssetPath))
             {
                 var importer=(TextureImporter)AssetImporter.GetAtPath(texturePath);
-                if(importer.filterMode!=FilterMode.Point||importer.wrapMode!=TextureWrapMode.Repeat||importer.npotScale!=TextureImporterNPOTScale.None)
+                bool detailMap=texturePath.Contains("floor-tile-normal")||texturePath.Contains("floor-tile-finish");
+                if(importer.filterMode!=FilterMode.Bilinear||importer.wrapMode!=TextureWrapMode.Repeat||(!detailMap&&importer.npotScale!=TextureImporterNPOTScale.None))
                     throw new Exception("Inconsistent office texture sampling: "+texturePath);
             }
             ValidateDieselCanisters();
-            Debug.Log("Expanded office validated: saved prefabs, matching objectives and hinged doors, physical locker sight gaps, uniform point-filtered tile textures.");
+            Debug.Log("Expanded office validated: saved prefabs, matching objectives and hinged doors, physical locker sight gaps, filtered surface textures and floor detail maps.");
         }
+
+        public static void ValidateDoorsAndGlass() => DeadAirDoorGlassValidation.Validate();
 
         [MenuItem("Dead Air/Validate Diesel Canister Geometry")]
         public static void ValidateDieselCanisters()

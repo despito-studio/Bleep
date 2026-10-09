@@ -22,9 +22,27 @@ namespace DeadAir
         readonly UnityEngine.UI.Text[] inventorySlotLabels = new UnityEngine.UI.Text[5];
         readonly UnityEngine.UI.Outline[] inventorySlotOutlines = new UnityEngine.UI.Outline[5];
         readonly List<KeyValuePair<string,UnityEngine.UI.Button>> classButtons=new List<KeyValuePair<string,UnityEngine.UI.Button>>();
+        readonly List<UnityEngine.UI.Button> graphicsPresetButtons=new List<UnityEngine.UI.Button>();
+        readonly List<UnityEngine.UI.Button> shadowSettingButtons=new List<UnityEngine.UI.Button>();
+        readonly Dictionary<string,UnityEngine.UI.Button> graphicsToggleButtons=new Dictionary<string,UnityEngine.UI.Button>();
+        UnityEngine.UI.Slider renderScaleSetting,brightnessSetting;
+        UnityEngine.UI.Text renderScaleValue,brightnessValue,graphicsPresetState;
+        GameObject graphicsSettings,audioSettings;
         string selectedClass="engineer", previousPhase, lastMessage;
         float toastUntil, nextHud;
         int lastRadioSequence;
+        int hudTapes=-1,hudCanisters=-1,hudFuses=-1,hudTripSeconds=-1,hudBearing=-1,hudDirection=-1;
+        int hudCigarettes=-1;
+        string hudInteraction,hudRoom,hudRoleClass,hudSelectedItem;
+        bool hudRoleEquipped,hudInteractionActive;
+        readonly string[] hudSlotItems=new string[5];
+        readonly bool[] hudSlotSelected=new bool[5];
+        bool hudSlotsInitialized;
+        readonly System.Text.StringBuilder lobbyRoster=new System.Text.StringBuilder(256);
+        string[] lobbyRosterIds=new string[4],lobbyRosterNames=new string[4],lobbyRosterClasses=new string[4];
+        string renderedLobbyCode,renderedLobbyHost;
+        int renderedLobbyCount=-1;
+        static readonly string[] CompassDirections={"Пн","Пн-Сх","Сх","Пд-Сх","Пд","Пд-Зх","Зх","Пн-Зх"};
         public string SelectedClass=>selectedClass;
         public event Action<string> ClassSelected;
         public bool HasModal=>Active(menuPanel)||Active(lobbyPanel)||Active(pausePanel)||Active(mapPanel)||Active(calibrationPanel)||Active(endingPanel)||Active(settingsPanel)||Active(dossierPanel)||Active(joinPanel)||Active(chapterPanel)||Active(preparationPanel)||Active(networkPanel)||Active(inventoryPanel)||Active(quitPanel)||Active(bookPanel);
@@ -51,7 +69,7 @@ namespace DeadAir
             BuildMenu();BuildLobby();BuildHud();BuildRadio();BuildPause();BuildMap();BuildCalibration();BuildEnding();BuildSettings();BuildDossier();BuildJoin();
             BuildSupplies();
             toastText=Text(designRoot,"Notification","",20,510,210,900,64,TextAnchor.MiddleCenter);toastText.color=Ink;toastText.gameObject.SetActive(false);
-            session.Error+=Toast;session.StateChanged+=RefreshPhase;
+            session.Error+=Toast;session.StateChanged+=RefreshPhase;DeadAirSettings.Changed+=RefreshGraphicsSettings;
             SelectClass(selectedClass);RefreshPhase();FocusPanel(menuPanel);
         }
 
@@ -189,17 +207,75 @@ namespace DeadAir
         }
         void BuildSettings()
         {
-            settingsPanel=Modal("Settings","НАЛАШТУВАННЯ",960,900,out var p);
-            SettingSlider(p,"ГУЧНІСТЬ",135,0,1,DeadAirSettings.Volume,v=>DeadAirSettings.Volume=v);
-            SettingSlider(p,"ОТОЧЕННЯ",235,0,1,DeadAirSettings.AmbienceVolume,v=>DeadAirSettings.AmbienceVolume=v);
-            SettingSlider(p,"ЗВУКОВІ ЕФЕКТИ",335,0,1,DeadAirSettings.EffectsVolume,v=>DeadAirSettings.EffectsVolume=v);
-            SettingSlider(p,"ЧУТЛИВІСТЬ МИШІ",435,.3f,2,DeadAirSettings.Sensitivity,v=>DeadAirSettings.Sensitivity=v,true);
-            Text(p,"VHS label","ЗЕРНО ПЛІВКИ",17,40,554,535,39);Toggle(p,"Grain",610,544,()=>DeadAirSettings.Grain,v=>DeadAirSettings.Grain=v);
-            Text(p,"Flicker label","МЕРЕХТІННЯ ТА СПАЛАХИ",17,40,614,535,39);Toggle(p,"Flicker",610,604,()=>DeadAirSettings.Flicker,v=>DeadAirSettings.Flicker=v);
-            Text(p,"Quality label","ДЕТАЛІЗАЦІЯ",17,40,674,410,43);
-            int[] qualities={360,540,720};for(int i=0;i<3;i++){int q=qualities[i];Button(p,"Quality "+q,q+"p",466+i*154,664,140,46,()=>{DeadAirSettings.Quality=q;});}
-            Text(p,"Fullscreen label","ПОВНИЙ ЕКРАН",17,40,734,535,39);Toggle(p,"Fullscreen",610,724,()=>DeadAirSettings.Fullscreen,v=>DeadAirSettings.Fullscreen=v);
-            Button(p,"Save settings","НАЗАД",40,819,880,48,()=>Close(settingsPanel));
+            settingsPanel=Modal("Settings","НАЛАШТУВАННЯ",1060,1020,out var p);
+            Button(p,"Graphics tab","ГРАФІКА",40,123,474,48,()=>ShowSettingsTab(true));
+            Button(p,"Audio tab","ЗВУК І КЕРУВАННЯ",534,123,486,48,()=>ShowSettingsTab(false));
+            graphicsSettings=Rect(p,"Graphics",40,197,980,734).gameObject;
+            audioSettings=Rect(p,"Audio and controls",40,197,980,734).gameObject;
+            var g=graphicsSettings.transform;
+            Text(g,"Preset label","ЯКІСТЬ",18,0,3,295,37);
+            string[] qualityNames={"НИЗЬКА","СЕРЕДНЯ","ВИСОКА"};
+            for(int i=0;i<3;i++)
+            {
+                int q=i;graphicsPresetButtons.Add(Button(g,"Quality "+q,qualityNames[i],310+i*226,0,212,44,()=>DeadAirSettings.ApplyGraphicsPreset(q)));
+            }
+            graphicsPresetState=Text(g,"Preset state","",13,0,42,295,25);graphicsPresetState.color=Muted;
+            renderScaleSetting=GraphicsSlider(g,"Render scale","МАСШТАБ ЗОБРАЖЕННЯ",78,.5f,1,DeadAirSettings.RenderScale,v=>DeadAirSettings.RenderScale=v,out renderScaleValue);
+            brightnessSetting=GraphicsSlider(g,"Brightness","ЯСКРАВІСТЬ",170,.8f,1.2f,DeadAirSettings.Brightness,v=>DeadAirSettings.Brightness=v,out brightnessValue);
+            Text(g,"Shadow label","ТІНІ",18,0,274,450,40);
+            string[] shadowNames={"ВИМКНЕНІ","ПРОСТІ","М’ЯКІ"};
+            for(int i=0;i<3;i++)
+            {
+                int q=i;shadowSettingButtons.Add(Button(g,"Shadows "+q,shadowNames[i],310+i*226,268,212,44,()=>DeadAirSettings.ShadowQuality=q));
+            }
+            GraphicsToggle(g,"Ambient occlusion","ОБ’ЄМНЕ ЗАТІНЕННЯ",334,()=>DeadAirSettings.AmbientOcclusion,v=>DeadAirSettings.AmbientOcclusion=v);
+            GraphicsToggle(g,"Bloom","М’ЯКЕ СВІТІННЯ ЛАМП",398,()=>DeadAirSettings.Bloom,v=>DeadAirSettings.Bloom=v);
+            GraphicsToggle(g,"Antialiasing","ЗГЛАДЖУВАННЯ КРАЇВ",462,()=>DeadAirSettings.Antialiasing,v=>DeadAirSettings.Antialiasing=v);
+            GraphicsToggle(g,"Reflections","ВІДБИТТЯ",526,()=>DeadAirSettings.Reflections,v=>DeadAirSettings.Reflections=v);
+            GraphicsToggle(g,"Grain","ЗЕРНО ПЛІВКИ",590,()=>DeadAirSettings.Grain,v=>DeadAirSettings.Grain=v);
+            GraphicsToggle(g,"Flicker","МЕРЕХТІННЯ ТА СПАЛАХИ",654,()=>DeadAirSettings.Flicker,v=>DeadAirSettings.Flicker=v);
+            var a=audioSettings.transform;
+            SettingSlider(a,"ГУЧНІСТЬ",8,0,1,DeadAirSettings.Volume,v=>DeadAirSettings.Volume=v);
+            SettingSlider(a,"ОТОЧЕННЯ",110,0,1,DeadAirSettings.AmbienceVolume,v=>DeadAirSettings.AmbienceVolume=v);
+            SettingSlider(a,"ЗВУКОВІ ЕФЕКТИ",212,0,1,DeadAirSettings.EffectsVolume,v=>DeadAirSettings.EffectsVolume=v);
+            SettingSlider(a,"ЧУТЛИВІСТЬ МИШІ",314,.3f,2,DeadAirSettings.Sensitivity,v=>DeadAirSettings.Sensitivity=v,true);
+            Text(a,"Fullscreen label","ПОВНИЙ ЕКРАН",18,40,432,535,39);Toggle(a,"Fullscreen",630,422,()=>DeadAirSettings.Fullscreen,v=>DeadAirSettings.Fullscreen=v);
+            Text(a,"Mute label","БЕЗ ЗВУКУ",18,40,498,535,39);Toggle(a,"Mute",630,488,()=>DeadAirSettings.Muted,v=>DeadAirSettings.Muted=v);
+            Button(p,"Save settings","НАЗАД",40,944,980,48,()=>Close(settingsPanel));
+            ShowSettingsTab(true);RefreshGraphicsSettings();
+        }
+        void ShowSettingsTab(bool graphics){graphicsSettings.SetActive(graphics);audioSettings.SetActive(!graphics);}
+        UnityEngine.UI.Slider GraphicsSlider(Transform p,string name,string caption,float y,float min,float max,float initial,Action<float> setter,out UnityEngine.UI.Text value)
+        {
+            Text(p,name+" label",caption,18,0,y,780,32);
+            value=Text(p,name+" value","",18,810,y,170,32,TextAnchor.UpperRight);value.color=Ink;
+            return Slider(p,name+" slider",0,y+37,980,min,max,initial,setter);
+        }
+        void GraphicsToggle(Transform p,string name,string caption,float y,Func<bool> get,Action<bool> set)
+        {
+            Text(p,name+" label",caption,18,0,y+6,650,36);
+            graphicsToggleButtons[name]=Button(p,name,"",670,y,310,44,()=>set(!get()));
+        }
+        void RefreshGraphicsSettings()
+        {
+            if(renderScaleSetting==null)return;
+            renderScaleSetting.SetValueWithoutNotify(DeadAirSettings.RenderScale);brightnessSetting.SetValueWithoutNotify(DeadAirSettings.Brightness);
+            renderScaleValue.text=Mathf.RoundToInt(DeadAirSettings.RenderScale*100)+"%";brightnessValue.text=Mathf.RoundToInt(DeadAirSettings.Brightness*100)+"%";
+            foreach(var pair in graphicsToggleButtons)
+            {
+                bool enabled=pair.Key=="Ambient occlusion"?DeadAirSettings.AmbientOcclusion:pair.Key=="Bloom"?DeadAirSettings.Bloom:pair.Key=="Antialiasing"?DeadAirSettings.Antialiasing:pair.Key=="Reflections"?DeadAirSettings.Reflections:pair.Key=="Grain"?DeadAirSettings.Grain:DeadAirSettings.Flicker;
+                pair.Value.GetComponentInChildren<UnityEngine.UI.Text>().text=enabled?"УВІМКНЕНО":"ВИМКНЕНО";
+                SettingChoice(pair.Value,enabled);
+            }
+            int q=DeadAirSettings.GraphicsQuality;
+            bool preset=Mathf.Abs(DeadAirSettings.RenderScale-(q==0?.65f:q==1?.85f:1))<.005f&&DeadAirSettings.ShadowQuality==q&&DeadAirSettings.AmbientOcclusion==(q>0)&&DeadAirSettings.Bloom==(q>0)&&DeadAirSettings.Reflections==(q>0)&&DeadAirSettings.Antialiasing;
+            graphicsPresetState.text=preset?"ПРОФІЛЬ ЗАСТОСОВАНО":"ВЛАСНІ НАЛАШТУВАННЯ";
+            for(int i=0;i<graphicsPresetButtons.Count;i++)SettingChoice(graphicsPresetButtons[i],preset&&i==q);
+            for(int i=0;i<shadowSettingButtons.Count;i++)SettingChoice(shadowSettingButtons[i],i==DeadAirSettings.ShadowQuality);
+        }
+        static void SettingChoice(UnityEngine.UI.Button button,bool chosen)
+        {
+            var colors=button.colors;colors.normalColor=chosen?new Color(.38f,.19f,.13f,.95f):new Color(.13f,.13f,.12f,.9f);button.colors=colors;
         }
         void SettingSlider(Transform p,string label,float y,float min,float max,float initial,Action<float> setter,bool multiplier=false)
         {
@@ -240,11 +316,27 @@ namespace DeadAir
             RefreshChapterLabels();
             if(phase=="lobby")
             {
-                joinPanel.SetActive(false);lobbyInfo.text="КОД СЕАНСУ   "+state.code+"\n"+state.players.Count+" / 4 ОПЕРАТОРИ";
-                string names="ГРАВЦІ\n\n";foreach(var p in state.players)names+=(p.id==state.hostId?"◆ ":"◇ ")+p.name+"\n"+world.GetClass(p.characterClass).role+"\n\n";lobbyPlayers.text=names;
+                joinPanel.SetActive(false);
+                int count=state.players.Count;
+                if(renderedLobbyCode!=state.code||renderedLobbyCount!=count)lobbyInfo.text="КОД СЕАНСУ   "+state.code+"\n"+count+" / 4 ОПЕРАТОРИ";
+                bool rosterChanged=renderedLobbyCount!=count||renderedLobbyHost!=state.hostId;
+                if(count>lobbyRosterIds.Length){Array.Resize(ref lobbyRosterIds,count);Array.Resize(ref lobbyRosterNames,count);Array.Resize(ref lobbyRosterClasses,count);}
+                for(int i=0;i<count;i++)
+                {
+                    var entry=state.players[i];
+                    if(lobbyRosterIds[i]!=entry.id||lobbyRosterNames[i]!=entry.name||lobbyRosterClasses[i]!=entry.characterClass)rosterChanged=true;
+                    lobbyRosterIds[i]=entry.id;lobbyRosterNames[i]=entry.name;lobbyRosterClasses[i]=entry.characterClass;
+                }
+                if(rosterChanged)
+                {
+                    lobbyRoster.Clear();lobbyRoster.Append("ГРАВЦІ\n\n");
+                    foreach(var entry in state.players)lobbyRoster.Append(entry.id==state.hostId?"◆ ":"◇ ").Append(entry.name).Append('\n').Append(world.GetClass(entry.characterClass).role).Append("\n\n");
+                    lobbyPlayers.text=lobbyRoster.ToString();
+                }
+                renderedLobbyCode=state.code;renderedLobbyHost=state.hostId;renderedLobbyCount=count;
                 startButton.interactable=state.hostId==session.LocalId;
-                lobbyPanel.transform.Find("Lobby chapters").GetComponent<UnityEngine.UI.Button>().interactable=session.IsHost;
-                startButton.GetComponentInChildren<UnityEngine.UI.Text>().text=state.hostId==session.LocalId?"ПОЧАТИ ГРУ":"ОЧІКУЄМО ХОСТА";
+                lobbyChapterButton.interactable=session.IsHost;
+                lobbyStartLabel.text=state.hostId==session.LocalId?"ПОЧАТИ ГРУ":"ОЧІКУЄМО ХОСТА";
             }
             if(phase=="won"||phase=="lost")
             {
@@ -265,38 +357,56 @@ namespace DeadAir
             if((Input.GetKeyDown(KeyCode.I)||Input.GetKeyDown(KeyCode.Tab))&&(InventoryOpen||!HasModal))ToggleInventory();
             if(Time.unscaledTime<nextHud||session.State==null||session.State.phase!="playing")return;nextHud=Time.unscaledTime+.1f;
             var state=session.State;var me=state.Player(session.LocalId);if(me==null)return;
-            string room=world.RoomAt(me.x,me.z,me.y);roomText.text=player.CameraUp?"● REC":"";
+            roomText.text=player.CameraUp?"● REC":"";
             float mushroomTime=DeadAirMushrooms.Remaining(state,me);
-            statusText.text=mushroomTime>0&&!me.down?"ГРИБНИЙ ТРІП  ·  "+Mathf.CeilToInt(mushroomTime)+" с":"";
+            int tripSeconds=mushroomTime>0&&!me.down?Mathf.CeilToInt(mushroomTime):0;
+            if(tripSeconds!=hudTripSeconds){hudTripSeconds=tripSeconds;statusText.text=tripSeconds>0?"ГРИБНИЙ ТРІП  ·  "+tripSeconds+" с":"";}
             statusText.color=mushroomTime>0?new Color(.64f,.91f,.76f):Muted;
-            evidenceText.text=state.tapes.Count+" / 3  КАСЕТИ";
-            fuelEvidenceText.text=state.canisters.Count+" / 3  ПАЛИВО";
-            fuseEvidenceText.text=state.fuses.Count+" / 2  ЗАПОБІЖНИКИ";
+            bool evidenceChanged=hudTapes!=state.tapes.Count||hudCanisters!=state.canisters.Count||hudFuses!=state.fuses.Count;
+            if(hudTapes!=state.tapes.Count){hudTapes=state.tapes.Count;evidenceText.text=hudTapes+" / 3  КАСЕТИ";}
+            if(hudCanisters!=state.canisters.Count){hudCanisters=state.canisters.Count;fuelEvidenceText.text=hudCanisters+" / 3  ПАЛИВО";}
+            if(hudFuses!=state.fuses.Count){hudFuses=state.fuses.Count;fuseEvidenceText.text=hudFuses+" / 2  ЗАПОБІЖНИКИ";}
             sanityBar.fillAmount=Mathf.Clamp01(me.sanity/100);staminaBar.fillAmount=Mathf.Clamp01(player.Stamina/100);
             var forward=player.ViewCamera.transform.forward;float compass=Mathf.Repeat(Mathf.Atan2(forward.x,forward.z)*Mathf.Rad2Deg,360);
-            string[] directions={"Пн","Пн-Сх","Сх","Пд-Сх","Пд","Пд-Зх","Зх","Пн-Зх"};compassText.text=directions[Mathf.RoundToInt(compass/45)%8]+"   ·   "+Mathf.RoundToInt(compass).ToString("000")+"°";
+            int bearing=Mathf.RoundToInt(compass),direction=Mathf.RoundToInt(compass/45)%8;
+            if(bearing!=hudBearing||direction!=hudDirection){hudBearing=bearing;hudDirection=direction;compassText.text=CompassDirections[direction]+"   ·   "+bearing.ToString("000")+"°";}
             objectiveText.text=state.broadcast?"Поверніться до фургона":state.breakerOn?"Передавач: 96.4 МГц":state.power?(state.fuses.Count>=2?"Увімкніть рубильник у підвалі":"Знайдіть 2 запобіжники для щитка"):state.canisters.Count>=3?"Заправте та увімкніть генератор у дворі":"Знайдіть 3 каністри дизеля для генератора";
             messageText.text=me.down?"ВАС ЗБИТО. ЧЕКАЙТЕ НА ДОПОМОГУ.":!string.IsNullOrEmpty(me.hiding)?"ВИ У СХОВАНЦІ  /  E — ВИЙТИ":"";
-            interactionText.text=string.IsNullOrEmpty(player.InteractionId)?"":"[ E ]  "+player.InteractionLabel;
-            mapLocation.text="ВИ ЗАРАЗ: "+room.ToUpperInvariant()+"    /    КАСЕТИ "+state.tapes.Count+"/3    /    ПАЛИВО "+state.canisters.Count+"/3    /    ЗАПОБІЖНИКИ "+state.fuses.Count+"/2";
-            roleItemText.text=me.uniqueItemEquipped?"R — "+(me.characterClass=="operator"?"Закурити ("+me.cigarettesRemaining+")":"Використати"):"";
+            bool hasInteraction=!string.IsNullOrEmpty(player.InteractionId);
+            string interaction=hasInteraction?player.InteractionLabel:null;
+            if(hasInteraction!=hudInteractionActive||interaction!=hudInteraction){hudInteractionActive=hasInteraction;hudInteraction=interaction;interactionText.text=hasInteraction?"[ E ]  "+interaction:"";}
+            string room=world.RoomAt(me.x,me.z,me.y);
+            if(room!=hudRoom||evidenceChanged){hudRoom=room;mapLocation.text="ВИ ЗАРАЗ: "+room.ToUpperInvariant()+"    /    КАСЕТИ "+hudTapes+"/3    /    ПАЛИВО "+hudCanisters+"/3    /    ЗАПОБІЖНИКИ "+hudFuses+"/2";}
+            string selectedItem=me.SelectedItem;
+            if(me.uniqueItemEquipped!=hudRoleEquipped||me.characterClass!=hudRoleClass||selectedItem!=hudSelectedItem||me.cigarettesRemaining!=hudCigarettes)
+            {
+                hudRoleEquipped=me.uniqueItemEquipped;hudRoleClass=me.characterClass;hudSelectedItem=selectedItem;hudCigarettes=me.cigarettesRemaining;
+                roleItemText.text=selectedItem=="flashlight"||selectedItem==DeadAirSupplies.BatteryItem?"R — замінити батарейку":
+                    selectedItem==DeadAirPrisonBook.Id?"R — читати справу":me.uniqueItemEquipped?
+                    (me.characterClass=="operator"?"R — Закурити ("+me.cigarettesRemaining+")":"R — Використати"):"";
+            }
             RefreshSupplies(state,me);
             compassText.gameObject.SetActive(me.characterClass=="dispatcher"&&me.uniqueItemEquipped);
             int page=me.selectedSlot/5*5;
-            inventoryCaption.text="TAB / I — інвентар";
             for(int i=0;i<5;i++)
             {
                 int slot=page+i;
                 bool isSelected=me.selectedSlot==slot;
                 bool hasItem=me.inventory!=null&&slot<me.inventory.Count;
                 string itemId=hasItem?me.inventory[slot]:null;
-                inventorySlotLabels[i].text=hasItem?StackItemName(itemId,me):"—";
-                inventorySlotLabels[i].color=isSelected?Gold:hasItem?Ink:Muted;
-                inventorySlotBgs[i].color=isSelected?new Color(.35f,.16f,.12f,.94f):new Color(.12f,.105f,.095f,.75f);
-                inventorySlotOutlines[i].effectColor=isSelected?Gold:new Color(.6f,.52f,.42f,.17f);
-                inventorySlotOutlines[i].effectDistance=isSelected?new Vector2(2,-2):new Vector2(1,-1);
-                quickIcons[i].enabled=hasItem;if(hasItem)quickIcons[i].sprite=DeadAirUIArt.Sprite(ItemIcon(itemId));
+                if(!hudSlotsInitialized||hudSlotItems[i]!=itemId||itemId==DeadAirSupplies.BatteryItem)
+                    inventorySlotLabels[i].text=hasItem?StackItemName(itemId,me):"—";
+                if(!hudSlotsInitialized||hudSlotItems[i]!=itemId||hudSlotSelected[i]!=isSelected)
+                {
+                    inventorySlotLabels[i].color=isSelected?Gold:hasItem?Ink:Muted;
+                    inventorySlotBgs[i].color=isSelected?new Color(.35f,.16f,.12f,.94f):new Color(.12f,.105f,.095f,.75f);
+                    inventorySlotOutlines[i].effectColor=isSelected?Gold:new Color(.6f,.52f,.42f,.17f);
+                    inventorySlotOutlines[i].effectDistance=isSelected?new Vector2(2,-2):new Vector2(1,-1);
+                }
+                if(!hudSlotsInitialized||hudSlotItems[i]!=itemId){quickIcons[i].enabled=hasItem;if(hasItem)quickIcons[i].sprite=DeadAirUIArt.Sprite(ItemIcon(itemId));}
+                hudSlotItems[i]=itemId;hudSlotSelected[i]=isSelected;
             }
+            hudSlotsInitialized=true;
             if(InventoryOpen)RefreshInventory();
         }
         static string FormatItemName(string itemId)
@@ -332,9 +442,9 @@ namespace DeadAir
         public void ShowPause(bool shown){if(shown){pausePanel.transform.Find("Pause card/Pause note").GetComponent<UnityEngine.UI.Text>().text=session.State?.players.Count>1?"Мережева гра не призупиняється.":"";Open(pausePanel);}else Close(pausePanel);}
         public void ToggleMap(){if(DeadAirScarePresentation.FullscreenActive)return;if(Active(mapPanel))Close(mapPanel);else if(session.State?.phase=="playing"){if(player.LocalPaused)player.SetPause(false);player.SetMapPresentation(true);Open(mapPanel);}}
         public void ShowCalibration(){Open(calibrationPanel);}
-        public void ShowSettings(){Open(settingsPanel);}
+        public void ShowSettings(){RefreshGraphicsSettings();Open(settingsPanel);}
         public void ShowDossier(){Open(dossierPanel);}
         public void Toast(string message){if(toastText==null)return;toastText.text=message;toastText.gameObject.SetActive(true);toastText.transform.SetAsLastSibling();toastUntil=Time.unscaledTime+5;}
-        void OnDestroy(){if(session!=null){session.Error-=Toast;session.StateChanged-=RefreshPhase;}}
+        void OnDestroy(){DeadAirSettings.Changed-=RefreshGraphicsSettings;if(session!=null){session.Error-=Toast;session.StateChanged-=RefreshPhase;}}
     }
 }

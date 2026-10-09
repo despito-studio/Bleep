@@ -26,10 +26,10 @@ namespace DeadAir
         }
         readonly List<Sector> sectors = new List<Sector>();
         readonly Plane[] planes = new Plane[6];
+        readonly Plane[] reflectionPlanes = new Plane[6];
         readonly WorldData world;
         readonly List<LightVolume> shadowCandidates=new List<LightVolume>();
         static readonly RaycastHit[] occlusionHits=new RaycastHit[32];
-        const int PracticalShadowBudget=8;
         float nextUpdate;
 
         public DeadAirCulling(WorldData world, Transform station, Transform exterior,
@@ -53,7 +53,7 @@ namespace DeadAir
                 {
                     var light=lights[i];
                     volumes[i]=new LightVolume {light=light,bounds=IlluminationBounds(light),
-                        ceilingFixture=light.name.StartsWith("lamp:zone-"),
+                        ceilingFixture=light.name.StartsWith("lamp:zone-")||light.name.StartsWith("lamp:bounce-zone-"),
                         floor=Mathf.FloorToInt(light.transform.position.y/DeadAirOfficeLayout.FloorHeight),shadows=light.shadows};
                     var volume=volumes[i];
                     if(volume.ceilingFixture)
@@ -61,9 +61,7 @@ namespace DeadAir
                         foreach(var room in world.rooms)
                             if(Mathf.Abs(room.floorY-volume.floor*DeadAirOfficeLayout.FloorHeight)<.01f &&
                                 Contains(room,light.transform.position)){volume.room=room;break;}
-                        // The scene is presented at a VHS-sized resolution. A local
-                        // 256px hard shadow retains its readable contact edges.
-                        light.shadowCustomResolution=256;
+                        light.shadowCustomResolution=DeadAirSettings.ShadowQuality==2?1024:512;
                     }
                 }
                 sectors.Add(new Sector { bounds = bounds, renderers = renderers, lights = volumes });
@@ -135,11 +133,20 @@ namespace DeadAir
             var cameraPosition=camera.transform.position;
             bool inside=InteriorFloor(cameraPosition,out int cameraFloor);
             GeometryUtility.CalculateFrustumPlanes(camera, planes);
+            bool reflectedView=DeadAirSettings.Reflections;
+            if(reflectedView)
+            {
+                float floor=cameraPosition.y>4.6f?4.2f:cameraPosition.y<-1?-4.2f:0;
+                var mirror=Matrix4x4.identity;mirror.m11=-1;mirror.m13=2*floor;
+                GeometryUtility.CalculateFrustumPlanes(camera.projectionMatrix*camera.worldToCameraMatrix*mirror,reflectionPlanes);
+            }
             shadowCandidates.Clear();
+            int shadowQuality=DeadAirSettings.ShadowQuality;
             foreach (var sector in sectors)
             {
                 float distanceSquared = sector.bounds.SqrDistance(cameraPosition);
-                bool visible = distanceSquared < 9 || distanceSquared < 2500 && GeometryUtility.TestPlanesAABB(planes, sector.bounds);
+                bool visible = distanceSquared < 9 || distanceSquared < 2500 && (GeometryUtility.TestPlanesAABB(planes, sector.bounds)||
+                    reflectedView&&GeometryUtility.TestPlanesAABB(reflectionPlanes,sector.bounds));
                 if (sector.visible != visible)
                 {
                     sector.visible = visible;
@@ -152,7 +159,8 @@ namespace DeadAir
                     // Test each actual light volume rather than the whole room's large
                     // 25m neighbourhood. Preserve nearby lamps behind the camera.
                     bool nearby=(light.transform.position-cameraPosition).sqrMagnitude<light.range*light.range;
-                    bool relevant=floorRelevant && (nearby || GeometryUtility.TestPlanesAABB(planes,volume.bounds));
+                    bool relevant=floorRelevant && (nearby || GeometryUtility.TestPlanesAABB(planes,volume.bounds)||
+                        reflectedView&&GeometryUtility.TestPlanesAABB(reflectionPlanes,volume.bounds));
                     light.enabled=relevant && VisiblePractical(volume,cameraPosition,cameraFloor);
                     if(volume.ceilingFixture && volume.shadows!=LightShadows.None)
                     {
@@ -168,10 +176,13 @@ namespace DeadAir
                 }
             }
             shadowCandidates.Sort((a,b)=>a.priority.CompareTo(b.priority));
+            int shadowBudget=shadowQuality==0?0:shadowQuality==2?3:1;
             for(int i=0;i<shadowCandidates.Count;i++)
             {
                 var volume=shadowCandidates[i];
-                var shadows=i<PracticalShadowBudget?volume.shadows:LightShadows.None;
+                var shadows=i<shadowBudget?volume.shadows:LightShadows.None;
+                int resolution=shadowQuality==2?1024:512;
+                if(volume.light.shadowCustomResolution!=resolution)volume.light.shadowCustomResolution=resolution;
                 if(volume.light.shadows!=shadows)volume.light.shadows=shadows;
             }
         }

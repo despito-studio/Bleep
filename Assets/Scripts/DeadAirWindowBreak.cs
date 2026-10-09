@@ -35,18 +35,17 @@ namespace DeadAir
             {
                 name = "Director glass / fracture facets",
                 hideFlags = HideFlags.DontSave,
-                mainTexture = Texture2D.whiteTexture,
                 color = new Color(.57f, .72f, .78f, .67f),
                 renderQueue = 3005
             };
-            material.SetColor("_EmissionColor", Color.black);
+            if(material.HasProperty("_MainTex"))material.mainTexture=Texture2D.whiteTexture;
+            if(material.HasProperty("_EmissionColor"))material.SetColor("_EmissionColor", Color.black);
             material.SetFloat("_Glossiness", .92f);
-            material.SetFloat("_Metallic", .03f);
-            material.SetFloat("_SurfaceGrain", 0);
-            material.SetFloat("_LightBanding", .18f);
-            material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
-            material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-            material.SetFloat("_ZWrite", 0);
+            if(material.HasProperty("_ReflectionStrength"))material.SetFloat("_ReflectionStrength", .18f);
+            if(material.HasProperty("_Metallic"))material.SetFloat("_Metallic", .03f);
+            if(material.HasProperty("_SrcBlend"))material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            if(material.HasProperty("_DstBlend"))material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            if(material.HasProperty("_ZWrite"))material.SetFloat("_ZWrite", 0);
             var filter = source.GetComponent<MeshFilter>();
             Bounds bounds = filter != null ? filter.sharedMesh.bounds : new Bounds(Vector3.zero, new Vector3(2.37f, 1.80f, .035f));
             for (int row = 0; row < 3; row++)

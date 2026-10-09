@@ -4,11 +4,11 @@ Shader "Dead Air/Source Surface"
     {
         _Color("Color", Color) = (1,1,1,1)
         _MainTex("Canvas texture", 2D) = "white" {}
-        _Glossiness("Smoothness", Range(0,1)) = 0.06
+        _Glossiness("Smoothness", Range(0,1)) = 0.18
         _Metallic("Metallic", Range(0,1)) = 0
-        _LightBanding("Painted light bands", Range(0,1)) = 0.38
-        _SurfaceGrain("Surface grain", Range(0,0.1)) = 0.025
-        _ShadowTint("Indirect shadow tint", Color) = (0.86,0.95,1.08,1)
+        _BumpMap("Surface normal", 2D) = "bump" {}
+        _SurfaceMap("Smoothness variation", 2D) = "white" {}
+        _PlanarReflection("Polished floor reflection", Range(0,1)) = 0
         _EmissionColor("Emission", Color) = (0,0,0,0)
         _EmissionMap("Emission map", 2D) = "white" {}
         _Cutoff("Alpha cutoff", Range(0,1)) = 0
@@ -29,64 +29,63 @@ Shader "Dead Air/Source Surface"
 
         CGPROGRAM
         #pragma target 3.0
-        #pragma surface surf DeadAir keepalpha fullforwardshadows addshadow exclude_path:deferred
+        #pragma surface surf Standard keepalpha fullforwardshadows addshadow
         #pragma multi_compile_instancing
         #include "Lighting.cginc"
 
-        sampler2D _MainTex, _EmissionMap;
+        sampler2D _MainTex, _EmissionMap, _BumpMap, _SurfaceMap;
+        sampler2D _DeadAirReflectionTex;
+        float4x4 _DeadAirReflectionVP;
+        float4 _DeadAirReflectionTex_TexelSize;
+        float _DeadAirReflectionFloor, _DeadAirReflectionEnabled;
         fixed4 _Color;
-        half _Glossiness, _Metallic, _Cutoff, _LightBanding, _SurfaceGrain;
-        half4 _EmissionColor, _ShadowTint;
+        half _Glossiness, _Metallic, _Cutoff, _PlanarReflection;
+        half4 _EmissionColor;
 
         struct Input
         {
             float2 uv_MainTex;
             float2 uv_EmissionMap;
+            float2 uv_BumpMap;
+            float2 uv_SurfaceMap;
             float3 worldPos;
+            float3 worldNormal;
+            float3 viewDir;
+            INTERNAL_DATA
         };
-
-        inline half4 LightingDeadAir(SurfaceOutput s, half3 viewDir, UnityGI gi)
-        {
-            half facing = saturate(dot(s.Normal, gi.light.dir));
-            // Broad, feathered value groups reveal the authored polygon planes.
-            // Light falloff and shadow attenuation stay continuous and physical.
-            half bands = 0.18h * smoothstep(0.0h, 0.18h, facing)
-                       + 0.42h * smoothstep(0.25h, 0.52h, facing)
-                       + 0.40h * smoothstep(0.64h, 1.0h, facing);
-            half diffuse = lerp(facing, bands, _LightBanding);
-            half3 halfDirection = normalize(gi.light.dir + viewDir);
-            half highlight = pow(saturate(dot(s.Normal, halfDirection)), lerp(12.0h, 96.0h, s.Gloss));
-            half3 specularColor = lerp(half3(0.045h,0.045h,0.045h), s.Albedo * 0.45h, s.Specular);
-            half3 direct = s.Albedo * diffuse * (1.0h - s.Specular * 0.35h)
-                         + specularColor * highlight * s.Gloss;
-            half4 result;
-            result.rgb = direct * gi.light.color;
-            #ifdef UNITY_LIGHT_FUNCTION_APPLY_INDIRECT
-                result.rgb += s.Albedo * gi.indirect.diffuse * _ShadowTint.rgb;
-            #endif
-            result.a = s.Alpha;
-            return result;
-        }
-
-        inline void LightingDeadAir_GI(SurfaceOutput s, UnityGIInput data, inout UnityGI gi)
-        {
-            gi = UnityGlobalIllumination(data, 1.0, s.Normal);
-        }
-
-        void surf(Input IN, inout SurfaceOutput o)
+        void surf(Input IN, inout SurfaceOutputStandard o)
         {
             fixed4 c = tex2D(_MainTex, IN.uv_MainTex) * _Color;
             clip(c.a - _Cutoff);
-            // Stable 20cm flecks give plain exported materials a restrained worn
-            // finish without extra texture assets or animated screen noise.
-            float3 cell = frac(floor(IN.worldPos * 5.0) * 0.1031);
-            cell += dot(cell, cell.yzx + 33.33);
-            half grain = frac((cell.x + cell.y) * cell.z) * 2.0h - 1.0h;
-            o.Albedo = c.rgb * (1.0h + grain * _SurfaceGrain);
+            o.Albedo = c.rgb;
+            o.Normal = UnpackNormal(tex2D(_BumpMap, IN.uv_BumpMap));
             o.Alpha = c.a;
-            o.Gloss = _Glossiness;
-            o.Specular = _Metallic;
+            o.Smoothness = _Glossiness * tex2D(_SurfaceMap, IN.uv_SurfaceMap).r;
+            o.Metallic = _Metallic;
+            o.Occlusion = 1;
             o.Emission = tex2D(_EmissionMap, IN.uv_EmissionMap).rgb * _EmissionColor.rgb;
+            // Reflection comes from an actual mirrored camera, so lamps, furniture
+            // and doorways appear at their correct positions on the polished floor.
+            if (_PlanarReflection > .01 && _DeadAirReflectionEnabled > .5 &&
+                abs(IN.worldPos.y - _DeadAirReflectionFloor) < .12)
+            {
+                float3 normal = WorldNormalVector(IN, o.Normal);
+                float4 reflected = mul(_DeadAirReflectionVP, float4(IN.worldPos, 1));
+                float2 uv = reflected.xy / reflected.w * .5 + .5;
+                #if UNITY_UV_STARTS_AT_TOP
+                    uv.y = 1 - uv.y;
+                #endif
+                float inside = step(0, uv.x) * step(uv.x, 1) * step(0, uv.y) * step(uv.y, 1);
+                float2 blur = _DeadAirReflectionTex_TexelSize.xy * lerp(3.5, .7, o.Smoothness);
+                half3 reflection = (tex2D(_DeadAirReflectionTex, uv + blur).rgb +
+                    tex2D(_DeadAirReflectionTex, uv - blur).rgb +
+                    tex2D(_DeadAirReflectionTex, uv + float2(blur.x, -blur.y)).rgb +
+                    tex2D(_DeadAirReflectionTex, uv + float2(-blur.x, blur.y)).rgb) * .25;
+                half fresnel = .07 + .38 * pow(1 - saturate(dot(normalize(IN.viewDir), o.Normal)), 5);
+                half weight = _PlanarReflection * o.Smoothness * fresnel * inside * saturate(normal.y);
+                o.Albedo *= 1 - weight;
+                o.Emission += reflection * weight;
+            }
         }
         ENDCG
     }

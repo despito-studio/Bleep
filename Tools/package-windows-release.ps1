@@ -4,7 +4,8 @@ param(
     [Parameter(Mandatory)][string]$UpdateReport,
     [Parameter(Mandatory)][string]$GeometryReport,
     [Parameter(Mandatory)][string]$RulesReport,
-    [string]$ExpectedVersion = '1.7.4'
+    [Parameter(Mandatory)][string]$GraphicsReport,
+    [string]$ExpectedVersion = '1.7.7'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -20,7 +21,8 @@ if ($manifest.schemaVersion -ne 2 -or $manifest.version -ne $ExpectedVersion -or
 $updateText = Get-Content -Raw -LiteralPath $UpdateReport
 $geometryText = Get-Content -Raw -LiteralPath $GeometryReport
 $rulesText = Get-Content -Raw -LiteralPath $RulesReport
-foreach ($reportPath in @($UpdateReport, $GeometryReport, $RulesReport)) {
+$graphicsText = Get-Content -Raw -LiteralPath $GraphicsReport
+foreach ($reportPath in @($UpdateReport, $GeometryReport, $RulesReport, $GraphicsReport)) {
     if ((Get-Item -LiteralPath $reportPath).LastWriteTimeUtc -lt [DateTimeOffset]::Parse($manifest.builtAtUtc).UtcDateTime) {
         throw 'A verification report predates this build.'
     }
@@ -40,7 +42,10 @@ if ($geometryText -match '(?m)^FAIL:' -or $geometryText -notmatch '(?m)^COMPLETE
 if ($rulesText -notmatch '^Rule audit summary: [1-9]\d* passed, 0 failed\.') {
     throw 'Native rules verification did not pass.'
 }
-$runtimeChecks = foreach ($check in @($UpdateReport, $GeometryReport, $RulesReport)) {
+if ($graphicsText -notmatch ('^PASSED: v' + [regex]::Escape($ExpectedVersion) + ' actual Windows GPU presentation and settings regression\.')) {
+    throw 'Original player graphics, settings and stable menu verification did not pass.'
+}
+$runtimeChecks = foreach ($check in @($UpdateReport, $GeometryReport, $RulesReport, $GraphicsReport)) {
     [pscustomobject]@{
         report = [IO.Path]::GetFileName($check)
         sha256 = (Get-FileHash -LiteralPath $check -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -67,7 +72,7 @@ foreach ($file in $manifest.files) {
 foreach ($required in @('DeadAir.exe', 'UnityPlayer.dll', 'DeadAir_Data/Managed/Assembly-CSharp.dll', 'DeadAir_Data/level0', 'DeadAir_Data/globalgamemanagers', 'DeadAir_Data/resources.assets', 'MonoBleedingEdge/EmbedRuntime/mono-2.0-bdwgc.dll')) {
     if (-not $expectedFiles.ContainsKey($required)) { throw ('Missing required runtime file: ' + $required) }
 }
-$manifest.runtimeVerification = 'passed: original GPU player, native canister/HUD/geometry checks, rules and loopback LAN'
+$manifest.runtimeVerification = 'passed: original GPU player, reference graphics and independent menu, native canister/HUD/geometry checks, rules and loopback LAN'
 $manifest | Add-Member -NotePropertyName runtimeReports -NotePropertyValue @($runtimeChecks) -Force
 $manifest | Add-Member -NotePropertyName testedBuildManifestSHA256 -NotePropertyValue $manifestHash -Force
 $verifiedManifestText = ($manifest | ConvertTo-Json -Depth 12) + "`n"

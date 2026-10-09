@@ -94,9 +94,9 @@ obj('broadcast','broadcast','Передати запис · Апаратна, 2 
 obj('exit','exit','Сісти у фургон · покинути станцію',-8.1,1.2,26);
 obj('keycard-guard','keycard','Картка доступу · Охорона',11,.83,-2);
 obj('keycard-engineer','keycard','Картка головного інженера · Рецепція',-11,.83,-2.4);
-obj('fuel-canister','canister','Каністра з дизелем · Задній двір',-14,.7,-62);
+obj('fuel-canister','canister','Каністра з дизелем · Біля генератора 1',-14.25,.35,-65.2);
 obj('fuel-canister-2','canister','Каністра з дизелем · Підвал',1.5,-H+.35,-32);
-obj('fuel-canister-3','canister','Каністра з дизелем · Господарська',13.5,.35,-44);
+obj('fuel-canister-3','canister','Каністра з дизелем · Біля генератора 2',-13.45,.35,-65.2);
 obj('pressure-valve','valve','Вентиль тиску · Вентвузол, 2 поверх',17.66,5.5,-35);
 obj('ladder','ladder','Складна драбина · біля фургона',-8.35,0,27);
 obj('key-main','keycard','Головна картка доступу · Кабінет директора',-11.22,4.72,-1.37);
@@ -164,8 +164,10 @@ prop('sofa',13,H,-49.5,0,3.1,.95);prop('coffeeTable',13,H,-47.6,0,1.9,.9);prop('
 // Basement electrical switchgear props
 prop('cableSpool',-3.5,-H,-30,0,1.2,1.2,'Кабельний барабан · Підвал');
 prop('table',3.5,-H,-32,0,2.4,1.3,'Верстак чергового електрика');
-prop('shelf',-4.8,-H,-34,0,2.2,.6,'Стелаж з інструментами');
-prop('shelf',-4.8,-H,-37,0,2.2,.6,'Стелаж із запчастинами');
+// Wall-aligned storage faces the electrical room, leaving the west-cell doorway
+// and the route from the stair exit to the breaker free of furniture.
+prop('shelf',-5.5,-H,-31.5,pi/2,2.2,.6,'Стелаж з інструментами');
+prop('shelf',-3.7,-H,-39,0,2.2,.6,'Стелаж із запчастинами');
 // Wayfinding, waiting niches and shared office equipment make circulation useful.
 for(let f=0;f<2;f++){const y=f*H;prop('directory',-3.8,y,-10.82,0,2.2,.12);prop('officePlant',4.8,y,3.8,0,.75,.75);prop('bench',4.9,y,-4.2,-pi/2,2.3,.65);
   prop('bench',-6.8,y,-31,pi/2,2.4,.65);prop('vendingMachine',6.75,y,-30.7,-pi/2,1.1,.8);prop('officePlant',-6.9,y,-37.2,0,.75,.75);

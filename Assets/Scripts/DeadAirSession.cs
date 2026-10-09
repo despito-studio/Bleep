@@ -61,7 +61,13 @@ namespace DeadAir
         public void Send(NetPacket packet)
         {
             if (!socket.Connected) return;
-            try { lock (writeLock) writer.WriteLine(JsonUtility.ToJson(packet)); }
+            SendSerialized(JsonUtility.ToJson(packet));
+        }
+
+        public void SendSerialized(string message)
+        {
+            if (!socket.Connected) return;
+            try { lock (writeLock) writer.WriteLine(message); }
             catch (Exception) { mainQueue.Enqueue(() => onClose(this)); }
         }
 
@@ -270,8 +276,14 @@ namespace DeadAir
         {
             if (rules == null) return;
             State = rules.State;
-            var packet = new NetPacket { type = "state", stateJson = JsonUtility.ToJson(State), chapterId = State.chapterId };
-            foreach (var peer in guests) if (!string.IsNullOrEmpty(peer.id)) peer.Send(packet);
+            string message = null;
+            foreach (var peer in guests)
+            {
+                if (string.IsNullOrEmpty(peer.id)) continue;
+                if (message == null)
+                    message = JsonUtility.ToJson(new NetPacket { type = "state", stateJson = JsonUtility.ToJson(State), chapterId = State.chapterId });
+                peer.SendSerialized(message);
+            }
             rules.ClearDirty();
             StateChanged?.Invoke();
         }
