@@ -37,6 +37,10 @@ namespace DeadAir
             Add("revive", b => { b.Noise(0, .4f, .08f, 590, .08f); b.Tone(.16f, 98, 146.83f, .65f, .065f, Wave.Sine, .08f); b.Tone(.4f, 196, 220, .65f, .05f, Wave.Sine, .08f); }, 1.3f);
             Add("monster-stun", b => { b.Noise(0, .4f, .16f, 2300, .005f); b.Tone(0, 520, 70, .65f, .15f, Wave.Saw, .003f); b.Tone(.08f, 81, 32, .65f, .12f, Wave.Triangle); }, 1.05f);
             Add("pursuit", b => { b.Tone(0, 71, 44, .7f, .11f, Wave.Triangle, .018f); b.Tone(.04f, 294, 277, .55f, .06f, Wave.Saw, .025f); }, .9f);
+            Add("teke-scream", b => { b.Noise(0, 1.2f, .25f, 3200, .002f); b.Tone(0, 880, 1400, 1.2f, .28f, Wave.Saw, .01f); b.Tone(.05f, 1760, 920, 1.0f, .18f, Wave.Triangle, .02f); b.Noise(.2f, .8f, .15f, 4500, .005f); }, 1.4f);
+            Add("teke-groan", b => { b.Tone(0, 220, 140, 1.8f, .22f, Wave.Sine, .04f); b.Tone(.1f, 110, 85, 1.6f, .28f, Wave.Triangle, .03f); b.Noise(.2f, 1.2f, .08f, 950, .08f); }, 1.8f);
+            Add("teke-crawl", b => { b.Knock(0, .9f); b.Noise(0, .14f, .12f, 1800, .005f); b.Knock(.16f, .75f); b.Noise(.16f, .12f, .10f, 2200, .005f); }, .35f);
+            Add("pill-consume", b => { b.Knock(0, .4f); b.Noise(.02f, .08f, .06f, 3200, .003f); b.Tone(.08f, 540, 720, .18f, .08f, Wave.Sine); b.Knock(.22f, .5f); }, .4f);
             Add("role-operator", b => {
                 b.Noise(0, .35f, .075f, 2800, .03f); b.Knock(.58f, .42f);
                 b.Noise(.62f, .32f, .11f, 2900, .004f); b.Tone(.62f, 440, 180, .12f, .055f, Wave.Triangle);

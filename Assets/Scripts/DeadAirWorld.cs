@@ -37,6 +37,11 @@ namespace DeadAir
         readonly DeadAirSky sky;
         readonly DeadAirCulling culling;
         Camera renderCamera;
+        DeadAirSchoolWorld schoolWorld;
+        GameObject tekeTekeObject;
+        DeadAirTekeTeke tekeTeke;
+        bool lastIsChapter2;
+        public DeadAirSchoolWorld SchoolWorld => schoolWorld;
         sealed class Practical
         {
             public Light light; public float intensity; public Color color; public bool interior;
@@ -627,13 +632,59 @@ namespace DeadAir
                 }
                 lastPower=state.power;lastBroadcast=state.broadcast;lastBreaker=state.breakerOn;
             }
-            bool enemyVisible=state.enemy.active&&state.enemy.behaviour!="vanished";
-            anchor.SetActive(enemyVisible&&!state.broadcast);
-            bloodyAnchor.SetActive(enemyVisible&&state.broadcast);
-            if(enemyVisible)
+            bool isCh2 = DeadAirChapters.IsChapter2(state.chapterId);
+            if (isCh2 != lastIsChapter2 || (isCh2 && schoolWorld == null))
             {
-                var motion=state.broadcast?bloodyAnchorMotion:anchorMotion;
-                motion.Present(state.enemy,state.elapsed,state.paused);
+                lastIsChapter2 = isCh2;
+                var station = root.Find("station");
+                var exterior = root.Find("exterior");
+                if (station != null) station.gameObject.SetActive(!isCh2);
+                if (exterior != null) exterior.gameObject.SetActive(!isCh2);
+                if (isCh2)
+                {
+                    if (schoolWorld == null)
+                    {
+                        schoolWorld = new DeadAirSchoolWorld(root, data);
+                        schoolWorld.Initialize();
+                        tekeTekeObject = new GameObject("Teke-Teke / Monster Ch2");
+                        tekeTekeObject.transform.SetParent(root, false);
+                        tekeTeke = tekeTekeObject.AddComponent<DeadAirTekeTeke>();
+                        tekeTeke.Initialize();
+                    }
+                    schoolWorld.SetActive(true);
+                    if (tekeTekeObject != null) tekeTekeObject.SetActive(true);
+                }
+                else
+                {
+                    if (schoolWorld != null) schoolWorld.SetActive(false);
+                    if (tekeTekeObject != null) tekeTekeObject.SetActive(false);
+                }
+            }
+
+            if (isCh2)
+            {
+                schoolWorld?.Update(state, state.paused ? 0 : Time.deltaTime);
+                anchor.SetActive(false);
+                bloodyAnchor.SetActive(false);
+                bool enemyVisible = state.enemy.active && state.enemy.behaviour != "vanished";
+                if (tekeTekeObject != null) tekeTekeObject.SetActive(enemyVisible);
+                if (enemyVisible && tekeTeke != null)
+                {
+                    var localPlayer = state.Player("host") ?? (state.players.Count > 0 ? state.players[0] : null);
+                    float sanity = localPlayer != null ? localPlayer.sanity : 100f;
+                    tekeTeke.Present(state.enemy, sanity, state.elapsed, state.paused);
+                }
+            }
+            else
+            {
+                bool enemyVisible = state.enemy.active && state.enemy.behaviour != "vanished";
+                anchor.SetActive(enemyVisible && !state.broadcast);
+                bloodyAnchor.SetActive(enemyVisible && state.broadcast);
+                if (enemyVisible)
+                {
+                    var motion = state.broadcast ? bloodyAnchorMotion : anchorMotion;
+                    motion.Present(state.enemy, state.elapsed, state.paused);
+                }
             }
             ApplyDropped(state);
             var cam=renderCamera!=null?renderCamera:Camera.main;
