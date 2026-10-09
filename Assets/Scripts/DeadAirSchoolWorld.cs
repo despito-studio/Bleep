@@ -7,8 +7,12 @@ namespace DeadAir
     /// <summary>
     /// Massive, authentic Japanese School, Residential Neighborhood, Two-Floor Interiors,
     /// Back Sports Yard & Forest, Road, and Traditional Park generator for Chapter 2.
-    /// Features grand entrance Genkan, wide 5m central corridors with 2 classrooms on each side,
-    /// authentic Japanese sliding doors with nameplates, and realistic switchback U-turn stairwell.
+    /// Features:
+    /// 1. High-resolution procedural textures (Parquet, Plaster, Desk wood, Chalkboard, Paper, Concrete, Books).
+    /// 2. Real transparent windows with the dedicated "Dead Air/Window Glass" shader and actual wall cutouts.
+    /// 3. Grand, completely unobstructed 2-story Switchback Stairwell with double-height ceiling and seamless 2nd floor access.
+    /// 4. Rich authentic Japanese classrooms with detailed student desks, realistic disarray, overturned furniture,
+    ///    scattered examination papers, crumpled trash, wastebaskets, soda cans, and fallen textbooks across all rooms!
     /// </summary>
     public sealed class DeadAirSchoolWorld
     {
@@ -22,7 +26,7 @@ namespace DeadAir
         Material matPlaster, matAsphalt, matRoadZebra, matWoodFloor, matBark, matFoliage;
         Material matTorii, matStone, matGlass, matDarkMetal, matConcrete, matChalkboard, matWhite;
         Material matHouseStucco, matKawaraRoof, matBlockWall, matGuardrail, matBooks, matLabCounter;
-        Material matGold, matDoorWood, matShoeLocker;
+        Material matGold, matDoorWood, matShoeLocker, matDeskWood, matPaper, matTrashCan, matCan;
 
         sealed class FlickeringLamp
         {
@@ -63,32 +67,269 @@ namespace DeadAir
             InitMaterials();
         }
 
+        // ====================================================================
+        // PROCEDURAL TEXTURE GENERATION
+        // ====================================================================
+        static Texture2D CreateParquetTexture()
+        {
+            int w = 256, h = 256;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, true);
+            var pixels = new Color32[w * h];
+            Color32 plankA = new Color32(152, 110, 68, 255);
+            Color32 plankB = new Color32(138, 96, 56, 255);
+            Color32 plankC = new Color32(166, 124, 78, 255);
+            Color32 seam = new Color32(76, 50, 28, 255);
+
+            for (int y = 0; y < h; y++)
+            {
+                int row = y / 32;
+                for (int x = 0; x < w; x++)
+                {
+                    int xOff = (row % 2) * 64;
+                    int col = (x + xOff) / 64;
+
+                    if (y % 32 == 0 || (x + xOff) % 64 == 0)
+                    {
+                        pixels[y * w + x] = seam;
+                    }
+                    else
+                    {
+                        int grain = (int)(Mathf.Sin(x * 0.4f + y * 0.05f) * 10 + (Mathf.PerlinNoise(x * 0.1f, y * 0.1f) - 0.5f) * 16);
+                        Color32 baseCol = (col + row) % 3 == 0 ? plankA : ((col + row) % 3 == 1 ? plankB : plankC);
+                        byte r = (byte)Mathf.Clamp(baseCol.r + grain, 0, 255);
+                        byte g = (byte)Mathf.Clamp(baseCol.g + grain, 0, 255);
+                        byte b = (byte)Mathf.Clamp(baseCol.b + grain, 0, 255);
+                        pixels[y * w + x] = new Color32(r, g, b, 255);
+                    }
+                }
+            }
+            tex.SetPixels32(pixels);
+            tex.wrapMode = TextureWrapMode.Repeat;
+            tex.filterMode = FilterMode.Bilinear;
+            tex.Apply(true, true);
+            return tex;
+        }
+
+        static Texture2D CreateDeskWoodTexture()
+        {
+            int w = 128, h = 128;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, true);
+            var pixels = new Color32[w * h];
+            Color32 baseWood = new Color32(204, 162, 112, 255);
+
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    float grain = Mathf.Sin(x * 0.7f + Mathf.Sin(y * 0.2f) * 2f) * 8f;
+                    float noise = (Mathf.PerlinNoise(x * 0.05f, y * 0.2f) - 0.5f) * 18f;
+                    int val = (int)(grain + noise);
+                    byte r = (byte)Mathf.Clamp(baseWood.r + val, 0, 255);
+                    byte g = (byte)Mathf.Clamp(baseWood.g + val, 0, 255);
+                    byte b = (byte)Mathf.Clamp(baseWood.b + val, 0, 255);
+                    pixels[y * w + x] = new Color32(r, g, b, 255);
+                }
+            }
+            tex.SetPixels32(pixels);
+            tex.wrapMode = TextureWrapMode.Repeat;
+            tex.filterMode = FilterMode.Bilinear;
+            tex.Apply(true, true);
+            return tex;
+        }
+
+        static Texture2D CreatePlasterTexture()
+        {
+            int w = 256, h = 256;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, true);
+            var pixels = new Color32[w * h];
+            Color32 basePlaster = new Color32(218, 212, 196, 255);
+            Color32 groove = new Color32(182, 175, 160, 255);
+
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    if (y % 64 == 0)
+                    {
+                        pixels[y * w + x] = groove;
+                    }
+                    else
+                    {
+                        int noise = (int)((Mathf.PerlinNoise(x * 0.15f, y * 0.15f) - 0.5f) * 14f);
+                        byte r = (byte)Mathf.Clamp(basePlaster.r + noise, 0, 255);
+                        byte g = (byte)Mathf.Clamp(basePlaster.g + noise, 0, 255);
+                        byte b = (byte)Mathf.Clamp(basePlaster.b + noise, 0, 255);
+                        pixels[y * w + x] = new Color32(r, g, b, 255);
+                    }
+                }
+            }
+            tex.SetPixels32(pixels);
+            tex.wrapMode = TextureWrapMode.Repeat;
+            tex.filterMode = FilterMode.Bilinear;
+            tex.Apply(true, true);
+            return tex;
+        }
+
+        static Texture2D CreateConcreteTexture()
+        {
+            int w = 128, h = 128;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, true);
+            var pixels = new Color32[w * h];
+            Color32 baseConcrete = new Color32(155, 155, 148, 255);
+
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    int noise = (int)((Mathf.PerlinNoise(x * 0.25f, y * 0.25f) - 0.5f) * 20f);
+                    byte c = (byte)Mathf.Clamp(baseConcrete.r + noise, 0, 255);
+                    pixels[y * w + x] = new Color32(c, c, (byte)(c * 0.96f), 255);
+                }
+            }
+            tex.SetPixels32(pixels);
+            tex.wrapMode = TextureWrapMode.Repeat;
+            tex.filterMode = FilterMode.Bilinear;
+            tex.Apply(true, true);
+            return tex;
+        }
+
+        static Texture2D CreateChalkboardTexture()
+        {
+            int w = 256, h = 128;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            var green = new Color32(26, 52, 34, 255);
+            var chalk = new Color32(220, 235, 215, 255);
+            var pixels = new Color32[w * h];
+
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    int smear = (int)((Mathf.PerlinNoise(x * 0.04f, y * 0.08f) - 0.5f) * 12f);
+                    byte g = (byte)Mathf.Clamp(green.g + smear, 30, 80);
+                    pixels[y * w + x] = new Color32((byte)(g * 0.5f), g, (byte)(g * 0.65f), 255);
+                }
+            }
+
+            // Japanese chalk notes & equations
+            for (int x = 16; x < 240; x++)
+            {
+                if (x % 3 == 0) { pixels[95 * w + x] = chalk; pixels[65 * w + x] = chalk; pixels[35 * w + x] = chalk; }
+            }
+            for (int y = 45; y < 85; y++)
+            {
+                pixels[y * w + 50] = chalk; pixels[y * w + 110] = chalk; pixels[y * w + 170] = chalk; pixels[y * w + 210] = chalk;
+            }
+            tex.SetPixels32(pixels);
+            tex.wrapMode = TextureWrapMode.Clamp;
+            tex.filterMode = FilterMode.Bilinear;
+            tex.Apply(false, true);
+            return tex;
+        }
+
+        static Texture2D CreatePaperTexture()
+        {
+            int w = 64, h = 64;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            var pixels = new Color32[w * h];
+            Color32 white = new Color32(245, 243, 238, 255);
+            Color32 lineCol = new Color32(180, 200, 225, 255);
+            Color32 ink = new Color32(50, 60, 90, 255);
+
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    if (y % 8 == 0) pixels[y * w + x] = lineCol;
+                    else if (y > 10 && y < 54 && (x + y * 3) % 19 == 0) pixels[y * w + x] = ink;
+                    else pixels[y * w + x] = white;
+                }
+            }
+            tex.SetPixels32(pixels);
+            tex.Apply(false, true);
+            return tex;
+        }
+
+        static Texture2D CreateBooksTexture()
+        {
+            int w = 128, h = 64;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+            var pixels = new Color32[w * h];
+            Color32[] spineColors = {
+                new Color32(160, 45, 35, 255),
+                new Color32(35, 75, 140, 255),
+                new Color32(40, 110, 55, 255),
+                new Color32(180, 130, 40, 255),
+                new Color32(110, 50, 120, 255),
+                new Color32(60, 60, 65, 255)
+            };
+
+            for (int x = 0; x < w; x++)
+            {
+                int spineIdx = (x / 10) % spineColors.Length;
+                Color32 col = spineColors[spineIdx];
+                for (int y = 0; y < h; y++)
+                {
+                    if (x % 10 == 0 || y == 0 || y == h - 1) pixels[y * w + x] = new Color32(25, 25, 25, 255);
+                    else if (y > 20 && y < 35 && x % 10 > 2 && x % 10 < 8) pixels[y * w + x] = new Color32(230, 220, 180, 255);
+                    else pixels[y * w + x] = col;
+                }
+            }
+            tex.SetPixels32(pixels);
+            tex.wrapMode = TextureWrapMode.Repeat;
+            tex.Apply(false, true);
+            return tex;
+        }
+
         void InitMaterials()
         {
-            var shader = Shader.Find("Dead Air/Source Surface") ?? Shader.Find("Standard");
+            var surfaceShader = Shader.Find("Dead Air/Source Surface") ?? Shader.Find("Standard");
+            var glassShader = Shader.Find("Dead Air/Window Glass") ?? Shader.Find("Standard");
 
-            matPlaster = CreateMat("SchoolPlaster", shader, new Color(0.86f, 0.83f, 0.74f), 0.15f);
-            matAsphalt = CreateMat("RoadAsphalt", shader, new Color(0.18f, 0.19f, 0.20f), 0.35f);
-            matRoadZebra = CreateMat("RoadZebraWhite", shader, new Color(0.92f, 0.92f, 0.88f), 0.25f);
-            matWoodFloor = CreateMat("ParquetWood", shader, new Color(0.52f, 0.38f, 0.22f), 0.3f);
-            matBark = CreateMat("DarkBark", shader, new Color(0.24f, 0.19f, 0.14f), 0.05f);
-            matFoliage = CreateMat("DeepFoliage", shader, new Color(0.12f, 0.22f, 0.14f), 0.08f);
-            matTorii = CreateMat("ShrineVermilion", shader, new Color(0.85f, 0.20f, 0.12f), 0.4f);
-            matStone = CreateMat("WeatheredStone", shader, new Color(0.46f, 0.47f, 0.45f), 0.15f);
-            matGlass = CreateMat("DarkGlass", shader, new Color(0.10f, 0.15f, 0.18f), 0.9f);
-            matDarkMetal = CreateMat("MetalDark", shader, new Color(0.18f, 0.20f, 0.18f), 0.6f);
-            matConcrete = CreateMat("ConcreteLight", shader, new Color(0.60f, 0.60f, 0.56f), 0.2f);
-            matChalkboard = CreateChalkboardMaterial(shader);
-            matWhite = CreateMat("TrimWhite", shader, new Color(0.92f, 0.90f, 0.86f), 0.3f);
-            matHouseStucco = CreateMat("HouseStucco", shader, new Color(0.78f, 0.76f, 0.70f), 0.1f);
-            matKawaraRoof = CreateMat("KawaraRoof", shader, new Color(0.22f, 0.25f, 0.28f), 0.35f);
-            matBlockWall = CreateMat("BlockWall", shader, new Color(0.55f, 0.54f, 0.50f), 0.15f);
-            matGuardrail = CreateMat("GuardrailWhite", shader, new Color(0.88f, 0.88f, 0.88f), 0.5f);
-            matBooks = CreateMat("BookCovers", shader, new Color(0.42f, 0.28f, 0.20f), 0.15f);
-            matLabCounter = CreateMat("LabBlackStone", shader, new Color(0.14f, 0.15f, 0.15f), 0.7f);
-            matGold = CreateMat("SignGold", shader, new Color(0.88f, 0.75f, 0.25f), 0.6f);
-            matDoorWood = CreateMat("DoorWood", shader, new Color(0.68f, 0.52f, 0.34f), 0.25f);
-            matShoeLocker = CreateMat("GetabakoWood", shader, new Color(0.58f, 0.42f, 0.26f), 0.2f);
+            // Textures
+            var texParquet = CreateParquetTexture();
+            var texPlaster = CreatePlasterTexture();
+            var texDeskWood = CreateDeskWoodTexture();
+            var texConcrete = CreateConcreteTexture();
+            var texChalkboard = CreateChalkboardTexture();
+            var texPaper = CreatePaperTexture();
+            var texBooks = CreateBooksTexture();
+
+            matPlaster = CreateTexturedMat("SchoolPlaster", surfaceShader, texPlaster, Color.white, 0.15f);
+            matWoodFloor = CreateTexturedMat("ParquetWood", surfaceShader, texParquet, Color.white, 0.35f);
+            matWoodFloor.mainTextureScale = new Vector2(8f, 8f);
+
+            matDeskWood = CreateTexturedMat("DeskWood", surfaceShader, texDeskWood, Color.white, 0.25f);
+            matConcrete = CreateTexturedMat("ConcreteLight", surfaceShader, texConcrete, Color.white, 0.20f);
+            matChalkboard = CreateTexturedMat("Chalkboard", surfaceShader, texChalkboard, Color.white, 0.05f);
+            matPaper = CreateTexturedMat("PaperSheet", surfaceShader, texPaper, Color.white, 0.10f);
+            matBooks = CreateTexturedMat("BookCovers", surfaceShader, texBooks, Color.white, 0.20f);
+
+            // Transparent Window Glass using dedicated Dead Air/Window Glass shader
+            matGlass = new Material(glassShader) { name = "SchoolWindowGlass", hideFlags = HideFlags.DontSave };
+            matGlass.SetColor("_Color", new Color(0.25f, 0.45f, 0.55f, 0.18f));
+            matGlass.SetFloat("_Glossiness", 0.95f);
+            matGlass.SetFloat("_ReflectionStrength", 0.35f);
+
+            // Other materials
+            matAsphalt = CreateMat("RoadAsphalt", surfaceShader, new Color(0.18f, 0.19f, 0.20f), 0.35f);
+            matRoadZebra = CreateMat("RoadZebraWhite", surfaceShader, new Color(0.92f, 0.92f, 0.88f), 0.25f);
+            matBark = CreateMat("DarkBark", surfaceShader, new Color(0.24f, 0.19f, 0.14f), 0.05f);
+            matFoliage = CreateMat("DeepFoliage", surfaceShader, new Color(0.12f, 0.22f, 0.14f), 0.08f);
+            matTorii = CreateMat("ShrineVermilion", surfaceShader, new Color(0.85f, 0.20f, 0.12f), 0.4f);
+            matStone = CreateMat("WeatheredStone", surfaceShader, new Color(0.46f, 0.47f, 0.45f), 0.15f);
+            matDarkMetal = CreateMat("MetalDark", surfaceShader, new Color(0.20f, 0.22f, 0.22f), 0.65f);
+            matWhite = CreateMat("TrimWhite", surfaceShader, new Color(0.92f, 0.90f, 0.86f), 0.35f);
+            matHouseStucco = CreateMat("HouseStucco", surfaceShader, new Color(0.78f, 0.76f, 0.70f), 0.1f);
+            matKawaraRoof = CreateMat("KawaraRoof", surfaceShader, new Color(0.22f, 0.25f, 0.28f), 0.35f);
+            matBlockWall = CreateMat("BlockWall", surfaceShader, new Color(0.55f, 0.54f, 0.50f), 0.15f);
+            matGuardrail = CreateMat("GuardrailWhite", surfaceShader, new Color(0.88f, 0.88f, 0.88f), 0.5f);
+            matLabCounter = CreateMat("LabBlackStone", surfaceShader, new Color(0.14f, 0.15f, 0.15f), 0.7f);
+            matGold = CreateMat("SignGold", surfaceShader, new Color(0.88f, 0.75f, 0.25f), 0.6f);
+            matDoorWood = CreateTexturedMat("DoorWood", surfaceShader, texDeskWood, new Color(0.78f, 0.62f, 0.42f), 0.25f);
+            matShoeLocker = CreateMat("GetabakoWood", surfaceShader, new Color(0.58f, 0.42f, 0.26f), 0.2f);
+            matTrashCan = CreateMat("TrashCanBlue", surfaceShader, new Color(0.22f, 0.42f, 0.68f), 0.4f);
+            matCan = CreateMat("CanAluminum", surfaceShader, new Color(0.85f, 0.35f, 0.25f), 0.7f);
         }
 
         static Material CreateMat(string name, Shader shader, Color color, float gloss)
@@ -98,27 +339,10 @@ namespace DeadAir
             return mat;
         }
 
-        static Material CreateChalkboardMaterial(Shader shader)
+        static Material CreateTexturedMat(string name, Shader shader, Texture2D texture, Color color, float gloss)
         {
-            var tex = new Texture2D(256, 128, TextureFormat.RGBA32, false);
-            var green = new Color32(28, 56, 36, 255);
-            var chalk = new Color32(215, 230, 210, 255);
-            var pixels = new Color32[256 * 128];
-            for (int i = 0; i < pixels.Length; i++) pixels[i] = green;
-
-            for (int x = 20; x < 236; x++)
-            {
-                if (x % 3 == 0) { pixels[100 * 256 + x] = chalk; pixels[70 * 256 + x] = chalk; pixels[40 * 256 + x] = chalk; }
-            }
-            for (int y = 50; y < 90; y++)
-            {
-                pixels[y * 256 + 60] = chalk; pixels[y * 256 + 120] = chalk; pixels[y * 256 + 180] = chalk;
-            }
-            tex.SetPixels32(pixels);
-            tex.Apply(false, true);
-
-            var mat = new Material(shader) { name = "ChalkboardBaked", mainTexture = tex, hideFlags = HideFlags.DontSave };
-            mat.SetFloat("_Glossiness", 0.05f);
+            var mat = new Material(shader) { name = name, mainTexture = texture, color = color, hideFlags = HideFlags.DontSave };
+            mat.SetFloat("_Glossiness", gloss);
             return mat;
         }
 
@@ -412,7 +636,6 @@ namespace DeadAir
             yard.SetParent(Root, false);
 
             CreateBox(yard, new Vector3(0, -0.05f, 18f), new Vector3(72f, 0.1f, 36f), matAsphalt, true, "Courtyard Asphalt");
-
             CreateBox(yard, new Vector3(0, 0.02f, 18f), new Vector3(6.5f, 0.02f, 36f), matConcrete, false, "Approach Path");
 
             var yellowMat = CreateMat("CircleYellow", matPlaster.shader, new Color(0.92f, 0.78f, 0.20f), 0.2f);
@@ -474,7 +697,7 @@ namespace DeadAir
         }
 
         // ====================================================================
-        // 5. SCHOOL EXTERIOR STRUCTURE & GRAND GENKAN ENTRANCE
+        // 5. SCHOOL EXTERIOR STRUCTURE & TRANSPARENT WINDOWS
         // ====================================================================
         void BuildSchoolBuilding()
         {
@@ -483,21 +706,22 @@ namespace DeadAir
 
             float width = 72f, height = 7.6f, depth = 22f;
 
-            // Roof Parapet and Slab (Y = 7.4 to 8.2)
+            // Roof Parapet and Slab
             CreateBox(bldg, new Vector3(0, 7.55f, -depth * 0.5f), new Vector3(width, 0.25f, depth), matConcrete, true, "Roof Slab");
             CreateBox(bldg, new Vector3(0, 7.95f, 0.1f), new Vector3(width + 0.6f, 0.6f, 0.35f), matConcrete, true, "Roof Parapet South");
             CreateBox(bldg, new Vector3(0, 7.95f, -depth - 0.1f), new Vector3(width + 0.6f, 0.6f, 0.35f), matConcrete, true, "Roof Parapet North");
             CreateBox(bldg, new Vector3(-width * 0.5f - 0.1f, 7.95f, -depth * 0.5f), new Vector3(0.35f, 0.6f, depth + 0.6f), matConcrete, true, "Roof Parapet West");
             CreateBox(bldg, new Vector3(width * 0.5f + 0.1f, 7.95f, -depth * 0.5f), new Vector3(0.35f, 0.6f, depth + 0.6f), matConcrete, true, "Roof Parapet East");
 
-            // West Exterior Wall (X = -36)
+            // West & East Solid Exterior Walls
             CreateBox(bldg, new Vector3(-36f, height * 0.5f, -depth * 0.5f), new Vector3(0.4f, height, depth), matPlaster, true, "Exterior Wall West");
-            // East Exterior Wall (X = +36)
             CreateBox(bldg, new Vector3(36f, height * 0.5f, -depth * 0.5f), new Vector3(0.4f, height, depth), matPlaster, true, "Exterior Wall East");
 
-            // South Exterior Facade (Z = 0)
-            CreateBox(bldg, new Vector3(-20.5f, height * 0.5f, 0f), new Vector3(31f, height, 0.35f), matPlaster, true, "South Facade Left Wing");
-            CreateBox(bldg, new Vector3(20.5f, height * 0.5f, 0f), new Vector3(31f, height, 0.35f), matPlaster, true, "South Facade Right Wing");
+            // SOUTH FACADE (Z = 0): Built with REAL window openings (No z-fighting, true transparency!)
+            BuildFacadeWallWithWindows(bldg, 0f, false);
+
+            // NORTH FACADE (Z = -22): Built with REAL window openings
+            BuildFacadeWallWithWindows(bldg, -22f, true);
 
             // Center Facade 2nd floor wall (Y: 3.8 to 7.6 at X: -5 to +5)
             CreateBox(bldg, new Vector3(0, 5.7f, 0f), new Vector3(10f, 3.8f, 0.35f), matPlaster, true, "South Facade Center 2F");
@@ -505,47 +729,6 @@ namespace DeadAir
             var clock = CreateCylinder(bldg, new Vector3(0, 6.2f, 0.22f), 0.85f, 0.12f, matDarkMetal, false, "Clock");
             clock.transform.rotation = Quaternion.Euler(90, 0, 0);
             CreateCylinder(clock.transform, new Vector3(0, 0.07f, 0), 0.76f, 0.03f, matWhite, false);
-
-            // Exterior Classroom Windows along South Facade
-            for (int floor = 0; floor < 2; floor++)
-            {
-                float wy = 2.2f + floor * 3.6f;
-                for (int side = -1; side <= 1; side += 2)
-                {
-                    for (int w = 0; w < 6; w++)
-                    {
-                        float wx = side * (8.5f + w * 4.6f);
-                        CreateBox(bldg, new Vector3(wx, wy, 0.22f), new Vector3(3.6f, 2.0f, 0.12f), matWhite, false);
-                        CreateBox(bldg, new Vector3(wx, wy, 0.26f), new Vector3(3.3f, 1.8f, 0.04f), matGlass, false);
-                    }
-                }
-            }
-
-            // North Exterior Facade (Z = -22)
-            CreateBox(bldg, new Vector3(-20.5f, height * 0.5f, -22f), new Vector3(31f, height, 0.35f), matPlaster, true, "North Facade Left Wing");
-            CreateBox(bldg, new Vector3(20.5f, height * 0.5f, -22f), new Vector3(31f, height, 0.35f), matPlaster, true, "North Facade Right Wing");
-            // North Windows along classrooms
-            for (int floor = 0; floor < 2; floor++)
-            {
-                float wy = 2.2f + floor * 3.6f;
-                for (int side = -1; side <= 1; side += 2)
-                {
-                    for (int w = 0; w < 6; w++)
-                    {
-                        float wx = side * (8.5f + w * 4.6f);
-                        CreateBox(bldg, new Vector3(wx, wy, -22.22f), new Vector3(3.6f, 2.0f, 0.12f), matWhite, false);
-                        CreateBox(bldg, new Vector3(wx, wy, -22.26f), new Vector3(3.3f, 1.8f, 0.04f), matGlass, false);
-                    }
-                }
-            }
-
-            // Center Stairwell Grand North Glass Window (overlooking forest)
-            CreateBox(bldg, new Vector3(0, 4.2f, -22.05f), new Vector3(8.5f, 6.8f, 0.12f), matWhite, false, "Stairwell Window Frame");
-            CreateBox(bldg, new Vector3(0, 4.2f, -22.08f), new Vector3(8.2f, 6.5f, 0.04f), matGlass, false, "Stairwell Window Glass");
-            for (float mx = -3.2f; mx <= 3.2f; mx += 1.6f)
-            {
-                CreateBox(bldg, new Vector3(mx, 4.2f, -22.12f), new Vector3(0.08f, 6.5f, 0.08f), matDarkMetal, false);
-            }
 
             // Planter boxes with shrubs along South facade
             for (int side = -1; side <= 1; side += 2)
@@ -566,73 +749,118 @@ namespace DeadAir
             BuildSchoolEntrance(bldg);
         }
 
+        void BuildFacadeWallWithWindows(Transform parent, float facadeZ, bool isNorth)
+        {
+            var fac = new GameObject((isNorth ? "North" : "South") + " Facade Wall").transform;
+            fac.SetParent(parent, false);
+
+            // Lower wall band under 1F windows (Y: 0 to 1.1m)
+            CreateBox(fac, new Vector3(-20.5f, 0.55f, facadeZ), new Vector3(31f, 1.1f, 0.35f), matPlaster, true);
+            CreateBox(fac, new Vector3(20.5f, 0.55f, facadeZ), new Vector3(31f, 1.1f, 0.35f), matPlaster, true);
+
+            // Middle spandrel wall band between 1F & 2F (Y: 3.1m to 4.3m)
+            CreateBox(fac, new Vector3(-20.5f, 3.70f, facadeZ), new Vector3(31f, 1.2f, 0.35f), matPlaster, true);
+            CreateBox(fac, new Vector3(20.5f, 3.70f, facadeZ), new Vector3(31f, 1.2f, 0.35f), matPlaster, true);
+
+            // Upper wall band above 2F windows (Y: 6.3m to 7.6m)
+            CreateBox(fac, new Vector3(-20.5f, 6.95f, facadeZ), new Vector3(31f, 1.3f, 0.35f), matPlaster, true);
+            CreateBox(fac, new Vector3(20.5f, 6.95f, facadeZ), new Vector3(31f, 1.3f, 0.35f), matPlaster, true);
+
+            // If North, build center 2-story glass window for the stairwell!
+            if (isNorth)
+            {
+                CreateBox(fac, new Vector3(0, 0.55f, facadeZ), new Vector3(10f, 1.1f, 0.35f), matPlaster, true);
+                CreateBox(fac, new Vector3(0, 7.0f, facadeZ), new Vector3(10f, 1.2f, 0.35f), matPlaster, true);
+
+                // Grand 2-story frosted stairwell window frame & glass
+                CreateBox(fac, new Vector3(0, 4.05f, facadeZ), new Vector3(9.2f, 4.7f, 0.12f), matWhite, false, "Stairwell Grand Window Frame");
+                CreateBox(fac, new Vector3(0, 4.05f, facadeZ), new Vector3(8.8f, 4.5f, 0.04f), matGlass, false, "Stairwell Transparent Glass");
+                for (float mx = -3.3f; mx <= 3.3f; mx += 1.65f)
+                {
+                    CreateBox(fac, new Vector3(mx, 4.05f, facadeZ), new Vector3(0.08f, 4.5f, 0.08f), matDarkMetal, false);
+                }
+            }
+
+            // Pillars and transparent classroom windows
+            for (int floor = 0; floor < 2; floor++)
+            {
+                float wy = 2.10f + floor * 3.20f; // Window center height: 1F = 2.1m, 2F = 5.3m
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    // Outer edge wall pillar
+                    CreateBox(fac, new Vector3(side * 34.5f, wy, facadeZ), new Vector3(3.0f, 2.0f, 0.35f), matPlaster, true);
+                    // Inner edge wall pillar
+                    CreateBox(fac, new Vector3(side * 6.5f, wy, facadeZ), new Vector3(3.0f, 2.0f, 0.35f), matPlaster, true);
+
+                    for (int w = 0; w < 4; w++)
+                    {
+                        float wx = side * (10.5f + w * 5.4f);
+
+                        // Transparent glass pane (in an actual opening!)
+                        CreateBox(fac, new Vector3(wx, wy, facadeZ), new Vector3(3.8f, 1.9f, 0.02f), matGlass, false, "Transparent Classroom Window");
+
+                        // Outer white window frame
+                        CreateBox(fac, new Vector3(wx - 1.95f, wy, facadeZ), new Vector3(0.12f, 2.0f, 0.14f), matWhite, false);
+                        CreateBox(fac, new Vector3(wx + 1.95f, wy, facadeZ), new Vector3(0.12f, 2.0f, 0.14f), matWhite, false);
+                        CreateBox(fac, new Vector3(wx, wy - 0.95f, facadeZ), new Vector3(4.0f, 0.12f, 0.14f), matWhite, false);
+                        CreateBox(fac, new Vector3(wx, wy + 0.95f, facadeZ), new Vector3(4.0f, 0.12f, 0.14f), matWhite, false);
+
+                        // Center mullion cross
+                        CreateBox(fac, new Vector3(wx, wy, facadeZ), new Vector3(0.06f, 1.9f, 0.06f), matDarkMetal, false);
+                        CreateBox(fac, new Vector3(wx, wy, facadeZ), new Vector3(3.8f, 0.06f, 0.06f), matDarkMetal, false);
+
+                        // Wall pillar between this window and next
+                        if (w < 3)
+                        {
+                            CreateBox(fac, new Vector3(side * (13.2f + w * 5.4f), wy, facadeZ), new Vector3(1.4f, 2.0f, 0.35f), matPlaster, true);
+                        }
+                    }
+                }
+            }
+        }
+
         // ====================================================================
-        // GRAND SCHOOL ENTRANCE (GENKAN) - Authentic Japanese Architecture
+        // GRAND SCHOOL ENTRANCE (GENKAN)
         // ====================================================================
         void BuildSchoolEntrance(Transform parent)
         {
             var ent = new GameObject("School Entrance (玄関)").transform;
             ent.SetParent(parent, false);
 
-            // Porch Platform (Z: 0 to 4.2, X: -5 to +5, Y: 0 to 0.45)
             CreateBox(ent, new Vector3(0, 0.225f, 2.1f), new Vector3(10.5f, 0.45f, 4.2f), matConcrete, true, "Porch Landing");
-
-            // 3 Wide Porch Steps leading up from courtyard ground (Y = 0 to 0.45)
             CreateBox(ent, new Vector3(0, 0.12f, 4.8f), new Vector3(10.5f, 0.15f, 0.6f), matConcrete, true, "Porch Step 1");
             CreateBox(ent, new Vector3(0, 0.27f, 4.5f), new Vector3(10.5f, 0.15f, 0.6f), matConcrete, true, "Porch Step 2");
 
-            // Overhead Concrete Canopy Roof (Y = 3.8m, depth 4.8m, width 11m)
             CreateBox(ent, new Vector3(0, 3.95f, 2.4f), new Vector3(11.2f, 0.35f, 4.8f), matConcrete, true, "Canopy Roof");
-            // Heavy Concrete Support Pillars
             CreateBox(ent, new Vector3(-4.8f, 1.9f, 4.2f), new Vector3(0.7f, 3.8f, 0.7f), matConcrete, true, "Canopy Pillar L");
             CreateBox(ent, new Vector3(4.8f, 1.9f, 4.2f), new Vector3(0.7f, 3.8f, 0.7f), matConcrete, true, "Canopy Pillar R");
 
-            // Japanese School Nameplate Plaque (私立 夜桜学園高等学校)
             var plaque = CreateBox(ent, new Vector3(0, 3.25f, 0.22f), new Vector3(4.8f, 0.65f, 0.08f), matDarkMetal, false, "School Plaque");
             CreateBox(plaque.transform, new Vector3(0, 0, 0.05f), new Vector3(4.5f, 0.48f, 0.04f), matGold, false, "Gold Lettering Plate");
 
-            // Sliding Glass Double Entrance Facade at Z = 0
-            // Outer Frame (X: -4.8 to +4.8)
+            // Entrance Glass Group
             CreateBox(ent, new Vector3(-4.8f, 1.7f, 0.08f), new Vector3(0.4f, 3.4f, 0.18f), matDarkMetal, true);
             CreateBox(ent, new Vector3(4.8f, 1.7f, 0.08f), new Vector3(0.4f, 3.4f, 0.18f), matDarkMetal, true);
             CreateBox(ent, new Vector3(0, 3.25f, 0.08f), new Vector3(9.6f, 0.35f, 0.18f), matDarkMetal, false);
 
-            // Left Fixed Glass Leaf (X: -4.6 to -2.0)
-            CreateBox(ent, new Vector3(-3.3f, 1.6f, 0.08f), new Vector3(2.6f, 2.9f, 0.06f), matGlass, true, "Entrance Glass Fixed L");
-            CreateBox(ent, new Vector3(-3.3f, 1.6f, 0.10f), new Vector3(2.6f, 0.08f, 0.08f), matDarkMetal, false);
+            CreateBox(ent, new Vector3(-3.3f, 1.6f, 0.08f), new Vector3(2.6f, 2.9f, 0.04f), matGlass, true, "Entrance Glass Fixed L");
+            CreateBox(ent, new Vector3(3.3f, 1.6f, 0.08f), new Vector3(2.6f, 2.9f, 0.04f), matGlass, true, "Entrance Glass Fixed R");
 
-            // Right Fixed Glass Leaf (X: +2.0 to +4.6)
-            CreateBox(ent, new Vector3(3.3f, 1.6f, 0.08f), new Vector3(2.6f, 2.9f, 0.06f), matGlass, true, "Entrance Glass Fixed R");
-            CreateBox(ent, new Vector3(3.3f, 1.6f, 0.10f), new Vector3(2.6f, 0.08f, 0.08f), matDarkMetal, false);
+            // Sliding entrance leaves (Center door open 1.8m for free entry!)
+            CreateBox(ent, new Vector3(-1.1f, 1.6f, 0.14f), new Vector3(1.8f, 2.9f, 0.04f), matGlass, true, "Entrance Sliding Door Closed");
+            CreateBox(ent, new Vector3(2.2f, 1.6f, 0.14f), new Vector3(1.4f, 2.9f, 0.04f), matGlass, false, "Entrance Door Slid Open");
 
-            // Center sliding doors: Left sliding door closed, Right sliding door slid open!
-            // This leaves a grand 1.8m open entranceway at X: -0.2 to +1.6 for player entry!
-            CreateBox(ent, new Vector3(-1.1f, 1.6f, 0.14f), new Vector3(1.8f, 2.9f, 0.06f), matGlass, true, "Entrance Sliding Door Closed");
-            CreateBox(ent, new Vector3(2.2f, 1.6f, 0.14f), new Vector3(1.4f, 2.9f, 0.06f), matGlass, false, "Entrance Door Slid Open");
-
-            // Genkan Vestibule Interior (Z: 0 to -8.5, X: -5 to +5)
-            // Sunken Tiled Doma Entry Floor (Y = 0.45m, Z: 0 to -3.0)
+            // Genkan Vestibule Interior
             CreateBox(ent, new Vector3(0, 0.225f, -1.5f), new Vector3(9.6f, 0.45f, 3.0f), matConcrete, true, "Genkan Doma Floor");
-
-            // Raised Wood Step Threshold (Shikidai / Agari-kamachi) rising to Y = 0.60m
             CreateBox(ent, new Vector3(0, 0.525f, -3.15f), new Vector3(9.6f, 0.15f, 0.35f), matWoodFloor, true, "Shikidai Threshold Step");
-
-            // Raised Parquet Floor of Genkan Hall (Y = 0.60m, Z: -3.3 to -8.5)
             CreateBox(ent, new Vector3(0, 0.30f, -5.9f), new Vector3(9.6f, 0.60f, 5.2f), matWoodFloor, true, "Genkan Hall Floor");
 
-            // Genkan Enclosing Partition Walls (X = -5.0 and X = +5.0)
             CreateBox(ent, new Vector3(-4.9f, 2.2f, -4.25f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true, "Genkan Wall L");
             CreateBox(ent, new Vector3(4.9f, 2.2f, -4.25f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true, "Genkan Wall R");
 
-            // Authentic Getabako Shoe Locker Units (下駄箱) on Left and Right
             BuildShoeLockers(ent, new Vector3(-4.1f, 0.60f, -5.5f), 90);
             BuildShoeLockers(ent, new Vector3(4.1f, 0.60f, -5.5f), -90);
 
-            // Umbrella Stands (傘立て)
-            CreateBox(ent, new Vector3(-3.8f, 0.85f, -1.8f), new Vector3(0.6f, 0.8f, 1.4f), matDarkMetal, true, "Umbrella Stand L");
-            CreateBox(ent, new Vector3(3.8f, 0.85f, -1.8f), new Vector3(0.6f, 0.8f, 1.4f), matDarkMetal, true, "Umbrella Stand R");
-
-            // Soft warm Genkan ceiling light fixture
             CreateInteriorLamp(ent, new Vector3(0, 3.65f, -4.5f));
         }
 
@@ -646,7 +874,6 @@ namespace DeadAir
             float w = 5.2f, h = 1.9f, d = 0.65f;
             CreateBox(g, new Vector3(0, h * 0.5f, 0), new Vector3(w, h, d), matShoeLocker, true, "Locker Main Body");
 
-            // Grid of shoe cubbies with white Uwabaki indoor slippers inside
             int rows = 4, cols = 10;
             float cellW = (w - 0.2f) / cols;
             float cellH = (h - 0.2f) / rows;
@@ -657,7 +884,6 @@ namespace DeadAir
                     float cx = -w * 0.5f + 0.15f + c * cellW + cellW * 0.5f;
                     float cy = 0.15f + r * cellH + cellH * 0.5f;
                     CreateBox(g, new Vector3(cx, cy, 0.05f), new Vector3(cellW * 0.85f, cellH * 0.85f, d * 0.7f), matDarkMetal, false);
-                    // Uwabaki slippers
                     if ((r + c) % 2 == 0)
                     {
                         CreateBox(g, new Vector3(cx - 0.08f, cy - 0.08f, 0.10f), new Vector3(0.09f, 0.05f, 0.22f), matWhite, false);
@@ -678,77 +904,58 @@ namespace DeadAir
             float floorY = 0.60f;
             float ceilY = 3.80f;
 
-            // First Floor Parquet Slab (X: -36 to +36, Z: 0 to -22)
+            // 1st Floor Parquet Floor Slab (X: -36 to +36, Z: 0 to -22)
             CreateBox(floor1, new Vector3(0, floorY * 0.5f, -11f), new Vector3(72f, floorY, 22f), matWoodFloor, true, "Floor 1 Ground");
-            // Ceiling Concrete Slab
-            CreateBox(floor1, new Vector3(0, ceilY + 0.05f, -11f), new Vector3(72f, 0.15f, 22f), matConcrete, true, "Floor 1 Ceiling");
 
-            // ====================================================================
-            // 5-METER CENTRAL CORRIDOR (Z: -8.5 to -13.5, width 5.0m)
-            // ====================================================================
-            // Corridor ceiling lamps spaced across length
+            // 1st Floor Ceiling: Split so there is a 100% OPEN ATRIUM over the Stairwell Bay!
+            // Left Wing Ceiling (X: -36 to -6)
+            CreateBox(floor1, new Vector3(-21f, ceilY + 0.05f, -11f), new Vector3(30f, 0.15f, 22f), matConcrete, true, "Ceiling Left Wing");
+            // Right Wing Ceiling (X: +6 to +36)
+            CreateBox(floor1, new Vector3(21f, ceilY + 0.05f, -11f), new Vector3(30f, 0.15f, 22f), matConcrete, true, "Ceiling Right Wing");
+            // Center South & Corridor Ceiling (X: -6 to +6, Z: 0 to -13.5)
+            CreateBox(floor1, new Vector3(0, ceilY + 0.05f, -6.75f), new Vector3(12f, 0.15f, 13.5f), matConcrete, true, "Ceiling Center South");
+            // NOTE: X: -6 to +6, Z: -13.5 to -22 is 100% OPEN for the grand 2-story stairwell!
+
+            // 5m Central Corridor Lamps
             for (float hx = -30f; hx <= 30f; hx += 10f)
             {
                 CreateInteriorLamp(floor1, new Vector3(hx, ceilY - 0.15f, -11f));
             }
 
-            // Green Emergency Exit Signs (誘導灯) glowing on hallway walls
             BuildExitSign(floor1, new Vector3(-20.5f, 2.9f, -8.65f));
             BuildExitSign(floor1, new Vector3(20.5f, 2.9f, -8.65f));
-            BuildExitSign(floor1, new Vector3(-5.0f, 2.9f, -13.35f));
+            BuildExitSign(floor1, new Vector3(-6.0f, 2.9f, -13.35f));
 
-            // Fire Extinguisher Hydrant Cabinets (消火栓)
             BuildFireHydrant(floor1, new Vector3(-18f, 1.4f, -8.65f));
             BuildFireHydrant(floor1, new Vector3(18f, 1.4f, -8.65f));
 
-            // Cork Bulletin Boards along corridor
             BuildNoticeBoard(floor1, new Vector3(-12f, 2.0f, -8.65f));
             BuildNoticeBoard(floor1, new Vector3(12f, 2.0f, -8.65f));
 
-            // ====================================================================
-            // SOUTH CORRIDOR PARTITION WALL (at Z = -8.5)
-            // Separates 5m corridor from 4 South rooms: Class 1-A, 1-B, 1-C, Nurse
-            // ====================================================================
-            // Wall sections with door cutouts:
-            // Doorway 1-A at X = -28.5 (width 1.5m: -29.25 to -27.75)
-            // Doorway 1-B at X = -13.0 (width 1.5m: -13.75 to -12.25)
-            // Genkan entrance opening at X: -4.8 to +4.8 (open!)
-            // Doorway 1-C at X = +13.0 (width 1.5m: 12.25 to 13.75)
-            // Doorway Nurse at X = +28.5 (width 1.5m: 27.75 to 29.25)
+            // SOUTH CORRIDOR WALL (at Z = -8.5)
             CreateBox(floor1, new Vector3(-32.6f, 2.2f, -8.5f), new Vector3(6.8f, 3.2f, 0.25f), matPlaster, true);
             CreateBox(floor1, new Vector3(-20.75f, 2.2f, -8.5f), new Vector3(14.0f, 3.2f, 0.25f), matPlaster, true);
             CreateBox(floor1, new Vector3(-8.5f, 2.2f, -8.5f), new Vector3(7.5f, 3.2f, 0.25f), matPlaster, true);
-            // X: -4.8 to +4.8 is the wide Genkan opening!
             CreateBox(floor1, new Vector3(8.5f, 2.2f, -8.5f), new Vector3(7.5f, 3.2f, 0.25f), matPlaster, true);
             CreateBox(floor1, new Vector3(20.75f, 2.2f, -8.5f), new Vector3(14.0f, 3.2f, 0.25f), matPlaster, true);
             CreateBox(floor1, new Vector3(32.6f, 2.2f, -8.5f), new Vector3(6.8f, 3.2f, 0.25f), matPlaster, true);
 
-            // Door headers above the 4 doorways
             CreateBox(floor1, new Vector3(-28.5f, 3.3f, -8.5f), new Vector3(1.5f, 1.0f, 0.25f), matPlaster, true);
             CreateBox(floor1, new Vector3(-13.0f, 3.3f, -8.5f), new Vector3(1.5f, 1.0f, 0.25f), matPlaster, true);
             CreateBox(floor1, new Vector3(13.0f, 3.3f, -8.5f), new Vector3(1.5f, 1.0f, 0.25f), matPlaster, true);
             CreateBox(floor1, new Vector3(28.5f, 3.3f, -8.5f), new Vector3(1.5f, 1.0f, 0.25f), matPlaster, true);
 
-            // Classroom Sliding Doors (Hikido) set ajar with upper observation glass & Nameplates!
             BuildClassroomDoor(floor1, new Vector3(-28.5f, floorY, -8.5f), 0, "1-A");
             BuildClassroomDoor(floor1, new Vector3(-13.0f, floorY, -8.5f), 0, "1-B");
             BuildClassroomDoor(floor1, new Vector3(13.0f, floorY, -8.5f), 0, "1-C");
             BuildClassroomDoor(floor1, new Vector3(28.5f, floorY, -8.5f), 0, "保健室");
 
-            // ====================================================================
-            // NORTH CORRIDOR PARTITION WALL (at Z = -13.5)
-            // Separates 5m corridor from 4 North rooms + central Stairwell Bay
-            // ====================================================================
-            // Doorway Staff at X = -28.5
-            // Doorway Principal at X = -13.0
-            // Stairwell entrance opening at X: -4.8 to +4.8 (open to stairs!)
-            // Doorway PC Lab at X = +13.0
-            // Doorway Archive at X = +28.5
+            // NORTH CORRIDOR WALL (at Z = -13.5): X: -5.5 to +5.5 is completely wide open to the grand stairwell!
             CreateBox(floor1, new Vector3(-32.6f, 2.2f, -13.5f), new Vector3(6.8f, 3.2f, 0.25f), matPlaster, true);
             CreateBox(floor1, new Vector3(-20.75f, 2.2f, -13.5f), new Vector3(14.0f, 3.2f, 0.25f), matPlaster, true);
-            CreateBox(floor1, new Vector3(-8.5f, 2.2f, -13.5f), new Vector3(7.5f, 3.2f, 0.25f), matPlaster, true);
-            // X: -4.8 to +4.8 is the central stairwell entrance!
-            CreateBox(floor1, new Vector3(8.5f, 2.2f, -13.5f), new Vector3(7.5f, 3.2f, 0.25f), matPlaster, true);
+            CreateBox(floor1, new Vector3(-9.25f, 2.2f, -13.5f), new Vector3(6.5f, 3.2f, 0.25f), matPlaster, true);
+            // X: -6.0 to +6.0 is the 12m wide entrance to the grand stairwell!
+            CreateBox(floor1, new Vector3(9.25f, 2.2f, -13.5f), new Vector3(6.5f, 3.2f, 0.25f), matPlaster, true);
             CreateBox(floor1, new Vector3(20.75f, 2.2f, -13.5f), new Vector3(14.0f, 3.2f, 0.25f), matPlaster, true);
             CreateBox(floor1, new Vector3(32.6f, 2.2f, -13.5f), new Vector3(6.8f, 3.2f, 0.25f), matPlaster, true);
 
@@ -762,51 +969,31 @@ namespace DeadAir
             BuildClassroomDoor(floor1, new Vector3(13.0f, floorY, -13.5f), 180, "PC室");
             BuildClassroomDoor(floor1, new Vector3(28.5f, floorY, -13.5f), 180, "資料室");
 
-            // ====================================================================
-            // ROOM DIVIDING PARTITION WALLS (along X)
-            // ====================================================================
-            // South Wing Dividers (Z: 0 to -8.5)
-            CreateBox(floor1, new Vector3(-20.5f, 2.2f, -4.25f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true, "Divider 1A-1B");
-            CreateBox(floor1, new Vector3(-5.0f, 2.2f, -4.25f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true, "Divider 1B-Genkan");
-            CreateBox(floor1, new Vector3(5.0f, 2.2f, -4.25f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true, "Divider Genkan-1C");
-            CreateBox(floor1, new Vector3(20.5f, 2.2f, -4.25f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true, "Divider 1C-Nurse");
+            // Room dividers along X
+            CreateBox(floor1, new Vector3(-20.5f, 2.2f, -4.25f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true);
+            CreateBox(floor1, new Vector3(-5.0f, 2.2f, -4.25f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true);
+            CreateBox(floor1, new Vector3(5.0f, 2.2f, -4.25f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true);
+            CreateBox(floor1, new Vector3(20.5f, 2.2f, -4.25f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true);
 
-            // North Wing Dividers (Z: -13.5 to -22)
-            CreateBox(floor1, new Vector3(-20.5f, 2.2f, -17.75f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true, "Divider Staff-Principal");
-            CreateBox(floor1, new Vector3(-5.0f, 2.2f, -17.75f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true, "Divider Principal-Stairs");
-            CreateBox(floor1, new Vector3(5.0f, 2.2f, -17.75f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true, "Divider Stairs-PC");
-            CreateBox(floor1, new Vector3(20.5f, 2.2f, -17.75f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true, "Divider PC-Archive");
+            CreateBox(floor1, new Vector3(-20.5f, 2.2f, -17.75f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true);
+            CreateBox(floor1, new Vector3(-6.0f, 2.2f, -17.75f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true);
+            CreateBox(floor1, new Vector3(6.0f, 2.2f, -17.75f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true);
+            CreateBox(floor1, new Vector3(20.5f, 2.2f, -17.75f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true);
 
-            // ====================================================================
-            // 1ST FLOOR ROOM INTERIORS & MAPPING
-            // ====================================================================
-            // 1. Class 1-A (South West: X: -36 to -20.5, Z: 0 to -8.5)
-            BuildClassroom(floor1, -28.25f, floorY, -4.25f, "1-A");
-
-            // 2. Class 1-B (South Center-West: X: -20.5 to -5.0, Z: 0 to -8.5)
-            BuildClassroom(floor1, -12.75f, floorY, -4.25f, "1-B");
-
-            // 3. Class 1-C (South Center-East: X: +5.0 to +20.5, Z: 0 to -8.5)
-            BuildClassroom(floor1, 12.75f, floorY, -4.25f, "1-C");
-
-            // 4. Nurse's Office (South East: X: +20.5 to +36.0, Z: 0 to -8.5)
+            // 1st Floor Classrooms with authentic mapping, desks & trash
+            BuildClassroom(floor1, -28.25f, floorY, -4.25f, "1-A", 1);
+            BuildClassroom(floor1, -12.75f, floorY, -4.25f, "1-B", 2);
+            BuildClassroom(floor1, 12.75f, floorY, -4.25f, "1-C", 3);
             BuildNurseOffice(floor1, 28.25f, floorY);
 
-            // 5. Staff Room / Teachers' Office (North West: X: -36 to -20.5, Z: -13.5 to -22)
             BuildStaffRoom(floor1, -28.25f, floorY);
-
-            // 6. Principal's Office (North Center-West: X: -20.5 to -5.0, Z: -13.5 to -22)
             BuildPrincipalOffice(floor1, -12.75f, floorY);
-
-            // 7. Computer / AV Lab (North Center-East: X: +5.0 to +20.5, Z: -13.5 to -22)
             BuildComputerLab(floor1, 12.75f, floorY);
-
-            // 8. Archive & Club Room (North East: X: +20.5 to +36.0, Z: -13.5 to -22)
             BuildArchiveRoom(floor1, 28.25f, floorY);
         }
 
         // ====================================================================
-        // 7. SECOND FLOOR INTERIORS: Matching Wide 5m Corridor & 2 Rooms Each Side
+        // 7. SECOND FLOOR INTERIORS: Wide 5m Corridor & 2 Rooms Each Side
         // ====================================================================
         void BuildSecondFloorInteriors()
         {
@@ -816,15 +1003,16 @@ namespace DeadAir
             float floorY = 3.80f;
             float ceilY = 7.40f;
 
-            // 2nd Floor Parquet Slab (with cutout over Stairwell Bay at X: -5 to +5, Z: -13.5 to -22!)
-            CreateBox(floor2, new Vector3(-20.5f, floorY + 0.05f, -11f), new Vector3(31f, 0.1f, 22f), matWoodFloor, true, "Floor 2 Parquet Left");
-            CreateBox(floor2, new Vector3(20.5f, floorY + 0.05f, -11f), new Vector3(31f, 0.1f, 22f), matWoodFloor, true, "Floor 2 Parquet Right");
-            CreateBox(floor2, new Vector3(0, floorY + 0.05f, -4.25f), new Vector3(10f, 0.1f, 8.5f), matWoodFloor, true, "Floor 2 Parquet South Center");
-            CreateBox(floor2, new Vector3(0, floorY + 0.05f, -11.0f), new Vector3(10f, 0.1f, 5.0f), matWoodFloor, true, "Floor 2 Parquet Corridor Center");
+            // 2nd Floor Parquet Floor Slab: Split with OPEN VOID over the Stairwell Bay!
+            CreateBox(floor2, new Vector3(-21f, floorY + 0.05f, -11f), new Vector3(30f, 0.1f, 22f), matWoodFloor, true, "Floor 2 Parquet Left");
+            CreateBox(floor2, new Vector3(21f, floorY + 0.05f, -11f), new Vector3(30f, 0.1f, 22f), matWoodFloor, true, "Floor 2 Parquet Right");
+            CreateBox(floor2, new Vector3(0, floorY + 0.05f, -4.25f), new Vector3(12f, 0.1f, 8.5f), matWoodFloor, true, "Floor 2 Parquet South Center");
+            CreateBox(floor2, new Vector3(0, floorY + 0.05f, -11.0f), new Vector3(12f, 0.1f, 5.0f), matWoodFloor, true, "Floor 2 Parquet Corridor Center");
+            // NOTE: X: -6 to +6, Z: -13.5 to -22 is 100% open void for the stairs!
+
             // Ceiling Concrete Slab
             CreateBox(floor2, new Vector3(0, ceilY + 0.05f, -11f), new Vector3(72f, 0.15f, 22f), matConcrete, true, "Floor 2 Ceiling");
 
-            // Corridor ceiling lamps spaced across length
             for (float hx = -30f; hx <= 30f; hx += 10f)
             {
                 CreateInteriorLamp(floor2, new Vector3(hx, ceilY - 0.15f, -11f));
@@ -833,10 +1021,7 @@ namespace DeadAir
             BuildExitSign(floor2, new Vector3(-20.5f, floorY + 2.9f, -8.65f));
             BuildExitSign(floor2, new Vector3(20.5f, floorY + 2.9f, -8.65f));
 
-            // ====================================================================
-            // 2ND FLOOR SOUTH CORRIDOR PARTITION WALL (at Z = -8.5)
-            // Separates 5m corridor from 4 South rooms: Class 2-A, 2-B, 2-C, Music Room
-            // ====================================================================
+            // 2ND FLOOR SOUTH CORRIDOR WALL (Z = -8.5)
             CreateBox(floor2, new Vector3(-32.6f, floorY + 1.8f, -8.5f), new Vector3(6.8f, 3.6f, 0.25f), matPlaster, true);
             CreateBox(floor2, new Vector3(-20.75f, floorY + 1.8f, -8.5f), new Vector3(14.0f, 3.6f, 0.25f), matPlaster, true);
             CreateBox(floor2, new Vector3(-8.5f, floorY + 1.8f, -8.5f), new Vector3(7.5f, 3.6f, 0.25f), matPlaster, true);
@@ -855,14 +1040,12 @@ namespace DeadAir
             BuildClassroomDoor(floor2, new Vector3(13.0f, floorY, -8.5f), 0, "2-C");
             BuildClassroomDoor(floor2, new Vector3(28.5f, floorY, -8.5f), 0, "音楽室");
 
-            // ====================================================================
-            // 2ND FLOOR NORTH CORRIDOR PARTITION WALL (at Z = -13.5)
-            // ====================================================================
+            // 2ND FLOOR NORTH CORRIDOR WALL (Z = -13.5)
+            // Left flight exit (X: -5.5 to -0.8) is 100% UNIMPEDED AND OPEN!
             CreateBox(floor2, new Vector3(-32.6f, floorY + 1.8f, -13.5f), new Vector3(6.8f, 3.6f, 0.25f), matPlaster, true);
             CreateBox(floor2, new Vector3(-20.75f, floorY + 1.8f, -13.5f), new Vector3(14.0f, 3.6f, 0.25f), matPlaster, true);
-            CreateBox(floor2, new Vector3(-8.5f, floorY + 1.8f, -13.5f), new Vector3(7.5f, 3.6f, 0.25f), matPlaster, true);
-            // X: -4.8 to +4.8 is the stairwell exit and void guardrail!
-            CreateBox(floor2, new Vector3(8.5f, floorY + 1.8f, -13.5f), new Vector3(7.5f, 3.6f, 0.25f), matPlaster, true);
+            CreateBox(floor2, new Vector3(-9.25f, floorY + 1.8f, -13.5f), new Vector3(6.5f, 3.6f, 0.25f), matPlaster, true);
+            CreateBox(floor2, new Vector3(9.25f, floorY + 1.8f, -13.5f), new Vector3(6.5f, 3.6f, 0.25f), matPlaster, true);
             CreateBox(floor2, new Vector3(20.75f, floorY + 1.8f, -13.5f), new Vector3(14.0f, 3.6f, 0.25f), matPlaster, true);
             CreateBox(floor2, new Vector3(32.6f, floorY + 1.8f, -13.5f), new Vector3(6.8f, 3.6f, 0.25f), matPlaster, true);
 
@@ -876,28 +1059,27 @@ namespace DeadAir
             BuildClassroomDoor(floor2, new Vector3(13.0f, floorY, -13.5f), 180, "図書室");
             BuildClassroomDoor(floor2, new Vector3(28.5f, floorY, -13.5f), 180, "放送室");
 
-            // Room dividers on 2nd floor
+            // 2nd Floor Room dividers
             CreateBox(floor2, new Vector3(-20.5f, floorY + 1.8f, -4.25f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster, true);
             CreateBox(floor2, new Vector3(-5.0f, floorY + 1.8f, -4.25f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster, true);
             CreateBox(floor2, new Vector3(5.0f, floorY + 1.8f, -4.25f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster, true);
             CreateBox(floor2, new Vector3(20.5f, floorY + 1.8f, -4.25f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster, true);
 
             CreateBox(floor2, new Vector3(-20.5f, floorY + 1.8f, -17.75f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster, true);
-            CreateBox(floor2, new Vector3(-5.0f, floorY + 1.8f, -17.75f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster, true);
-            CreateBox(floor2, new Vector3(5.0f, floorY + 1.8f, -17.75f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster, true);
+            CreateBox(floor2, new Vector3(-6.0f, floorY + 1.8f, -17.75f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster, true);
+            CreateBox(floor2, new Vector3(6.0f, floorY + 1.8f, -17.75f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster, true);
             CreateBox(floor2, new Vector3(20.5f, floorY + 1.8f, -17.75f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster, true);
 
-            // Protective Balustrade Guardrails around the Stairwell Void on 2nd Floor
-            CreateBox(floor2, new Vector3(-4.8f, floorY + 0.5f, -16.0f), new Vector3(0.1f, 1.0f, 5.0f), matDarkMetal, true, "Stair Void Rail W");
-            CreateBox(floor2, new Vector3(0f, floorY + 0.5f, -18.5f), new Vector3(9.6f, 1.0f, 0.1f), matDarkMetal, true, "Stair Void Rail N");
-            CreateBox(floor2, new Vector3(0f, floorY + 0.5f, -13.5f), new Vector3(4.8f, 1.0f, 0.1f), matDarkMetal, true, "Stair Void Rail S");
+            // Safety Balustrade Railings around the 2nd Floor Open Void (Only where needed!)
+            // Protects the void edge overlooking Flight 1 from the corridor (X: -0.6 to +5.8)
+            CreateBox(floor2, new Vector3(2.6f, floorY + 0.5f, -13.6f), new Vector3(6.4f, 1.0f, 0.08f), matDarkMetal, true, "Void Rail South");
+            // Inner guardrail between flights
+            CreateBox(floor2, new Vector3(-0.6f, floorY + 0.5f, -16.0f), new Vector3(0.08f, 1.0f, 4.8f), matDarkMetal, true, "Void Rail Center");
 
-            // ====================================================================
-            // 2ND FLOOR ROOM INTERIORS & MAPPING
-            // ====================================================================
-            BuildClassroom(floor2, -28.25f, floorY, -4.25f, "2-A");
-            BuildClassroom(floor2, -12.75f, floorY, -4.25f, "2-B");
-            BuildClassroom(floor2, 12.75f, floorY, -4.25f, "2-C");
+            // 2nd Floor Classrooms with authentic mapping, desks & trash
+            BuildClassroom(floor2, -28.25f, floorY, -4.25f, "2-A", 4);
+            BuildClassroom(floor2, -12.75f, floorY, -4.25f, "2-B", 5);
+            BuildClassroom(floor2, 12.75f, floorY, -4.25f, "2-C", 6);
             BuildMusicRoom(floor2, 28.25f, floorY);
 
             BuildScienceLab(floor2, -28.25f, floorY);
@@ -907,7 +1089,7 @@ namespace DeadAir
         }
 
         // ====================================================================
-        // 8. GRAND SWITCHBACK U-TURN STAIRWELL (Authentic School Staircase)
+        // 8. GRAND SWITCHBACK U-TURN STAIRWELL (Unobstructed, Double-Height Atrium)
         // ====================================================================
         void BuildStairs()
         {
@@ -918,46 +1100,49 @@ namespace DeadAir
             float midY = 2.20f;
             float endY = 3.80f;
 
-            // Stairwell Bay: X: -5.0 to +5.0, Z: -13.5 to -22.0
-            // Midway Landing Platform at Y = 2.20m (Z: -18.2 to -21.8, X: -4.8 to +4.8)
-            CreateBox(stairs, new Vector3(0, midY - 0.08f, -20.0f), new Vector3(9.6f, 0.16f, 3.6f), matConcrete, true, "Midway Landing Platform");
-            // Central Divider Wall between the two flights (X = 0, Z: -13.5 to -18.2, height 2.8m)
-            CreateBox(stairs, new Vector3(0, 2.0f, -15.85f), new Vector3(0.25f, 3.2f, 4.7f), matConcrete, true, "Stair Central Spine");
+            // Stairwell Bay: X: -6.0 to +6.0, Z: -13.5 to -22.0
+            // Midway Landing Platform at Y = 2.20m (Z: -18.2 to -21.8, X: -5.6 to +5.6)
+            CreateBox(stairs, new Vector3(0, midY - 0.09f, -20.0f), new Vector3(11.2f, 0.18f, 3.6f), matConcrete, true, "Midway Landing Platform");
 
-            // FLIGHT 1 (West half: X: -4.8 to -0.2): Climbs North from Z = -13.5, Y = 0.60m to Z = -18.2, Y = 2.20m
-            int stepsFlight1 = 10;
-            float rise1 = (midY - startY) / stepsFlight1; // 0.16m per step
-            float run1 = 4.7f / stepsFlight1;            // 0.47m tread
-            for (int i = 0; i < stepsFlight1; i++)
+            // Slender Central Divider Wall between the two flights
+            CreateBox(stairs, new Vector3(0, 2.0f, -16.0f), new Vector3(0.20f, 3.2f, 4.4f), matConcrete, true, "Stair Central Spine");
+
+            // FLIGHT 1 (Right flight: X: +0.6 to +5.4, width 4.4m)
+            // Starts at 1F corridor level (Z = -13.8, Y = 0.60m) and climbs North to Landing (Z = -18.2, Y = 2.20m)
+            int steps1 = 10;
+            float rise1 = (midY - startY) / steps1; // 0.16m
+            float run1 = 4.4f / steps1;            // 0.44m
+            for (int i = 0; i < steps1; i++)
             {
                 float sy = startY + (i + 0.5f) * rise1;
-                float sz = -13.5f - (i + 0.5f) * run1;
-                CreateBox(stairs, new Vector3(-2.5f, sy, sz), new Vector3(4.5f, rise1, run1), matConcrete, true, "Step F1 " + i);
+                float sz = -13.8f - (i + 0.5f) * run1;
+                CreateBox(stairs, new Vector3(3.0f, sy, sz), new Vector3(4.4f, rise1, run1), matConcrete, true, "Step F1 " + i);
             }
-            // Smooth invisible ramp collider over Flight 1 for butter-smooth character motion!
-            CreateRamp(stairs, new Vector3(-2.5f, 1.40f, -15.85f), new Vector3(4.5f, 0.15f, 4.96f), 18.8f, "Flight 1 Smooth Ramp");
+            CreateRamp(stairs, new Vector3(3.0f, 1.40f, -16.0f), new Vector3(4.4f, 0.10f, 4.8f), 19.5f, "Flight 1 Smooth Ramp");
 
-            // Outer Handrail for Flight 1 (along West wall X = -4.8)
-            CreateBox(stairs, new Vector3(-4.7f, 2.25f, -15.85f), new Vector3(0.08f, 0.9f, 4.7f), matDarkMetal, false, "Handrail F1 Outer");
+            // Handrails for Flight 1
+            CreateBox(stairs, new Vector3(5.3f, 2.25f, -16.0f), new Vector3(0.08f, 0.9f, 4.4f), matDarkMetal, false, "Handrail F1 Wall");
+            CreateBox(stairs, new Vector3(0.7f, 2.25f, -16.0f), new Vector3(0.08f, 0.9f, 4.4f), matDarkMetal, false, "Handrail F1 Inner");
 
-            // FLIGHT 2 (East half: X: +0.2 to +4.8): Turns 180°! Climbs South from Landing Z = -18.2, Y = 2.20m to Z = -13.5, Y = 3.80m
-            int stepsFlight2 = 10;
-            float rise2 = (endY - midY) / stepsFlight2; // 0.16m per step
-            float run2 = 4.7f / stepsFlight2;            // 0.47m tread
-            for (int i = 0; i < stepsFlight2; i++)
+            // FLIGHT 2 (Left flight: X: -5.4 to -0.6, width 4.4m)
+            // Turns 180°! Starts at Landing (Z = -18.2, Y = 2.20m) and climbs South to 2F corridor (Z = -13.8, Y = 3.80m)
+            int steps2 = 10;
+            float rise2 = (endY - midY) / steps2; // 0.16m
+            float run2 = 4.4f / steps2;            // 0.44m
+            for (int i = 0; i < steps2; i++)
             {
                 float sy = midY + (i + 0.5f) * rise2;
                 float sz = -18.2f + (i + 0.5f) * run2;
-                CreateBox(stairs, new Vector3(2.5f, sy, sz), new Vector3(4.5f, rise2, run2), matConcrete, true, "Step F2 " + i);
+                CreateBox(stairs, new Vector3(-3.0f, sy, sz), new Vector3(4.4f, rise2, run2), matConcrete, true, "Step F2 " + i);
             }
-            // Smooth invisible ramp collider over Flight 2!
-            CreateRamp(stairs, new Vector3(2.5f, 3.00f, -15.85f), new Vector3(4.5f, 0.15f, 4.96f), -18.8f, "Flight 2 Smooth Ramp");
+            CreateRamp(stairs, new Vector3(-3.0f, 3.00f, -16.0f), new Vector3(4.4f, 0.10f, 4.8f), -19.5f, "Flight 2 Smooth Ramp");
 
-            // Outer Handrail for Flight 2 (along East wall X = +4.8)
-            CreateBox(stairs, new Vector3(4.7f, 3.85f, -15.85f), new Vector3(0.08f, 0.9f, 4.7f), matDarkMetal, false, "Handrail F2 Outer");
+            // Handrails for Flight 2
+            CreateBox(stairs, new Vector3(-5.3f, 3.85f, -16.0f), new Vector3(0.08f, 0.9f, 4.4f), matDarkMetal, false, "Handrail F2 Wall");
+            CreateBox(stairs, new Vector3(-0.7f, 3.85f, -16.0f), new Vector3(0.08f, 0.9f, 4.4f), matDarkMetal, false, "Handrail F2 Inner");
 
-            // Midway Landing Railing under the big window
-            CreateBox(stairs, new Vector3(0, midY + 0.5f, -21.8f), new Vector3(9.6f, 1.0f, 0.08f), matDarkMetal, false, "Landing Railing");
+            // Midway Landing Railing under the big forest window
+            CreateBox(stairs, new Vector3(0, midY + 0.5f, -21.8f), new Vector3(11.0f, 1.0f, 0.08f), matDarkMetal, false, "Landing Railing");
         }
 
         // ====================================================================
@@ -970,90 +1155,182 @@ namespace DeadAir
             doorGroup.localPosition = basePos;
             doorGroup.localRotation = Quaternion.Euler(0, yaw, 0);
 
-            // Doorway is 1.5m wide, 2.3m high
-            // Wooden Door Posts
             CreateBox(doorGroup, new Vector3(-0.75f, 1.15f, 0), new Vector3(0.12f, 2.3f, 0.28f), matDarkMetal, true);
             CreateBox(doorGroup, new Vector3(0.75f, 1.15f, 0), new Vector3(0.12f, 2.3f, 0.28f), matDarkMetal, true);
             CreateBox(doorGroup, new Vector3(0, 2.36f, 0), new Vector3(1.62f, 0.12f, 0.28f), matDarkMetal, false);
 
-            // Authentic Wooden Room Nameplate Plaque (室名札) mounted above door
             var plate = CreateBox(doorGroup, new Vector3(0, 2.58f, 0.15f), new Vector3(0.75f, 0.28f, 0.06f), matWoodFloor, false, "Nameplate");
             CreateBox(plate.transform, new Vector3(0, 0, 0.04f), new Vector3(0.68f, 0.22f, 0.02f), matWhite, false, "Label Base");
 
-            // Japanese Sliding Door Leaf (Hikido):
-            // Placed slid to the side (ajar by ~1.1m) so the player walks freely inside!
             var leaf = CreateBox(doorGroup, new Vector3(0.85f, 1.12f, 0.08f), new Vector3(0.95f, 2.20f, 0.05f), matDoorWood, true, "Sliding Leaf");
-            // Upper glass observation window pane
             CreateBox(leaf.transform, new Vector3(0, 0.45f, 0), new Vector3(0.75f, 0.75f, 0.03f), matGlass, false, "Door Window Glass");
-            // Wooden window mullion crosses
             CreateBox(leaf.transform, new Vector3(0, 0.45f, 0.02f), new Vector3(0.04f, 0.75f, 0.04f), matDoorWood, false);
             CreateBox(leaf.transform, new Vector3(0, 0.45f, 0.02f), new Vector3(0.75f, 0.04f, 0.04f), matDoorWood, false);
-            // Recessed door pull handle
             CreateBox(leaf.transform, new Vector3(-0.38f, 0, 0.03f), new Vector3(0.04f, 0.18f, 0.02f), matDarkMetal, false);
         }
 
         // ====================================================================
-        // CLASSROOM BUILDER: Blackboard, Podium, 12 Desks & Rear Cubbies
+        // CLASSROOM BUILDER: Authentic Desks, Disarray, Trash & Abandoned Clutter!
         // ====================================================================
-        void BuildClassroom(Transform parent, float centerX, float floorY, float centerZ, string roomName)
+        void BuildClassroom(Transform parent, float centerX, float floorY, float centerZ, string roomName, int classroomIndex)
         {
             var room = new GameObject("Classroom " + roomName).transform;
             room.SetParent(parent, false);
 
-            // Front Baked Chalkboard with wooden frame & chalk tray (never bleeds through walls!)
-            CreateBox(room, new Vector3(centerX, floorY + 1.85f, centerZ + 4.15f), new Vector3(5.8f, 1.6f, 0.08f), matChalkboard, true, "Chalkboard");
-            CreateBox(room, new Vector3(centerX, floorY + 1.0f, centerZ + 4.1f), new Vector3(5.8f, 0.08f, 0.14f), matWoodFloor, false, "Chalk Tray");
+            // Front Baked Chalkboard with wood frame & chalk tray
+            CreateBox(room, new Vector3(centerX, floorY + 1.85f, centerZ + 4.05f), new Vector3(6.2f, 1.6f, 0.08f), matChalkboard, true, "Chalkboard");
+            CreateBox(room, new Vector3(centerX, floorY + 1.0f, centerZ + 4.0f), new Vector3(6.2f, 0.08f, 0.14f), matWoodFloor, false, "Chalk Tray");
+
+            // Broken chalk pieces and dropped eraser on the floor under the chalkboard!
+            CreateBox(room, new Vector3(centerX - 0.8f, floorY + 0.015f, centerZ + 3.8f), new Vector3(0.08f, 0.03f, 0.03f), matWhite, false, "Chalk Stick");
+            CreateBox(room, new Vector3(centerX + 0.5f, floorY + 0.015f, centerZ + 3.7f), new Vector3(0.06f, 0.03f, 0.03f), matTorii, false, "Red Chalk");
+            CreateBox(room, new Vector3(centerX + 1.2f, floorY + 0.025f, centerZ + 3.65f), new Vector3(0.18f, 0.05f, 0.09f), matDarkMetal, false, "Felt Eraser");
 
             // Teacher Podium & Desk
-            CreateBox(room, new Vector3(centerX, floorY + 0.10f, centerZ + 2.8f), new Vector3(2.6f, 0.20f, 1.4f), matWoodFloor, true, "Podium Stage");
-            CreateBox(room, new Vector3(centerX, floorY + 0.55f, centerZ + 2.8f), new Vector3(1.8f, 0.75f, 0.85f), matWoodFloor, true, "Teacher Desk");
-            CreateBox(room, new Vector3(centerX + 0.4f, floorY + 0.95f, centerZ + 2.8f), new Vector3(0.35f, 0.05f, 0.25f), matBooks, false, "Attendance Book");
+            CreateBox(room, new Vector3(centerX, floorY + 0.08f, centerZ + 2.8f), new Vector3(2.8f, 0.16f, 1.4f), matWoodFloor, true, "Podium Stage");
+            CreateBox(room, new Vector3(centerX, floorY + 0.55f, centerZ + 2.8f), new Vector3(1.6f, 0.75f, 0.85f), matDeskWood, true, "Teacher Desk");
+            CreateBox(room, new Vector3(centerX + 0.4f, floorY + 0.95f, centerZ + 2.8f), new Vector3(0.35f, 0.04f, 0.25f), matPaper, false, "Grade Binder");
 
-            // 12 Student Desks arranged in 3 rows x 4 columns
+            // 12 Authentic Student Desks (3 rows x 4 columns)
+            int deskIndex = 0;
             for (int r = 0; r < 3; r++)
             {
                 for (int c = 0; c < 4; c++)
                 {
+                    deskIndex++;
                     float dx = centerX - 4.2f + c * 2.8f;
-                    float dz = centerZ + 1.0f - r * 2.2f;
-                    BuildDesk(room, new Vector3(dx, floorY, dz));
+                    float dz = centerZ + 0.9f - r * 2.2f;
+
+                    // Abandoned horror school touches:
+                    // In each classroom, some desks are pushed askew, one is overturned, chairs tipped!
+                    bool isOverturned = (classroomIndex + deskIndex) % 11 == 0;
+                    bool isAskew = (classroomIndex * 3 + deskIndex) % 5 == 0;
+                    bool isTippedChair = (classroomIndex * 2 + deskIndex) % 7 == 0;
+
+                    float yawOffset = isAskew ? ((deskIndex % 2 == 0) ? 22f : -28f) : UnityEngine.Random.Range(-3f, 3f);
+                    BuildAuthenticDesk(room, new Vector3(dx, floorY, dz), yawOffset, isOverturned, isTippedChair);
                 }
             }
 
-            // Student Wooden Cubby Shelves (ロッカー棚) along rear wall
-            CreateBox(room, new Vector3(centerX, floorY + 0.85f, centerZ - 4.05f), new Vector3(10.0f, 1.6f, 0.55f), matWoodFloor, true, "Cubby Shelves");
+            // Rear Wall Low Storage Shelf Unit (Clean, authentic Japanese school furniture!)
+            CreateBox(room, new Vector3(centerX, floorY + 0.50f, centerZ - 3.95f), new Vector3(8.4f, 1.0f, 0.40f), matDeskWood, true, "Cubby Unit");
             for (int c = 0; c < 8; c++)
             {
-                float cx = centerX - 4.2f + c * 1.2f;
-                CreateBox(room, new Vector3(cx, floorY + 0.85f, centerZ - 3.8f), new Vector3(1.0f, 1.4f, 0.45f), matDarkMetal, false);
+                float cx = centerX - 3.7f + c * 1.05f;
+                // Internal shelf cubby dividing walls
+                CreateBox(room, new Vector3(cx, floorY + 0.50f, centerZ - 3.95f), new Vector3(0.04f, 0.95f, 0.38f), matDeskWood, false);
+                // Textbooks & bags tucked in some cubbies
+                if ((c + classroomIndex) % 2 == 0)
+                {
+                    CreateBox(room, new Vector3(cx + 0.45f, floorY + 0.25f, centerZ - 3.95f), new Vector3(0.35f, 0.22f, 0.25f), matBooks, false);
+                }
             }
 
+            // CLASSROOM TRASH & ABANDONED CLUTTER (Мусор та безлад)
+            BuildClassroomTrashAndClutter(room, centerX, floorY, centerZ, classroomIndex);
+
             // Wall Clock above blackboard
-            var clk = CreateCylinder(room, new Vector3(centerX, floorY + 3.0f, centerZ + 4.15f), 0.35f, 0.06f, matWhite, false);
+            var clk = CreateCylinder(room, new Vector3(centerX, floorY + 3.0f, centerZ + 4.05f), 0.35f, 0.06f, matWhite, false);
             clk.transform.rotation = Quaternion.Euler(90, 0, 0);
 
             // Ceiling Fluorescent Tube Fixtures
-            CreateInteriorLamp(room, new Vector3(centerX - 2.5f, floorY + 3.1f, centerZ));
-            CreateInteriorLamp(room, new Vector3(centerX + 2.5f, floorY + 3.1f, centerZ));
+            CreateInteriorLamp(room, new Vector3(centerX - 2.8f, floorY + 3.1f, centerZ));
+            CreateInteriorLamp(room, new Vector3(centerX + 2.8f, floorY + 3.1f, centerZ));
         }
 
-        void BuildDesk(Transform parent, Vector3 pos)
+        void BuildAuthenticDesk(Transform parent, Vector3 pos, float yaw, bool isOverturned, bool isTippedChair)
         {
-            var g = new GameObject("SchoolDesk").transform;
+            var g = new GameObject("Authentic School Desk").transform;
             g.SetParent(parent, false);
             g.localPosition = pos;
+            g.localRotation = Quaternion.Euler(0, yaw, isOverturned ? 85f : 0);
 
-            CreateBox(g, new Vector3(0, 0.72f, 0), new Vector3(0.78f, 0.04f, 0.52f), matWoodFloor, true);
+            // Desktop (Warm light birch wood grain texture!)
+            CreateBox(g, new Vector3(0, 0.72f, 0), new Vector3(0.68f, 0.03f, 0.48f), matDeskWood, true, "Desktop");
+
+            // Under-desk metal book storage shelf
+            CreateBox(g, new Vector3(0, 0.62f, 0), new Vector3(0.56f, 0.06f, 0.38f), matDarkMetal, false, "Book Shelf");
+
+            // 4 Slender Tubular Steel Legs with rubber glides
             for (int sx = -1; sx <= 1; sx += 2)
             {
                 for (int sz = -1; sz <= 1; sz += 2)
                 {
-                    CreateCylinder(g, new Vector3(sx * 0.34f, 0.36f, sz * 0.22f), 0.018f, 0.72f, matDarkMetal, false);
+                    CreateCylinder(g, new Vector3(sx * 0.30f, 0.36f, sz * 0.20f), 0.016f, 0.72f, matDarkMetal, false);
                 }
             }
-            CreateBox(g, new Vector3(0, 0.42f, 0.46f), new Vector3(0.44f, 0.035f, 0.42f), matWoodFloor, true);
-            CreateBox(g, new Vector3(0, 0.80f, 0.64f), new Vector3(0.44f, 0.32f, 0.035f), matWoodFloor, false);
-            CreateBox(g, new Vector3(-0.42f, 0.45f, 0), new Vector3(0.12f, 0.35f, 0.24f), matDarkMetal, false, "Backpack");
+
+            // Attached Student Chair
+            var chair = new GameObject("Student Chair").transform;
+            chair.SetParent(g, false);
+            chair.localPosition = isTippedChair ? new Vector3(0, 0.2f, 0.8f) : Vector3.zero;
+            chair.localRotation = isTippedChair ? Quaternion.Euler(-75f, 15f, 0) : Quaternion.identity;
+
+            // Wooden Seat & Backrest
+            CreateBox(chair, new Vector3(0, 0.42f, 0.45f), new Vector3(0.40f, 0.025f, 0.38f), matDeskWood, true, "Seat");
+            CreateBox(chair, new Vector3(0, 0.78f, 0.62f), new Vector3(0.40f, 0.18f, 0.025f), matDeskWood, false, "Backrest");
+
+            // Chair tubular metal legs & uprights
+            for (int sx = -1; sx <= 1; sx += 2)
+            {
+                CreateCylinder(chair, new Vector3(sx * 0.16f, 0.21f, 0.45f), 0.014f, 0.42f, matDarkMetal, false);
+                CreateCylinder(chair, new Vector3(sx * 0.16f, 0.60f, 0.61f), 0.014f, 0.40f, matDarkMetal, false);
+            }
+
+            // School bag hanging on desk side hook
+            CreateBox(g, new Vector3(-0.36f, 0.45f, 0), new Vector3(0.10f, 0.32f, 0.22f), matDarkMetal, false, "School Bag");
+
+            // Open notebook or exam paper on some desks
+            if (!isOverturned && (int)(pos.x + pos.z) % 2 == 0)
+            {
+                CreateBox(g, new Vector3(UnityEngine.Random.Range(-0.1f, 0.1f), 0.74f, 0), new Vector3(0.24f, 0.005f, 0.32f), matPaper, false, "Desk Paper");
+            }
+        }
+
+        void BuildClassroomTrashAndClutter(Transform parent, float centerX, float floorY, float centerZ, int seed)
+        {
+            var clutter = new GameObject("Classroom Debris & Trash").transform;
+            clutter.SetParent(parent, false);
+
+            var rng = new System.Random(seed * 777 + 123);
+
+            // 1. Scattered Examination Papers & Notebook Pages on the floor!
+            int numPapers = 12;
+            for (int i = 0; i < numPapers; i++)
+            {
+                float px = centerX + (float)(rng.NextDouble() * 10.0 - 5.0);
+                float pz = centerZ + (float)(rng.NextDouble() * 6.5 - 3.2);
+                float yaw = (float)(rng.NextDouble() * 360.0);
+                var paper = CreateBox(clutter, new Vector3(px, floorY + 0.01f, pz), new Vector3(0.28f, 0.005f, 0.20f), matPaper, false, "Loose Exam Paper");
+                paper.transform.rotation = Quaternion.Euler(0, yaw, 0);
+            }
+
+            // 2. Crumpled Paper Balls on the floor
+            for (int i = 0; i < 6; i++)
+            {
+                float px = centerX + (float)(rng.NextDouble() * 8.0 - 4.0);
+                float pz = centerZ + (float)(rng.NextDouble() * 6.0 - 3.0);
+                CreateBox(clutter, new Vector3(px, floorY + 0.04f, pz), new Vector3(0.08f, 0.08f, 0.08f), matPaper, false, "Crumpled Paper Ball");
+            }
+
+            // 3. Classroom Wastebasket / Trash Bin (in front corner)
+            var bin = CreateCylinder(clutter, new Vector3(centerX + 5.8f, floorY + 0.30f, centerZ + 3.2f), 0.18f, 0.60f, matTrashCan, true, "Trash Bin");
+            // Overflowing crumpled paper inside bin
+            CreateBox(bin.transform, new Vector3(0, 0.32f, 0), new Vector3(0.22f, 0.14f, 0.22f), matPaper, false, "Trash Overflow");
+
+            // 4. Aluminum Beverage Cans on the floor
+            CreateCylinder(clutter, new Vector3(centerX - 2.5f, floorY + 0.035f, centerZ - 1.8f), 0.035f, 0.12f, matCan, false, "Soda Can").transform.rotation = Quaternion.Euler(90, 45, 0);
+            CreateCylinder(clutter, new Vector3(centerX + 3.2f, floorY + 0.035f, centerZ + 0.5f), 0.035f, 0.12f, matCan, false, "Tea Can").transform.rotation = Quaternion.Euler(90, -30, 0);
+
+            // 5. Fallen Textbooks dropped on the floor
+            for (int i = 0; i < 3; i++)
+            {
+                float bx = centerX + (float)(rng.NextDouble() * 8.0 - 4.0);
+                float bz = centerZ + (float)(rng.NextDouble() * 5.0 - 2.5);
+                float byaw = (float)(rng.NextDouble() * 180.0);
+                var book = CreateBox(clutter, new Vector3(bx, floorY + 0.02f, bz), new Vector3(0.22f, 0.035f, 0.30f), matBooks, false, "Dropped Textbook");
+                book.transform.rotation = Quaternion.Euler(0, byaw, 0);
+            }
         }
 
         // ====================================================================
@@ -1072,8 +1349,12 @@ namespace DeadAir
                 CreateBox(room, new Vector3(centerX + 3.0f, floorY + 1.2f, bz), new Vector3(0.05f, 1.8f, 2.2f), matWhite, false, "Privacy Curtain");
             }
             CreateBox(room, new Vector3(centerX - 3.5f, floorY + 1.5f, -6.5f), new Vector3(2.4f, 2.8f, 0.6f), matDarkMetal, true, "Medicine Cabinet");
-            CreateBox(room, new Vector3(centerX - 3.5f, floorY + 0.75f, -2.5f), new Vector3(1.8f, 0.75f, 1.0f), matWoodFloor, true, "Nurse Desk");
+            CreateBox(room, new Vector3(centerX - 3.5f, floorY + 0.75f, -2.5f), new Vector3(1.8f, 0.75f, 1.0f), matDeskWood, true, "Nurse Desk");
             CreateBox(room, new Vector3(centerX + 1.0f, floorY + 1.0f, -7.5f), new Vector3(0.35f, 2.0f, 0.35f), matWhite, true, "Height Scale");
+
+            // Dropped medical bandages & pill box on floor
+            CreateBox(room, new Vector3(centerX - 1.5f, floorY + 0.03f, -4.5f), new Vector3(0.14f, 0.06f, 0.14f), matWhite, false, "Bandage Roll");
+            CreateBox(room, new Vector3(centerX - 1.8f, floorY + 0.02f, -4.2f), new Vector3(0.12f, 0.04f, 0.08f), matPaper, false, "Medicine Box");
 
             CreateInteriorLamp(room, new Vector3(centerX, floorY + 3.1f, -4.25f));
         }
@@ -1086,14 +1367,23 @@ namespace DeadAir
             for (int pod = 0; pod < 2; pod++)
             {
                 float pz = -16.0f - pod * 3.4f;
-                var podDesk = CreateBox(room, new Vector3(centerX, floorY + 0.75f, pz), new Vector3(7.2f, 0.75f, 1.8f), matWoodFloor, true, "Staff Pod Desk");
+                var podDesk = CreateBox(room, new Vector3(centerX, floorY + 0.75f, pz), new Vector3(7.2f, 0.75f, 1.8f), matDeskWood, true, "Staff Pod Desk");
                 for (float dx = -2.4f; dx <= 2.4f; dx += 2.4f)
                 {
-                    CreateBox(podDesk.transform, new Vector3(dx, 0.45f, 0.3f), new Vector3(0.4f, 0.25f, 0.3f), matBooks, false, "Paper Stack");
-                    CreateBox(podDesk.transform, new Vector3(dx, 0.45f, -0.3f), new Vector3(0.4f, 0.25f, 0.3f), matBooks, false, "Paper Stack");
+                    CreateBox(podDesk.transform, new Vector3(dx, 0.45f, 0.3f), new Vector3(0.4f, 0.25f, 0.3f), matPaper, false, "Paper Stack");
+                    CreateBox(podDesk.transform, new Vector3(dx, 0.45f, -0.3f), new Vector3(0.4f, 0.25f, 0.3f), matPaper, false, "Paper Stack");
                 }
             }
             CreateBox(room, new Vector3(centerX - 5.5f, floorY + 1.6f, -17.75f), new Vector3(0.8f, 2.8f, 6.0f), matDarkMetal, true, "Filing Cabinets");
+
+            // Scattered documents across the floor
+            for (int i = 0; i < 8; i++)
+            {
+                float px = centerX + UnityEngine.Random.Range(-4.5f, 4.5f);
+                float pz = -17.75f + UnityEngine.Random.Range(-2.5f, 2.5f);
+                CreateBox(room, new Vector3(px, floorY + 0.01f, pz), new Vector3(0.28f, 0.005f, 0.22f), matPaper, false, "Printout Document");
+            }
+
             CreateInteriorLamp(room, new Vector3(centerX, floorY + 3.1f, -17.75f));
         }
 
@@ -1102,11 +1392,11 @@ namespace DeadAir
             var room = new GameObject("Principal Office (校長室)").transform;
             room.SetParent(parent, false);
 
-            CreateBox(room, new Vector3(centerX, floorY + 0.75f, -20.0f), new Vector3(2.8f, 0.75f, 1.4f), matWoodFloor, true, "Executive Desk");
+            CreateBox(room, new Vector3(centerX, floorY + 0.75f, -20.0f), new Vector3(2.8f, 0.75f, 1.4f), matDeskWood, true, "Executive Desk");
             CreateBox(room, new Vector3(centerX, floorY + 0.65f, -20.9f), new Vector3(0.8f, 1.1f, 0.8f), matDarkMetal, true, "Leather Chair");
             CreateBox(room, new Vector3(centerX - 2.5f, floorY + 0.45f, -16.5f), new Vector3(1.8f, 0.65f, 0.8f), matDarkMetal, true, "Sofa L");
             CreateBox(room, new Vector3(centerX + 2.5f, floorY + 0.45f, -16.5f), new Vector3(1.8f, 0.65f, 0.8f), matDarkMetal, true, "Sofa R");
-            CreateBox(room, new Vector3(centerX, floorY + 0.35f, -16.5f), new Vector3(1.6f, 0.45f, 0.8f), matWoodFloor, true, "Coffee Table");
+            CreateBox(room, new Vector3(centerX, floorY + 0.35f, -16.5f), new Vector3(1.6f, 0.45f, 0.8f), matDeskWood, true, "Coffee Table");
 
             CreateInteriorLamp(room, new Vector3(centerX, floorY + 3.1f, -17.75f));
         }
@@ -1137,7 +1427,7 @@ namespace DeadAir
             for (int r = 0; r < 3; r++)
             {
                 float rz = -15.5f - r * 2.2f;
-                var shelf = CreateBox(room, new Vector3(centerX - 1.5f, floorY + 1.4f, rz), new Vector3(6.5f, 2.6f, 0.7f), matWoodFloor, true, "Archive Shelf");
+                var shelf = CreateBox(room, new Vector3(centerX - 1.5f, floorY + 1.4f, rz), new Vector3(6.5f, 2.6f, 0.7f), matDeskWood, true, "Archive Shelf");
                 for (int lvl = 0; lvl < 3; lvl++)
                 {
                     CreateBox(shelf.transform, new Vector3(0, -0.8f + lvl * 0.75f, 0.05f), new Vector3(6.2f, 0.45f, 0.55f), matBooks, false);
@@ -1156,7 +1446,15 @@ namespace DeadAir
 
             var piano = CreateBox(room, new Vector3(centerX + 3.5f, floorY + 0.7f, -4.25f), new Vector3(1.8f, 1.3f, 1.4f), matDarkMetal, true, "Upright Piano");
             CreateBox(piano.transform, new Vector3(0, -0.1f, 0.65f), new Vector3(1.6f, 0.18f, 0.35f), matWhite, false, "Keyboard");
-            CreateBox(room, new Vector3(centerX + 3.5f, floorY + 0.45f, -3.2f), new Vector3(0.6f, 0.45f, 0.4f), matWoodFloor, true, "Piano Stool");
+            CreateBox(room, new Vector3(centerX + 3.5f, floorY + 0.45f, -3.2f), new Vector3(0.6f, 0.45f, 0.4f), matDeskWood, true, "Piano Stool");
+
+            // Scattered sheet music pages across the floor!
+            for (int i = 0; i < 9; i++)
+            {
+                float px = centerX + UnityEngine.Random.Range(-3.5f, 3.5f);
+                float pz = -4.25f + UnityEngine.Random.Range(-2.5f, 2.5f);
+                CreateBox(room, new Vector3(px, floorY + 0.01f, pz), new Vector3(0.24f, 0.005f, 0.32f), matPaper, false, "Sheet Music Page");
+            }
 
             for (int row = 0; row < 3; row++)
             {
@@ -1164,7 +1462,7 @@ namespace DeadAir
                 for (int c = 0; c < 4; c++)
                 {
                     float cx = centerX - 3.8f + c * 1.8f;
-                    CreateBox(room, new Vector3(cx, floorY + 0.45f, rz), new Vector3(0.45f, 0.45f, 0.45f), matWoodFloor, true, "Chair");
+                    CreateBox(room, new Vector3(cx, floorY + 0.45f, rz), new Vector3(0.45f, 0.45f, 0.45f), matDeskWood, true, "Chair");
                     CreateCylinder(room, new Vector3(cx, floorY + 0.9f, rz + 0.6f), 0.02f, 0.9f, matDarkMetal, false, "Music Stand");
                     CreateBox(room, new Vector3(cx, floorY + 1.2f, rz + 0.6f), new Vector3(0.4f, 0.3f, 0.03f), matDarkMetal, false);
                 }
@@ -1185,7 +1483,7 @@ namespace DeadAir
                 CreateCylinder(bench.transform, new Vector3(2.8f, 0.7f, 0), 0.02f, 0.4f, matWhite, false, "Faucet");
                 CreateCylinder(bench.transform, new Vector3(-2.2f, 0.55f, 0.2f), 0.06f, 0.22f, matGlass, false, "Beaker");
                 CreateCylinder(bench.transform, new Vector3(-1.6f, 0.55f, 0.2f), 0.08f, 0.25f, matGlass, false, "Beaker 2");
-                CreateBox(bench.transform, new Vector3(0, 0.55f, -0.3f), new Vector3(0.45f, 0.18f, 0.15f), matWoodFloor, false, "Test Tubes");
+                CreateBox(bench.transform, new Vector3(0, 0.55f, -0.3f), new Vector3(0.45f, 0.18f, 0.15f), matDeskWood, false, "Test Tubes");
             }
 
             var skel = new GameObject("Skeleton Stand").transform;
@@ -1217,14 +1515,14 @@ namespace DeadAir
             for (int r = 0; r < 3; r++)
             {
                 float bz = -15.5f - r * 2.6f;
-                var shelf = CreateBox(lib, new Vector3(centerX - 3.0f, floorY + 1.4f, bz), new Vector3(5.5f, 2.8f, 0.65f), matWoodFloor, true, "Bookshelf");
+                var shelf = CreateBox(lib, new Vector3(centerX - 3.0f, floorY + 1.4f, bz), new Vector3(5.5f, 2.8f, 0.65f), matDeskWood, true, "Bookshelf");
                 for (int level = 0; level < 4; level++)
                 {
-                    CreateBox(shelf.transform, new Vector3(0, -1.0f + level * 0.65f, 0.05f), new Vector3(5.2f, 0.45f, 0.55f), matBooks, false, "Books");
+                    CreateBox(shelf.transform, new Vector3(0, -1.0f + level * 0.65f, 0.05f), new Vector3(5.2f, 0.45f, 0.55f), matBooks, false);
                 }
             }
 
-            var table = CreateBox(lib, new Vector3(centerX + 3.2f, floorY + 0.4f, -17.75f), new Vector3(2.6f, 0.8f, 4.8f), matWoodFloor, true, "Study Table");
+            var table = CreateBox(lib, new Vector3(centerX + 3.2f, floorY + 0.4f, -17.75f), new Vector3(2.6f, 0.8f, 4.8f), matDeskWood, true, "Study Table");
             for (float tz = -1.5f; tz <= 1.5f; tz += 1.5f)
             {
                 var lamp = CreateBox(table.transform, new Vector3(0, 0.55f, tz), new Vector3(0.22f, 0.35f, 0.22f), matTorii, false, "Desk Lamp");
@@ -1233,6 +1531,14 @@ namespace DeadAir
                 l.color = new Color(0.9f, 1.0f, 0.7f);
                 l.intensity = 0.9f;
                 l.range = 3.2f;
+            }
+
+            // Fallen books between shelves on library floor!
+            for (int i = 0; i < 6; i++)
+            {
+                float bx = centerX + UnityEngine.Random.Range(-4f, 4f);
+                float bz = -17.75f + UnityEngine.Random.Range(-3f, 3f);
+                CreateBox(lib, new Vector3(bx, floorY + 0.02f, bz), new Vector3(0.22f, 0.04f, 0.32f), matBooks, false, "Fallen Library Book");
             }
 
             CreateInteriorLamp(lib, new Vector3(centerX, floorY + 3.1f, -17.75f));
@@ -1297,8 +1603,8 @@ namespace DeadAir
         void BuildNoticeBoard(Transform parent, Vector3 pos)
         {
             var cork = CreateBox(parent, pos, new Vector3(2.4f, 1.2f, 0.06f), matWoodFloor, false, "NoticeBoard");
-            CreateBox(cork.transform, new Vector3(-0.6f, 0.15f, 0.04f), new Vector3(0.45f, 0.6f, 0.02f), matWhite, false, "Poster 1");
-            CreateBox(cork.transform, new Vector3(0.4f, -0.1f, 0.04f), new Vector3(0.55f, 0.45f, 0.02f), matWhite, false, "Poster 2");
+            CreateBox(cork.transform, new Vector3(-0.6f, 0.15f, 0.04f), new Vector3(0.45f, 0.6f, 0.02f), matPaper, false, "Poster 1");
+            CreateBox(cork.transform, new Vector3(0.4f, -0.1f, 0.04f), new Vector3(0.55f, 0.45f, 0.02f), matPaper, false, "Poster 2");
         }
 
         // ====================================================================
@@ -1552,7 +1858,7 @@ namespace DeadAir
         void SpawnSanityPills()
         {
             Vector3[] pillPositions = {
-                new Vector3(-28.25f, 1.45f, -4.25f), // Class 1-A desk
+                new Vector3(-28.25f, 1.45f, -1.45f), // Class 1-A teacher desk
                 new Vector3(28.25f, 1.45f, -4.25f),  // Nurse's office table
                 new Vector3(-28.25f, 4.65f, -16.2f), // 2nd Floor Science Lab counter
                 new Vector3(12.75f, 4.65f, -17.75f), // 2nd Floor Library table
@@ -1590,10 +1896,10 @@ namespace DeadAir
         void SpawnEvidenceTapes()
         {
             var tapeDefs = new[] {
-                new { id = "tape-1", label = "Касета 1: Щоденник чергового учня", pos = new Vector3(-12.75f, 1.45f, -4.25f) }, // Class 1-B
+                new { id = "tape-1", label = "Касета 1: Щоденник чергового учня", pos = new Vector3(-12.75f, 1.45f, -3.25f) }, // Class 1-B
                 new { id = "tape-2", label = "Касета 2: Звіт вчительської ради", pos = new Vector3(-28.25f, 1.45f, -16.0f) },    // Staff Room
                 new { id = "tape-3", label = "Касета 3: Запис гуртка окультизму", pos = new Vector3(28.25f, 4.65f, -4.25f) },   // Music Room
-                new { id = "tape-4", label = "Касета 4: Запис спостереження 2-A", pos = new Vector3(-28.25f, 4.65f, -4.25f) },  // Class 2-A
+                new { id = "tape-4", label = "Касета 4: Запис спостереження 2-A", pos = new Vector3(-28.25f, 4.65f, -3.25f) },  // Class 2-A
                 new { id = "tape-5", label = "Касета 5: Останній репортаж журналіста", pos = new Vector3(16f, 0.75f, 72f) }     // Park Gazebo
             };
 
