@@ -63,7 +63,8 @@ namespace DeadAir
                 player.SetVerificationCrouching(false); yield return new WaitForSecondsRealtime(.4f);
                 player.ClearVerificationMovement(); player.EndInspection(); ui.ReturnToMenu(); yield return null;
             }
-            checks.Add("PASSED: all four authored local bodies rendered standing and through actual crouch eye/capsule transitions without duplicate equipment lights.");
+            yield return CaptureRelaxedCharacterPostures();
+            checks.Add("PASSED: all four authored local bodies rendered standing and through actual crouch eye/capsule transitions without duplicate equipment lights; full source models rendered in relaxed idle, walk, run and flashlight poses.");
             var peerObject = new GameObject("Body loopback guest"); var peer = peerObject.AddComponent<DeadAirSession>(); peer.Initialize(data);
             try
             {
@@ -104,6 +105,62 @@ namespace DeadAir
             File.WriteAllLines(Path.Combine(output, "body-runtime-report.txt"), checks);
             Debug.Log("DEAD AIR BODY RUNTIME PASSED: " + checks.Count + " focused checks with rendered Windows frames.");
             Application.Quit(0);
+        }
+
+        IEnumerator CaptureRelaxedCharacterPostures()
+        {
+            session.Host("Posture verifier", "engineer", true, true); session.Command(new NetPacket { type = "start" });
+            session.State.elapsed = DeadAirVanPresentation.ArrivalDuration + 1; session.State.enemy.active = false;
+            yield return null; yield return null;
+            var actors = new List<DeadAirCharacterMotion>();
+            var stage = new GameObject("Source posture capture stage");
+            try
+            {
+                int index = 0;
+                foreach (string role in new[] { "operator", "engineer", "journalist", "dispatcher" })
+                {
+                    var avatar = Instantiate(Resources.Load<GameObject>("World/character_" + role), stage.transform);
+                    avatar.name = "Posture capture / " + role;
+                    avatar.transform.position = new Vector3(-2.7f + index++ * 1.8f, 0, 20);
+                    foreach (var child in avatar.GetComponentsInChildren<Transform>(true)) child.gameObject.layer = 28;
+                    foreach (var collider in avatar.GetComponentsInChildren<Collider>(true)) collider.enabled = false;
+                    actors.Add(avatar.GetComponent<DeadAirCharacterMotion>());
+                }
+                // Illuminate only the supplied character surfaces for an unobscured
+                // full-body comparison. This light exists solely in explicit captures.
+                var lightObject = new GameObject("Posture comparison light"); lightObject.transform.SetParent(stage.transform, false);
+                var light = lightObject.AddComponent<Light>(); light.type = LightType.Directional;
+                light.color = new Color(.85f, .89f, 1); light.intensity = .85f;
+                light.shadows = LightShadows.None; light.cullingMask = 1 << 28;
+                lightObject.transform.rotation = Quaternion.Euler(35, 180, 0);
+                // Keep the comparison actors in their authored forward direction.
+                foreach (var actor in actors) actor.transform.rotation = Quaternion.identity;
+                InspectToward(0, 26, 0, 0, 1.05f, 20);
+                captureWithoutEquipment = true; captureCanvas.enabled = false;
+                int frame = 0;
+                foreach (string clip in new[] { "Idle", "Walk", "Run", "Flashlight" })
+                {
+                    foreach (float phase in clip == "Walk" || clip == "Run" ? new[] { .25f, .75f } : new[] { .25f })
+                    {
+                        foreach (var actor in actors)
+                        {
+                            var state = new PlayerState { characterClass = actor.ClassId, clothingMask = -1,
+                                inventory = new List<string> { "flashlight" }, selectedSlot = clip == "Flashlight" ? 0 : -1 };
+                            // Empty hands exercise free arm swing. The final view uses
+                            // the production held-light contact and gaze direction.
+                            if (clip != "Flashlight") state.inventory.Clear();
+                            actor.SetEquipmentPreview(state, clip == "Flashlight" ? "Idle" : clip, phase);
+                        }
+                        yield return Save("posture-0" + ++frame + "-" + clip.ToLowerInvariant() + "-" + Mathf.RoundToInt(phase * 100));
+                    }
+                }
+            }
+            finally
+            {
+                captureWithoutEquipment = false; captureCanvas.enabled = true;
+                Destroy(stage); player.EndInspection(); ui.ReturnToMenu();
+            }
+            yield return null;
         }
     }
 }

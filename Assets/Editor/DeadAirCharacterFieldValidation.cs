@@ -102,8 +102,67 @@ namespace DeadAir.Editor
                 geometryReport.Add(role + ": PASSED authored clothes in six standing/crouching/walking/running/seated poses, discarded legacy serialized edit and finite posed BakeMesh bounds; default=" + baseline.size.ToString("F3") +
                     ", maximum(w,h,d)=" + new Vector3(largestWidth, largestHeight, largestDepth).ToString("F3") + ", source triangles default=" + fullTriangles +
                     ".");
+                ValidateLocomotionPosture(avatar, motion, role, geometryReport);
             }
             finally { UnityEngine.Object.DestroyImmediate(avatar); }
+        }
+
+        static void ValidateLocomotionPosture(GameObject avatar, DeadAirCharacterMotion motion, string role, List<string> geometryReport)
+        {
+            var state = new PlayerState { characterClass = role, clothingMask = -1 };
+            motion.SetTransitPose(0);
+            var shoulders = new[] { Find(avatar, "upper_arm.L"), Find(avatar, "upper_arm.R") };
+            var elbows = new[] { Find(avatar, "forearm.L"), Find(avatar, "forearm.R") };
+            var wrists = new[] { Find(avatar, "hand.L"), Find(avatar, "hand.R") };
+            var feet = new[] { Find(avatar, "foot.L"), Find(avatar, "foot.R") };
+            motion.SetEquipmentPreview(state, "Idle", 0);
+            var upperLengths = new float[2]; var forearmLengths = new float[2];
+            for (int side = 0; side < 2; side++)
+            {
+                upperLengths[side] = Vector3.Distance(shoulders[side].position, elbows[side].position);
+                forearmLengths[side] = Vector3.Distance(elbows[side].position, wrists[side].position);
+                Require(upperLengths[side] > .05f && forearmLengths[side] > .05f, role + " has a collapsed arm chain.");
+            }
+            foreach (string clip in new[] { "Idle", "Walk", "Run" })
+            {
+                float maximumAbduction = 0;
+                var armMin = new[] { float.PositiveInfinity, float.PositiveInfinity };
+                var armMax = new[] { float.NegativeInfinity, float.NegativeInfinity };
+                var footMin = new[] { float.PositiveInfinity, float.PositiveInfinity };
+                var footMax = new[] { float.NegativeInfinity, float.NegativeInfinity };
+                for (int phase = 0; phase < 8; phase++)
+                {
+                    motion.SetEquipmentPreview(state, clip, phase / 8f);
+                    for (int side = 0; side < 2; side++)
+                    {
+                        Vector3 shoulder = avatar.transform.InverseTransformPoint(shoulders[side].position);
+                        Vector3 elbow = avatar.transform.InverseTransformPoint(elbows[side].position);
+                        Vector3 direction = elbow - shoulder;
+                        // Fore/aft gait swing is allowed. Only the lateral part
+                        // of the actual joint direction measures A/T-pose arms.
+                        float abduction = Mathf.Asin(Mathf.Clamp01(Mathf.Abs(direction.x) / direction.magnitude)) * Mathf.Rad2Deg;
+                        Require(Finite(abduction) && abduction <= 10.5f && direction.y < -.08f,
+                            role + " " + clip + " phase " + phase + " keeps a spread/raised arm: " + abduction.ToString("F2") + " degrees.");
+                        Require(direction.x * (side == 0 ? 1 : -1) >= -.02f,
+                            role + " " + clip + " moved an elbow through the torso.");
+                        Require(Mathf.Abs(Vector3.Distance(shoulders[side].position, elbows[side].position) - upperLengths[side]) <= .001f + upperLengths[side] * .01f &&
+                            Mathf.Abs(Vector3.Distance(elbows[side].position, wrists[side].position) - forearmLengths[side]) <= .001f + forearmLengths[side] * .01f,
+                            role + " " + clip + " posture correction stretched an authored arm.");
+                        maximumAbduction = Mathf.Max(maximumAbduction, abduction);
+                        armMin[side] = Mathf.Min(armMin[side], direction.z); armMax[side] = Mathf.Max(armMax[side], direction.z);
+                        float footZ = avatar.transform.InverseTransformPoint(feet[side].position).z;
+                        footMin[side] = Mathf.Min(footMin[side], footZ); footMax[side] = Mathf.Max(footMax[side], footZ);
+                    }
+                }
+                if (clip != "Idle")
+                    for (int side = 0; side < 2; side++)
+                        Require(armMax[side] - armMin[side] > .02f && footMax[side] - footMin[side] > .06f,
+                            role + " " + clip + " lost its actual arm swing or foot stride.");
+                geometryReport.Add(role + ": PASSED " + clip + " empty-hand posture at eight phases; maximum lateral upper-arm abduction=" +
+                    maximumAbduction.ToString("F2") + " degrees, arm fore/aft spans=" + (armMax[0] - armMin[0]).ToString("F3") + "/" +
+                    (armMax[1] - armMin[1]).ToString("F3") + " m, foot spans=" + (footMax[0] - footMin[0]).ToString("F3") + "/" +
+                    (footMax[1] - footMin[1]).ToString("F3") + " m; source arm lengths preserved.");
+            }
         }
         static Transform Find(GameObject root, string name)
         { foreach (var bone in root.GetComponentsInChildren<Transform>(true)) if (bone.name == name) return bone; throw new InvalidOperationException("Missing rig bone " + name); }

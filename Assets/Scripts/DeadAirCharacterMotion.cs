@@ -44,6 +44,8 @@ namespace DeadAir
         bool firstPersonPresentation, hasLocomotionOverride, externalCrouching;
         float externalSpeed;
         Quaternion headRest = Quaternion.identity, chestRest = Quaternion.identity;
+        Quaternion rightArmRest = Quaternion.identity, leftArmRest = Quaternion.identity;
+        Quaternion rightForearmRest = Quaternion.identity, leftForearmRest = Quaternion.identity;
         Quaternion pelvisRest = Quaternion.identity;
         Vector3 pelvisRestPosition;
         Quaternion spineRest = Quaternion.identity;
@@ -288,6 +290,10 @@ namespace DeadAir
                 headLocalEye = head.InverseTransformPoint(transform.TransformPoint(DeadAirBodyFit.SourceEye(classId)));
             }
             if (chest != null) chestRest = chest.localRotation;
+            if (rightArm != null) rightArmRest = rightArm.localRotation;
+            if (leftArm != null) leftArmRest = leftArm.localRotation;
+            if (rightForearm != null) rightForearmRest = rightForearm.localRotation;
+            if (leftForearm != null) leftForearmRest = leftForearm.localRotation;
             if (pelvis != null) { pelvisRest = pelvis.localRotation; pelvisRestPosition = pelvis.localPosition; }
             if (spine != null) { spineRest = spine.localRotation; spineRestPosition = spine.localPosition; }
             if (rightSocket == null || leftSocket == null) return;
@@ -435,6 +441,10 @@ namespace DeadAir
             // a second gaze rotation to last frame's pose.
             if (head != null) head.localRotation = headRest;
             if (chest != null) chest.localRotation = chestRest;
+            if (rightArm != null) rightArm.localRotation = rightArmRest;
+            if (leftArm != null) leftArm.localRotation = leftArmRest;
+            if (rightForearm != null) rightForearm.localRotation = rightForearmRest;
+            if (leftForearm != null) leftForearm.localRotation = leftForearmRest;
             if (firstPersonPresentation && pelvis != null) { pelvis.localRotation = pelvisRest; pelvis.localPosition = pelvisRestPosition; }
             if (firstPersonPresentation && spine != null) { spine.localRotation = spineRest; spine.localPosition = spineRestPosition; }
             FirstPersonCrouchLeanDegrees = 0;
@@ -442,6 +452,37 @@ namespace DeadAir
             PoseCrouching();
             PoseSeatedTransit();
             PoseGaze();
+            PoseRelaxedArms();
+        }
+
+        void PoseRelaxedArms()
+        {
+            // Source export lowers its T-pose by only 65 degrees. Idle keeps the
+            // remaining A-pose and gait clips add sagittal swing without closing
+            // it. Correct actual shoulder/elbow directions, not imported Euler
+            // axes, and leave contact-driven special poses to their own solvers.
+            if (firstPersonPresentation || ladderClimbing || crouching || seatedWeight > .001f || actionTime >= 0 ||
+                clipName == "UseItem" || previousClip == "UseItem" && transition < 1) return;
+            RelaxArm(rightArm, rightForearm);
+            RelaxArm(leftArm, leftForearm);
+        }
+
+        void RelaxArm(Transform shoulder, Transform elbow)
+        {
+            if (shoulder == null || elbow == null) return;
+            Vector3 direction = elbow.position - shoulder.position;
+            float lengthSquared = direction.sqrMagnitude;
+            if (lengthSquared < .0001f) return;
+            float forward = Vector3.Dot(direction, transform.forward);
+            float outboard = Vector3.Dot(direction, transform.right);
+            float downward = Vector3.Dot(direction, transform.up);
+            float hangingLength = Mathf.Sqrt(Mathf.Max(0, lengthSquared - forward * forward));
+            float relaxedOutboard = hangingLength * Mathf.Sin(10 * Mathf.Deg2Rad);
+            if (downward >= 0 || Mathf.Abs(outboard) <= relaxedOutboard) return;
+            float targetOutboard = Mathf.Sign(outboard) * relaxedOutboard;
+            float targetDownward = -Mathf.Sqrt(Mathf.Max(0, hangingLength * hangingLength - targetOutboard * targetOutboard));
+            Vector3 target = transform.right * targetOutboard + transform.up * targetDownward + transform.forward * forward;
+            shoulder.rotation = Quaternion.FromToRotation(direction, target) * shoulder.rotation;
         }
 
         void PoseGaze()
@@ -854,8 +895,10 @@ namespace DeadAir
             Vector3 direction = toTarget.normalized;
             float along = (upperLength * upperLength - forearmLength * forearmLength + distance * distance) / (2 * distance);
             float bend = Mathf.Sqrt(Mathf.Max(0, upperLength * upperLength - along * along));
-            float elbowDrop = propMode == "camera" && classId == "engineer" ? 1.25f : .25f;
-            Vector3 hint = transform.right * (right ? 1 : -1) - transform.up * elbowDrop - transform.forward * .1f;
+            float elbowDrop = propMode == "camera" && classId == "engineer" ? 1.25f : 1f;
+            // A downward elbow rests under the real hand contact. An outboard-
+            // dominant hint flared both elbows despite an otherwise relaxed rig.
+            Vector3 hint = transform.right * ((right ? 1 : -1) * .35f) - transform.up * elbowDrop - transform.forward * .1f;
             hint -= direction * Vector3.Dot(hint, direction);
             if (hint.sqrMagnitude < .0001f) hint = Vector3.Cross(direction, transform.up);
             Vector3 elbow = shoulder + direction * along + hint.normalized * bend;
