@@ -434,7 +434,7 @@ namespace DeadAir
         {
             if(data==null||state?.phase!="playing"||state.elapsed<DeadAirVanPresentation.ArrivalDuration||actor==null||actor.down||actor.ladderClimbing||!string.IsNullOrEmpty(actor.hiding))return false;
             var board=data.Objective("van-map");
-            return board!=null&&Vector3.Distance(new Vector3(actor.x,actor.y+1,actor.z),new Vector3(board.x,board.y,board.z))<=2.5f&&
+            return board!=null&&DeadAirVanPresentation.IsInside(data,actor.x,actor.z)&&Vector3.Distance(new Vector3(actor.x,actor.y+1,actor.z),new Vector3(board.x,board.y,board.z))<=2.5f&&
                 DeadAirRules.HasInteractionSightline(new Vector3(-actor.x,actor.y+1.4f,actor.z),new Vector3(-board.x,board.y,board.z),"van-map");
         }
         public void OpenVanMap()

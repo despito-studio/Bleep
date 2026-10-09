@@ -158,7 +158,8 @@ namespace DeadAir
         {
             var board = world.Objective("van-map");
             return board != null && player != null && !player.down && !player.ladderClimbing &&
-                string.IsNullOrEmpty(player.hiding) && Near(player, board.x, board.y, board.z, 2.5f, 0, "van-map");
+                string.IsNullOrEmpty(player.hiding) && DeadAirVanPresentation.IsInside(world, player.x, player.z) &&
+                Near(player, board.x, board.y, board.z, 2.5f, 0, "van-map");
         }
 
         public string UseUnique(string id)
@@ -819,7 +820,7 @@ namespace DeadAir
                     var seat = DeadAirVanPresentation.SpawnPoint(world, i);
                     crew.x = seat.x; crew.y = seat.y; crew.z = seat.z;
                     crew.sprinting = crew.crouching = crew.camera = crew.mapOpen = crew.flashlight = false;
-                    RecordReturnedLoot(crew);
+                    if (!crew.down) RecordReturnedLoot(crew);
                 }
                 foreach(var player in State.players)ClearMushroomTrip(player);
                 State.message = "Ви вийшли. На записі чути на один голос більше.";

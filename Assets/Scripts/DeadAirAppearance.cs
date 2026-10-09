@@ -133,7 +133,16 @@ namespace DeadAir
             string bone = DominantBone(weight, sourceBones)?.name ?? "";
             // Faces, source fingers, earrings and every head-bound long hair
             // component survive garment removal, retaining individual identity.
-            if (bone == "head" || bone.StartsWith("hand.", StringComparison.Ordinal)) return 0;
+            if (bone == "head")
+            {
+                // A few imported white collar triangles share the head bone.
+                // Their low front position separates them from face and hair.
+                float headY = Point(head).y;
+                float chroma = Mathf.Max(color.r, Mathf.Max(color.g, color.b)) - Mathf.Min(color.r, Mathf.Min(color.g, color.b));
+                if ((classId == "engineer" || classId == "journalist") && point.y < headY - .025f && point.z > .025f && color.grayscale > .58f && chroma < .15f) return 1;
+                return 0;
+            }
+            if (bone.StartsWith("hand.", StringComparison.Ordinal)) return 0;
             float hipY = transform.InverseTransformPoint(pelvis.position).y;
             if (bone.StartsWith("foot.", StringComparison.Ordinal) || point.y < hipY * .20f) return 4;
             if (point.y < hipY - .025f) return 3;
@@ -214,23 +223,38 @@ namespace DeadAir
             float width = classId == "engineer" ? .32f : classId == "dispatcher" ? .165f : .17f;
             float depth = classId == "engineer" ? .23f : .125f;
             var body = new SkinBuilder(transform, bones);
-            body.Shape(rounded, pelvis, hip + new Vector3(0, -.04f, 0), new Vector3(width * 1.65f, .28f, depth * 1.8f));
-            body.Shape(rounded, spine ?? chest, Vector3.Lerp(hip, upper, .44f), new Vector3(width * 1.64f, (upper.y - hip.y) * .95f, depth * 1.9f));
-            body.Shape(rounded, chestProxy, upper + Vector3.up * .055f, new Vector3(width * 2, .30f, depth * 2));
-            body.Between(tube, chest, upper, neck, width * .33f, depth * .60f);
+            // One continuous adult torso, rather than disconnected pelvis,
+            // stomach and chest primitives. Narrow shoulder/neck rings meet the
+            // original head while the blended weights follow the actual rig.
+            body.Loft(new[] { hip + Vector3.down * .15f, hip + Vector3.down * .04f,
+                Vector3.Lerp(hip, upper, .25f), Vector3.Lerp(hip, upper, .55f), upper,
+                upper + Vector3.up * .10f, Vector3.Lerp(upper + Vector3.up * .10f, neck, .55f), neck + Vector3.up * .025f },
+                new[] { new Vector2(width * .52f, depth * .64f), new Vector2(width * .88f, depth * .91f),
+                    new Vector2(width * .93f, depth), new Vector2(width * .90f, depth * .95f), new Vector2(width, depth * .92f),
+                    new Vector2(width * .83f, depth * .80f), new Vector2(width * .30f, depth * .37f), new Vector2(width * .27f, depth * .34f) },
+                new[] { body.Weight(pelvis), body.Weight(pelvis), body.Weight(pelvis, spine ?? chest, .55f),
+                    body.Weight(spine ?? chest, chestProxy, .45f), body.Weight(chestProxy), body.Weight(chest),
+                    body.Weight(chest, head, .55f), body.Weight(head) });
             foreach (string side in new[] { "R", "L" })
             {
                 if (found.TryGetValue("upper_arm." + side, out var arm) && found.TryGetValue("forearm." + side, out var fore) && found.TryGetValue("hand." + side, out var hand))
                 {
-                    body.Between(tube, arm, Point(arm), Point(fore), width * .43f, width * .42f);
-                    body.Between(tube, fore, Point(fore), Point(hand), width * .31f, width * .29f);
-                    body.Shape(rounded, fore, Point(fore), new Vector3(width * .72f, width * .72f, width * .72f));
+                    Vector3 shoulder = Point(arm), elbow = Point(fore), wrist = Point(hand);
+                    body.Loft(new[] { shoulder + (upper - shoulder).normalized * .045f, shoulder,
+                        Vector3.Lerp(shoulder, elbow, .45f), elbow, Vector3.Lerp(elbow, wrist, .42f), wrist },
+                        new[] { Vector2.one * width * .29f, Vector2.one * width * .35f, Vector2.one * width * .32f,
+                            Vector2.one * width * .25f, Vector2.one * width * .27f, Vector2.one * width * .20f },
+                        new[] { body.Weight(arm), body.Weight(arm), body.Weight(arm), body.Weight(arm, fore, .5f), body.Weight(fore), body.Weight(hand) });
                 }
                 if (found.TryGetValue("thigh." + side, out var thigh) && found.TryGetValue("shin." + side, out var shin) && found.TryGetValue("foot." + side, out var foot))
                 {
-                    body.Between(tube, thigh, Point(thigh), Point(shin), width * .64f, width * .63f);
-                    body.Between(tube, shin, Point(shin), Point(foot), width * .42f, width * .44f);
-                    body.Shape(rounded, shin, Point(shin), Vector3.one * width * .86f);
+                    Vector3 legHip = Point(thigh), knee = Point(shin), anklePoint = Point(foot);
+                    body.Loft(new[] { legHip + Vector3.up * .055f, legHip, Vector3.Lerp(legHip, knee, .42f), knee,
+                        Vector3.Lerp(knee, anklePoint, .30f), Vector3.Lerp(knee, anklePoint, .72f), anklePoint },
+                        new[] { Vector2.one * width * .48f, Vector2.one * width * .49f, Vector2.one * width * .43f,
+                            Vector2.one * width * .31f, Vector2.one * width * .34f, Vector2.one * width * .25f, Vector2.one * width * .22f },
+                        new[] { body.Weight(pelvis, thigh, .65f), body.Weight(thigh), body.Weight(thigh), body.Weight(thigh, shin, .5f),
+                            body.Weight(shin), body.Weight(shin), body.Weight(foot) });
                     var ankle = Point(foot);
                     body.Shape(rounded, foot, new Vector3(ankle.x, .075f, ankle.z + .045f), new Vector3(width * .76f, .15f, .265f));
                 }
@@ -298,6 +322,42 @@ namespace DeadAir
             readonly List<int> triangles = new List<int>();
             readonly List<BoneWeight> weights = new List<BoneWeight>();
             public SkinBuilder(Transform root, Transform[] bones) { this.root = root; this.bones = bones; }
+            public BoneWeight Weight(Transform first, Transform second = null, float blend = 0)
+            {
+                return new BoneWeight { boneIndex0 = Mathf.Max(0, Array.IndexOf(bones, first)), weight0 = 1 - blend,
+                    boneIndex1 = second == null ? 0 : Mathf.Max(0, Array.IndexOf(bones, second)), weight1 = blend };
+            }
+            public void Loft(Vector3[] centers, Vector2[] radii, BoneWeight[] ringWeights)
+            {
+                const int sides = 16;
+                int start = vertices.Count;
+                for (int row = 0; row < centers.Length; row++)
+                {
+                    Vector3 direction = row == 0 ? centers[1] - centers[0] : row == centers.Length - 1 ? centers[row] - centers[row - 1] : centers[row + 1] - centers[row - 1];
+                    Quaternion orientation = Quaternion.FromToRotation(Vector3.up, direction.normalized);
+                    for (int side = 0; side < sides; side++)
+                    {
+                        float angle = side * Mathf.PI * 2 / sides;
+                        vertices.Add(centers[row] + orientation * new Vector3(Mathf.Cos(angle) * radii[row].x, 0, Mathf.Sin(angle) * radii[row].y));
+                        weights.Add(ringWeights[row]);
+                    }
+                    if (row == 0) continue;
+                    for (int side = 0; side < sides; side++)
+                    {
+                        int a = start + (row - 1) * sides + side, b = start + (row - 1) * sides + (side + 1) % sides;
+                        int c = start + row * sides + side, d = start + row * sides + (side + 1) % sides;
+                        triangles.Add(a); triangles.Add(c); triangles.Add(b); triangles.Add(b); triangles.Add(c); triangles.Add(d);
+                    }
+                }
+                int bottom = vertices.Count; vertices.Add(centers[0]); weights.Add(ringWeights[0]);
+                int top = vertices.Count; vertices.Add(centers[centers.Length - 1]); weights.Add(ringWeights[ringWeights.Length - 1]);
+                for (int side = 0; side < sides; side++)
+                {
+                    int next = (side + 1) % sides;
+                    triangles.Add(bottom); triangles.Add(start + side); triangles.Add(start + next);
+                    triangles.Add(top); triangles.Add(start + (centers.Length - 1) * sides + next); triangles.Add(start + (centers.Length - 1) * sides + side);
+                }
+            }
             public void Between(Mesh source, Transform bone, Vector3 a, Vector3 b, float radiusX, float radiusZ)
             {
                 var offset = b - a;
