@@ -122,7 +122,7 @@ namespace DeadAir
                     var avatar = Instantiate(Resources.Load<GameObject>("World/character_" + role), stage.transform);
                     avatar.name = "Posture capture / " + role;
                     avatar.transform.position = new Vector3(-2.7f + index++ * 1.8f, 0, 20);
-                    foreach (var child in avatar.GetComponentsInChildren<Transform>(true)) child.gameObject.layer = 28;
+                    foreach (var child in avatar.GetComponentsInChildren<Transform>(true)) child.gameObject.layer = 26;
                     foreach (var collider in avatar.GetComponentsInChildren<Collider>(true)) collider.enabled = false;
                     actors.Add(avatar.GetComponent<DeadAirCharacterMotion>());
                 }
@@ -131,7 +131,7 @@ namespace DeadAir
                 var lightObject = new GameObject("Posture comparison light"); lightObject.transform.SetParent(stage.transform, false);
                 var light = lightObject.AddComponent<Light>(); light.type = LightType.Directional;
                 light.color = new Color(.85f, .89f, 1); light.intensity = .85f;
-                light.shadows = LightShadows.None; light.cullingMask = 1 << 28;
+                light.shadows = LightShadows.None; light.cullingMask = 1 << 26;
                 lightObject.transform.rotation = Quaternion.Euler(35, 180, 0);
                 // Keep the comparison actors in their authored forward direction.
                 foreach (var actor in actors) actor.transform.rotation = Quaternion.identity;

@@ -143,7 +143,10 @@ namespace DeadAir.Editor
                         float abduction = Mathf.Asin(Mathf.Clamp01(Mathf.Abs(direction.x) / direction.magnitude)) * Mathf.Rad2Deg;
                         Require(Finite(abduction) && abduction <= 10.5f && direction.y < -.08f,
                             role + " " + clip + " phase " + phase + " keeps a spread/raised arm: " + abduction.ToString("F2") + " degrees.");
-                        Require(direction.x * (side == 0 ? 1 : -1) >= -.02f,
+                        // FBX basis conversion can mirror left/right labels.
+                        // Compare against the measured side of the real torso.
+                        float torsoX = avatar.transform.InverseTransformPoint(Find(avatar, "pelvis").position).x;
+                        Require(direction.x * Mathf.Sign(shoulder.x - torsoX) >= -.02f,
                             role + " " + clip + " moved an elbow through the torso.");
                         Require(Mathf.Abs(Vector3.Distance(shoulders[side].position, elbows[side].position) - upperLengths[side]) <= .001f + upperLengths[side] * .01f &&
                             Mathf.Abs(Vector3.Distance(elbows[side].position, wrists[side].position) - forearmLengths[side]) <= .001f + forearmLengths[side] * .01f,
