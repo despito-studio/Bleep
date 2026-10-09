@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace DeadAir
 {
-    public sealed class DeadAirPlayer : MonoBehaviour
+    public sealed partial class DeadAirPlayer : MonoBehaviour
     {
         WorldData world;
         DeadAirSession session;
@@ -89,6 +89,7 @@ namespace DeadAir
                 }
             foreach(var argument in Environment.GetCommandLineArgs())
                 if(argument=="-deadAirCapture"||argument=="-deadAirOfficeCapture"||argument=="-deadAirMenuCapture"||argument=="-deadAirRepairCapture"||argument=="-deadAirLightingCapture"||argument=="-deadAirHorrorCapture"||argument=="-deadAirMovementVerification"||argument=="-deadAirIndieCapture"||argument=="-deadAirUpdateCapture"||argument=="-deadAirGraphicsCapture")verificationAllowed=true;
+            if(Array.IndexOf(Environment.GetCommandLineArgs(), "-deadAirFieldCapture") >= 0) verificationAllowed = true;
             controller = gameObject.AddComponent<CharacterController>();
             controller.height = 1.7f; controller.radius = .22f; controller.center = new Vector3(0, .85f, 0);
             controller.stepOffset = .28f; controller.slopeLimit = 48; controller.skinWidth = .035f;
@@ -125,7 +126,7 @@ namespace DeadAir
             // character is dead and gameplay input is no longer being processed.
             bool escapeHandled = Input.GetKeyDown(KeyCode.Escape) && ui.TryCloseTopModal();
             var state = session.State;
-            IsPlaying = state != null && state.phase == "playing";
+            IsPlaying = state != null && (state.phase == "playing" || state.phase == "departing");
             if (menuCharacter != null) menuCharacter.SetActive(!IsPlaying && !inspectionPose);
             if (menuBackdrop != null) menuBackdrop.SetVisible(!IsPlaying && !inspectionPose);
             if (inspectionPose)
@@ -155,9 +156,10 @@ namespace DeadAir
                 windowCutscenePlayed = false;
                 windowCutsceneActive = false;
                 if (cutsceneMonster != null) { Destroy(cutsceneMonster); cutsceneMonster = null; }
-                yaw = pitch = 0; stamina = 100; cameraUp = false; lightOn = true;
+                yaw = me.yaw; pitch = 0; stamina = 100; cameraUp = false; lightOn = true;
                 observedFlashlightReload = me.flashlightReloadSerial;
                 firstPerson.ResetPresentation();
+                ResetLocomotion();
                 Teleport(me.x, me.y, me.z);
             }
             previousPhase = state.phase;
@@ -170,6 +172,7 @@ namespace DeadAir
                 previousHiding = me.hiding;
             }
             if (!IsPlaying) { EndLadderPresentation(me); ShowMenuCamera(); SyncRemote(state); return; }
+            if (PresentVanTransit(me, state)) { SyncRemote(state); return; }
             UpdateLadderPresentation(me, state);
             if (observedFlashlightReload != me.flashlightReloadSerial)
             {
@@ -181,7 +184,6 @@ namespace DeadAir
             if(string.IsNullOrEmpty(me.hiding) && !climbingLadder && !Noclip)ReconcileMovement(me);
             if (Input.GetKeyDown(KeyCode.Escape) && !escapeHandled)
                 SetPause(!pausedLocally);
-            if (Input.GetKeyDown(KeyCode.M) && !me.down && string.IsNullOrEmpty(me.hiding) && !climbingLadder && !DeadAirConsole.IsOpen) { cameraUp = false; ui.ToggleMap(); }
             var controlled = !pausedLocally && !state.paused && !ui.HasModal && !DeadAirConsole.IsOpen && !me.down && string.IsNullOrEmpty(me.hiding) && !climbingLadder;
             bool lookingFromLocker = !pausedLocally && !state.paused && !ui.HasModal && !DeadAirConsole.IsOpen && !me.down && !string.IsNullOrEmpty(me.hiding) && !climbingLadder;
             Sprinting = false;
@@ -249,7 +251,7 @@ namespace DeadAir
             footBob += Time.deltaTime * (moving ? (Sprinting ? 13 : 8) : 2);
             if (!climbingLadder)
             {
-                view.transform.localPosition = new Vector3(0, me.down ? .55f : 1.65f + Mathf.Sin(footBob) * currentBob, 0);
+                view.transform.localPosition = new Vector3(0, me.down ? .55f : EyeHeight + Mathf.Sin(footBob) * currentBob, 0);
                 view.transform.localRotation = Quaternion.Euler(-pitch * Mathf.Rad2Deg, 0, me.down ? -12.6f : Mathf.Sin(footBob * .5f) * currentBob * 6.87f);
             }
             view.fieldOfView = Mathf.Lerp(view.fieldOfView, cameraUp ? 57 : Sprinting ? 74 : 68, Time.deltaTime * 5);
@@ -262,7 +264,9 @@ namespace DeadAir
             FindInteraction(me, state);
             if (Input.GetKeyDown(KeyCode.E) && !state.paused && !me.down && !ui.HasModal && !DeadAirConsole.IsOpen && !pausedLocally && !string.IsNullOrEmpty(InteractionId) && !climbingLadder)
             {
-                if (InteractionId == "broadcast" && !state.calibrated)
+                if (InteractionId == "van-map")
+                    ui.OpenVanMap();
+                else if (InteractionId == "broadcast" && !state.calibrated)
                     ui.ShowCalibration();
                 else if (InteractionId == "ladder-climb")
                 {
@@ -312,7 +316,7 @@ namespace DeadAir
             yaw = (180 - transform.rotation.eulerAngles.y) * Mathf.Deg2Rad;
             float routeAge = DeadAirLadder.PathAge(age, me.ladderUp);
             bool onRungs = routeAge > .35f && routeAge < 3.45f;
-            float handCycle = (routeAge - .35f) * Mathf.PI * 4.3f;
+            float handCycle = (routeAge - .35f) / (3.10f / 9) * Mathf.PI;
             float bob = onRungs ? Mathf.Sin(handCycle * 2) * .012f : 0;
             pitch = Mathf.Lerp(ladderStartPitch, onRungs ? -.13f : 0, alignment);
             view.transform.localPosition = new Vector3(0, DeadAirLadder.EyeHeight(age, me.ladderUp) + bob, 0);
@@ -400,7 +404,7 @@ namespace DeadAir
         {
             if (me == null) { firstPerson.SetVisible(false); return; }
             firstPerson.SynchronizeUniqueAction(me.uniqueActionSequence > 0 && me.uniqueItemEquipped && !me.uniqueActionCancelled ? state.elapsed - me.uniqueActionAt : -1);
-            firstPerson.Present(me, cameraUp, ui.MapOpen, lightOn && DeadAirSupplies.HasCharge(me), movement, state.paused || pausedLocally);
+            firstPerson.Present(me, cameraUp, ui.MapOpen, lightOn && DeadAirSupplies.HasCharge(me), movement, state.paused || pausedLocally, state.elapsed);
             if (climbingLadder) firstPerson.PresentLadder(ladderPresentationAge, me.ladderUp, !state.windowBroken);
             firstPerson.SetVisible(state.phase == "playing" && !me.down && string.IsNullOrEmpty(me.hiding));
             flashlight.enabled = lightOn && DeadAirSupplies.HasCharge(me) && HoldingFlashlight(me) && !me.down && string.IsNullOrEmpty(me.hiding) && !climbingLadder;
@@ -520,12 +524,13 @@ namespace DeadAir
             }
             var forward = axes.y;
             var sideways = axes.x;
+            UpdateCrouch();
             var direction = (transform.forward * forward + transform.right * sideways).normalized;
-            bool sprint = direction.sqrMagnitude > 0 && (verificationMovement?verificationSprint:Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) && (state.creative || stamina > 2);
+            bool sprint = !Crouching && direction.sqrMagnitude > 0 && (verificationMovement?verificationSprint:Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) && (state.creative || stamina > 2);
             Sprinting = sprint;
             var bonuses = world.GetClass(me.characterClass).bonuses;
             stamina = state.creative ? 100 : Mathf.Clamp(stamina + (sprint ? -23 : 14 * bonuses.staminaRecovery) * Time.deltaTime, 0, 100);
-            float speed = sprint ? 4.5f * bonuses.speedMultiplier : 2.6f;
+            float speed = Crouching ? DeadAirLocomotion.CrouchSpeed : sprint ? DeadAirLocomotion.RunSpeed * bonuses.speedMultiplier : DeadAirLocomotion.WalkSpeed;
             ApplyGravity(direction * speed);
         }
 
@@ -631,7 +636,7 @@ namespace DeadAir
                     type = "move", x = -transform.position.x, y = transform.position.y, z = transform.position.z,
                     moveSequence=sequence,
                     yaw = yaw, pitch = pitch, flashlight = lightOn && DeadAirSupplies.HasCharge(me) && HoldingFlashlight(me) && !me.down && string.IsNullOrEmpty(me.hiding),
-                    camera = cameraUp && !me.down && string.IsNullOrEmpty(me.hiding), mapOpen = ui.MapOpen && !me.down && string.IsNullOrEmpty(me.hiding), sprinting = Sprinting,
+                    camera = cameraUp && !me.down && string.IsNullOrEmpty(me.hiding), mapOpen = ui.MapOpen && !me.down && string.IsNullOrEmpty(me.hiding), sprinting = Sprinting, crouching = Crouching,
                     noclip = Noclip
                 });
             }
@@ -817,12 +822,12 @@ namespace DeadAir
                     if (remoteMotions[p.id] != null) remoteMotions[p.id].ConfigureFlashlight(world.GetClass(p.characterClass).bonuses);
                     viewObject.transform.position = new Vector3(-p.x, p.y, p.z);
                 }
-                viewObject.transform.position = Vector3.Lerp(viewObject.transform.position, new Vector3(-p.x, p.y + (p.down ? .2f : 0), p.z), Time.deltaTime * 12);
+                viewObject.transform.position = Vector3.Lerp(viewObject.transform.position, new Vector3(-p.x, p.y + (p.down ? .2f : 0), p.z) + DeadAirVanPresentation.TransitOffset(state), Time.deltaTime * 12);
                 viewObject.transform.rotation = p.ladderClimbing && !p.down ?
                     LadderFacingRotation(Mathf.Clamp(state.elapsed - p.ladderStartedAt, 0, DeadAirLadder.Duration), p.ladderUp) :
                     Quaternion.Euler(0, 180 - p.yaw * Mathf.Rad2Deg, p.down ? -90 : 0);
                 remoteMotions.TryGetValue(p.id, out var motion);
-                if (motion != null) motion.Present(p, state.elapsed, state.paused, state.phase == "playing");
+                if (motion != null) { motion.SetTransitPose(DeadAirVanPresentation.SeatedWeight(state)); motion.Present(p, state.elapsed, state.paused, state.phase == "playing"); }
                 viewObject.SetActive(string.IsNullOrEmpty(p.hiding));
             }
             remoteIdsToRemove.Clear();
@@ -875,7 +880,8 @@ namespace DeadAir
         void UpdateMenuCharacter()
         {
             string selected = ui.SelectedClass;
-            if (menuCharacter != null && menuClass == selected) return;
+            int mask = ui.ClothingPreviewMask;
+            if (menuCharacter != null && menuClass == selected) { DeadAirClothing.Apply(menuCharacter, mask, selected); return; }
             if (menuCharacter != null) Destroy(menuCharacter);
             var prefab = Resources.Load<GameObject>("World/character_" + selected);
             if (prefab == null) return;
@@ -886,6 +892,7 @@ namespace DeadAir
             menuCharacter.transform.rotation = DeadAirMenuBackdrop.OperativeRotation;
             foreach (var collider in menuCharacter.GetComponentsInChildren<Collider>()) Destroy(collider);
             foreach (var part in menuCharacter.GetComponentsInChildren<Transform>(true)) part.gameObject.layer = 29;
+            DeadAirClothing.Apply(menuCharacter, mask, selected);
             AddMenuCharacterLight("Operative preview key", new Vector3(1.3f, 2.5f, 2.2f), new Color32(235, 213, 180, 255), .9f);
             AddMenuCharacterLight("Operative preview rim", new Vector3(-1.7f, 2.25f, -1.3f), new Color32(152, 177, 197, 255), .8f);
         }

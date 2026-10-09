@@ -118,10 +118,10 @@ namespace DeadAir.Editor
                 Require(actor.HasSelectedRoleItem&&actor.uniqueItemEquipped,role+" slot selection must equip its gear.");
                 Require(rules.Drop("host",item)!=null&&actor.HasItem(item),role+" permanent gear must not disappear through dropping.");
                 Require(rules.UseUnique("host") == null && actor.cigarettesRemaining == 0, role + " must have its own reusable item.");
-                rules.State.elapsed = 2.49f;
+                rules.State.elapsed = DeadAirRoleAbilities.Cooldown(role) - .01f;
                 Require(rules.UseUnique("host") != null, role + " cooldown was skipped.");
-                rules.State.elapsed = 2.5f;
-                Require(rules.UseUnique("host") == null && actor.uniqueActionSequence == 2, role + " cooldown should end after 2.5 seconds.");
+                rules.State.elapsed = DeadAirRoleAbilities.Cooldown(role);
+                Require(rules.UseUnique("host") == null && actor.uniqueActionSequence == 2, role + " cooldown should end at its host timer.");
             }
         }
 
@@ -157,7 +157,7 @@ namespace DeadAir.Editor
                     Require(rules.UseUnique(actor.id) != null && actor.uniqueActionAt == acceptedAt && actor.uniqueActionSequence == sequence &&
                         actor.cigarettesRemaining == remaining && actor.uniqueActionCancelled,
                         "Cancelling and re-equipping must neither bypass the cooldown nor consume another cigarette.");
-                    rules.State.elapsed = acceptedAt + (role == "operator" ? 7f : 2.5f);
+                    rules.State.elapsed = acceptedAt + DeadAirRoleAbilities.Cooldown(role);
                     Require(rules.UseUnique(actor.id) == null && !actor.uniqueActionCancelled && actor.uniqueActionSequence == sequence + 1 &&
                         actor.cigarettesRemaining == remaining - (role == "operator" ? 1 : 0),
                         "The next valid use must start a fresh presentation after the original cooldown.");
@@ -172,6 +172,8 @@ namespace DeadAir.Editor
             downed.invulnerableUntil = 0;
             AimEnemyAt(attackRules, downed, 0);
             attackRules.Tick(.01f);
+            Require(!downed.down && attackRules.State.enemy.behaviour == "attack", "An attack needs a visible wind-up before damage.");
+            for (int tick = 0; tick < 9; tick++) attackRules.Tick(.1f);
             Require(downed.down && downed.uniqueActionCancelled && !downed.uniqueItemEquipped,
                 "An enemy attack must cancel the downed player's personal action.");
             Require(attackRules.Interact("guest", "revive:host") == null && !downed.down, "The companion must be able to revive the player.");

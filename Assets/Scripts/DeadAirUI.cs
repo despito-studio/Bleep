@@ -16,7 +16,6 @@ namespace DeadAir
         UnityEngine.UI.InputField nameField, addressField, codeField;
         UnityEngine.UI.Button startButton, restartButton;
         UnityEngine.UI.Image sanityBar, staminaBar;
-        UnityEngine.UI.Text roleItemText, inventoryCaption;
         UnityEngine.UI.Slider frequency;
         readonly UnityEngine.UI.Image[] inventorySlotBgs = new UnityEngine.UI.Image[5];
         readonly UnityEngine.UI.Text[] inventorySlotLabels = new UnityEngine.UI.Text[5];
@@ -31,10 +30,9 @@ namespace DeadAir
         string selectedClass="engineer", previousPhase, lastMessage;
         float toastUntil, nextHud;
         int lastRadioSequence;
-        int hudTapes=-1,hudCanisters=-1,hudFuses=-1,hudTripSeconds=-1,hudBearing=-1,hudDirection=-1;
-        int hudCigarettes=-1;
-        string hudInteraction,hudRoom,hudRoleClass,hudSelectedItem;
-        bool hudRoleEquipped,hudInteractionActive;
+        int hudTripSeconds=-1,hudBearing=-1,hudDirection=-1;
+        string hudInteraction,hudRoom,hudCompassMode;
+        bool hudInteractionActive;
         readonly string[] hudSlotItems=new string[5];
         readonly bool[] hudSlotSelected=new bool[5];
         bool hudSlotsInitialized;
@@ -45,7 +43,7 @@ namespace DeadAir
         static readonly string[] CompassDirections={"Пн","Пн-Сх","Сх","Пд-Сх","Пд","Пд-Зх","Зх","Пн-Зх"};
         public string SelectedClass=>selectedClass;
         public event Action<string> ClassSelected;
-        public bool HasModal=>Active(menuPanel)||Active(lobbyPanel)||Active(pausePanel)||Active(mapPanel)||Active(calibrationPanel)||Active(endingPanel)||Active(settingsPanel)||Active(dossierPanel)||Active(joinPanel)||Active(chapterPanel)||Active(preparationPanel)||Active(networkPanel)||Active(inventoryPanel)||Active(quitPanel)||Active(bookPanel);
+        public bool HasModal=>Active(menuPanel)||Active(lobbyPanel)||Active(pausePanel)||Active(mapPanel)||Active(calibrationPanel)||Active(endingPanel)||Active(settingsPanel)||Active(dossierPanel)||Active(joinPanel)||Active(chapterPanel)||Active(preparationPanel)||Active(networkPanel)||Active(inventoryPanel)||Active(quitPanel)||Active(bookPanel)||Active(clothingPanel);
         public bool RadioOpen=>Active(radioPanel);
         public bool MapOpen=>Active(mapPanel);
         public bool PresentationHidden=>interfaceGroup!=null&&interfaceGroup.alpha==0;
@@ -68,6 +66,7 @@ namespace DeadAir
             designRoot=new GameObject("Safe interface frame",typeof(RectTransform)).GetComponent<RectTransform>();designRoot.SetParent(canvas.transform,false);designRoot.anchorMin=designRoot.anchorMax=designRoot.pivot=new Vector2(.5f,.5f);designRoot.sizeDelta=new Vector2(1920,1080);
             BuildMenu();BuildLobby();BuildHud();BuildRadio();BuildPause();BuildMap();BuildCalibration();BuildEnding();BuildSettings();BuildDossier();BuildJoin();
             BuildSupplies();
+            BuildClothingEditor();
             toastText=Text(designRoot,"Notification","",20,510,210,900,64,TextAnchor.MiddleCenter);toastText.color=Ink;toastText.gameObject.SetActive(false);
             session.Error+=Toast;session.StateChanged+=RefreshPhase;DeadAirSettings.Changed+=RefreshGraphicsSettings;
             SelectClass(selectedClass);RefreshPhase();FocusPanel(menuPanel);
@@ -173,7 +172,7 @@ namespace DeadAir
             var strip=Fill(p,"Map heading",530,48,860,100,PanelInk).transform;
             Text(strip,"Title","ПЛАН ОФІСУ",26,24,14,810,40,TextAnchor.MiddleCenter,true).color=Ink;
             mapLocation=Text(strip,"Current room","",14,24,62,810,25,TextAnchor.MiddleCenter);
-            Button(p,"Close map","M / ESC — СКЛАСТИ КАРТУ",720,164,480,48,()=>Close(mapPanel));
+            Button(p,"Close map","ЗАКРИТИ ПЛАН  /  ESC",720,164,480,48,()=>Close(mapPanel));
             mapPanel.SetActive(false);
         }
         void BuildCalibration()
@@ -231,7 +230,7 @@ namespace DeadAir
             GraphicsToggle(g,"Ambient occlusion","ОБ’ЄМНЕ ЗАТІНЕННЯ",334,()=>DeadAirSettings.AmbientOcclusion,v=>DeadAirSettings.AmbientOcclusion=v);
             GraphicsToggle(g,"Bloom","М’ЯКЕ СВІТІННЯ ЛАМП",398,()=>DeadAirSettings.Bloom,v=>DeadAirSettings.Bloom=v);
             GraphicsToggle(g,"Antialiasing","ЗГЛАДЖУВАННЯ КРАЇВ",462,()=>DeadAirSettings.Antialiasing,v=>DeadAirSettings.Antialiasing=v);
-            GraphicsToggle(g,"Reflections","ВІДБИТТЯ",526,()=>DeadAirSettings.Reflections,v=>DeadAirSettings.Reflections=v);
+            GraphicsToggle(g,"Reflections","ВІДБИТТЯ СВІТЛА",526,()=>DeadAirSettings.Reflections,v=>DeadAirSettings.Reflections=v);
             GraphicsToggle(g,"Grain","ЗЕРНО ПЛІВКИ",590,()=>DeadAirSettings.Grain,v=>DeadAirSettings.Grain=v);
             GraphicsToggle(g,"Flicker","МЕРЕХТІННЯ ТА СПАЛАХИ",654,()=>DeadAirSettings.Flicker,v=>DeadAirSettings.Flicker=v);
             var a=audioSettings.transform;
@@ -290,9 +289,9 @@ namespace DeadAir
         void BuildDossier()
         {
             dossierPanel=Modal("Case file","КЕРУВАННЯ",1020,590,out var p);
-            Text(p,"Controls left","W A S D     Рух\nМИША        Огляд\nSHIFT       Біг\nE           Взаємодія\nM           Карта\nTAB / I     Інвентар",22,40,155,450,220);
+            Text(p,"Controls left","W A S D     Рух\nМИША        Огляд\nSHIFT       Біг\nE           Взаємодія\nTAB         Журнал і речі\nКАРТА       Дошка у фургоні",22,40,155,450,240);
             Text(p,"Controls right","1–5 / КОЛЕСО  Обрати річ\nF             Ліхтар\nV             Камера\nQ             Рація\nR             Використати\nG             Викинути",21,525,155,470,220);
-            Text(p,"Inventory controls","Особисті речі персонажа лежать в інвентарі.\nESC — пауза або назад.",20,40,399,940,68).color=Muted;
+            Text(p,"Inventory controls","Завдання, знахідки та особисті речі записані в журналі.\nESC — пауза або назад.",20,40,415,940,68).color=Muted;
             Button(p,"Close dossier","НАЗАД",40,503,940,52,()=>Close(dossierPanel));
         }
         void BuildEnding()
@@ -310,7 +309,7 @@ namespace DeadAir
         {
             var state=session.State;string phase=state?.phase;
             bool changed=phase!=previousPhase;
-            if(changed){previousPhase=phase;HideRadio();foreach(var panel in new[]{pausePanel,mapPanel,calibrationPanel,settingsPanel,dossierPanel,joinPanel,chapterPanel,preparationPanel,networkPanel,inventoryPanel,quitPanel,bookPanel})if(panel!=null)panel.SetActive(false);}
+            if(changed){previousPhase=phase;HideRadio();foreach(var panel in new[]{pausePanel,mapPanel,calibrationPanel,settingsPanel,dossierPanel,joinPanel,chapterPanel,preparationPanel,networkPanel,inventoryPanel,quitPanel,bookPanel,clothingPanel})if(panel!=null)panel.SetActive(false);}
             menuPanel.SetActive(state==null);lobbyPanel.SetActive(phase=="lobby");hudPanel.SetActive(phase=="playing");endingPanel.SetActive(phase=="won"||phase=="lost");
             if(state==null){RefreshModalInput(changed);return;}
             RefreshChapterLabels();
@@ -354,7 +353,7 @@ namespace DeadAir
         {
             if(toastText==null)return;if(Time.unscaledTime>=toastUntil)toastText.gameObject.SetActive(false);
             if(DeadAirScarePresentation.FullscreenActive)return;
-            if((Input.GetKeyDown(KeyCode.I)||Input.GetKeyDown(KeyCode.Tab))&&(InventoryOpen||!HasModal))ToggleInventory();
+            if(Input.GetKeyDown(KeyCode.Tab)&&(InventoryOpen||!HasModal))ToggleInventory();
             if(Time.unscaledTime<nextHud||session.State==null||session.State.phase!="playing")return;nextHud=Time.unscaledTime+.1f;
             var state=session.State;var me=state.Player(session.LocalId);if(me==null)return;
             roomText.text=player.CameraUp?"● REC":"";
@@ -362,31 +361,21 @@ namespace DeadAir
             int tripSeconds=mushroomTime>0&&!me.down?Mathf.CeilToInt(mushroomTime):0;
             if(tripSeconds!=hudTripSeconds){hudTripSeconds=tripSeconds;statusText.text=tripSeconds>0?"ГРИБНИЙ ТРІП  ·  "+tripSeconds+" с":"";}
             statusText.color=mushroomTime>0?new Color(.64f,.91f,.76f):Muted;
-            bool evidenceChanged=hudTapes!=state.tapes.Count||hudCanisters!=state.canisters.Count||hudFuses!=state.fuses.Count;
-            if(hudTapes!=state.tapes.Count){hudTapes=state.tapes.Count;evidenceText.text=hudTapes+" / 3  КАСЕТИ";}
-            if(hudCanisters!=state.canisters.Count){hudCanisters=state.canisters.Count;fuelEvidenceText.text=hudCanisters+" / 3  ПАЛИВО";}
-            if(hudFuses!=state.fuses.Count){hudFuses=state.fuses.Count;fuseEvidenceText.text=hudFuses+" / 2  ЗАПОБІЖНИКИ";}
             sanityBar.fillAmount=Mathf.Clamp01(me.sanity/100);staminaBar.fillAmount=Mathf.Clamp01(player.Stamina/100);
-            var forward=player.ViewCamera.transform.forward;float compass=Mathf.Repeat(Mathf.Atan2(forward.x,forward.z)*Mathf.Rad2Deg,360);
+            bool intel=DeadAirRoleAbilities.HasIntel(me,state.elapsed)&&me.uniqueItemEquipped&&(me.characterClass=="dispatcher"||me.characterClass=="journalist");
+            string compassMode=intel?(me.characterClass=="journalist"?"ШУМ":"ЦІЛЬ"):"";
+            var forward=intel?DeadAirRoleAbilities.IntelPosition(me)-player.ViewCamera.transform.position:player.ViewCamera.transform.forward;
+            float compass=Mathf.Repeat(Mathf.Atan2(forward.x,forward.z)*Mathf.Rad2Deg,360);
             int bearing=Mathf.RoundToInt(compass),direction=Mathf.RoundToInt(compass/45)%8;
-            if(bearing!=hudBearing||direction!=hudDirection){hudBearing=bearing;hudDirection=direction;compassText.text=CompassDirections[direction]+"   ·   "+bearing.ToString("000")+"°";}
-            objectiveText.text=state.broadcast?"Поверніться до фургона":state.breakerOn?"Передавач: 96.4 МГц":state.power?(state.fuses.Count>=2?"Увімкніть рубильник у підвалі":"Знайдіть 2 запобіжники для щитка"):state.canisters.Count>=3?"Заправте та увімкніть генератор у дворі":"Знайдіть 3 каністри дизеля для генератора";
+            if(bearing!=hudBearing||direction!=hudDirection||compassMode!=hudCompassMode){hudBearing=bearing;hudDirection=direction;hudCompassMode=compassMode;compassText.text=(intel?compassMode+" · ":"")+CompassDirections[direction]+"   ·   "+bearing.ToString("000")+"°";}
             messageText.text=me.down?"ВАС ЗБИТО. ЧЕКАЙТЕ НА ДОПОМОГУ.":!string.IsNullOrEmpty(me.hiding)?"ВИ У СХОВАНЦІ  /  E — ВИЙТИ":"";
             bool hasInteraction=!string.IsNullOrEmpty(player.InteractionId);
             string interaction=hasInteraction?player.InteractionLabel:null;
             if(hasInteraction!=hudInteractionActive||interaction!=hudInteraction){hudInteractionActive=hasInteraction;hudInteraction=interaction;interactionText.text=hasInteraction?"[ E ]  "+interaction:"";}
             string room=world.RoomAt(me.x,me.z,me.y);
-            if(room!=hudRoom||evidenceChanged){hudRoom=room;mapLocation.text="ВИ ЗАРАЗ: "+room.ToUpperInvariant()+"    /    КАСЕТИ "+hudTapes+"/3    /    ПАЛИВО "+hudCanisters+"/3    /    ЗАПОБІЖНИКИ "+hudFuses+"/2";}
-            string selectedItem=me.SelectedItem;
-            if(me.uniqueItemEquipped!=hudRoleEquipped||me.characterClass!=hudRoleClass||selectedItem!=hudSelectedItem||me.cigarettesRemaining!=hudCigarettes)
-            {
-                hudRoleEquipped=me.uniqueItemEquipped;hudRoleClass=me.characterClass;hudSelectedItem=selectedItem;hudCigarettes=me.cigarettesRemaining;
-                roleItemText.text=selectedItem=="flashlight"||selectedItem==DeadAirSupplies.BatteryItem?"R — замінити батарейку":
-                    selectedItem==DeadAirPrisonBook.Id?"R — читати справу":me.uniqueItemEquipped?
-                    (me.characterClass=="operator"?"R — Закурити ("+me.cigarettesRemaining+")":"R — Використати"):"";
-            }
+            if(room!=hudRoom){hudRoom=room;mapLocation.text="ВИ ЗАРАЗ: "+room.ToUpperInvariant();}
             RefreshSupplies(state,me);
-            compassText.gameObject.SetActive(me.characterClass=="dispatcher"&&me.uniqueItemEquipped);
+            compassText.gameObject.SetActive(intel||me.characterClass=="dispatcher"&&me.uniqueItemEquipped);
             int page=me.selectedSlot/5*5;
             for(int i=0;i<5;i++)
             {
@@ -407,7 +396,7 @@ namespace DeadAir
                 hudSlotItems[i]=itemId;hudSlotSelected[i]=isSelected;
             }
             hudSlotsInitialized=true;
-            if(InventoryOpen)RefreshInventory();
+            if(InventoryOpen){RefreshInventory();RefreshJournal(state,me);}
         }
         static string FormatItemName(string itemId)
         {
@@ -436,11 +425,26 @@ namespace DeadAir
             return itemId;
         }
         public bool TryCloseTopModal()
-        {if(DeadAirScarePresentation.FullscreenActive)return true;if(RadioOpen){HideRadio();return true;}GameObject top=null;foreach(var p in new[]{settingsPanel,dossierPanel,joinPanel,calibrationPanel,mapPanel,chapterPanel,preparationPanel,networkPanel,inventoryPanel,quitPanel,bookPanel,endingPanel})if(Active(p)&&(top==null||p.transform.GetSiblingIndex()>top.transform.GetSiblingIndex()))top=p;if(top==endingPanel&&top!=null){ReturnToMenu();return true;}if(top!=null){Close(top);return true;}return false;}
+        {if(DeadAirScarePresentation.FullscreenActive)return true;if(RadioOpen){HideRadio();return true;}GameObject top=null;foreach(var p in new[]{settingsPanel,dossierPanel,joinPanel,calibrationPanel,mapPanel,chapterPanel,preparationPanel,networkPanel,inventoryPanel,quitPanel,bookPanel,clothingPanel,endingPanel})if(Active(p)&&(top==null||p.transform.GetSiblingIndex()>top.transform.GetSiblingIndex()))top=p;if(top==endingPanel&&top!=null){ReturnToMenu();return true;}if(top!=null){Close(top);return true;}return false;}
         public void ToggleRadio(){if(DeadAirScarePresentation.FullscreenActive)return;if(RadioOpen)HideRadio();else if(session.State?.phase=="playing"&&!HasModal)radioPanel.SetActive(true);}
         public void HideRadio(){if(radioPanel!=null)radioPanel.SetActive(false);}
         public void ShowPause(bool shown){if(shown){pausePanel.transform.Find("Pause card/Pause note").GetComponent<UnityEngine.UI.Text>().text=session.State?.players.Count>1?"Мережева гра не призупиняється.":"";Open(pausePanel);}else Close(pausePanel);}
-        public void ToggleMap(){if(DeadAirScarePresentation.FullscreenActive)return;if(Active(mapPanel))Close(mapPanel);else if(session.State?.phase=="playing"){if(player.LocalPaused)player.SetPause(false);player.SetMapPresentation(true);Open(mapPanel);}}
+        public void ToggleMap(){if(DeadAirScarePresentation.FullscreenActive)return;if(Active(mapPanel))Close(mapPanel);else OpenVanMap();}
+        public static bool CanOpenVanMap(WorldData data, RoomState state, PlayerState actor)
+        {
+            if(data==null||state?.phase!="playing"||state.elapsed<DeadAirVanPresentation.ArrivalDuration||actor==null||actor.down||actor.ladderClimbing||!string.IsNullOrEmpty(actor.hiding))return false;
+            var board=data.Objective("van-map");
+            return board!=null&&Vector3.Distance(new Vector3(actor.x,actor.y+1,actor.z),new Vector3(board.x,board.y,board.z))<=2.5f&&
+                DeadAirRules.HasInteractionSightline(new Vector3(-actor.x,actor.y+1.4f,actor.z),new Vector3(-board.x,board.y,board.z),"van-map");
+        }
+        public void OpenVanMap()
+        {
+            if(DeadAirScarePresentation.FullscreenActive||Active(mapPanel))return;
+            if(!CanOpenVanMap(world,session.State,session.State?.Player(session.LocalId)))return;
+            if(player.LocalPaused)player.SetPause(false);
+            if(Active(inventoryPanel))Close(inventoryPanel);
+            player.SetMapPresentation(true);Open(mapPanel);
+        }
         public void ShowCalibration(){Open(calibrationPanel);}
         public void ShowSettings(){RefreshGraphicsSettings();Open(settingsPanel);}
         public void ShowDossier(){Open(dossierPanel);}

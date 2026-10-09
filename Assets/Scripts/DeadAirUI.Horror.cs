@@ -30,6 +30,7 @@ namespace DeadAir
         int bagSelection, bagPage;
         readonly string[] renderedBagItems=new string[12];
         int renderedBagPage=-1,renderedBagSelection=-1,renderedBagCount=-1,renderedBagBatteries=-1,renderedBagCigarettes=-1,renderedBagCharge=-1;
+        int renderedBagRoleReady=-1;
         string renderedBagSelectedItem;
         public string SelectedChapter => selectedChapter;
         public bool InventoryOpen => Active(inventoryPanel);
@@ -90,6 +91,7 @@ namespace DeadAir
             preparationChapter=Text(p,"Selected chapter","",20,42,155,950,42);preparationChapter.color=Gold;
             Text(p,"Name caption","ІМ’Я",18,44,217,920,28).color=Muted;
             nameField=Field(p,"Operator name",PlayerPrefs.GetString("DeadAir.PlayerName","Оператор"),42,252,966,53);
+            Button(p,"Edit preparation clothing","ОДЯГ ПЕРСОНАЖА",42,316,966,46,ShowClothingEditor);
             string[] ids={"engineer","operator","journalist","dispatcher"};
             for(int i=0;i<ids.Length;i++)
             {
@@ -245,6 +247,7 @@ namespace DeadAir
             lobbyPlayers=Text(p,"Team","",22,119,358,740,450);
             lobbyChapter=Text(p,"Lobby chapter","",22,720,626,470,184);lobbyChapter.color=Ink;
             lobbyChapterButton=Button(p,"Lobby chapters","ЗМІНИТИ ГЛАВУ",721,830,467,52,ShowChapters);
+            Button(p,"Edit lobby clothing","ОДЯГ ПЕРСОНАЖА",1210,830,588,52,ShowClothingEditor);
             Fill(p,"Lobby footer",0,894,1920,186,new Color(.045f,.032f,.031f,.92f));
             ClassPicker(p,116,963,896);
             startButton=Button(p,"Start operation","ПОЧАТИ ГЛАВУ",1170,954,350,62,()=>session.Command(new NetPacket{type="start"}),true);
@@ -255,8 +258,6 @@ namespace DeadAir
         void BuildHorrorHud()
         {
             hudPanel=FullScreen("HUD",Color.clear);hudPanel.GetComponent<Image>().raycastTarget=false;var p=hudPanel.transform;
-            Art(p,"Objective marker","frame",58,58,22,22,Ink);
-            objectiveText=Text(p,"Objective","",20,96,52,750,54);
             roomText=Text(p,"Location","",17,1270,49,590,79,TextAnchor.UpperRight);roomText.color=Muted;
             compassText=Text(p,"Compass","",14,812,24,296,27,TextAnchor.MiddleCenter);compassText.color=Muted;
             Art(p,"Sanity eye","eye",58,905,44,34,Ink);
@@ -266,14 +267,6 @@ namespace DeadAir
             Art(p,"Stamina track","bar",121,963,315,13,new Color(.13f,.19f,.13f,.8f));
             staminaBar=Art(p,"Stamina","bar",121,963,315,13,new Color(.54f,.68f,.46f));staminaBar.type=Image.Type.Filled;staminaBar.fillMethod=Image.FillMethod.Horizontal;
             statusText=Text(p,"Status","",15,60,1009,710,47);statusText.color=Muted;
-            Art(p,"Evidence tape","tape",55,764,40,40,Ink);
-            Art(p,"Evidence fuel","fuel",55,808,40,40,Ink);
-            Art(p,"Evidence fuse","fuse",55,852,40,40,Ink);
-            evidenceText=Text(p,"Evidence counts","",19,110,768,326,32,TextAnchor.MiddleLeft);
-            fuelEvidenceText=Text(p,"Fuel counts","",19,110,812,326,32,TextAnchor.MiddleLeft);
-            fuseEvidenceText=Text(p,"Fuse counts","",19,110,856,326,32,TextAnchor.MiddleLeft);
-            inventoryCaption=Text(p,"Inventory caption","F — ліхтар    ·    TAB / I — інвентар",16,1110,884,750,30,TextAnchor.UpperRight);inventoryCaption.color=Ink;
-            roleItemText=Text(p,"Personal item","",17,1110,821,750,57,TextAnchor.MiddleRight);roleItemText.color=Muted;
             for(int i=0;i<5;i++)
             {
                 float x=1394+i*94;
@@ -296,8 +289,8 @@ namespace DeadAir
             pausePanel=Modal("Pause","ПАУЗА",760,835,out var p);
             Text(p,"Pause note","",18,42,149,676,57).color=Muted;
             Button(p,"Resume","ПРОДОВЖИТИ",42,230,676,63,()=>player.SetPause(false),true);
-            Button(p,"Map","КАРТА",42,312,676,59,ToggleMap);
-            Button(p,"Inventory","ІНВЕНТАР",42,390,676,59,ToggleInventory);
+            Text(p,"Van map reminder","План офісу — на дошці у фургоні.",18,42,322,676,40).color=Muted;
+            Button(p,"Inventory","ПОЛЬОВИЙ ЖУРНАЛ",42,390,676,59,ToggleInventory);
             Button(p,"Options","НАЛАШТУВАННЯ",42,468,676,59,ShowSettings);
             Button(p,"Help","КЕРУВАННЯ",42,546,676,59,ShowDossier);
             Button(p,"Leave","ПОВЕРНУТИСЯ ДО МЕНЮ",42,690,676,59,ReturnToMenu);
@@ -305,30 +298,7 @@ namespace DeadAir
             var close=p.Find("Close").GetComponent<Button>();close.onClick.RemoveAllListeners();close.onClick.AddListener(()=>player.SetPause(false));
         }
 
-        void BuildInventory()
-        {
-            inventoryPanel=FullScreen("Inventory",new Color(.015f,.009f,.008f,.35f));
-            var p=Fill(inventoryPanel.transform,"Inventory card",1094,120,730,845,PanelInk,true).transform;
-            Text(p,"Inventory title","ІНВЕНТАР",42,38,40,580,64,title:true);
-            Button(p,"Close inventory","×",644,29,48,48,()=>Close(inventoryPanel));
-            for(int i=0;i<12;i++)
-            {
-                int index=i;float x=42+(i%4)*166,y=192+(i/4)*104;
-                var button=Button(p,"Inventory item "+i,"",x,y,148,88,()=>{bagSelection=bagPage*12+index;RefreshInventory();});
-                var icon=Art(button.transform,"Item icon","tape",56,11,38,38,Ink);
-                var label=button.transform.Find("Label").GetComponent<Text>();label.fontSize=13;label.rectTransform.anchoredPosition=new Vector2(3,-55);label.rectTransform.sizeDelta=new Vector2(142,25);
-                bagSlots.Add(button);bagIcons.Add(icon);bagLabels.Add(label);
-            }
-            previousInventoryPage=Button(p,"Previous inventory page","‹",42,512,58,42,()=>{bagPage=Mathf.Max(0,bagPage-1);bagSelection=bagPage*12;RefreshInventory();});
-            inventoryPageLabel=Text(p,"Inventory page","",15,110,512,510,42,TextAnchor.MiddleCenter);inventoryPageLabel.color=Muted;
-            nextInventoryPage=Button(p,"Next inventory page","›",628,512,58,42,()=>{var me=session.State?.Player(session.LocalId);if(me!=null&&((bagPage+1)*12)<me.inventory.Count)bagPage++;bagSelection=bagPage*12;RefreshInventory();});
-            Rule(p,42,579,644);
-            inventoryPreview=Art(p,"Selected item","tape",43,611,66,66,Ink);
-            inventoryName=Text(p,"Item name","",27,130,608,548,47,title:true);
-            inventoryDescription=Text(p,"Item description","",17,130,660,548,85);inventoryDescription.color=Muted;
-            inventoryEquipLabel=Button(p,"Equip item","ОБРАТИ ПРЕДМЕТ",42,761,644,51,EquipInventorySelection,true).GetComponentInChildren<Text>();
-            inventoryPanel.SetActive(false);
-        }
+        void BuildInventory() => BuildFieldJournal();
 
         void EquipInventorySelection()
         {
@@ -342,10 +312,10 @@ namespace DeadAir
             if(DeadAirScarePresentation.FullscreenActive)return;
             if(Active(inventoryPanel)){Close(inventoryPanel);return;}
             var me=session.State?.Player(session.LocalId);
-            if(session.State?.phase!="playing"||me==null||me.down||!string.IsNullOrEmpty(me.hiding))return;
+            if(session.State?.phase!="playing"||session.State.elapsed<DeadAirVanPresentation.ArrivalDuration||me==null||me.down||me.ladderClimbing||!string.IsNullOrEmpty(me.hiding))return;
             if(player.LocalPaused)player.SetPause(false);
             if(Active(mapPanel))Close(mapPanel);
-            bagSelection=me.selectedSlot;bagPage=bagSelection/12;RefreshInventory();Open(inventoryPanel);
+            bagSelection=me.selectedSlot;bagPage=bagSelection/12;RefreshInventory();RefreshJournal(session.State,me);Open(inventoryPanel);
         }
 
         void RefreshInventory()
@@ -365,7 +335,7 @@ namespace DeadAir
                 }
                 if(initial||renderedBagItems[i]!=id||(id==DeadAirSupplies.BatteryItem&&batteriesChanged))
                     bagLabels[i].text=has?StackItemName(id,me):"—";
-                if(selectionChanged){var colors=bagSlots[i].colors;colors.normalColor=slot==bagSelection?new Color(.43f,.17f,.13f,.95f):new Color(.14f,.12f,.12f,.8f);bagSlots[i].colors=colors;}
+                if(selectionChanged){var colors=bagSlots[i].colors;colors.normalColor=slot==bagSelection?new Color(.63f,.50f,.35f):new Color(.82f,.77f,.65f);bagSlots[i].colors=colors;}
                 renderedBagItems[i]=id;
             }
             if(initial||renderedBagPage!=bagPage||renderedBagCount!=me.inventory.Count)
@@ -384,10 +354,16 @@ namespace DeadAir
                 inventoryEquipLabel.text=selected==DeadAirPrisonBook.Id?"ЧИТАТИ СПРАВУ":"ОБРАТИ ПРЕДМЕТ";
             }
             int charge=Mathf.CeilToInt(me.flashlightCharge/DeadAirSupplies.FlashlightSeconds*100);
-            if(itemChanged||(selected=="flashlight"&&(charge!=renderedBagCharge||batteriesChanged)))
-                inventoryDescription.text=ItemDescription(selected)+(selected=="flashlight"?"\nЗаряд: "+charge+"%. Запас: "+me.spareBatteries+".":"");
+            bool roleItem=selected==DeadAirRoleItems.ForClass(me.characterClass);
+            int ready=Mathf.CeilToInt(DeadAirRoleAbilities.ReadyIn(me,session.State.elapsed));
+            if(itemChanged||(selected=="flashlight"&&(charge!=renderedBagCharge||batteriesChanged))||(roleItem&&ready!=renderedBagRoleReady))
+            {
+                inventoryDescription.text=ItemDescription(selected)+(selected=="flashlight"?"\nЗаряд: "+charge+"%. Запас: "+me.spareBatteries+".":"")+
+                    (roleItem?"\n"+DeadAirRoleAbilities.Help(me.characterClass)+"\n"+(ready>0?"Готовність через "+ready+" с":"Готовий до використання"):"");
+            }
             renderedBagPage=bagPage;renderedBagSelection=bagSelection;renderedBagCount=me.inventory.Count;
             renderedBagBatteries=me.spareBatteries;renderedBagCigarettes=me.cigarettesRemaining;renderedBagCharge=charge;renderedBagSelectedItem=selected;
+            renderedBagRoleReady=ready;
         }
 
         static string ItemIcon(string id)
@@ -460,7 +436,7 @@ namespace DeadAir
             if(focusPanels==null)
             {
                 focusPanels=new[]{menuPanel,lobbyPanel,pausePanel,mapPanel,calibrationPanel,
-                    endingPanel,settingsPanel,dossierPanel,joinPanel,chapterPanel,preparationPanel,networkPanel,inventoryPanel,quitPanel};
+                    endingPanel,settingsPanel,dossierPanel,joinPanel,chapterPanel,preparationPanel,networkPanel,inventoryPanel,quitPanel,bookPanel,clothingPanel};
                 focusGroups=new CanvasGroup[focusPanels.Length];
                 for(int i=0;i<focusPanels.Length;i++)
                 {

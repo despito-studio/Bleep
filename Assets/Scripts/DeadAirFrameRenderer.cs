@@ -29,6 +29,8 @@ namespace DeadAir
             }
 
             worldCamera = camera;
+            DeadAirSettings.Changed += ApplyReflectionSetting;
+            ApplyReflectionSetting();
             equipment = camera.GetComponentInParent<DeadAirFirstPersonRig>();
             previousTarget = camera.targetTexture;
             previousMsaa = camera.allowMSAA;
@@ -59,6 +61,12 @@ namespace DeadAir
         }
 
         void LateUpdate() { EnsureTargets(); }
+
+        static void ApplyReflectionSetting()
+        {
+            Shader.SetGlobalFloat("_DeadAirReflectionsDisabled", DeadAirSettings.Reflections ? 0 : 1);
+            if (!DeadAirSettings.Reflections) Shader.SetGlobalFloat("_DeadAirReflectionEnabled", 0);
+        }
 
         public void EnsureTargets()
         {
@@ -127,6 +135,7 @@ namespace DeadAir
 
         void OnDestroy()
         {
+            DeadAirSettings.Changed -= ApplyReflectionSetting;
             if (worldCamera != null)
             {
                 if (worldCamera.targetTexture == SceneFrame) worldCamera.targetTexture = previousTarget;

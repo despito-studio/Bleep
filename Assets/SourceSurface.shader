@@ -29,7 +29,7 @@ Shader "Dead Air/Source Surface"
 
         CGPROGRAM
         #pragma target 3.0
-        #pragma surface surf Standard keepalpha fullforwardshadows addshadow
+        #pragma surface surf StandardSpecular keepalpha fullforwardshadows addshadow
         #pragma multi_compile_instancing
         #include "Lighting.cginc"
 
@@ -38,6 +38,7 @@ Shader "Dead Air/Source Surface"
         float4x4 _DeadAirReflectionVP;
         float4 _DeadAirReflectionTex_TexelSize;
         float _DeadAirReflectionFloor, _DeadAirReflectionEnabled;
+        float _DeadAirReflectionsDisabled;
         fixed4 _Color;
         half _Glossiness, _Metallic, _Cutoff, _PlanarReflection;
         half4 _EmissionColor;
@@ -53,20 +54,22 @@ Shader "Dead Air/Source Surface"
             float3 viewDir;
             INTERNAL_DATA
         };
-        void surf(Input IN, inout SurfaceOutputStandard o)
+        void surf(Input IN, inout SurfaceOutputStandardSpecular o)
         {
             fixed4 c = tex2D(_MainTex, IN.uv_MainTex) * _Color;
             clip(c.a - _Cutoff);
-            o.Albedo = c.rgb;
+            half reflections = 1 - saturate(_DeadAirReflectionsDisabled);
+            half metallic = _Metallic * reflections;
+            o.Albedo = c.rgb * (1 - metallic);
             o.Normal = UnpackNormal(tex2D(_BumpMap, IN.uv_BumpMap));
             o.Alpha = c.a;
-            o.Smoothness = _Glossiness * tex2D(_SurfaceMap, IN.uv_SurfaceMap).r;
-            o.Metallic = _Metallic;
+            o.Smoothness = _Glossiness * tex2D(_SurfaceMap, IN.uv_SurfaceMap).r * reflections;
+            o.Specular = lerp(half3(.04, .04, .04), c.rgb, metallic) * reflections;
             o.Occlusion = 1;
             o.Emission = tex2D(_EmissionMap, IN.uv_EmissionMap).rgb * _EmissionColor.rgb;
             // Reflection comes from an actual mirrored camera, so lamps, furniture
             // and doorways appear at their correct positions on the polished floor.
-            if (_PlanarReflection > .01 && _DeadAirReflectionEnabled > .5 &&
+            if (reflections > .5 && _PlanarReflection > .01 && _DeadAirReflectionEnabled > .5 &&
                 abs(IN.worldPos.y - _DeadAirReflectionFloor) < .12)
             {
                 float3 normal = WorldNormalVector(IN, o.Normal);

@@ -94,6 +94,7 @@ namespace DeadAir.Editor
             foreach (var objective in world.objects)
             {
                 float floor = objective.y < -1 ? -DeadAirOfficeLayout.FloorHeight : objective.y >= DeadAirOfficeLayout.FloorHeight ? DeadAirOfficeLayout.FloorHeight : 0;
+                if(DeadAirVanPresentation.TryFloorHeight(world,objective.x,objective.z,out var vanFloor))floor=vanFloor;
                 float vertical = objective.y - floor - 1;
                 float range = Mathf.Sqrt(Mathf.Max(0, 2.5f * 2.5f - vertical * vertical));
                 Require(physical.ReachableApproach(offset + DeadAirOfficeLayout.Position(objective.x, floor, objective.z), range) >= 0, "Baked quest approach is unreachable: " + objective.id);

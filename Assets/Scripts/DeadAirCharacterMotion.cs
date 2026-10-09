@@ -21,8 +21,12 @@ namespace DeadAir
         readonly List<Transform> smoke = new List<Transform>();
         Animation animationPlayer;
         Transform rightSocket, leftSocket, rightArm, leftArm, rightForearm, leftForearm, rightHand, leftHand, head, packLid, cigarette, lighter, flame, ember, compassNeedle, pendulum;
-        Transform rightThigh, leftThigh, rightShin, leftShin;
-        bool ladderClimbing, ladderUp;
+        Transform rightThigh, leftThigh, rightShin, leftShin, rightFoot, leftFoot, pelvis, chest;
+        bool ladderClimbing, ladderUp, crouching, motionPaused;
+        DeadAirAppearance appearance;
+        int secondaryFrame = -1;
+        float currentYaw, seatedWeight;
+        Vector3 compassHeading = Vector3.forward;
         float ladderAge;
         Vector3 rightGrip, leftGrip, mouthLocal = new Vector3(0, .092f, .132f);
         Material dark, metal, brass, paper, red, glass, smokeMaterial;
@@ -48,6 +52,7 @@ namespace DeadAir
                 // after the network view has moved/turned its root this frame.
                 SamplePose();
                 if (ladderClimbing) PoseLadder(); else PoseEquipment();
+                UpdateSecondaryMotion();
                 UpdateFlashlightPose();
                 return;
             }
@@ -57,7 +62,13 @@ namespace DeadAir
             SelectClip("Idle");
             Advance(dt);
             SamplePose();
+            UpdateSecondaryMotion();
         }
+
+        public void SetLocomotionPose(bool isCrouching, float horizontalSpeed)
+        { crouching = isCrouching && !ladderClimbing; moveSpeed = Mathf.Clamp(horizontalSpeed, 0, 8); }
+
+        public void SetTransitPose(float weight) { seatedWeight = Mathf.Clamp01(weight); }
 
         public void ConfigureFlashlight(ClassBonuses bonuses)
         {
@@ -71,6 +82,11 @@ namespace DeadAir
             if (player == null) return;
             Initialize();
             preview = false;
+            DeadAirClothing.Apply(gameObject, player.clothingMask, classId);
+            appearance = GetComponent<DeadAirAppearance>();
+            crouching = player.crouching && !player.down && !player.ladderClimbing;
+            motionPaused = paused || player.down;
+            currentYaw = player.yaw;
             aimPitch = Mathf.Clamp(player.pitch, -1.35f, 1.35f);
             flashlightRequested = playing && player.flashlight && DeadAirSupplies.HasCharge(player) &&
                 !player.down && !player.ladderClimbing && !player.mapOpen && !player.uniqueItemEquipped && string.IsNullOrEmpty(player.hiding);
@@ -116,6 +132,7 @@ namespace DeadAir
             SamplePose();
             ShowEquipment(player);
             if (ladderClimbing) PoseLadder(); else PoseEquipment();
+            UpdateSecondaryMotion(reset);
             UpdateFlashlightPose();
         }
 
@@ -124,6 +141,7 @@ namespace DeadAir
         {
             Initialize();
             preview = true;
+            crouching = false;
             aimPitch = 0;
             flashlightRequested = false;
             if (flashlightEmitter != null) flashlightEmitter.enabled = false;
@@ -143,6 +161,9 @@ namespace DeadAir
         {
             if (equipment == null) return;
             SetPreview(name, normalizedTime);
+            DeadAirClothing.Apply(gameObject, equipment.clothingMask, classId);
+            appearance = GetComponent<DeadAirAppearance>();
+            crouching = equipment.crouching;
             aimPitch = Mathf.Clamp(equipment.pitch, -1.35f, 1.35f);
             SamplePose();
             ShowEquipment(equipment);
@@ -180,6 +201,10 @@ namespace DeadAir
                 else if (bone.name == "thigh.L") leftThigh = bone;
                 else if (bone.name == "shin.R") rightShin = bone;
                 else if (bone.name == "shin.L") leftShin = bone;
+                else if (bone.name == "foot.R") rightFoot = bone;
+                else if (bone.name == "foot.L") leftFoot = bone;
+                else if (bone.name == "pelvis") pelvis = bone;
+                else if (bone.name == "chest") chest = bone;
             }
             if (rightSocket == null || leftSocket == null) return;
             if (rightHand != null && leftHand != null)
@@ -322,6 +347,61 @@ namespace DeadAir
                 previous.time = previousClipTime;
             }
             animationPlayer.Sample();
+            PoseCrouching();
+            PoseSeatedTransit();
+        }
+
+        void PoseSeatedTransit()
+        {
+            if (seatedWeight <= .001f || pelvis == null || ladderClimbing) return;
+            Vector3 rightTarget = rightFoot != null ? rightFoot.position : Vector3.zero;
+            Vector3 leftTarget = leftFoot != null ? leftFoot.position : Vector3.zero;
+            Quaternion rightRotation = rightFoot != null ? rightFoot.rotation : Quaternion.identity;
+            Quaternion leftRotation = leftFoot != null ? leftFoot.rotation : Quaternion.identity;
+            float hipHeight = transform.InverseTransformPoint(pelvis.position).y;
+            pelvis.position -= transform.up * Mathf.Max(0, hipHeight - .46f) * seatedWeight;
+            if (chest != null) chest.rotation = Quaternion.AngleAxis(5 * seatedWeight, transform.right) * chest.rotation;
+            Vector3 forward = transform.forward * (.22f * seatedWeight);
+            CrouchLeg(rightThigh, rightShin, rightFoot, rightTarget + forward, rightRotation);
+            CrouchLeg(leftThigh, leftShin, leftFoot, leftTarget + forward, leftRotation);
+        }
+
+        void PoseCrouching()
+        {
+            if (!crouching || ladderClimbing || pelvis == null) return;
+            Vector3 rightTarget = rightFoot != null ? rightFoot.position : Vector3.zero;
+            Vector3 leftTarget = leftFoot != null ? leftFoot.position : Vector3.zero;
+            Quaternion rightRotation = rightFoot != null ? rightFoot.rotation : Quaternion.identity;
+            Quaternion leftRotation = leftFoot != null ? leftFoot.rotation : Quaternion.identity;
+            float hipHeight = transform.InverseTransformPoint(pelvis.position).y;
+            pelvis.position -= transform.up * Mathf.Min(.41f, hipHeight * .48f);
+            if (chest != null) chest.rotation = Quaternion.AngleAxis(12, transform.right) * chest.rotation;
+            CrouchLeg(rightThigh, rightShin, rightFoot, rightTarget, rightRotation);
+            CrouchLeg(leftThigh, leftShin, leftFoot, leftTarget, leftRotation);
+        }
+
+        void CrouchLeg(Transform thigh, Transform shin, Transform foot, Vector3 target, Quaternion rotation)
+        {
+            if (thigh == null || shin == null || foot == null) return;
+            Vector3 origin = thigh.position, offset = target - origin;
+            float a = Vector3.Distance(origin, shin.position), b = Vector3.Distance(shin.position, foot.position);
+            float distance = Mathf.Clamp(offset.magnitude, Mathf.Abs(a-b)+.001f, a+b-.001f);
+            Vector3 direction = offset.normalized;
+            float along = (a*a-b*b+distance*distance)/(2*distance), height = Mathf.Sqrt(Mathf.Max(0,a*a-along*along));
+            Vector3 hint = transform.forward - direction * Vector3.Dot(transform.forward,direction);
+            if (hint.sqrMagnitude < .001f) hint = transform.right;
+            Vector3 knee = origin + direction*along + hint.normalized*height;
+            thigh.rotation = Quaternion.FromToRotation(shin.position-origin,knee-origin)*thigh.rotation;
+            shin.rotation = Quaternion.FromToRotation(foot.position-shin.position,target-shin.position)*shin.rotation;
+            foot.rotation = rotation;
+        }
+
+        void UpdateSecondaryMotion(bool reset = false)
+        {
+            if (appearance == null || appearance.SecondaryMotion == null || secondaryFrame == Time.frameCount && !reset) return;
+            secondaryFrame = Time.frameCount;
+            bool clothed = (appearance.CurrentMask & (DeadAirClothing.Shirt | DeadAirClothing.Jacket)) != 0;
+            appearance.SecondaryMotion.Step(motionPaused ? 0 : Time.deltaTime, currentYaw, moveSpeed, clothed, reset);
         }
 
         void ShowEquipment(PlayerState player)
@@ -329,7 +409,7 @@ namespace DeadAir
             if (props.Count == 0) return;
             string selected = player.inventory != null && player.selectedSlot >= 0 && player.selectedSlot < player.inventory.Count
                 ? player.inventory[player.selectedSlot] : "empty";
-            string mode = player.down || player.ladderClimbing || !string.IsNullOrEmpty(player.hiding) ? "empty" : player.mapOpen ? "map" : player.camera ? "camera"
+            string mode = player.down || player.ladderClimbing || player.mapOpen || !string.IsNullOrEmpty(player.hiding) ? "empty" : player.camera ? "camera"
                 : player.uniqueItemEquipped ? classId : InventoryMode(selected);
             if (mode != propMode)
             {
@@ -361,6 +441,13 @@ namespace DeadAir
             }
             if (compassNeedle != null)
             {
+                compassHeading = Vector3.forward;
+                if (DeadAirRoleAbilities.HasIntel(player, lastElapsed))
+                {
+                    compassHeading = DeadAirRoleAbilities.IntelPosition(player) - transform.position;
+                    compassHeading.y = 0;
+                    compassHeading = compassHeading.sqrMagnitude > .0001f ? compassHeading.normalized : Vector3.forward;
+                }
                 compassNeedle.localRotation = Quaternion.Euler(0, -player.yaw * Mathf.Rad2Deg, 0);
                 pendulum.localRotation = Quaternion.Euler(0, 0, Mathf.Sin(lastElapsed * (actionTime >= 0 ? 7 : 2.5f)) * (actionTime >= 0 ? 22 : 5));
             }
@@ -370,7 +457,6 @@ namespace DeadAir
         {
             GripContactError = 0;
             if (propMode == "empty" || string.IsNullOrEmpty(propMode)) return;
-            if (propMode == "map") { PoseMap(); return; }
             if (propMode == "camera") { PoseCamera(); return; }
             if (propMode == "fuel-canister") { PoseFuelCanister(); return; }
             if (propMode == "operator" && actionTime >= 0) { PoseSmoking(); return; }
@@ -428,7 +514,7 @@ namespace DeadAir
             var compass = props["dispatcher"];
             compass.rotation = transform.rotation;
             compass.position = rightSocket.position - compass.rotation * new Vector3(.056f, .035f, 0);
-            Vector3 north = compass.InverseTransformDirection(Vector3.forward);
+            Vector3 north = compass.InverseTransformDirection(compassHeading);
             compassNeedle.localRotation = Quaternion.Euler(0, Mathf.Atan2(north.x, north.z) * Mathf.Rad2Deg, 0);
         }
 
@@ -684,14 +770,6 @@ namespace DeadAir
             Part("Lens", g, tubeMesh, glass, new Vector3(0, .152f, 0), new Vector3(.10f, .004f, .10f));
             Part("Switch", g, boxMesh, red, new Vector3(0, .01f, -.04f), new Vector3(.02f, .03f, .006f));
             AnchorProp(g, new Vector3(0, 0, -.0375f), new Vector3(-90, 0, 0));
-
-            g = Prop("map", transform);
-            Part("Folded station map", g, boxMesh, paper, Vector3.zero, new Vector3(.44f, .28f, .004f));
-            for (int i = 0; i < 6; i++)
-            {
-                Part("Station corridor", g, boxMesh, dark, new Vector3(-.12f + i * .048f, .01f, -.003f), new Vector3(.008f, .18f - (i % 3) * .035f, .002f));
-                Part("Station room", g, boxMesh, red, new Vector3(-.12f + i * .048f, -.02f + (i % 2) * .09f, -.003f), new Vector3(.026f, .015f, .002f));
-            }
 
             g = Prop("camera", transform);
             Part("VHS-C body", g, boxMesh, dark, new Vector3(0, .08f, .025f), new Vector3(.17f, .13f, .24f));

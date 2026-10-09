@@ -32,6 +32,7 @@ namespace DeadAir
         GameObject windowDirectorGlass;
         readonly DeadAirWindowBreak directorWindow;
         readonly DeadAirDrawerPresentation drawerPresentation;
+        readonly DeadAirVanPresentation vanPresentation;
         readonly Material interiorLampMaterial;
         readonly DeadAirSky sky;
         readonly DeadAirCulling culling;
@@ -142,6 +143,7 @@ namespace DeadAir
                 }
             }
             drawerPresentation = new DeadAirDrawerPresentation(root, data);
+            vanPresentation=DeadAirVanPresentation.Attach(root,data);
             if (interactables.TryGetValue("key-main", out var directorKey))
                 foreach (var part in root.GetComponentsInChildren<Transform>(true))
                     if (part.name == "drawer:drawer-director")
@@ -164,6 +166,7 @@ namespace DeadAir
                 moon.shadows=LightShadows.Soft;
                 moon.shadowCustomResolution=1024;
             }
+            if(vanPresentation.VehicleRoot!=null)dynamicRoots.Add(vanPresentation.VehicleRoot);
             culling = new DeadAirCulling(data,root.Find("station"),root.Find("exterior"),dynamicRoots,doorAnimations);
             anchor=Instantiate("monster");bloodyAnchor=Instantiate("monster_bloody");
             anchorMotion=anchor.AddComponent<DeadAirMonsterMotion>();
@@ -184,6 +187,7 @@ namespace DeadAir
         static bool IsLampMaterial(Material material)
         {
             if(material.name=="light-panel")return true;
+            if(material.name.StartsWith("van-headlamp-lens",StringComparison.Ordinal))return true;
             // Headlamps, indicators and tail lamps on the saved service van.
             return material.name=="surface_677" || material.name=="surface_678" ||
                 material.name=="surface_679" || material.name=="surface_684" ||
@@ -251,7 +255,7 @@ namespace DeadAir
             {
                 if(!transform.name.StartsWith("prop:van-") && transform.name!="van" &&
                     !transform.name.StartsWith("Broadcast service van"))continue;
-                InstallVanHeadlamps(transform);
+                InstallVanHeadlamps(transform.Find("vehicle:crew-van")??transform);
             }
         }
 
@@ -502,7 +506,7 @@ namespace DeadAir
             {
                 bool headlamp=false;
                 foreach(var material in lens.sharedMaterials)
-                    if(material!=null && material.name=="surface_677"){headlamp=true;break;}
+                    if(material!=null && (material.name=="surface_677"||material.name.StartsWith("van-headlamp-lens",StringComparison.Ordinal))){headlamp=true;break;}
                 if(!headlamp)continue;
                 var local=van.InverseTransformPoint(lens.bounds.center);
                 float side=Mathf.Sign(local.x);
@@ -511,8 +515,10 @@ namespace DeadAir
                 if(emitter==null){emitter=new GameObject(name).transform;emitter.SetParent(van,false);}
                 // Start ahead of the outer glass, so the housing cannot shadow its
                 // own beam. The upper edge stays below the horizon.
-                emitter.localPosition=new Vector3(local.x,local.y,local.z-.065f);
-                emitter.localRotation=Quaternion.LookRotation(new Vector3(side*.035f,-.47f,-1));
+                bool modern=van.name=="vehicle:crew-van"||lens.name.StartsWith("headlamp-lens:");
+                float forward=modern?1f:-1f;
+                emitter.localPosition=new Vector3(local.x,local.y,local.z+forward*.065f);
+                emitter.localRotation=Quaternion.LookRotation(new Vector3(side*.035f,-.30f,forward));
                 var light=emitter.GetComponent<Light>();
                 if(light==null)light=emitter.gameObject.AddComponent<Light>();
                 light.type=LightType.Spot;light.range=18;light.intensity=3.6f;
@@ -540,6 +546,7 @@ namespace DeadAir
         public void Apply(RoomState state)
         {
             if(state==null) return;
+            vanPresentation.Apply(state);
             foreach(var door in state.doors)
             {
                 if(doorAnimations.TryGetValue(door.id,out var animation))animation.SetOpen(door.open, door.openSign);

@@ -169,8 +169,11 @@ namespace DeadAir
     [Serializable] public class PlayerState
     {
         public string id, name, characterClass, hiding;
+        public int clothingMask = -1;
+        public float roleReadyAt, roleIntelUntil, roleIntelX, roleIntelY, roleIntelZ;
+        public string roleIntelKind;
         public float x, y, z, yaw, pitch, sanity = 100, stamina = 100, invulnerableUntil;
-        public bool flashlight = true, camera, sprinting, down, mapOpen, uniqueItemEquipped, noclip;
+        public bool flashlight = true, camera, sprinting, crouching, down, mapOpen, uniqueItemEquipped, noclip;
         public bool uniqueActionCancelled = true;
         public int uniqueActionSequence, cigarettesRemaining;
         // Host-authored event counters survive skipped snapshots without repeating a scare.
@@ -218,6 +221,8 @@ namespace DeadAir
         public string behaviour = "patrol", watchingPlayerId, doorId;
         public float yaw, peekLean;
         public float heardX, heardY, heardZ, heardUntil;
+        public float attackStartedAt = -100, searchUntil, heardStrength;
+        public string attackPlayerId;
         public int encounterSerial, encounterAt;
     }
     [Serializable] public class QuestState
@@ -234,12 +239,13 @@ namespace DeadAir
         public bool solo, creative, paused, canister, valveOpened, calibrated, power, broadcast;
         public bool ladderPlaced, breakerOn, directorDrawerOpen;
         public bool windowBroken = true;
-        public float spawnCountdown = 35, elapsed;
+        public float spawnCountdown = 35, elapsed, departureStartedAt;
         public int scare, radioSequence;
         public List<PlayerState> players = new List<PlayerState>();
         public List<string> tapes = new List<string>(), fuses = new List<string>(), keycards = new List<string>();
         public List<string> canisters = new List<string>();
         public List<string> collected = new List<string>();
+        public List<string> securedItems = new List<string>();
         public List<DroppedItem> droppedItems = new List<DroppedItem>();
         public List<DoorState> doors = new List<DoorState>();
         public List<DrawerState> drawers = new List<DrawerState>();
@@ -267,9 +273,11 @@ namespace DeadAir
 
     [Serializable] public class NetPacket
     {
+        public int protocol;
         public string type, id, name, classId, code, playerId, stateJson, error, chapterId;
-        public bool solo, creative, flashlight, camera, sprinting, paused, ok, mapOpen, uniqueEquipped, noclip;
+        public bool solo, creative, flashlight, camera, sprinting, crouching, paused, ok, mapOpen, uniqueEquipped, noclip;
         public int phrase, slot, moveSequence;
+        public int clothingMask = -1;
         public float x, y, z, yaw, pitch, frequency;
     }
 }

@@ -49,6 +49,7 @@ namespace DeadAir
         WorldData world;
         Mesh boxMesh, tubeMesh, palmMesh;
         string currentMode, currentClass;
+        int currentClothing = int.MinValue;
         float clock, bob, equip, actionTime = -1, synchronizedAge = -1, mapMinX, mapMinZ, mapMaxX, mapMaxZ;
         bool visible, hadEquipmentLayer, synchronized;
         bool bareArms;
@@ -189,7 +190,7 @@ namespace DeadAir
             if (ember != null) ember.gameObject.SetActive(false);
         }
 
-        public void Present(PlayerState me, bool cameraUp, bool mapOpen, bool flashlightOn, float movementAmount, bool paused)
+        public void Present(PlayerState me, bool cameraUp, bool mapOpen, bool flashlightOn, float movementAmount, bool paused, float elapsed = 0)
         {
             if (rig == null || me == null) return;
             if (me.down || !string.IsNullOrEmpty(me.hiding)) { SetVisible(false); return; }
@@ -205,7 +206,9 @@ namespace DeadAir
                     synchronizedAge = acceptedAge;
                 }
                 SetClass(me.characterClass);
+                currentClothing = int.MinValue;
             }
+            ApplySleeves(me);
             float dt = paused ? 0 : Mathf.Min(Time.deltaTime, .05f);
             // Raising the map is presentation: solo play can already be paused
             // by its modal while this transition still has to finish.
@@ -224,7 +227,7 @@ namespace DeadAir
             }
             string selected = me.inventory != null && me.selectedSlot >= 0 && me.selectedSlot < me.inventory.Count
                 ? me.inventory[me.selectedSlot] : "empty";
-            string mode = mapOpen ? "map" : cameraUp ? "camera" : me.uniqueItemEquipped ? me.characterClass : InventoryMode(selected);
+            string mode = mapOpen ? "empty" : cameraUp ? "camera" : me.uniqueItemEquipped ? me.characterClass : InventoryMode(selected);
             if (currentMode != mode)
             {
                 currentMode = mode;
@@ -277,7 +280,10 @@ namespace DeadAir
             {
                 // A real north needle, with a free-swinging brass pendulum below the case.
                 // WorldData north is +Z; yaw zero faces the station's -Z corridor.
-                compassNeedle.localRotation = Quaternion.Euler(0, 0, 180 + me.yaw * Mathf.Rad2Deg);
+                float heading = Mathf.PI;
+                if (DeadAirRoleAbilities.HasIntel(me, elapsed) && me.roleIntelKind.StartsWith("objective:", StringComparison.Ordinal))
+                    heading = Mathf.Atan2(-(me.roleIntelX - me.x), -(me.roleIntelZ - me.z));
+                compassNeedle.localRotation = Quaternion.Euler(0, 0, (me.yaw - heading) * Mathf.Rad2Deg);
                 pendulum.localRotation = Quaternion.Euler(0, 0, Mathf.Sin(clock * (IsUsingUnique ? 7 : 2.5f)) * (IsUsingUnique ? 22 : 5));
                 GripCompass();
             }
@@ -286,6 +292,21 @@ namespace DeadAir
             else if (mode == "tape") GripBox(rightHand, items[mode], items[mode].Find("Tape casing"), 1);
             else if (mode == "fuse") GripVerticalHandle(rightHand, items[mode], items[mode].Find("Ceramic fuse"));
             else if (mode == "fuel-canister") GripFuelCan();
+        }
+
+        public void PresentTransit(float progress, bool departing)
+        {
+            if (rig == null || !visible) return;
+            currentMode = null; actionTime = -1;
+            foreach (var item in items) item.Value.gameObject.SetActive(false);
+            foreach (var puff in smoke) puff.gameObject.SetActive(false);
+            cigarette.gameObject.SetActive(false); lighter.gameObject.SetActive(false);
+            flame.gameObject.SetActive(false); ember.gameObject.SetActive(false);
+            rig.localPosition = Vector3.zero; rig.localRotation = Quaternion.identity;
+            float seated = departing ? Mathf.SmoothStep(0, 1, progress * 3) : 1 - Mathf.SmoothStep(0, 1, (progress - .62f) / .30f);
+            rightHand.gameObject.SetActive(true); leftHand.gameObject.SetActive(true);
+            RelaxHand(rightHand, new Vector3(.27f, -.40f - seated * .06f, .40f), new Vector3(40, -15, 16));
+            RelaxHand(leftHand, new Vector3(-.27f, -.40f - seated * .06f, .40f), new Vector3(40, 15, -16));
         }
 
         public void PresentLadder(float age, bool up, bool intactWindow)
@@ -300,14 +321,14 @@ namespace DeadAir
             rig.localPosition = Vector3.zero; rig.localRotation = Quaternion.identity;
             rightHand.gameObject.SetActive(true); leftHand.gameObject.SetActive(true);
             float route = DeadAirLadder.PathAge(age, up);
-            float cycle = (route - .35f) * Mathf.PI * 4.3f;
             bool rungs = route > .35f && route < 3.45f;
-            float rightReach = rungs ? Mathf.Sin(cycle) * .11f : 0;
-            float leftReach = rungs ? Mathf.Sin(cycle + Mathf.PI) * .11f : 0;
+            float phase = Mathf.Repeat((route - .35f) / (3.10f / 9), 2);
+            float rightReach = rungs ? .18f * Mathf.SmoothStep(0, 1, Mathf.PingPong(phase, 1)) : 0;
+            float leftReach = rungs ? .18f * Mathf.SmoothStep(0, 1, Mathf.PingPong(phase + 1, 1)) : 0;
             // Reach one hand at a time with a quiet camera, rather than rolling
             // the whole view from side to side as the old climb did.
-            RelaxHand(rightHand, new Vector3(.21f, -.15f + rightReach, .47f), new Vector3(12, -8, -6));
-            RelaxHand(leftHand, new Vector3(-.21f, -.15f + leftReach, .47f), new Vector3(12, 8, 6));
+            RelaxHand(rightHand, new Vector3(.24f, -.18f + rightReach, .48f - rightReach * .35f), new Vector3(12 + rightReach * 100, -8, -6));
+            RelaxHand(leftHand, new Vector3(-.24f, -.18f + leftReach, .48f - leftReach * .35f), new Vector3(12 + leftReach * 100, 8, 6));
             if (up && intactWindow && route >= 3.45f && route <= 3.80f)
             {
                 float strike = Mathf.Sin(Mathf.Clamp01((route - 3.45f) / .35f) * Mathf.PI);
@@ -360,6 +381,7 @@ namespace DeadAir
         void SetClass(string id)
         {
             currentClass = id;
+            foreach (var hand in new[] { rightHand, leftHand }) hand.Find("Cuff or bracelet").gameObject.SetActive(true);
             bool bare = id == "operator" || id == "dispatcher";
             bareArms = bare;
             if (ApplyImportedHands(id)) return;
@@ -374,6 +396,32 @@ namespace DeadAir
             {
                 hand.Find("Tailored forearm").localScale = bare ? new Vector3(.073f, .24f, .071f) : new Vector3(.104f, .25f, .10f);
                 hand.Find("Cuff or bracelet").localScale = bare ? new Vector3(.075f, .012f, .071f) : new Vector3(.091f, .037f, .086f);
+            }
+        }
+
+        void ApplySleeves(PlayerState player)
+        {
+            int mask = DeadAirClothing.Resolve(player);
+            if (currentClothing == mask) return;
+            currentClothing = mask;
+            if (mask == DeadAirClothing.DefaultMask(player.characterClass)) { SetClass(player.characterClass); return; }
+            bool sleeves = DeadAirClothing.FirstPersonSleeves(mask, player.characterClass);
+            SetClass(player.characterClass);
+            bareArms = !sleeves;
+            // Keep imported palms/fingers; only replace the clothing-covered forearms.
+            foreach (var part in handParts)
+                if (part.filter.name == "Tailored forearm" || part.filter.name == "Cuff or bracelet")
+                {
+                    part.filter.sharedMesh = part.proceduralMesh;
+                    part.renderer.sharedMaterials = part.proceduralMaterials;
+                }
+            hands[rightHand].attachments = hands[leftHand].attachments = null;
+            SetTint(sleeve, !sleeves ? skin.color : (mask & DeadAirClothing.Jacket) != 0 ?
+                player.characterClass == "engineer" ? new Color32(32, 34, 33, 255) : new Color32(48, 63, 66, 255) : new Color32(172, 168, 146, 255));
+            foreach (var hand in new[] { rightHand, leftHand })
+            {
+                hand.Find("Tailored forearm").localScale = sleeves ? new Vector3(.104f, .25f, .10f) : new Vector3(.073f, .24f, .071f);
+                hand.Find("Cuff or bracelet").gameObject.SetActive(sleeves);
             }
         }
 

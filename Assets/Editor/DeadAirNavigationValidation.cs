@@ -33,6 +33,7 @@ namespace DeadAir.Editor
             foreach(var objective in world.objects)
             {
                 float floor=objective.y< -1?-DeadAirOfficeLayout.FloorHeight:objective.y>=DeadAirOfficeLayout.FloorHeight?DeadAirOfficeLayout.FloorHeight:0;
+                if(DeadAirVanPresentation.TryFloorHeight(world,objective.x,objective.z,out var vanFloor))floor=vanFloor;
                 Require(reachable.Contains(Nearest(world,objective.x,floor,objective.z)),
                     "The quest destination is disconnected from the entrance: "+objective.id);
             }

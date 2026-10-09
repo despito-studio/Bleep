@@ -35,7 +35,14 @@ namespace DeadAir
         static Vector3 Route(float t)
         {
             if (t <= .35f) return Foot;
-            if (t < 3.45f) return Vector3.Lerp(Foot, Top, Smooth((t - .35f) / 3.10f));
+            if (t < 3.45f)
+            {
+                // Each weight transfer lifts the body after a hand plants on the
+                // next rung, with a short stable grip rather than a continuous glide.
+                float rung = Mathf.Clamp01((t - .35f) / 3.10f) * 9;
+                float lift = (Mathf.Floor(rung) + Smooth((Mathf.Repeat(rung, 1) - .12f) / .78f)) / 9;
+                return Vector3.Lerp(Foot, Top, lift);
+            }
             if (t < 3.80f) return Top;
             if (t < 4.22f) return Vector3.Lerp(Top, SillOutside, Smooth((t - 3.80f) / .42f));
             if (t < 4.70f) return Vector3.Lerp(SillOutside, SillInside, Smooth((t - 4.22f) / .48f));

@@ -61,8 +61,8 @@ namespace DeadAir.Editor
                     foreach(var material in renderer.sharedMaterials)
                         Require(!material.HasProperty("_EmissionColor") || material.GetColor("_EmissionColor").maxColorComponent<.001f,
                             "A blind monster's face and cloth must respond to scene light instead of emitting it.");
-                    var head=rig.transform.GetComponentsInChildren<Transform>(true).First(t=>t.childCount>=10 &&
-                        t.localPosition.y>1.3f && t.parent.name=="Anchor spine");
+                    var head=rig.HeadPivot;
+                    Require(head!=null && head.localPosition.y>1.3f,"The new adult listening head needs its own pivot above the shoulders.");
                     var legs=rig.transform.GetComponentsInChildren<Transform>(true).Where(t=>t.name=="Anchor knee").ToArray();
                     Require(legs.Length==2,"The authored legs need distinct knee pivots.");
                     rig.SetPreviewPose("patrol",0,.25f);

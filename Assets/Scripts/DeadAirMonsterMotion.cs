@@ -5,8 +5,8 @@ using UnityEngine.Rendering;
 
 namespace DeadAir
 {
-    // The source monster is made of rigid, textured parts. Build pivots around
-    // those parts instead of replacing the model or stretching its pixel art.
+    // Presentation follows authoritative sound/attack state. Procedural adult
+    // anatomy uses independent pivots, so searching and striking do not slide.
     public sealed class DeadAirMonsterMotion : MonoBehaviour
     {
         sealed class Joint
@@ -23,7 +23,7 @@ namespace DeadAir
         Joint torso,head,leftArm,rightArm,leftElbow,rightElbow,leftHand,rightHand,
             leftLeg,rightLeg,leftKnee,rightKnee,leftFoot,rightFoot;
         Vector3 lastPosition;
-        float lastElapsed,gait,moveSpeed,moveAt=-100,lean;
+        float lastElapsed,gait,moveSpeed,moveAt=-100,lean,attackAt;
         bool initialized,hasSnapshot;
         public int AnimatedJointCount {get;private set;}
         public bool HasBlindfold {get;private set;}
@@ -33,42 +33,19 @@ namespace DeadAir
         {
             if(initialized)return;
             initialized=true;
-            var children=new List<Transform>();
-            foreach(Transform child in transform)children.Add(child);
-            model=Group("Anchor / articulated source model",transform,Vector3.zero);
-            foreach(var child in children)child.SetParent(model,false);
-            var upper=Group("Anchor spine",model,new Vector3(0,1.15f,0));
-            foreach(var child in children)
-            {
-                var position=child.localPosition;
-                if(child.childCount>=4 && position.y>.95f && position.y<1.3f)
-                {
-                    var hip=new Joint(child);
-                    var knee=new Joint(Regroup("Anchor knee",child,new Vector3(0,-.64f,0),t=>t.localPosition.y<-.64f));
-                    var foot=new Joint(Regroup("Anchor ankle",knee.transform,new Vector3(0,-.41f,0),t=>t.localPosition.y<-.41f));
-                    if(position.x<0){leftLeg=hip;leftKnee=knee;leftFoot=foot;}
-                    else{rightLeg=hip;rightKnee=knee;rightFoot=foot;}
-                    continue;
-                }
-                child.SetParent(upper,true);
-                if(child.childCount>=8 && Mathf.Abs(position.x)>.4f && position.y>2)
-                {
-                    var shoulder=new Joint(child);
-                    var elbow=new Joint(Regroup("Anchor elbow",child,new Vector3(0,-.64f,0),t=>t.localPosition.y<-.64f));
-                    var hand=new Joint(Regroup("Anchor wrist",elbow.transform,new Vector3(0,-.49f,.02f),t=>t.localPosition.y<-.47f));
-                    if(position.x<0){leftArm=shoulder;leftElbow=elbow;leftHand=hand;}
-                    else{rightArm=shoulder;rightElbow=elbow;rightHand=hand;}
-                }
-                else if(child.childCount>=10 && Mathf.Abs(position.x)<.05f && position.y>2.4f)
-                {
-                    head=new Joint(child);
-                    FitBlindfold(child);
-                }
-            }
-            torso=new Joint(upper);
-            // The imported soles were 12cm below the source floor plane.
+            // Keep the saved source reversible while replacing its visible body.
+            // These are render-only parts; no additional colliders or rigidbodies.
+            foreach(Transform child in transform)child.gameObject.SetActive(false);
+            var rig=DeadAirMonsterBody.Build(transform,owned);
+            model=rig.model;torso=new Joint(rig.spine);head=new Joint(rig.head);
+            leftArm=new Joint(rig.leftArm);rightArm=new Joint(rig.rightArm);
+            leftElbow=new Joint(rig.leftElbow);rightElbow=new Joint(rig.rightElbow);
+            leftHand=new Joint(rig.leftHand);rightHand=new Joint(rig.rightHand);
+            leftLeg=new Joint(rig.leftLeg);rightLeg=new Joint(rig.rightLeg);
+            leftKnee=new Joint(rig.leftKnee);rightKnee=new Joint(rig.rightKnee);
+            leftFoot=new Joint(rig.leftFoot);rightFoot=new Joint(rig.rightFoot);
+            HasBlindfold=true;
             model.localPosition=new Vector3(0,.13f,0);
-            CalibrateSkin();
             foreach(var joint in new[]{torso,head,leftArm,rightArm,leftElbow,rightElbow,leftHand,rightHand,
                 leftLeg,rightLeg,leftKnee,rightKnee,leftFoot,rightFoot})
                 if(joint!=null)AnimatedJointCount++;
@@ -154,6 +131,7 @@ namespace DeadAir
         public void Present(EnemyState enemy,float elapsed,bool paused)
         {
             Initialize();
+            attackAt=enemy.attackStartedAt;
             var position=new Vector3(-enemy.x,enemy.y,enemy.z);
             if(!hasSnapshot || elapsed<lastElapsed)
             {
@@ -178,6 +156,7 @@ namespace DeadAir
 
         public void SetPreviewPose(string behaviour,float time,float normalizedGait=.25f,float peekSide=1)
         {
+            attackAt=0;
             Initialize();SamplePose(behaviour,time,normalizedGait*Mathf.PI*2,
                 behaviour=="patrol"?1:behaviour=="investigate"?3:0,behaviour=="peek"?peekSide:0);
         }
@@ -207,6 +186,16 @@ namespace DeadAir
             {
                 torso?.Pose(13,0,Mathf.Sin(time*17)*1.5f);
                 head?.Pose(29,0,-11);leftArm?.Pose(-18,0,-7);rightArm?.Pose(-21,0,8);
+            }
+            else if(behaviour=="attack")
+            {
+                float windup=Mathf.Clamp01((time-attackAt)/.85f);
+                float strike=Mathf.SmoothStep(0,1,Mathf.InverseLerp(.55f,1,windup));
+                torso?.Pose(Mathf.Lerp(-7,24,strike),-6,0);
+                head?.Pose(Mathf.Lerp(-12,15,strike),5,-4);
+                rightArm?.Pose(Mathf.Lerp(-125,-40,strike),-18,16);
+                rightElbow?.Pose(Mathf.Lerp(-65,-10,strike));
+                leftArm?.Pose(-31,8,-13);
             }
             else if(Mathf.Abs(side)>.1f)
             {

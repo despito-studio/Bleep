@@ -253,7 +253,7 @@ namespace DeadAir
         }
 
         public void Tick(bool paused, bool moving, bool sprinting, bool hiding, float stamina, float sanity,
-            float threat, bool camera, bool power, bool broadcast, Vector3? monsterPosition, float monsterDistance, bool breakerOn = true)
+            float threat, bool camera, bool power, bool broadcast, Vector3? monsterPosition, float monsterDistance, bool breakerOn = true, bool crouching = false)
         {
             float now = Time.unscaledTime;
             gameplayPaused = paused;
@@ -290,8 +290,8 @@ namespace DeadAir
                 {
                     stepSide = stepSide == 1 ? -1 : 1;
                     string step = surface == "tile" ? sprinting ? "run-step" : "step" : (sprinting ? "run-step-" : "step-") + surface;
-                    Emit(step, 1, stepSide * .12f);
-                    nextStep = now + (sprinting ? .31f : .52f) + UnityEngine.Random.Range(0, .035f);
+                    Emit(step, crouching ? .25f : 1, stepSide * .12f);
+                    nextStep = now + (crouching ? .75f : sprinting ? .31f : .52f) + UnityEngine.Random.Range(0, .035f);
                 }
             }
             wasMoving = moving;

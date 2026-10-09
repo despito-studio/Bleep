@@ -61,14 +61,13 @@ namespace DeadAir
             }
             var cls = world.GetClass(classId);
             int index = State.players.Count;
+            var spawn = DeadAirVanPresentation.SpawnPoint(world, index);
             var pState = new PlayerState
             {
                 id = id, name = string.IsNullOrWhiteSpace(name) ? "Оператор" : name.Trim().Substring(0, Mathf.Min(20, name.Trim().Length)),
                 characterClass = cls.id,
-                x = world.spawn.x + (index % 2 == 0 ? -.42f : .42f),
-                y = world.spawn.y,
-                z = world.spawn.z + (index >= 2 ? .42f : 0),
-                flashlight = true
+                x = spawn.x, y = spawn.y, z = spawn.z,
+                flashlight = true, yaw = DeadAirVanPresentation.SpawnYaw
             };
             pState.inventory.Add("flashlight");
             ResetRoleItem(pState);
@@ -112,6 +111,8 @@ namespace DeadAir
             player.uniqueActionAt = -100;
             player.uniqueActionCancelled = true;
             player.cigarettesRemaining = player.characterClass == "operator" ? 12 : 0;
+            player.roleReadyAt = player.roleIntelUntil = 0;
+            player.roleIntelKind = null;
         }
 
         bool CanUseRoleItem(PlayerState player)
@@ -134,6 +135,7 @@ namespace DeadAir
             var player = State.Player(id);
             // A modal map must publish its equipment state even while a solo round is paused.
             if (State.phase != "playing" || player == null || player.down || player.ladderClimbing || !string.IsNullOrEmpty(player.hiding)) return;
+            if (open && !CanReadVanMap(player)) return;
             player.mapOpen = open;
             if (open)
             {
@@ -144,6 +146,21 @@ namespace DeadAir
             Dirty = true;
         }
 
+        public void SetClothing(string id, int mask)
+        {
+            var player = State.Player(id);
+            if (State.phase != "lobby" || player == null) return;
+            player.clothingMask = DeadAirClothing.Sanitize(mask);
+            Dirty = true;
+        }
+
+        bool CanReadVanMap(PlayerState player)
+        {
+            var board = world.Objective("van-map");
+            return board != null && player != null && !player.down && !player.ladderClimbing &&
+                string.IsNullOrEmpty(player.hiding) && Near(player, board.x, board.y, board.z, 2.5f, 0, "van-map");
+        }
+
         public string UseUnique(string id)
         {
             var player = State.Player(id);
@@ -152,17 +169,22 @@ namespace DeadAir
                 return "Оберіть особистий предмет в інвентарі.";
             bool cigarettes = player.characterClass == "operator";
             if (cigarettes && player.cigarettesRemaining <= 0) return "Пачка сигарет порожня.";
-            float cooldown = cigarettes ? 7f : 2.5f;
-            if (State.elapsed - player.uniqueActionAt < cooldown) return "Дочекайтеся завершення дії.";
+            float cooldown = DeadAirRoleAbilities.Cooldown(player.characterClass);
+            if (State.elapsed < player.roleReadyAt || State.elapsed - player.uniqueActionAt < cooldown)
+                return "Особистий предмет буде готовий через " + Mathf.CeilToInt(Mathf.Max(player.roleReadyAt - State.elapsed,
+                    cooldown - (State.elapsed - player.uniqueActionAt))) + " с.";
             if (cigarettes) player.cigarettesRemaining--;
             player.uniqueActionAt = State.elapsed;
+            player.roleReadyAt = State.elapsed + cooldown;
             player.uniqueActionSequence++;
             player.uniqueActionCancelled = false;
-            if(!cigarettes)HearNoise(player.x,player.y,player.z,player.characterClass=="journalist"?10:6,5);
-            if(player.characterClass=="engineer"&&State.enemy.active&&State.enemy.behaviour!="vanished"&&
-                SameFloor(player.y,State.enemy.y)&&Dist(player.x,player.z,State.enemy.x,State.enemy.z)<2.2f&&
-                !SegmentBlocked(player.x,player.y,player.z,State.enemy.x,State.enemy.y,State.enemy.z))
-                State.enemy.stunnedUntil=State.elapsed+1.75f*world.GetClass(player.characterClass).bonuses.stunBonus;
+            if (player.characterClass == "engineer")
+            {
+                bool worked = UseEngineerTool(player);
+                HearNoise(player.x, player.y, player.z, worked ? 14 : 4, worked ? 8 : 3);
+            }
+            else if (player.characterClass == "journalist") UseRecorder(player);
+            else if (player.characterClass == "dispatcher") UseCompass(player);
             Dirty = true;
             return null;
         }
@@ -209,6 +231,7 @@ namespace DeadAir
             State.paused = false;
             State.tapes.Clear(); State.fuses.Clear(); State.keycards.Clear(); State.canisters.Clear();
             State.collected.Clear();
+            State.securedItems.Clear();
             State.droppedItems.Clear();
             ResetDrawers();
             State.canister = State.valveOpened = State.calibrated = State.power = State.broadcast = false;
@@ -220,6 +243,7 @@ namespace DeadAir
             inspectedLockers.Clear();spiderCooldowns.Clear();footstepsAt.Clear();nextPeek=35;encounterEnds=0;nextPatrol=0;nextBreakerTrip=BreakerProtectionSeconds;breakerTrips=0;
             foreach (var door in State.doors) { door.open = false; door.openedAt=-100; door.openSign = 1f; door.locked = !string.IsNullOrEmpty(door.requiredKey); }
             State.elapsed = 0;
+            State.departureStartedAt = 0;
             State.scare = 0;
             State.radioSequence = 0;
             State.radioSenderId = null;
@@ -229,12 +253,11 @@ namespace DeadAir
             for (int i = 0; i < State.players.Count; i++)
             {
                 var p = State.players[i];
-                p.x = world.spawn.x + (i % 2 == 0 ? -.42f : .42f);
-                p.y = world.spawn.y;
-                p.z = world.spawn.z + (i >= 2 ? .42f : 0);
-                p.yaw = p.pitch = 0;
+                var spawn = DeadAirVanPresentation.SpawnPoint(world, i);
+                p.x = spawn.x; p.y = spawn.y; p.z = spawn.z;
+                p.yaw = DeadAirVanPresentation.SpawnYaw; p.pitch = 0;
                 p.sanity = p.stamina = 100;
-                p.down = p.sprinting = p.camera = p.ladderClimbing = false;
+                p.down = p.sprinting = p.crouching = p.camera = p.ladderClimbing = false;
                 p.inventory.Clear();
                 p.inventory.Add("flashlight");
                 p.selectedSlot = 0;
@@ -399,7 +422,7 @@ namespace DeadAir
 
         public void Move(string id, NetPacket input)
         {
-            if (State.phase != "playing" || State.paused) return;
+            if (State.phase != "playing" || State.paused || State.elapsed < DeadAirVanPresentation.ArrivalDuration) return;
             var p = State.Player(id);
             if (p == null || p.down) return;
             if(input.moveSequence>0)
@@ -418,6 +441,8 @@ namespace DeadAir
                 float.IsNaN(input.pitch) || float.IsInfinity(input.pitch)) return;
             if (Mathf.Abs(input.x) > 100 || Mathf.Abs(input.z) > 100 || input.y < -15f || input.y > 35) return;
             p.noclip = input.noclip;
+            p.crouching = input.crouching && string.IsNullOrEmpty(p.hiding);
+            p.sprinting = input.sprinting && !p.crouching && (State.creative || p.stamina > 2) && string.IsNullOrEmpty(p.hiding);
             if (string.IsNullOrEmpty(p.hiding))
             {
                 var delta = Vector3.Distance(new Vector3(p.x, p.y, p.z), new Vector3(input.x, input.y, input.z));
@@ -432,9 +457,9 @@ namespace DeadAir
                 {
                     // monsterHearingRange is the operator's listening perk; using it
                     // here would accidentally make the dispatcher louder to enemies.
-                    float radius=16*(input.sprinting ? 1.4f : delta/moveSeconds<1.3f ? .12f : .28f);
-                    HearNoise(p.x,p.y,p.z,radius,input.sprinting?8:5);
-                    footstepsAt[id]=State.elapsed+(input.sprinting ? .32f : .55f);
+                    float radius = p.crouching ? 1.2f : p.sprinting ? 22 : 6;
+                    HearNoise(p.x,p.y,p.z,radius,p.sprinting?8:p.crouching?2:5);
+                    footstepsAt[id]=State.elapsed+(p.sprinting ? .32f : p.crouching ? .75f : .55f);
                 }
             }
             else
@@ -447,7 +472,7 @@ namespace DeadAir
             p.flashlight = input.flashlight && string.IsNullOrEmpty(p.hiding) && DeadAirSupplies.HasCharge(p) &&
                 (p.SelectedItem == "flashlight" || input.camera);
             p.camera = input.camera && string.IsNullOrEmpty(p.hiding);
-            p.mapOpen = input.mapOpen && string.IsNullOrEmpty(p.hiding);
+            p.mapOpen = input.mapOpen && CanReadVanMap(p);
             if (p.mapOpen) p.camera = p.flashlight = false;
             if (p.mapOpen || p.camera || !string.IsNullOrEmpty(p.hiding))
             {
@@ -455,10 +480,10 @@ namespace DeadAir
                 p.uniqueActionCancelled = true;
             }
             else p.uniqueItemEquipped = p.HasSelectedRoleItem;
-            p.sprinting = input.sprinting && string.IsNullOrEmpty(p.hiding);
         }
 
-        float MaximumMovementSpeed(PlayerState actor) => Mathf.Max(2.6f, 4.5f * world.GetClass(actor.characterClass).bonuses.speedMultiplier) * 1.12f;
+        float MaximumMovementSpeed(PlayerState actor) => (actor.crouching ? DeadAirLocomotion.CrouchSpeed :
+            actor.sprinting ? DeadAirLocomotion.RunSpeed * world.GetClass(actor.characterClass).bonuses.speedMultiplier : DeadAirLocomotion.WalkSpeed) * 1.12f;
 
         void ResetMovementBudget(PlayerState actor)
         {
@@ -481,6 +506,7 @@ namespace DeadAir
         {
             if (x < world.courtyard.minX + .2f || x > world.courtyard.maxX - .2f ||
                 z > world.courtyard.maxZ - .2f || z < world.courtyard.minZ + .2f) return false;
+            if (DeadAirVanPresentation.TryFloorHeight(world, x, z, out float vanFloor) && Mathf.Abs(y - vanFloor) <= .28f) return true;
             if (world.stairs != null)
                 foreach (var stair in world.stairs)
                     if (stair.Contains(x, z, .12f) && Mathf.Abs(y - stair.HeightAt(z)) <= .55f) return true;
@@ -559,7 +585,7 @@ namespace DeadAir
                 bool barrier = false, isTarget = false;
                 for (var part = sightHits[i].collider.transform; part != null; part = part.parent)
                 {
-                    if (part.name == "shell" || part.name.StartsWith("door:") || part.name.StartsWith("Door frame ")) barrier = true;
+                    if (part.name == "shell" || part.name == "Van stationary collision shell" || part.name.StartsWith("door:") || part.name.StartsWith("Door frame ")) barrier = true;
                     if (!string.IsNullOrEmpty(targetId) && (part.name == "door:" + targetId || part.name == "Door frame " + targetId)) isTarget = true;
                 }
                 if (barrier && !isTarget) return false;
@@ -573,6 +599,12 @@ namespace DeadAir
             if (State.phase != "playing" || State.paused || p == null || p.down) return "Ефір не активний.";
             if (p.ladderClimbing) return "Дочекайтеся завершення підйому драбиною.";
             if (string.IsNullOrEmpty(objectId)) return "Невідомий предмет.";
+            if (objectId == "van-map")
+            {
+                if (!CanReadVanMap(p)) return "Карта висить у фургоні. Підійдіть до неї.";
+                EquipMap(id, true);
+                return null;
+            }
             if (objectId == "exit-locker")
             {
                 if (!string.IsNullOrEmpty(p.hiding)) ExitLocker(p);
@@ -777,7 +809,17 @@ namespace DeadAir
             else if (objectId == "exit")
             {
                 if (!State.broadcast) return "Передайте сигнал перед від’їздом.";
-                State.phase = "won"; State.enemy.active = false;
+                foreach (var crew in State.players)
+                    if (!crew.down && !DeadAirVanPresentation.IsInside(world, crew.x, crew.z, -2.2f))
+                        return "Зберіть усіх живих учасників біля фургона перед від’їздом.";
+                State.phase = "departing"; State.departureStartedAt = State.elapsed; State.enemy.active = false;
+                for (int i = 0; i < State.players.Count; i++)
+                {
+                    var crew = State.players[i];
+                    var seat = DeadAirVanPresentation.SpawnPoint(world, i);
+                    crew.x = seat.x; crew.y = seat.y; crew.z = seat.z;
+                    crew.sprinting = crew.crouching = crew.camera = crew.mapOpen = crew.flashlight = false;
+                }
                 foreach(var player in State.players)ClearMushroomTrip(player);
                 State.message = "Ви вийшли. На записі чути на один голос більше.";
             }
@@ -934,6 +976,13 @@ namespace DeadAir
 
         public void Tick(float dt)
         {
+            if (State.phase == "departing")
+            {
+                State.elapsed += Mathf.Min(dt, .25f);
+                if (State.elapsed - State.departureStartedAt >= DeadAirVanPresentation.DepartureDuration) State.phase = "won";
+                Dirty = true;
+                return;
+            }
             if (State.phase != "playing")
             {
                 if (DeadAirLadder.Advance(State)) Dirty = true;
@@ -959,6 +1008,13 @@ namespace DeadAir
             for (int i = 0; i < State.players.Count; i++)
             {
                 var p = State.players[i];
+                if (!p.down && State.elapsed >= DeadAirVanPresentation.ArrivalDuration &&
+                    DeadAirVanPresentation.IsInside(world, p.x, p.z) && Mathf.Abs(p.y - DeadAirVanPresentation.FloorHeight) < .3f)
+                    foreach (var item in p.inventory)
+                        if (DeadAirLootSummary.IsRecoverable(world, item) && !State.securedItems.Contains(item)) State.securedItems.Add(item);
+                p.stamina = State.creative ? 100 : Mathf.Clamp(p.stamina +
+                    (p.sprinting ? -DeadAirLocomotion.RunDrain : DeadAirLocomotion.Recovery * world.GetClass(p.characterClass).bonuses.staminaRecovery) * dt, 0, 100);
+                if (p.stamina <= 2) p.sprinting = false;
                 DrainFlashlight(p, dt);
                 if (p.down) { ClearMushroomTrip(p); continue; }
                 if (State.creative) { p.sanity = 100; continue; }
@@ -1014,6 +1070,8 @@ namespace DeadAir
         void UpdateEnemy(float dt)
         {
             var enemy = State.enemy;
+            if (State.elapsed < lastPerceptionTick) { attackRecoveryUntil = 0; ClearEnemyAttack(); }
+            lastPerceptionTick = State.elapsed;
             if(UpdateEncounter())return;
             bool hasLiving = false;
             PlayerState encounterPlayer = null;
@@ -1029,18 +1087,28 @@ namespace DeadAir
 
             if (!hasLiving) { CheckDefeat(); return; }
             enemy.stunned = State.elapsed<enemy.stunnedUntil;
-            if (enemy.stunned) return;
+            if (enemy.stunned) { ClearEnemyAttack(); return; }
+            if (!string.IsNullOrEmpty(enemy.attackPlayerId)) { AttackNearbyPlayers(1.25f); return; }
             if (State.elapsed >= nextBreakerTrip) TrySabotageBreaker(random.Next(100));
             bool investigating=State.elapsed<enemy.heardUntil;
-            if(!State.creative&&!State.broadcast&&!investigating&&State.elapsed>=nextPeek&&encounterPlayer!=null&&TryBeginPeek(encounterPlayer,false))return;
             Vector3 heard=new Vector3(enemy.heardX,enemy.heardY,enemy.heardZ);
+            bool searching = State.elapsed < enemy.searchUntil;
             if(investigating&&Vector3.Distance(new Vector3(enemy.x,enemy.y,enemy.z),heard)<.7f)
             {
+                enemy.heardUntil = State.elapsed;
+                enemy.searchUntil = State.elapsed + 5;
                 enemy.behaviour="search";enemy.doorId=null;
                 enemy.yaw+=dt*.4f;
                 AttackNearbyPlayers(.7f);
                 return;
             }
+            if (searching && !investigating)
+            {
+                enemy.behaviour = "search"; enemy.doorId = null;
+                enemy.yaw += dt * .55f;
+                AttackNearbyPlayers(.8f); return;
+            }
+            if(!State.creative&&!State.broadcast&&!investigating&&State.elapsed>=nextPeek&&encounterPlayer!=null&&TryBeginPeek(encounterPlayer,false))return;
             if(!investigating&&(State.elapsed>=nextPatrol||Vector3.Distance(new Vector3(enemy.x,enemy.y,enemy.z),patrolDestination)<.7f))
                 SelectPatrolDestination();
             Vector3 destinationPoint=investigating?heard:patrolDestination;
@@ -1064,21 +1132,39 @@ namespace DeadAir
         void AttackNearbyPlayers(float range)
         {
             var enemy=State.enemy;
+            if (!string.IsNullOrEmpty(enemy.attackPlayerId))
+            {
+                var target = State.Player(enemy.attackPlayerId);
+                enemy.behaviour = "attack";
+                if (State.elapsed - enemy.attackStartedAt < AttackWindup) return;
+                // The target has the entire wind-up to leave reach, close a door
+                // or hide. No attack can follow an operator through an office wall.
+                if (target != null && !target.down && string.IsNullOrEmpty(target.hiding) &&
+                    State.elapsed >= target.invulnerableUntil && SameFloor(target.y, enemy.y) &&
+                    Dist(target.x, target.z, enemy.x, enemy.z) <= 1.25f &&
+                    !SegmentBlocked(enemy.x, enemy.y, enemy.z, target.x, target.y, target.z)) DownAttackedPlayer(target);
+                ClearEnemyAttack(); attackRecoveryUntil = State.elapsed + AttackRecovery;
+                enemy.behaviour = "search"; enemy.searchUntil = Mathf.Max(enemy.searchUntil, attackRecoveryUntil);
+                Dirty = true; CheckDefeat(); return;
+            }
+            if (State.elapsed < attackRecoveryUntil) return;
+            PlayerState nearest = null; float nearestDistance = range;
             for (int i = 0; i < State.players.Count; i++)
             {
                 var p = State.players[i];
                 if (p.down || !string.IsNullOrEmpty(p.hiding) || State.elapsed < p.invulnerableUntil) continue;
-                if (SameFloor(p.y, enemy.y) && Dist(p.x, p.z, enemy.x, enemy.z) < range &&
+                float distance = Dist(p.x, p.z, enemy.x, enemy.z);
+                if (SameFloor(p.y, enemy.y) && distance < nearestDistance &&
                     !SegmentBlocked(enemy.x,enemy.y,enemy.z,p.x,p.y,p.z))
                 {
-                    p.down = true; p.sanity = 0; State.scare++;
-                    ClearMushroomTrip(p);
-                    p.camera = p.flashlight = p.sprinting = p.mapOpen = p.uniqueItemEquipped = false;
-                    p.uniqueActionCancelled = true;
-                    State.message = p.name + " втратив зв’язок. Підніміть напарника!";
+                    nearest = p; nearestDistance = distance;
                 }
             }
-            CheckDefeat();
+            if (nearest == null) return;
+            enemy.attackPlayerId = nearest.id; enemy.attackStartedAt = State.elapsed;
+            enemy.behaviour = "attack";
+            enemy.yaw = Mathf.Atan2(-(nearest.x - enemy.x), nearest.z - enemy.z);
+            State.message = "ДИКТОР ЗАМАХУЄТЬСЯ — ВІДСТУПАЙТЕ!"; Dirty = true;
         }
 
         // A blind enemy remembers noise positions, never an operator's live position.
@@ -1089,9 +1175,21 @@ namespace DeadAir
             Vector3 sound=new Vector3(x,y,z),origin=new Vector3(enemy.x,enemy.y,enemy.z);
             if(!SameFloor(y,enemy.y))radius*=.4f;
             if(PhysicalSegmentBlocked(new Vector3(-x,y+1.1f,z),new Vector3(-enemy.x,enemy.y+1.1f,enemy.z)))radius*=.72f;
-            if(Vector3.Distance(origin,sound)>radius)return false;
-            enemy.heardX=x;enemy.heardY=y;enemy.heardZ=z;enemy.heardUntil=State.elapsed+memory;
-            enemyRoute.Clear();enemyRouteCursor=0;nextRouteAttempt=0;
+            float distance = Vector3.Distance(origin,sound);
+            if(distance>radius)return false;
+            float strength = radius / Mathf.Max(1, distance);
+            bool remembered = State.elapsed < enemy.heardUntil;
+            float previousStrength = enemy.heardStrength * Mathf.Clamp01((enemy.heardUntil - State.elapsed) / 5);
+            Vector3 previous = new Vector3(enemy.heardX, enemy.heardY, enemy.heardZ);
+            if (remembered && (sound - previous).sqrMagnitude > 4 && strength * 1.25f < previousStrength) return false;
+            bool movedTarget = !remembered || (sound - previous).sqrMagnitude > 1;
+            enemy.heardX=x;enemy.heardY=y;enemy.heardZ=z;
+            enemy.heardUntil=State.elapsed+Mathf.Max(memory, distance / 2.5f + 3);
+            enemy.heardStrength = strength; enemy.searchUntil = 0;
+            // Standing still, looking or switching light never calls this path.
+            // Small footsteps update the remembered location without rebuilding
+            // the complete navigation route every accepted movement packet.
+            if (movedTarget) { enemyRoute.Clear();enemyRouteCursor=0;nextRouteAttempt=0; }
             if(enemy.behaviour!="peek"&&enemy.behaviour!="vanished")enemy.behaviour="investigate";
             Dirty=true;return true;
         }

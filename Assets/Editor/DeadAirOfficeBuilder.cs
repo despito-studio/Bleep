@@ -1006,9 +1006,16 @@ namespace DeadAir.Editor
             for(int i=0;i<9;i++)Box(shell,"Pedestrian paver",0,.015f,8+i*1.8f,8.8f,.03f,1.73f,floor,false);
             for(int i=0;i<4;i++)Box(shell,"Parking stripe",7.3f+i*5,.03f,28,.08f,.035f,6.5f,paper,false);
             Box(shell,"Parking front stripe",15,.03f,31.4f,20,.035f,.08f,paper,false);
-            // Fence keeps the walkable boundaries obvious; the front gate leaves an arrival opening.
+            // Keep the pedestrian gate and a separate crew-van drive gate on the real transit lane.
             Fence(shell,-30,-76,-30,38);Fence(shell,30,-76,30,38);Fence(shell,-30,-76,30,-76);
-            Fence(shell,-30,38,-5,38);Fence(shell,5,38,30,38);
+            Fence(shell,-30,38,-12.2f,38);Fence(shell,-7.8f,38,-5,38);Fence(shell,5,38,30,38);
+            foreach(float x in new[]{-12.2f,-7.8f})
+            {
+                Box(shell,"Crew drive gate post",x,1.35f,38,.14f,2.7f,.14f,metal);
+                float outside=x< -10?-.16f:.16f;
+                Box(shell,"Open crew driveway gate",x+outside,1.08f,39.1f,.05f,2.16f,2.2f,metal);
+            }
+            foreach(float x in new[]{-12.1f,-7.9f})Box(shell,"Crew parking lane edge",x,.009f,32.5f,.055f,.012f,10,wastePaper,false);
             for(int side=-1;side<=1;side+=2)for(int i=0;i<10;i++)Tree(shell,side*(32+(i%3)), -72+i*11);
             for(int i=0;i<8;i++)Tree(shell,-28+i*8,-80);
             BuildBeyondFence();
@@ -1048,6 +1055,7 @@ namespace DeadAir.Editor
             Box(background,"Distant ground front",0,-.21f,134,60,.36f,192,grass,false);
             Box(background,"Access road",0,-.06f,49,330,.12f,8,asphalt,false);
             Box(background,"Arrival road",0,-.06f,41.5f,9,.12f,7,asphalt,false);
+            Box(background,"Crew van arrival road",-10,-.06f,41.5f,4.4f,.12f,7,asphalt,false);
             for(int i=-13;i<=13;i++)Box(background,"Faded road centre dash",i*12,.006f,49,4,.012f,.11f,wastePaper,false);
             // Irregular rows overlap in depth so the skyline is visible from both
             // storeys without a flat billboard edge or a hole under the near trees.
@@ -1292,6 +1300,11 @@ namespace DeadAir.Editor
         {
             if(p.type=="locker")return; // The animated locker is generated once from LockerData.
             var root=PropRoot(p);
+            if(p.type=="van")
+            {
+                DeadAirModernVanBuilder.Build(root,p,Sign,BatchStaticGeometry);
+                return;
+            }
             if(DeadAirPeriodProps.TryBuild(root,p,Block,Sign,wood,trim,metal,paper,black,darkScreen))return;
             bool generated=p.type=="table"||p.type=="archivistDesk"||p.type=="workstation"||p.type=="chair"||p.type=="shelf"||p.type=="cardCatalog"||p.type=="serverRack"||p.type=="crt"||
                 p.type=="dieselGenerator"||p.type=="fusePanel"||p.type=="monitorWall"||p.type=="mixingConsole"||p.type=="anchorDesk";
@@ -1655,6 +1668,13 @@ namespace DeadAir.Editor
                     Block(root,"Key bit",new Vector3(.016f,0,.065f),new Vector3(.022f,.010f,.025f),metal,false);
                     break;
                 case "ladder":
+                    if(DeadAirVanPresentation.IsInside(world,o.x,o.z))
+                    {
+                        root.localRotation=DeadAirOfficeLayout.Rotation(DeadAirVanPresentation.Van(world).rotation)*Quaternion.Euler(0,-90,0);
+                        foreach(int side in new[]{-1,1})Block(root,"Stored folding ladder rail",new Vector3(side*.22f,.9f,0),new Vector3(.045f,1.8f,.045f),metal,false);
+                        for(int rung=0;rung<6;rung++)Block(root,"Stored folding ladder rung",new Vector3(0,.25f+rung*.28f,0),new Vector3(.44f,.03f,.03f),metal,false);
+                        break;
+                    }
                     Vector3 ladderRight = new Vector3(0, 0, 1);
                     Vector3 ladderUp = new Vector3(Mathf.Sin(10.5f * Mathf.Deg2Rad), Mathf.Cos(10.5f * Mathf.Deg2Rad), 0);
                     Vector3 ladderFwd = Vector3.Cross(ladderUp, ladderRight);
@@ -1718,7 +1738,31 @@ namespace DeadAir.Editor
                     Sign(root,"96.4 MHz / TRANSMIT",new Vector3(0,.19f,.235f),Quaternion.identity,.75f,.12f);break;
                 case "exit":
                     Block(root,"state:exitLamp",new Vector3(0,.25f,0),new Vector3(.12f,.08f,.03f),lightSurface,false);break;
+                case "van-map":
+                    root.localRotation=DeadAirOfficeLayout.Rotation(DeadAirVanPresentation.Van(world).rotation)*Quaternion.Euler(0,-90,0);
+                    BuildVanMapBoard(root);break;
             }
+        }
+
+        static void BuildVanMapBoard(Transform root)
+        {
+            root=Group(root,"Van map wall mounts");root.localPosition=new Vector3(0,0,-.035f);
+            Block(root,"Hanging office map board frame",Vector3.zero,new Vector3(1.43f,1.02f,.045f),metal,false);
+            Block(root,"Fixed Blackpine floor plan",new Vector3(0,0,.028f),new Vector3(1.35f,.94f,.012f),paper,false);
+            foreach(float x in new[]{-.55f,.55f})Block(root,"Map board hanging clip",new Vector3(x,.56f,0),new Vector3(.035f,.12f,.055f),metal,false);
+            // Two real plan diagrams use the same authored rooms as the portable floor map.
+            for(int level=0;level<2;level++)foreach(var room in world.rooms.Where(r=>DeadAirOfficeLayout.IsInterior(r)&&Mathf.Abs(r.floorY-level*Storey)<.01f))
+            {
+                float scale=.0065f,cx=(level==0?-.36f:.36f)-(room.minX+room.maxX)*.5f*scale;
+                float cy=.04f+(room.minZ+room.maxZ+48)*.5f*scale,w=(room.maxX-room.minX)*scale,h=(room.maxZ-room.minZ)*scale;
+                foreach(float side in new[]{-1f,1f})
+                {
+                    Block(root,"Office map room boundary",new Vector3(cx+side*w/2,cy,.037f),new Vector3(.004f,h,.003f),black,false);
+                    Block(root,"Office map room boundary",new Vector3(cx,cy+side*h/2,.037f),new Vector3(w,.004f,.003f),black,false);
+                }
+            }
+            Sign(root,"BLACKPINE / ПЛАН ОФІСУ",new Vector3(0,.365f,.045f),Quaternion.identity,1.23f,.13f);
+            Sign(root,"1 ПОВЕРХ       2 ПОВЕРХ\n[E] ПЕРЕГЛЯНУТИ ПЛАН",new Vector3(0,-.34f,.045f),Quaternion.identity,1.23f,.18f);
         }
 
         static void BuildLighting()
@@ -1868,7 +1912,7 @@ namespace DeadAir.Editor
         {
             while(t!=null&&t!=boundary)
             {
-                if(t.name.StartsWith("interactive:")||t.name.StartsWith("door:")||t.name.StartsWith("door-led:")||
+                if(t.name.StartsWith("vehicle:")||t.name.StartsWith("interactive:")||t.name.StartsWith("door:")||t.name.StartsWith("door-led:")||
                    t.name.StartsWith("locker-door:")||t.name.StartsWith("drawer:")||t.name.StartsWith("state:")||t.name.StartsWith("fan:")||t.name.StartsWith("monitor:")||
                    t.name.StartsWith("headlamp-lens:")||t.name.StartsWith("Cobweb:")) return true;
                 t=t.parent;

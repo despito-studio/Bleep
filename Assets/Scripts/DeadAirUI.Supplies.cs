@@ -17,8 +17,8 @@ namespace DeadAir
         {
             suppliesText = Text(hudPanel.transform, "Flashlight supplies", "", 17, 1070, 782, 790, 32, TextAnchor.MiddleRight);
             suppliesText.color = Muted;
-            bagSuppliesText = Text(inventoryPanel.transform.Find("Inventory card"), "Bag supplies", "", 16, 42, 139, 644, 35);
-            bagSuppliesText.color = Muted;
+            bagSuppliesText = Text(journalInventoryPage, "Bag supplies", "", 15, 42, 139, 644, 35);
+            bagSuppliesText.color = JournalMuted;
             bookPanel = Modal("Prison journal", DeadAirPrisonBook.Title, 1100, 820, out var card);
             bookBody = Text(card, "Journal text", "", 22, 50, 157, 1000, 494);
             bookBody.color = Ink; bookBody.lineSpacing = 1.18f;
@@ -40,8 +40,7 @@ namespace DeadAir
             int charge = Mathf.CeilToInt(Mathf.Clamp01(playerState.flashlightCharge / DeadAirSupplies.FlashlightSeconds) * 100);
             bool hasFlashlight=playerState.HasItem("flashlight");
             if(charge!=supplyCharge||playerState.spareBatteries!=supplyBatteries||hasFlashlight!=supplyHasFlashlight)
-                suppliesText.text = hasFlashlight ?
-                    "ЛІХТАР " + charge + "%  ·  БАТАРЕЙКИ " + playerState.spareBatteries : "БАТАРЕЙКИ " + playerState.spareBatteries;
+                suppliesText.text = hasFlashlight ? "ЛІХТАР " + charge + "%" : "";
             suppliesText.color = charge <= 15 && hasFlashlight ? Gold : Muted;
             if(playerState.coins!=supplyCoins||playerState.spareBatteries!=supplyBatteries)
                 bagSuppliesText.text = "МОНЕТКИ: " + playerState.coins + "    /    ЗАПАСНІ БАТАРЕЙКИ: " + playerState.spareBatteries;

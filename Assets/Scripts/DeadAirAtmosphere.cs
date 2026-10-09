@@ -99,7 +99,7 @@ namespace DeadAir
             bool hiding = playing && !string.IsNullOrEmpty(me.hiding);
             var movement = player.transform.position - previousPosition;
             previousPosition = player.transform.position;
-            bool moving = playing && !paused && !me.down && !hiding && new Vector2(movement.x, movement.z).sqrMagnitude > .000004f && movement.sqrMagnitude < 1;
+            bool moving = playing && !player.InTransit && !paused && !me.down && !hiding && new Vector2(movement.x, movement.z).sqrMagnitude > .000004f && movement.sqrMagnitude < 1;
             float distance = playing ? Vector3.Distance(new Vector3(me.x,me.y,me.z), new Vector3(state.enemy.x,state.enemy.y,state.enemy.z)) : 100;
             bool enemyPresent = playing && state.enemy.active && state.enemy.behaviour != "vanished";
             float threat = enemyPresent ? Mathf.Clamp01(1 - distance / 16) : 0;
@@ -109,7 +109,7 @@ namespace DeadAir
             audioEngine.SetContext(phase, outside, playing && me.down, playing ? state.enemy.behaviour : null, stairs);
             if (playing) audioEngine.SetRoomContext(audioWorld.RoomAt(me.x, me.z, me.y), me.y);
             audioEngine.Tick(paused, moving, playing && player.Sprinting, hiding, player.Stamina, playing ? me.sanity : 100,
-                threat, playing && player.CameraUp, playing && state.power, playing && state.broadcast, enemyPosition, distance, playing && state.breakerOn);
+                threat, playing && player.CameraUp, playing && state.power, playing && state.broadcast, enemyPosition, distance, playing && state.breakerOn, player.Crouching);
             if (tape != null)
             {
                 tape.Threat = playing ? Mathf.Lerp(tape.Threat, paused ? 0 : threat, Time.unscaledDeltaTime * 2) : 0;
