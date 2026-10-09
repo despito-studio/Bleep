@@ -241,15 +241,26 @@ namespace DeadAir
             State.scare = 0;
             State.radioSequence = 0;
             State.radioSenderId = null;
-            State.spawnCountdown = State.creative ? 999999 : 35;
+            bool isCh2 = DeadAirChapters.IsChapter2(State.chapterId);
+            State.spawnCountdown = State.creative ? 999999 : isCh2 ? 10 : 35;
             State.message = State.creative ? "РЕЖИМ ДОСЛІДЖЕННЯ: загроза пасивна." :
+                isCh2 ? "ЯПОНСЬКА ШКОЛА: Дослідіть школу й парк. Шукайте пігулки для розсудку!" :
                 "Група прибула. До прориву сигналу 35 секунд.";
+            if (isCh2) State.enemy = new EnemyState { x = 0, y = 0.1f, z = -10f };
             for (int i = 0; i < State.players.Count; i++)
             {
                 var p = State.players[i];
-                var spawn = DeadAirVanPresentation.SpawnPoint(world, i);
-                p.x = spawn.x; p.y = spawn.y; p.z = spawn.z;
-                p.yaw = DeadAirVanPresentation.SpawnYaw; p.pitch = 0;
+                if (isCh2)
+                {
+                    p.x = 0; p.y = 0.5f; p.z = 36f;
+                    p.yaw = Mathf.PI; p.pitch = 0;
+                }
+                else
+                {
+                    var spawn = DeadAirVanPresentation.SpawnPoint(world, i);
+                    p.x = spawn.x; p.y = spawn.y; p.z = spawn.z;
+                    p.yaw = DeadAirVanPresentation.SpawnYaw; p.pitch = 0;
+                }
                 p.sanity = p.stamina = 100;
                 p.down = p.sprinting = p.crouching = p.camera = p.ladderClimbing = false;
                 p.inventory.Clear();
@@ -498,6 +509,8 @@ namespace DeadAir
 
         bool Walkable(float x, float y, float z)
         {
+            if (DeadAirChapters.IsChapter2(State.chapterId))
+                return x >= -45f && x <= 45f && z >= -25f && z <= 100f && y >= -1f && y <= 6f;
             if (x < world.courtyard.minX + .2f || x > world.courtyard.maxX - .2f ||
                 z > world.courtyard.maxZ - .2f || z < world.courtyard.minZ + .2f) return false;
             if (DeadAirVanPresentation.TryFloorHeight(world, x, z, out float vanFloor) && Mathf.Abs(y - vanFloor) <= .28f) return true;
@@ -607,6 +620,7 @@ namespace DeadAir
             if (!string.IsNullOrEmpty(p.hiding)) return "Спочатку вийдіть із шафи.";
             if (objectId.StartsWith("drawer", StringComparison.Ordinal)) return InteractDrawer(p, objectId);
             if (objectId.StartsWith("van-battery-", StringComparison.Ordinal)) return CollectVanBattery(p, objectId);
+            if (objectId.StartsWith("pill-", StringComparison.Ordinal)) return TakePill(p, objectId);
             if (objectId.StartsWith("mushroom-", StringComparison.Ordinal))
                 return EatMushroom(p, objectId);
             if (objectId.StartsWith("dropped:"))
@@ -851,6 +865,17 @@ namespace DeadAir
 
         static void ClearMushroomTrip(PlayerState player)
         { player.mushroomTripStartedAt = player.mushroomTripUntil = 0; }
+
+        string TakePill(PlayerState player, string pillId)
+        {
+            if (State.Collected(pillId)) return "Ці пігулки вже забрали.";
+            player.sanity = Mathf.Min(100f, player.sanity + 40f);
+            State.collected.Add(pillId);
+            Dirty = true;
+            State.message = "Прийнято заспокійливе. Розсудок відновлено (+40%)!";
+            DeadAirAudio.Play("pill-consume");
+            return null;
+        }
 
         public string Drop(string id, string itemId)
         {
@@ -1161,6 +1186,24 @@ namespace DeadAir
                 }
             }
             if (nearest == null) return;
+            if (DeadAirChapters.IsChapter2(State.chapterId))
+            {
+                if (nearest.sanity > 40f)
+                {
+                    // High sanity: manifests, spooks, and vanishes without killing!
+                    nearest.sanity = Mathf.Max(0, nearest.sanity - 10f);
+                    enemy.behaviour = "vanished";
+                    enemy.heardUntil = State.elapsed + 7f;
+                    State.message = "Тек-Тек промайнула в тінях і розчинилася!";
+                    Dirty = true;
+                    return;
+                }
+                enemy.attackPlayerId = nearest.id; enemy.attackStartedAt = State.elapsed;
+                enemy.behaviour = "attack";
+                enemy.yaw = Mathf.Atan2(-(nearest.x - enemy.x), nearest.z - enemy.z);
+                State.message = "ТЕК-ТЕК НАЗДОГНАЛА ВАС!"; Dirty = true;
+                return;
+            }
             enemy.attackPlayerId = nearest.id; enemy.attackStartedAt = State.elapsed;
             enemy.behaviour = "attack";
             enemy.yaw = Mathf.Atan2(-(nearest.x - enemy.x), nearest.z - enemy.z);

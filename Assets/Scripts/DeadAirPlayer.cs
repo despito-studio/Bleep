@@ -296,6 +296,7 @@ namespace DeadAir
                     else if (InteractionId == "breaker") DeadAirAudio.Play("breaker-toggle");
                     else if (InteractionId == "ladder" || InteractionId == "ladder-spot") DeadAirAudio.Play("ladder");
                     else if (InteractionId.StartsWith("key-")) DeadAirAudio.Play("key");
+                    else if (InteractionId.StartsWith("pill-")) DeadAirAudio.Play("pill-consume");
                     SendMovement(me, state, true);
                     session.Command(new NetPacket { type = "interact", id = InteractionId });
                 }
@@ -743,6 +744,21 @@ namespace DeadAir
             foreach (var battery in world.Batteries)
                 if (InteractionInReach(battery.x, battery.y, battery.z, 2.5f, origin, forward, nearest) && !state.Collected(battery.id))
                     ConsiderInteraction(battery.id, "Взяти батарейку для ліхтаря", battery.x, battery.y, battery.z, 2.5f, origin, forward, ref nearest);
+            if (DeadAirChapters.IsChapter2(state.chapterId))
+            {
+                var bootstrap = UnityEngine.Object.FindAnyObjectByType<DeadAirBootstrap>();
+                var school = bootstrap != null && bootstrap.World != null ? bootstrap.World.SchoolWorld : null;
+                if (school != null)
+                {
+                    foreach (var pill in school.Pills)
+                    {
+                        if (!state.Collected(pill.id) && InteractionInReach(pill.position.x, pill.position.y, pill.position.z, 2.5f, origin, forward, nearest))
+                        {
+                            ConsiderInteraction(pill.id, "Прийняти заспокійливе (відновити розсудок)", pill.position.x, pill.position.y, pill.position.z, 2.5f, origin, forward, ref nearest);
+                        }
+                    }
+                }
+            }
             for (int i = 0; i < world.Mushrooms.Length; i++)
             {
                 var mushroom = world.Mushrooms[i];

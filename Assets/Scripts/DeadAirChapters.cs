@@ -22,14 +22,16 @@ namespace DeadAir
         {
             new DeadAirChapter(DefaultId, "01", "BLACKPINE", "Мертвий ефір",
                 "Двоповерховий офіс Blackpine. Дослідіть кімнати, відновіть живлення генератора в задньому дворі та передайте сигнал.", true),
-            new DeadAirChapter("coming-soon", "02", "НЕВІДОМА ЧАСТОТА", "",
-                "Наступна глава готується.", false)
+            new DeadAirChapter("coming-soon", "02", "ЯПОНСЬКА ШКОЛА", "Японська школа & Тек-Тек",
+                "Японська школа Тачібана та традиційний парк напроти. Дослідіть закинуті коридори, зберіть 5 записів доказів журналістів, знаходьте пігулки для розсудку та остерігайтеся примари Тек-Тек.", true)
         });
+
+        public static bool IsChapter2(string id) => id == "coming-soon" || id == "school" || id == "02";
 
         public static DeadAirChapter Find(string id)
         {
             foreach (var chapter in Catalog)
-                if (string.Equals(chapter.id, id, StringComparison.Ordinal)) return chapter;
+                if (string.Equals(chapter.id, id, StringComparison.Ordinal) || (IsChapter2(id) && IsChapter2(chapter.id))) return chapter;
             return null;
         }
 
