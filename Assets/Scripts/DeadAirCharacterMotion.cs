@@ -30,7 +30,7 @@ namespace DeadAir
         readonly DeadAirGaze gaze = new DeadAirGaze();
         Animation animationPlayer;
         Transform rightSocket, leftSocket, rightArm, leftArm, rightForearm, leftForearm, rightHand, leftHand, head, packLid, cigarette, lighter, flame, ember, compassNeedle, pendulum;
-        Transform rightThigh, leftThigh, rightShin, leftShin, rightFoot, leftFoot, pelvis, chest;
+        Transform rightThigh, leftThigh, rightShin, leftShin, rightFoot, leftFoot, pelvis, spine, chest;
         bool ladderClimbing, ladderUp, crouching, motionPaused;
         DeadAirAppearance appearance;
         int secondaryFrame = -1;
@@ -43,6 +43,8 @@ namespace DeadAir
         Quaternion headRest = Quaternion.identity, chestRest = Quaternion.identity;
         Quaternion pelvisRest = Quaternion.identity;
         Vector3 pelvisRestPosition;
+        Quaternion spineRest = Quaternion.identity;
+        Vector3 spineRestPosition;
         Vector3 compassHeading = Vector3.forward;
         float ladderAge;
         Vector3 rightGrip, leftGrip, mouthLocal = new Vector3(0, .092f, .132f);
@@ -271,11 +273,13 @@ namespace DeadAir
                 else if (bone.name == "foot.R") rightFoot = bone;
                 else if (bone.name == "foot.L") leftFoot = bone;
                 else if (bone.name == "pelvis") pelvis = bone;
+                else if (bone.name == "spine") spine = bone;
                 else if (bone.name == "chest") chest = bone;
             }
             if (head != null) headRest = head.localRotation;
             if (chest != null) chestRest = chest.localRotation;
             if (pelvis != null) { pelvisRest = pelvis.localRotation; pelvisRestPosition = pelvis.localPosition; }
+            if (spine != null) { spineRest = spine.localRotation; spineRestPosition = spine.localPosition; }
             if (rightSocket == null || leftSocket == null) return;
             if (rightHand != null && leftHand != null)
             {
@@ -422,6 +426,7 @@ namespace DeadAir
             if (head != null) head.localRotation = headRest;
             if (chest != null) chest.localRotation = chestRest;
             if (firstPersonPresentation && pelvis != null) { pelvis.localRotation = pelvisRest; pelvis.localPosition = pelvisRestPosition; }
+            if (firstPersonPresentation && spine != null) { spine.localRotation = spineRest; spine.localPosition = spineRestPosition; }
             FirstPersonCrouchLeanDegrees = 0;
             animationPlayer.Sample();
             PoseCrouching();
@@ -476,15 +481,27 @@ namespace DeadAir
                 float sourceHip = Vector3.Dot(pelvis.position - transform.position, transform.up);
                 float floorContact = (Vector3.Dot(rightTarget - transform.position, transform.up) +
                     Vector3.Dot(leftTarget - transform.position, transform.up)) * .5f;
-                float targetHip = Mathf.Max(floorContact + .23f, Mathf.Clamp(sourceHip * .48f, .33f, .42f));
+                // Short source legs cannot use the same deep hip drop as a tall
+                // rig: their shin/cuff blend can otherwise cross the floor.
+                float minimumHip = classId == "engineer" ? .40f : .33f;
+                float targetHip = Mathf.Max(floorContact + .23f, Mathf.Clamp(sourceHip * .48f, minimumHip, .42f));
                 pelvis.position -= transform.up * Mathf.Max(0, sourceHip - targetHip);
                 Vector3 headOffset = head.position - pelvis.position;
                 float vertical = Vector3.Dot(headOffset, transform.up), forward = Vector3.Dot(headOffset, transform.forward);
                 float radius = Mathf.Sqrt(vertical * vertical + forward * forward);
                 float targetHead = DeadAirLocomotion.CrouchingEye - .14f;
                 float angle = radius > .01f ? Mathf.Acos(Mathf.Clamp((targetHead - targetHip) / radius, -1, 1)) - Mathf.Atan2(forward, vertical) : 0;
-                FirstPersonCrouchLeanDegrees = Mathf.Clamp(angle * Mathf.Rad2Deg, 18, 62);
-                pelvis.rotation = Quaternion.AngleAxis(FirstPersonCrouchLeanDegrees, transform.right) * pelvis.rotation;
+                FirstPersonCrouchLeanDegrees = Mathf.Clamp(angle * Mathf.Rad2Deg, 18, 68);
+                Quaternion lean = Quaternion.AngleAxis(FirstPersonCrouchLeanDegrees, transform.right);
+                Transform upperBody = spine != null ? spine : chest;
+                if (upperBody != null)
+                {
+                    // Bend the upper body around the hip without rotating the
+                    // pelvis-weighted cuffs/soles. The leg chain keeps its source
+                    // orientation until the planted-foot IK below.
+                    upperBody.position = pelvis.position + lean * (upperBody.position - pelvis.position);
+                    upperBody.rotation = lean * upperBody.rotation;
+                }
                 // A backward-leaning authored gait pose may need a small extra
                 // hip bend after the bounded torso lean. Keep hip-to-floor room.
                 float excess = FirstPersonHeadHeight - targetHead;
