@@ -49,23 +49,11 @@ namespace DeadAir.Editor
                 Require(body.Avatar.GetComponentsInChildren<Collider>(true).Length == 0,
                     role + " owner appearance added collision beside the player's capsule.");
 
-                var visible = ActiveSkins(body.Avatar).Where(s => s.shadowCastingMode != ShadowCastingMode.ShadowsOnly && s.name != "First person neckline lining").ToArray();
+                var visible = ActiveSkins(body.Avatar).Where(s => s.shadowCastingMode != ShadowCastingMode.ShadowsOnly).ToArray();
                 var shadows = ActiveSkins(body.Avatar).Where(s => s.shadowCastingMode == ShadowCastingMode.ShadowsOnly).ToArray();
                 Require(visible.Length == 1 && shadows.Length == 1,
                     role + " must draw one authored torso/leg surface and one complete shadow surface.");
                 var surface = visible[0]; var shadow = shadows[0];
-                var neckline = ActiveSkins(body.Avatar).SingleOrDefault(s => s.name == "First person neckline lining");
-                Require((neckline != null) == (role == "operator" || role == "dispatcher"),
-                    role + " must only close the authored open dress neckline.");
-                if (neckline != null)
-                {
-                    Require(neckline.shadowCastingMode == ShadowCastingMode.Off && TriangleCount(neckline.sharedMesh) <= 128 &&
-                        neckline.sharedMaterial.shader.name == "Dead Air/Source Surface" && ForbiddenTriangleCount(neckline, body.Avatar.transform) == 0,
-                        role + " neckline lining changed the complete shadow or added hidden head/arm geometry.");
-                    var liningBounds = BakeBounds(neckline, owner.transform, role + " neckline lining");
-                    Require(liningBounds.size.x < .4f && liningBounds.size.z < .3f && liningBounds.size.y < .15f,
-                        role + " underlay escaped the small chest opening.");
-                }
                 Require(surface.shadowCastingMode == ShadowCastingMode.Off && !shadow.receiveShadows,
                     role + " clipped body/shadow modes would double-cast or draw the original head.");
                 Require(shadow.sharedMesh != surface.sharedMesh && shadow.transform.parent == surface.transform,

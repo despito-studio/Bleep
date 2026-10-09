@@ -11,7 +11,7 @@ namespace DeadAir
         readonly List<Mesh> ownedMeshes = new List<Mesh>();
         readonly List<SkinnedMeshRenderer> ownerSurfaces = new List<SkinnedMeshRenderer>();
         MaterialPropertyBlock bodyView;
-        public const float HiddenWeightThreshold = .02f;
+        public const float HiddenWeightThreshold = .5f;
         GameObject avatar;
         string role;
         DeadAirCharacterMotion motion;
@@ -86,7 +86,9 @@ namespace DeadAir
             bodyBounce.shadows = LightShadows.None; bodyBounce.renderMode = LightRenderMode.ForcePixel;
             Vector3 sourceEye = DeadAirBodyFit.SourceEye(role);
             avatar.transform.localScale *= DeadAirLocomotion.StandingEye / sourceEye.y;
-            eyeClearance = Mathf.Max(.08f, (DeadAirBodyFit.TorsoFront(role) - sourceEye.z) * avatar.transform.lossyScale.z + .08f);
+            // Keep the owner's removed neckline outside the downward viewport.
+            // Retain the complete authored chest instead of drawing a cap over it.
+            eyeClearance = Mathf.Max(.30f, (DeadAirBodyFit.TorsoFront(role) - sourceEye.z) * avatar.transform.lossyScale.z + .08f);
             VisibleTriangles = HiddenTriangles = 0;
             foreach (var renderer in avatar.GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {
@@ -128,8 +130,6 @@ namespace DeadAir
                 renderer.updateWhenOffscreen = true;
                 ownerSurfaces.Add(renderer);
             }
-            var neckline = DeadAirBodyNeckLining.Create(avatar, role);
-            if (neckline != null) ownerSurfaces.Add(neckline);
         }
 
         static float HiddenWeight(int index, float weight, bool[] hidden) => index >= 0 && index < hidden.Length && hidden[index] ? weight : 0;
