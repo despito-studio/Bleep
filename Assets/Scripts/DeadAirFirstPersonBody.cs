@@ -53,7 +53,9 @@ namespace DeadAir
             Quaternion look = camera != null ? camera.transform.rotation : DeadAirGaze.ViewRotation(yaw, pitch);
             Vector3 eye = camera != null ? camera.transform.position : feet.position + Vector3.up *
                 (crouching ? DeadAirLocomotion.CrouchingEye : DeadAirLocomotion.StandingEye) + feet.forward * .08f;
-            Vector3 eyeDelta = eye - motion.FirstPersonEyePosition - avatar.transform.forward * eyeClearance;
+            // Bending brings the face in front of the chest, so crouch only
+            // needs the small lens clearance rather than the upright coat fit.
+            Vector3 eyeDelta = eye - motion.FirstPersonEyePosition - avatar.transform.forward * (crouching ? .08f : eyeClearance);
             eyeDelta.y = 0;
             avatar.transform.position += eyeDelta;
             bodyView.SetVector("_DeadAirOwnerBodyEye", new Vector4(eye.x, eye.y, eye.z, 1));
@@ -126,6 +128,8 @@ namespace DeadAir
                 renderer.updateWhenOffscreen = true;
                 ownerSurfaces.Add(renderer);
             }
+            var neckline = DeadAirBodyNeckLining.Create(avatar, role);
+            if (neckline != null) ownerSurfaces.Add(neckline);
         }
 
         static float HiddenWeight(int index, float weight, bool[] hidden) => index >= 0 && index < hidden.Length && hidden[index] ? weight : 0;
