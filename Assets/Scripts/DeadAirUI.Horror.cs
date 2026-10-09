@@ -373,7 +373,7 @@ namespace DeadAir
             if(id==DeadAirPrisonBook.Id)return "chapter";
             if(id.StartsWith("tape"))return "tape";if(id.StartsWith("fuse"))return "fuse";
             if(id.StartsWith("keycard") || id.StartsWith("key-"))return "key";
-            if(id=="cigarette-pack"||id=="wrench"||id=="recorder"||id=="compass"||id=="ladder")return id;
+            if(id=="cigarette-pack"||id=="wrench"||id=="recorder"||id=="compass"||id=="ladder"||id=="camera"||id=="pills"||id=="emf-detector")return id;
             return id=="flashlight"?"flashlight":id.StartsWith("fuel-canister")?"fuel":"chapter";
         }
         static string ItemDescription(string id)
@@ -387,7 +387,10 @@ namespace DeadAir
             if(id=="recorder")return "Диктофон. R — увімкнути.";
             if(id=="compass")return "Компас. R — оглянути.";
             if(id=="ladder")return "Складна драбина для проникнення всередину.";
-            if(id.StartsWith("tape"))return "Касета для передавача.";
+            if(id=="camera")return "Репортерська камера. ЛКМ — зробити фото / спалах світла для відлякування примар.";
+            if(id=="emf-detector")return "Детектор електромагнітних аномалій. Реагує на наближення Тек-Тек.";
+            if(id=="pills"||id.StartsWith("pill-"))return "Заспокійливі таблетки. Відновлюють розсудок (+50%).";
+            if(id.StartsWith("tape"))return "Касета з аудіодоказами про шкільний інцидент. Зберіть 5 шт для розслідування!";
             if(id.StartsWith("keycard") || id.StartsWith("key-"))return "Картка доступу до замкнених приміщень.";
             if(id.StartsWith("fuse"))return "Запобіжник 380В для рубильника освітлення в підвалі.";
             if(id.StartsWith("fuel-canister"))return "Дизельне пальне для генератора на задньому дворі (потрібно 3 шт).";

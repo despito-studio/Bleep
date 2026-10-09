@@ -59,9 +59,9 @@ namespace DeadAir
     {
         public static string ForClass(string classId) => classId == "operator" ? "cigarette-pack" :
             classId == "engineer" ? "wrench" : classId == "journalist" ? "recorder" : classId == "dispatcher" ? "compass" : null;
-        public static bool IsRoleItem(string id) => id == "cigarette-pack" || id == "wrench" || id == "recorder" || id == "compass";
+        public static bool IsRoleItem(string id) => id == "cigarette-pack" || id == "wrench" || id == "recorder" || id == "compass" || id == "camera" || id == "emf-detector" || id == "pills";
         public static string Label(string id) => id == "cigarette-pack" ? "Пачка сигарет" : id == "wrench" ? "Гайковий ключ" :
-            id == "recorder" ? "Диктофон" : id == "compass" ? "Маятник-компас" : id;
+            id == "recorder" ? "Диктофон" : id == "compass" ? "Маятник-компас" : id == "camera" ? "Репортерська камера" : id == "emf-detector" ? "Детектор аномалій" : id == "pills" ? "Заспокійливі пігулки" : id;
     }
     [Serializable] public class ClassBonuses
     {

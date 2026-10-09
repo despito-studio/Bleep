@@ -95,17 +95,36 @@ namespace DeadAir
             signature = signature * 32 + (state.power ? 1 : 0) + (state.breakerOn ? 2 : 0) + (state.calibrated ? 4 : 0) + (state.broadcast ? 8 : 0);
             if (signature == journalSignature) return;
             journalSignature = signature;
-            objectiveText.text = state.broadcast ? "Поверніться до фургона" : state.breakerOn ?
-                (state.tapes.Count < 3 ? "Знайдіть три касети із записами" : !state.calibrated ? "Налаштуйте приймач на 96.4 МГц" : "Передайте записи на 96.4 МГц") : state.power ?
-                (state.fuses.Count >= 2 ? "Увімкніть рубильник у підвалі" : "Знайдіть запобіжники для щитка") : state.canisters.Count >= 3 ?
-                "Увімкніть генератор у дворі" : "Знайдіть дизель для генератора";
-            journalChecklist.text = Check(state.power, "Запустити генератор") + "\n" + Check(state.breakerOn, "Повернути освітлення") + "\n" +
-                Check(state.tapes.Count >= 3, "Знайти три касети") + "\n" + Check(state.calibrated, "Налаштувати 96.4 МГц") + "\n" + Check(state.broadcast, "Передати записи");
-            evidenceText.text = "Касети                 " + state.tapes.Count + " / 3";
-            fuelEvidenceText.text = "Каністри дизеля        " + state.canisters.Count + " / 3";
-            fuseEvidenceText.text = "Запобіжники            " + state.fuses.Count + " / 2";
-            journalTotals.text = "Зібрано речей: " + DeadAirLootSummary.CollectedCount(world, state) +
-                "\nВинесено до фургона: " + state.securedItems.Count + "\nПередано записів: " + (state.broadcast ? "3 / 3" : "0 / 3");
+            bool isCh2 = DeadAirChapters.IsChapter2(state.chapterId);
+            if (isCh2)
+            {
+                objectiveText.text = state.tapes.Count >= 5
+                    ? "ЕВАКУАЦІЯ: Всі 5 касет зібрано! Біжіть до фургона журналістів на дорозі!"
+                    : "РОЗСЛІДУВАННЯ: Знайдіть 5 касет-доказів про Тек-Тек (" + state.tapes.Count + " / 5). Пийте пігулки для збереження розсудку!";
+                journalChecklist.text = Check(state.tapes.Count >= 1, "Касета 1: Щоденник учня (Клас 1-B)") + "\n" +
+                    Check(state.tapes.Count >= 2, "Касета 2: Звіт медсестри (Медпункт)") + "\n" +
+                    Check(state.tapes.Count >= 3, "Касета 3: Окультний запис (Лабораторія 2 пов.)") + "\n" +
+                    Check(state.tapes.Count >= 4, "Касета 4: Архівний запис (Бібліотека 2 пов.)") + "\n" +
+                    Check(state.tapes.Count >= 5, "Касета 5: Останній репортаж (Альтанка в парку)");
+                evidenceText.text = "Касети-докази         " + state.tapes.Count + " / 5";
+                fuelEvidenceText.text = "Пігулки розсудку       5 шт на карті";
+                fuseEvidenceText.text = "Загроза: Тек-Тек       Полює при низькому розсудку";
+                journalTotals.text = "Зібрано доказів: " + state.tapes.Count + " / 5\nЕвакуація: Фургон журналістів на дорозі";
+            }
+            else
+            {
+                objectiveText.text = state.broadcast ? "Поверніться до фургона" : state.breakerOn ?
+                    (state.tapes.Count < 3 ? "Знайдіть три касети із записами" : !state.calibrated ? "Налаштуйте приймач на 96.4 МГц" : "Передайте записи на 96.4 МГц") : state.power ?
+                    (state.fuses.Count >= 2 ? "Увімкніть рубильник у підвалі" : "Знайдіть запобіжники для щитка") : state.canisters.Count >= 3 ?
+                    "Увімкніть генератор у дворі" : "Знайдіть дизель для генератора";
+                journalChecklist.text = Check(state.power, "Запустити генератор") + "\n" + Check(state.breakerOn, "Повернути освітлення") + "\n" +
+                    Check(state.tapes.Count >= 3, "Знайти три касети") + "\n" + Check(state.calibrated, "Налаштувати 96.4 МГц") + "\n" + Check(state.broadcast, "Передати записи");
+                evidenceText.text = "Касети                 " + state.tapes.Count + " / 3";
+                fuelEvidenceText.text = "Каністри дизеля        " + state.canisters.Count + " / 3";
+                fuseEvidenceText.text = "Запобіжники            " + state.fuses.Count + " / 2";
+                journalTotals.text = "Зібрано речей: " + DeadAirLootSummary.CollectedCount(world, state) +
+                    "\nВинесено до фургона: " + state.securedItems.Count + "\nПередано записів: " + (state.broadcast ? "3 / 3" : "0 / 3");
+            }
         }
 
         static string Check(bool done, string text) => (done ? "[×]  " : "[ ]  ") + text;

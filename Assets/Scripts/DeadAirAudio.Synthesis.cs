@@ -16,6 +16,7 @@ namespace DeadAir
             Add("mushroom-bed", b => b.MushroomBed(), 8);
             Add("flashlight", b => { b.Knock(0, .55f); b.Noise(.015f, .055f, .06f, 2700, .002f); }, .22f);
             Add("camera-equip", b => { b.Noise(0, .16f, .065f, 1700, .015f); b.Tone(.03f, 1080, 690, .09f, .045f, Wave.Triangle); b.Knock(.16f, .3f); }, .4f);
+            Add("camera-snap", b => { b.Noise(0, .08f, .18f, 3500, .002f); b.Knock(0, 1.2f); b.Knock(.06f, .8f); b.Tone(.08f, 1200, 400, .12f, .05f); }, .3f);
             Add("equip", b => { b.Noise(0, .16f, .045f, 1200, .018f); b.Knock(.11f, .25f); }, .32f);
             Add("paper", b => { b.Noise(0, .26f, .07f, 2400, .025f); b.Noise(.16f, .15f, .045f, 3900, .02f); }, .4f);
             Add("cassette", b => { b.Knock(0, .45f); b.Knock(.12f, .6f); b.Tone(.19f, 860, 850, .24f, .06f, Wave.Sine, .015f); }, .65f);
