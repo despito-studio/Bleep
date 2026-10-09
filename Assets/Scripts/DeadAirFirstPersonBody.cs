@@ -9,6 +9,9 @@ namespace DeadAir
     {
         readonly PlayerState pose = new PlayerState();
         readonly List<Mesh> ownedMeshes = new List<Mesh>();
+        readonly List<SkinnedMeshRenderer> ownerSurfaces = new List<SkinnedMeshRenderer>();
+        MaterialPropertyBlock bodyView;
+        public const float HiddenWeightThreshold = .02f;
         GameObject avatar;
         string role;
         DeadAirCharacterMotion motion;
@@ -20,13 +23,14 @@ namespace DeadAir
         public int VisibleTriangles { get; private set; }
         public int HiddenTriangles { get; private set; }
 
-        public void Present(PlayerState player, RoomState state, Transform feet, float yaw, float pitch, bool crouching, bool sprinting)
+        public void Present(PlayerState player, RoomState state, Transform feet, float yaw, float pitch, bool crouching, bool sprinting, Camera camera = null)
         {
             bool visible = player != null && state != null && (state.phase == "playing" || state.phase == "departing") &&
                 !player.down && string.IsNullOrEmpty(player.hiding);
             if (!visible) { SetVisible(false); return; }
             if (avatar == null || role != player.characterClass) CreateAvatar(player.characterClass);
             if (avatar == null) return;
+            if (bodyView == null) bodyView = new MaterialPropertyBlock();
             avatar.SetActive(true);
             // Put the view just in front of the neckline, rather than inside the
             // imported head. Feet stay close to the actual collision capsule.
@@ -45,6 +49,14 @@ namespace DeadAir
             motion.SetTransitPose(seated);
             motion.Present(pose, state.elapsed, state.paused, true);
             bodyBounce.transform.rotation = avatar.transform.rotation * Quaternion.Euler(35, 180, 0);
+            Quaternion look = camera != null ? camera.transform.rotation : DeadAirGaze.ViewRotation(yaw, pitch);
+            Vector3 eye = camera != null ? camera.transform.position : feet.position + Vector3.up *
+                (crouching ? DeadAirLocomotion.CrouchingEye : DeadAirLocomotion.StandingEye) + feet.forward * .08f;
+            bodyView.SetVector("_DeadAirOwnerBodyEye", new Vector4(eye.x, eye.y, eye.z, 1));
+            bodyView.SetVector("_DeadAirOwnerBodyUp", look * Vector3.up);
+            bodyView.SetVector("_DeadAirOwnerBodyForward", look * Vector3.forward);
+            bodyView.SetVector("_DeadAirOwnerBodyClearance", new Vector4(.18f, .10f, .02f, .12f));
+            foreach (var surface in ownerSurfaces) surface.SetPropertyBlock(bodyView);
             previousFeet = feet.position; hasFeet = true;
         }
 
@@ -87,7 +99,7 @@ namespace DeadAir
                 {
                     var w = weights[v];
                     hiddenVertices[v] = HiddenWeight(w.boneIndex0, w.weight0, hiddenBones) + HiddenWeight(w.boneIndex1, w.weight1, hiddenBones) +
-                        HiddenWeight(w.boneIndex2, w.weight2, hiddenBones) + HiddenWeight(w.boneIndex3, w.weight3, hiddenBones) > .5f;
+                        HiddenWeight(w.boneIndex2, w.weight2, hiddenBones) + HiddenWeight(w.boneIndex3, w.weight3, hiddenBones) > HiddenWeightThreshold;
                 }
                 // A separate shadow surface retains the complete silhouette. It
                 // never draws the owner's head or a second pair of arms on screen.
@@ -112,6 +124,7 @@ namespace DeadAir
                 }
                 renderer.sharedMesh = clipped; renderer.shadowCastingMode = ShadowCastingMode.Off;
                 renderer.updateWhenOffscreen = true;
+                ownerSurfaces.Add(renderer);
             }
         }
 
@@ -129,7 +142,7 @@ namespace DeadAir
         {
             if (avatar != null) Release(avatar);
             foreach (var mesh in ownedMeshes) if (mesh != null) Release(mesh);
-            ownedMeshes.Clear(); avatar = null; motion = null; hasFeet = false;
+            ownedMeshes.Clear(); ownerSurfaces.Clear(); avatar = null; motion = null; hasFeet = false;
         }
         static void Release(Object value) { if (Application.isPlaying) Destroy(value); else DestroyImmediate(value); }
         void OnDestroy() { DisposeAvatar(); }

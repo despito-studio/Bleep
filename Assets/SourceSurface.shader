@@ -17,6 +17,10 @@ Shader "Dead Air/Source Surface"
         _DstBlend("Destination blend", Float) = 0
         _ZWrite("Depth write", Float) = 1
         _ZTest("Depth test", Float) = 4
+        _DeadAirOwnerBodyEye("Owner body camera", Vector) = (0,0,0,0)
+        _DeadAirOwnerBodyUp("Owner body view up", Vector) = (0,1,0,0)
+        _DeadAirOwnerBodyForward("Owner body view forward", Vector) = (0,0,1,0)
+        _DeadAirOwnerBodyClearance("Owner camera clearance", Vector) = (0.18,0.10,0.02,0.12)
     }
     SubShader
     {
@@ -39,6 +43,7 @@ Shader "Dead Air/Source Surface"
         float4 _DeadAirReflectionTex_TexelSize;
         float _DeadAirReflectionFloor, _DeadAirReflectionEnabled;
         float _DeadAirReflectionsDisabled;
+        float4 _DeadAirOwnerBodyEye, _DeadAirOwnerBodyUp, _DeadAirOwnerBodyForward, _DeadAirOwnerBodyClearance;
         fixed4 _Color;
         half _Glossiness, _Metallic, _Cutoff, _PlanarReflection;
         half4 _EmissionColor;
@@ -58,6 +63,17 @@ Shader "Dead Air/Source Surface"
         {
             fixed4 c = tex2D(_MainTex, IN.uv_MainTex) * _Color;
             clip(c.a - _Cutoff);
+            if (_DeadAirOwnerBodyEye.w > .5)
+            {
+                float3 fromEye = IN.worldPos - _DeadAirOwnerBodyEye.xyz;
+                // Only the owner's clipped surface has this property block.
+                // Keep clothing out of the lens and the upper half of the view;
+                // the complete shadow and all remote bodies remain untouched.
+                clip(length(fromEye) - _DeadAirOwnerBodyClearance.x);
+                clip(-fromEye.y - _DeadAirOwnerBodyClearance.y);
+                clip(-dot(fromEye, _DeadAirOwnerBodyUp.xyz) -
+                    max(0, dot(fromEye, _DeadAirOwnerBodyForward.xyz)) * _DeadAirOwnerBodyClearance.z);
+            }
             half reflections = 1 - saturate(_DeadAirReflectionsDisabled);
             half metallic = _Metallic * reflections;
             o.Albedo = c.rgb * (1 - metallic);
@@ -67,6 +83,7 @@ Shader "Dead Air/Source Surface"
             o.Specular = lerp(half3(.04, .04, .04), c.rgb, metallic) * reflections;
             o.Occlusion = 1;
             o.Emission = tex2D(_EmissionMap, IN.uv_EmissionMap).rgb * _EmissionColor.rgb;
+            o.Emission += o.Albedo * (_DeadAirOwnerBodyEye.w * _DeadAirOwnerBodyClearance.w);
             // Reflection comes from an actual mirrored camera, so lamps, furniture
             // and doorways appear at their correct positions on the polished floor.
             if (reflections > .5 && _PlanarReflection > .01 && _DeadAirReflectionEnabled > .5 &&

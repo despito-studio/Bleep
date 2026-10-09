@@ -134,7 +134,7 @@ namespace DeadAir
             {
                 var eye = view.transform.localPosition; eye.z = .08f; view.transform.localPosition = eye;
             }
-            firstPersonBody.Present(me, state, transform, yaw, pitch, inspectionPose ? me.crouching : Crouching, Sprinting);
+            firstPersonBody.Present(me, state, transform, yaw, pitch, inspectionPose ? me.crouching : Crouching, Sprinting, view);
         }
 
         void Update()

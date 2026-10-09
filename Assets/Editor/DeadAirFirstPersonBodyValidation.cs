@@ -74,6 +74,12 @@ namespace DeadAir.Editor
                     role + " visible owner mesh retains triangles weighted to head, neck or source arms.");
                 Require(ForbiddenTriangleCount(shadow, body.Avatar.transform) == body.HiddenTriangles,
                     role + " full shadow must preserve precisely the triangles clipped from the camera body.");
+                var cameraBlock = new MaterialPropertyBlock(); surface.GetPropertyBlock(cameraBlock);
+                Require(cameraBlock.GetVector("_DeadAirOwnerBodyEye").w == 1,
+                    role + " camera body has no lens/clothing clearance.");
+                shadow.GetPropertyBlock(cameraBlock);
+                Require(cameraBlock.GetVector("_DeadAirOwnerBodyEye").w == 0,
+                    role + " camera clearance leaked onto the full world shadow.");
 
                 Transform leftFoot = Find(body.Avatar, "foot.L"), rightFoot = Find(body.Avatar, "foot.R");
                 Require(leftFoot != null && rightFoot != null, role + " lost source foot bones.");
@@ -110,8 +116,12 @@ namespace DeadAir.Editor
                         role + " " + fixture.name + " has implausible source foot bones: " + left + " / " + right);
                     if (poseIndex == 0) { standingLeft = left; standingRight = right; }
                     if (fixture.crouching)
+                    {
+                        Require(body.Motion.FirstPersonHeadHeight <= .90f && body.Motion.FirstPersonChestHeight < DeadAirLocomotion.CrouchingEye,
+                            role + " crouch put the camera inside the source neck/chest.");
                         Require(Vector3.Distance(standingLeft, left) < .045f && Vector3.Distance(standingRight, right) < .045f,
                             role + " crouch failed to plant both source feet.");
+                    }
                     poseIndex++;
                 }
 
@@ -173,7 +183,7 @@ namespace DeadAir.Editor
             {
                 var w = weights[i];
                 forbidden[i] = HiddenWeight(w.boneIndex0, w.weight0, hidden) + HiddenWeight(w.boneIndex1, w.weight1, hidden) +
-                    HiddenWeight(w.boneIndex2, w.weight2, hidden) + HiddenWeight(w.boneIndex3, w.weight3, hidden) > .5f;
+                    HiddenWeight(w.boneIndex2, w.weight2, hidden) + HiddenWeight(w.boneIndex3, w.weight3, hidden) > DeadAirFirstPersonBody.HiddenWeightThreshold;
             }
             int count = 0;
             for (int s = 0; s < mesh.subMeshCount; s++)
