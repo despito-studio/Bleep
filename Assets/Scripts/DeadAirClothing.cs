@@ -9,7 +9,7 @@ namespace DeadAir
         // -1 is serialized as the class default; zero deliberately removes every
         // garment. Appearance never changes collision, abilities or adult age.
         public static int Sanitize(int mask) => mask == -1 ? -1 : mask & All;
-        public static int DefaultMask(string classId) => classId == "operator" || classId == "journalist" ? All & ~Jacket : All;
+        public static int DefaultMask(string classId) => classId == "operator" || classId == "dispatcher" ? All & ~Jacket : All;
         public static int CasualMask(string classId) => Shirt | Trousers | Shoes | Underwear;
         public static int Resolve(PlayerState state) => state == null || state.clothingMask < 0 ? DefaultMask(state?.characterClass) : Sanitize(state.clothingMask);
         public static bool FirstPersonSleeves(int mask, string classId) => ((mask < 0 ? DefaultMask(classId) : Sanitize(mask)) & (Shirt | Jacket)) != 0;

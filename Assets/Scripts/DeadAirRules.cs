@@ -819,6 +819,7 @@ namespace DeadAir
                     var seat = DeadAirVanPresentation.SpawnPoint(world, i);
                     crew.x = seat.x; crew.y = seat.y; crew.z = seat.z;
                     crew.sprinting = crew.crouching = crew.camera = crew.mapOpen = crew.flashlight = false;
+                    RecordReturnedLoot(crew);
                 }
                 foreach(var player in State.players)ClearMushroomTrip(player);
                 State.message = "Ви вийшли. На записі чути на один голос більше.";
@@ -974,6 +975,12 @@ namespace DeadAir
             }
         }
 
+        void RecordReturnedLoot(PlayerState actor)
+        {
+            foreach (var item in actor.inventory)
+                if (DeadAirLootSummary.IsRecoverable(world, item) && !State.securedItems.Contains(item)) State.securedItems.Add(item);
+        }
+
         public void Tick(float dt)
         {
             if (State.phase == "departing")
@@ -1010,8 +1017,7 @@ namespace DeadAir
                 var p = State.players[i];
                 if (!p.down && State.elapsed >= DeadAirVanPresentation.ArrivalDuration &&
                     DeadAirVanPresentation.IsInside(world, p.x, p.z) && Mathf.Abs(p.y - DeadAirVanPresentation.FloorHeight) < .3f)
-                    foreach (var item in p.inventory)
-                        if (DeadAirLootSummary.IsRecoverable(world, item) && !State.securedItems.Contains(item)) State.securedItems.Add(item);
+                    RecordReturnedLoot(p);
                 p.stamina = State.creative ? 100 : Mathf.Clamp(p.stamina +
                     (p.sprinting ? -DeadAirLocomotion.RunDrain : DeadAirLocomotion.Recovery * world.GetClass(p.characterClass).bonuses.staminaRecovery) * dt, 0, 100);
                 if (p.stamina <= 2) p.sprinting = false;

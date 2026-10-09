@@ -938,7 +938,19 @@ namespace DeadAir
 
         public void SetMapPresentation(bool open)
         {
-            if (open) cameraUp = false;
+            if (open)
+            {
+                cameraUp = false;
+                var board = world.Objective("van-map");
+                if (board != null)
+                {
+                    var direction = new Vector3(-board.x, board.y, board.z) - view.transform.position;
+                    yaw = Mathf.Atan2(direction.x, -direction.z);
+                    pitch = Mathf.Atan2(direction.y, new Vector2(direction.x, direction.z).magnitude);
+                    transform.rotation = Quaternion.Euler(0, 180 - yaw * Mathf.Rad2Deg, 0);
+                    view.transform.localRotation = Quaternion.Euler(-pitch * Mathf.Rad2Deg, 0, 0);
+                }
+            }
             DeadAirAudio.Play("paper");
             session.Command(new NetPacket { type = "map-equip", mapOpen = open });
         }

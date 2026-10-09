@@ -50,6 +50,9 @@ namespace DeadAir
             Require(ui.InventoryOpen, "Tab journal must include a real inventory.");
             ui.TryCloseTopModal();
             checks.Add("PASSED: hanging world map prompt, near-board map only and actual mission/inventory notebook.");
+            yield return VerifyVanBoarding(data);
+            checks.Add("PASSED: real player walks down van steps to the yard and back into the standing-height cabin.");
+            InspectToward(point.x, point.z, point.y, map.x, map.y, map.z);
             player.EndInspection(); player.Teleport(me.x, me.y, me.z);
             player.SetVerificationMovement(Vector2.zero, false); player.SetVerificationCrouching(true);
             yield return new WaitForSecondsRealtime(.35f);
@@ -80,9 +83,9 @@ namespace DeadAir
             DeadAirSettings.Reflections = true;
             checks.Add("PASSED: reflection setting reaches physical material shading and the mirrored-floor camera.");
             session.State.enemy.active = true; session.State.enemy.behaviour = "search";
-            session.State.enemy.x = 0; session.State.enemy.y = 0; session.State.enemy.z = -17;
+            session.State.enemy.x = 0; session.State.enemy.y = 0; session.State.enemy.z = 17;
             session.State.enemy.yaw = 0; session.State.paused = true;
-            InspectToward(0, -13.5f, 0, 0, 1.25f, -17);
+            InspectToward(0, 22, 0, 0, 1.25f, 17);
             yield return Save("field-08-new-dictor-model");
             session.State.paused = false;
             player.EndInspection(); ui.ReturnToMenu();
@@ -103,16 +106,19 @@ namespace DeadAir
                 peer.Command(new NetPacket { type = "move", x = guestPoint.x, y = guestPoint.y, z = guestPoint.z, crouching = true, moveSequence = 1 });
                 yield return Until(() => guest.crouching && peer.State.Player(peer.LocalId).crouching, "Coop crouch snapshot");
                 Require(guest.clothingMask == DeadAirClothing.Underwear, "Game start must preserve customized clothing.");
-                var hostPoint = DeadAirVanPresentation.SpawnPoint(data, 0);
-                InspectToward(hostPoint.x, hostPoint.z, hostPoint.y, guest.x, guest.y + 1.1f, guest.z);
+                guest.x = 3; guest.y = 0; guest.z = 20; guest.yaw = Mathf.PI;
+                InspectToward(0, 24, 0, guest.x, guest.y + 1.0f, guest.z);
                 yield return Save("field-08-coop-clothing-and-crouch");
                 player.EndInspection();
+                guest.x = guestPoint.x; guest.y = guestPoint.y; guest.z = guestPoint.z;
                 var host = session.State.Player(session.LocalId); var exit = data.Objective("exit");
                 var exitPoint = DeadAirVanPresentation.SourcePoint(data, new Vector3(-.5f, .6f, -.3f));
                 host.x = exitPoint.x; host.y = exitPoint.y; host.z = exitPoint.z;
+                host.inventory.Add("tape-1");
                 session.State.broadcast = session.State.quest.broadcast = true;
                 session.Command(new NetPacket { type = "interact", id = "exit" });
                 yield return Until(() => session.State.phase == "departing" && peer.State.phase == "departing", "Coop departure");
+                Require(session.State.securedItems.Contains("tape-1"), "Departure must count loot brought aboard on the interaction frame.");
                 yield return Save("field-09-departure");
                 yield return Until(() => session.State.phase == "won" && peer.State.phase == "won", "Animated coop victory");
                 checks.Add("PASSED: real LAN guest clothing and crouch replication, synchronized van departure and delayed shared victory.");
@@ -121,6 +127,34 @@ namespace DeadAir
             File.WriteAllLines(Path.Combine(output, "field-runtime-report.txt"), checks);
             Debug.Log("DEAD AIR FIELD RUNTIME PASSED: " + checks.Count + " focused checks with rendered Windows frames.");
             Application.Quit(0);
+        }
+
+        IEnumerator VerifyVanBoarding(WorldData data)
+        {
+            var inside = DeadAirVanPresentation.SourcePoint(data, new Vector3(-.5f, .6f, -.125f));
+            var outside = DeadAirVanPresentation.SourcePoint(data, new Vector3(-3.1f, 0, -.125f));
+            InspectToward(inside.x, inside.z, inside.y, outside.x, 1.65f, outside.z);
+            player.EndInspection();
+            int corrections = player.MovementCorrectionCount;
+            try
+            {
+                player.SetVerificationMovement(Vector2.up, false);
+                float deadline = Time.realtimeSinceStartup + 4;
+                while (-player.transform.position.x < outside.x && Time.realtimeSinceStartup < deadline) yield return null;
+                player.SetVerificationMovement(Vector2.zero, false);
+                yield return new WaitForSecondsRealtime(.35f);
+                Require(-player.transform.position.x >= outside.x && player.transform.position.y < .12f,
+                    "The actual character controller must descend through the side entry into the yard.");
+                player.SetVerificationMovement(Vector2.down, false);
+                deadline = Time.realtimeSinceStartup + 4;
+                while (-player.transform.position.x > inside.x && Time.realtimeSinceStartup < deadline) yield return null;
+                player.SetVerificationMovement(Vector2.zero, false);
+                yield return new WaitForSecondsRealtime(.35f);
+                Require(-player.transform.position.x <= inside.x && Mathf.Abs(player.transform.position.y - .6f) < .12f,
+                    "The actual character controller must climb all boarding steps into the cabin.");
+                Require(player.MovementCorrectionCount == corrections, "Van boarding must agree with host floor and movement checks.");
+            }
+            finally { player.ClearVerificationMovement(); }
         }
     }
 }

@@ -95,7 +95,8 @@ namespace DeadAir
             signature = signature * 32 + (state.power ? 1 : 0) + (state.breakerOn ? 2 : 0) + (state.calibrated ? 4 : 0) + (state.broadcast ? 8 : 0);
             if (signature == journalSignature) return;
             journalSignature = signature;
-            objectiveText.text = state.broadcast ? "Поверніться до фургона" : state.breakerOn ? "Передайте сигнал на 96.4 МГц" : state.power ?
+            objectiveText.text = state.broadcast ? "Поверніться до фургона" : state.breakerOn ?
+                (state.tapes.Count < 3 ? "Знайдіть три касети із записами" : !state.calibrated ? "Налаштуйте приймач на 96.4 МГц" : "Передайте записи на 96.4 МГц") : state.power ?
                 (state.fuses.Count >= 2 ? "Увімкніть рубильник у підвалі" : "Знайдіть запобіжники для щитка") : state.canisters.Count >= 3 ?
                 "Увімкніть генератор у дворі" : "Знайдіть дизель для генератора";
             journalChecklist.text = Check(state.power, "Запустити генератор") + "\n" + Check(state.breakerOn, "Повернути освітлення") + "\n" +

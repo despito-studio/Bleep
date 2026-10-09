@@ -33,16 +33,17 @@ namespace DeadAir.Editor
             var fixedShell=new GameObject("Van stationary collision shell").transform;fixedShell.SetParent(parked,false);
             var paint=Material("pearl-body",new Color(.72f,.76f,.76f),.42f);
             var graphite=Material("graphite-trim",new Color(.065f,.085f,.10f),.28f);
+            var cabinFloor=Material("cabin-floor",new Color(.25f,.28f,.29f),.14f);
             var rubber=Material("rubber",new Color(.025f,.032f,.035f),.10f);
             var alloy=Material("alloy",new Color(.35f,.39f,.40f),.42f);
             var interior=Material("interior-lining",new Color(.39f,.42f,.42f),.12f);
-            var fabric=Material("blue-seat-fabric",new Color(.105f,.17f,.21f),.10f);
+            var fabric=Material("blue-seat-fabric",new Color(.24f,.32f,.36f),.10f);
             var window=Material("tinted-glass",new Color(.19f,.30f,.36f,.23f),.58f,true);
             var lens=Material("headlamp-lens",new Color(.81f,.87f,.90f),.65f);
             var tail=Material("red-tail-lens",new Color(.40f,.035f,.025f),.42f);
             var lamp=Material("cabin-diffuser",new Color(.84f,.84f,.73f),.18f);
             // The floor top and roof underside define a real 2.40 m interior clearance.
-            Part(visual,"Crew van deck",new Vector3(0,.53f,-1.125f),new Vector3(2.92f,.14f,4.65f),graphite,.03f);
+            Part(visual,"Crew van deck",new Vector3(0,.53f,-1.125f),new Vector3(2.92f,.14f,4.65f),cabinFloor,.03f);
             Solid(fixedShell,"Van supported floor",new Vector3(0,.53f,-1.125f),new Vector3(2.92f,.14f,4.65f));
             Part(visual,"High roof cap",new Vector3(0,3.18f,-.78f),new Vector3(3.24f,.36f,5.34f),paint,.12f);
             Part(visual,"Interior ceiling liner",new Vector3(0,3.025f,-1.125f),new Vector3(2.92f,.05f,4.65f),interior);
@@ -101,7 +102,7 @@ namespace DeadAir.Editor
             foreach(var bench in new[]{new Vector3(1.15f,0,-1.30f),new Vector3(-1.15f,0,-2.25f)})
             {
                 float length=bench.x>0?3.55f:1.85f;
-                Part(visual,"Crew bench storage base",bench+new Vector3(0,.79f,0),new Vector3(.56f,.38f,length),graphite);
+                Part(visual,"Crew bench storage base",bench+new Vector3(0,.79f,0),new Vector3(.56f,.38f,length),cabinFloor);
                 Part(visual,"Padded crew bench",bench+new Vector3(0,1.025f,0),new Vector3(.54f,.13f,length),fabric,.07f);
                 Part(visual,"Crew bench back cushion",bench+new Vector3(Mathf.Sign(bench.x)*.23f,1.36f,0),new Vector3(.10f,.62f,length),fabric,.035f);
                 Solid(fixedShell,"Van bench collision",bench+new Vector3(0,.845f,0),new Vector3(.56f,.49f,length));

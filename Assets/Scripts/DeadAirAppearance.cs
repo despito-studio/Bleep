@@ -13,15 +13,18 @@ namespace DeadAir
             public SkinnedMeshRenderer renderer;
             public Mesh original, mesh;
             public List<int>[][] groups;
-            public void Apply(int mask)
+            public int Apply(int mask)
             {
+                int count = 0;
                 for (int submesh = 0; submesh < groups.Length; submesh++)
                 {
                     var indices = new List<int>(groups[submesh][0]);
                     for (int group = 1; group <= 5; group++)
                         if ((mask & (1 << (group - 1))) != 0) indices.AddRange(groups[submesh][group]);
                     mesh.SetTriangles(indices, submesh, false);
+                    count += indices.Count / 3;
                 }
+                return count;
             }
         }
         readonly List<SourceSurface> surfaces = new List<SourceSurface>();
@@ -38,6 +41,17 @@ namespace DeadAir
         public int CurrentMask => currentMask;
         public DeadAirSecondaryMotion SecondaryMotion => secondary;
         public bool HasAdultBody => baseBody != null;
+        public int VisibleSourceTriangleCount { get; private set; }
+        public int RetainedSourceTriangleCount => TriangleCount(0);
+        public int SourceGarmentTriangleCount(int flag) => TriangleCount(flag == DeadAirClothing.Shirt ? 1 :
+            flag == DeadAirClothing.Jacket ? 2 : flag == DeadAirClothing.Trousers ? 3 : flag == DeadAirClothing.Shoes ? 4 : 5);
+
+        int TriangleCount(int group)
+        {
+            int count = 0;
+            foreach (var surface in surfaces) foreach (var submesh in surface.groups) count += submesh[group].Count / 3;
+            return count;
+        }
 
         public void Apply(int mask, string role)
         {
@@ -45,7 +59,8 @@ namespace DeadAir
             mask = mask < 0 ? DeadAirClothing.DefaultMask(role) : DeadAirClothing.Sanitize(mask);
             if (currentMask == mask) return;
             currentMask = mask;
-            foreach (var surface in surfaces) surface.Apply(mask);
+            VisibleSourceTriangleCount = 0;
+            foreach (var surface in surfaces) VisibleSourceTriangleCount += surface.Apply(mask);
             // Full original clothing keeps its authored surface untouched. The
             // neutral body closes all openings when one or more layers is removed.
             if (baseBody != null) baseBody.SetActive(mask != DeadAirClothing.DefaultMask(classId));
@@ -75,7 +90,7 @@ namespace DeadAir
             var paletteAsset = Resources.Load<TextAsset>("Characters/Appearance/" + role + "-palette");
             byte[] palette = paletteAsset != null ? paletteAsset.bytes : null;
             foreach (var source in sources) SplitSource(source, palette);
-            BuildBodyAndMissingGarments(found);
+            BuildBodyAndMissingGarments(found, palette);
         }
 
         Transform Proxy(string name, Transform parent)
@@ -116,21 +131,18 @@ namespace DeadAir
         int ClothingGroup(Vector3 point, Color color, BoneWeight weight, Transform[] sourceBones)
         {
             string bone = DominantBone(weight, sourceBones)?.name ?? "";
-            float headY = transform.InverseTransformPoint(head.position).y;
-            // The dispatcher's cap belongs to the coat outfit. A zero mask must
-            // remove the cap and its badge while keeping hair, beard and face.
-            if (classId == "dispatcher" && bone == "head" && point.y > headY + .30f) return 2;
             // Faces, source fingers, earrings and every head-bound long hair
             // component survive garment removal, retaining individual identity.
             if (bone == "head" || bone.StartsWith("hand.", StringComparison.Ordinal)) return 0;
             float hipY = transform.InverseTransformPoint(pelvis.position).y;
-            if (point.y > headY - .05f) return 0;
             if (bone.StartsWith("foot.", StringComparison.Ordinal) || point.y < hipY * .20f) return 4;
             if (point.y < hipY - .025f) return 3;
-            bool skin = IsSkin(color);
-            if (skin && !bone.StartsWith("thigh.", StringComparison.Ordinal) && !bone.StartsWith("shin.", StringComparison.Ordinal)) return 0;
+            // Source atlases use skin-like beige cotton. Retaining triangles by
+            // colour would leave white shirts behind in the zero-mask outfit.
+            // Keep identity at the original head/hands; exposed torso and limbs
+            // use the complete underlying body when their covering layer is off.
             if (classId == "engineer") return color.grayscale < .28f ? 2 : 1;
-            if (classId == "dispatcher") return color.r > .68f && color.g > .66f && color.b > .60f ? 1 : 2;
+            if (classId == "journalist") return color.grayscale > .60f || Mathf.Abs(point.x) < .095f && point.z > .08f ? 1 : 2;
             return 1; // A dress occupies the shirt and lower-garment bands.
         }
 
@@ -165,14 +177,14 @@ namespace DeadAir
             {
                 var color = Palette(palette, uv.Length > index ? uv[index] : Vector2.zero); var point = points[index];
                 var dominant = DominantBone(weights[index], sourceBones);
-                bool lightHair = classId == "journalist" && color.r > .55f && Mathf.Abs(color.r - color.b) < .18f;
-                bool darkHair = classId != "journalist" && color.grayscale < .34f && !IsSkin(color);
+                bool lightHair = classId == "operator" && color.r > .55f && Mathf.Abs(color.r - color.b) < .18f;
+                bool darkHair = color.grayscale < .34f && !IsSkin(color);
                 if (dominant == head && (lightHair || darkHair) && (point.y > headY + .05f || point.z < .055f))
                     weights[index] = Replace(weights[index], headIndex, hairIndex);
-                else if (classId == "engineer" && dominant == chest && Mathf.Abs(point.x) < .095f && point.z > .07f &&
+                else if ((classId == "engineer" || classId == "journalist") && dominant == chest && Mathf.Abs(point.x) < .095f && point.z > .07f &&
                     point.y < chestY + .11f && color.grayscale > .16f && color.grayscale < .64f && !IsSkin(color))
                     weights[index] = Replace(weights[index], chestIndex, tieIndex);
-                else if ((classId == "operator" || classId == "journalist") && dominant == chest &&
+                else if ((classId == "operator" || classId == "dispatcher") && dominant == chest &&
                     Mathf.Abs(point.x) < .19f && point.z > .065f && Mathf.Abs(point.y - chestY) < .14f)
                     weights[index] = Replace(weights[index], chestIndex, softChestIndex);
             }
@@ -187,13 +199,13 @@ namespace DeadAir
             return value;
         }
 
-        void BuildBodyAndMissingGarments(Dictionary<string, Transform> found)
+        void BuildBodyAndMissingGarments(Dictionary<string, Transform> found, byte[] palette)
         {
             Mesh rounded = DeadAirMonsterBody.Ellipsoid(10, 6); owned.Add(rounded);
             Mesh tube = DeadAirMonsterBody.TaperedTube(10); owned.Add(tube);
             Color skinColor = classId == "operator" ? new Color32(172, 139, 74, 255) : classId == "dispatcher" ?
                 new Color32(170, 132, 74, 255) : classId == "engineer" ? new Color32(175, 149, 135, 255) : new Color32(192, 160, 154, 255);
-            var skin = Surface("Adult neutral body / " + classId, skinColor);
+            var skin = Surface("Adult neutral body / " + classId, SourceHandSkinColor(palette, skinColor));
             var underwear = Surface("Plain cotton underlayer / " + classId, new Color32(189, 183, 158, 255));
             var shirt = Surface("Cotton shirt / " + classId, new Color32(172, 168, 146, 255));
             var jacket = Surface("Station jacket / " + classId, classId == "engineer" ? new Color32(32, 34, 33, 255) :
@@ -228,7 +240,7 @@ namespace DeadAir
             baseBody = body.Create("Adult body underneath removable layers", transform, skin, owned);
             var inner = new SkinBuilder(transform, bones);
             inner.Shape(rounded, pelvis, hip + new Vector3(0, -.045f, .005f), new Vector3(width * 1.70f, .255f, depth * 1.87f));
-            if (classId == "operator" || classId == "journalist")
+            if (classId == "operator" || classId == "dispatcher")
                 inner.Shape(rounded, chest, upper + new Vector3(0, .015f, .02f), new Vector3(width * 2.04f, .155f, depth * 2.07f));
             garments.Add(DeadAirClothing.Underwear, inner.Create("Plain underwear layer", transform, underwear, owned));
             // Missing source layers still have a physical garment. Existing coat,
@@ -252,6 +264,25 @@ namespace DeadAir
         bool HasSourceGroup(int group)
         { foreach (var surface in surfaces) foreach (var submesh in surface.groups) if (submesh[group].Count > 12) return true; return false; }
         Vector3 Point(Transform bone) => transform.InverseTransformPoint(bone.position);
+        Color SourceHandSkinColor(byte[] palette, Color fallback)
+        {
+            if (palette == null) return fallback;
+            Color total = Color.black; int count = 0;
+            foreach (var surface in surfaces)
+            {
+                var uv = surface.original.uv; var weights = surface.original.boneWeights; var sourceBones = surface.renderer.bones;
+                for (int index = 0; index < weights.Length && index < uv.Length; index++)
+                {
+                    var bone = DominantBone(weights[index], sourceBones);
+                    if (bone == null || !bone.name.StartsWith("hand.", StringComparison.Ordinal)) continue;
+                    var color = Palette(palette, uv[index]);
+                    if (color.grayscale < .13f || color.r > color.g * 1.6f && color.g < .23f) continue;
+                    total += color; count++;
+                }
+            }
+            if (count < 3) return fallback;
+            var average = total / count; average.a = 1; return average;
+        }
         Material Surface(string name, Color color)
         {
             var material = new Material(Shader.Find("Dead Air/Source Surface") ?? Shader.Find("Standard"))

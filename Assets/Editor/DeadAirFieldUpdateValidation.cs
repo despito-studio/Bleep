@@ -77,7 +77,9 @@ namespace DeadAir.Editor
                 Require(rules.Interact("host", "exit") != null && rules.State.phase == "playing", "Extraction must wait for living crew.");
                 var guestSeat = DeadAirVanPresentation.SpawnPoint(data, 1);
                 guest.x = guestSeat.x; guest.y = guestSeat.y; guest.z = guestSeat.z;
+                actor.inventory.Add("tape-1");
                 Require(rules.Interact("host", "exit") == null && rules.State.phase == "departing", "Extraction must play van departure before result.");
+                Require(rules.State.securedItems.Contains("tape-1"), "Extraction must count carried loot without waiting for another playing tick.");
                 for (int i = 0; i < 25; i++) rules.Tick(.25f);
                 Require(rules.State.phase == "won", "Departure must complete into final report.");
                 checks.Add("PASSED: crew gathering, shared departure timeline and victory after animation.");

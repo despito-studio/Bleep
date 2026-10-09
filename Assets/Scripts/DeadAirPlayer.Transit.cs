@@ -92,7 +92,7 @@ namespace DeadAir
             transform.rotation = Quaternion.Euler(0, 180 - yaw * Mathf.Rad2Deg, 0);
             view.transform.localRotation = Quaternion.Euler(-pitch * Mathf.Rad2Deg, 0, Mathf.Sin(age * 3) * .4f * movement);
             view.fieldOfView = 68;
-            firstPerson.SetVisible(true);
+            firstPerson.SetVisible(!me.down);
             firstPerson.PresentTransit(progress, departing);
             Cursor.lockState = ui.HasModal || DeadAirConsole.IsOpen ? CursorLockMode.None : CursorLockMode.Locked;
             Cursor.visible = Cursor.lockState != CursorLockMode.Locked;

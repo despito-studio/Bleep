@@ -289,7 +289,7 @@ namespace DeadAir
         void BuildDossier()
         {
             dossierPanel=Modal("Case file","КЕРУВАННЯ",1020,590,out var p);
-            Text(p,"Controls left","W A S D     Рух\nМИША        Огляд\nSHIFT       Біг\nE           Взаємодія\nTAB         Журнал і речі\nКАРТА       Дошка у фургоні",22,40,155,450,240);
+            Text(p,"Controls left","W A S D     Рух\nМИША        Огляд\nSHIFT       Біг\nCTRL / C    Присісти\nE           Взаємодія\nTAB         Журнал і речі\nКАРТА       Дошка у фургоні",22,40,155,450,240);
             Text(p,"Controls right","1–5 / КОЛЕСО  Обрати річ\nF             Ліхтар\nV             Камера\nQ             Рація\nR             Використати\nG             Викинути",21,525,155,470,220);
             Text(p,"Inventory controls","Завдання, знахідки та особисті речі записані в журналі.\nESC — пауза або назад.",20,40,415,940,68).color=Muted;
             Button(p,"Close dossier","НАЗАД",40,503,940,52,()=>Close(dossierPanel));
