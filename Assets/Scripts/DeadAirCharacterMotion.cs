@@ -46,6 +46,7 @@ namespace DeadAir
         Quaternion headRest = Quaternion.identity, chestRest = Quaternion.identity;
         Quaternion rightArmRest = Quaternion.identity, leftArmRest = Quaternion.identity;
         Quaternion rightForearmRest = Quaternion.identity, leftForearmRest = Quaternion.identity;
+        float rightArmRestPitch, leftArmRestPitch, rightLegRestPitch, leftLegRestPitch;
         Quaternion pelvisRest = Quaternion.identity;
         Vector3 pelvisRestPosition;
         Quaternion spineRest = Quaternion.identity;
@@ -294,6 +295,10 @@ namespace DeadAir
             if (leftArm != null) leftArmRest = leftArm.localRotation;
             if (rightForearm != null) rightForearmRest = rightForearm.localRotation;
             if (leftForearm != null) leftForearmRest = leftForearm.localRotation;
+            rightArmRestPitch = SagittalPitch(rightArm, rightForearm);
+            leftArmRestPitch = SagittalPitch(leftArm, leftForearm);
+            rightLegRestPitch = SagittalPitch(rightThigh, rightShin);
+            leftLegRestPitch = SagittalPitch(leftThigh, leftShin);
             if (pelvis != null) { pelvisRest = pelvis.localRotation; pelvisRestPosition = pelvis.localPosition; }
             if (spine != null) { spineRest = spine.localRotation; spineRestPosition = spine.localPosition; }
             if (rightSocket == null || leftSocket == null) return;
@@ -457,32 +462,53 @@ namespace DeadAir
 
         void PoseRelaxedArms()
         {
-            // Source export lowers its T-pose by only 65 degrees. Idle keeps the
-            // remaining A-pose and gait clips add sagittal swing without closing
-            // it. Correct actual shoulder/elbow directions, not imported Euler
-            // axes, and leave contact-driven special poses to their own solvers.
+            // After the supplied rest-pose bake, arm local X points forward:
+            // the authored X gait curves flap laterally instead of swinging.
+            // Use the actual opposite leg's sagittal motion at the authored
+            // 0.7 arm/leg amplitude, with a relaxed 10-degree lateral hang.
             if (firstPersonPresentation || ladderClimbing || crouching || seatedWeight > .001f || actionTime >= 0 ||
                 clipName == "UseItem" || previousClip == "UseItem" && transition < 1) return;
-            RelaxArm(rightArm, rightForearm);
-            RelaxArm(leftArm, leftForearm);
+            bool gait = clipName == "Walk" || clipName == "Run" ||
+                transition < 1 && (previousClip == "Walk" || previousClip == "Run");
+            RelaxArm(rightArm, rightForearm, rightHand, gait,
+                rightArmRestPitch, SagittalPitch(leftThigh, leftShin) - leftLegRestPitch);
+            RelaxArm(leftArm, leftForearm, leftHand, gait,
+                leftArmRestPitch, SagittalPitch(rightThigh, rightShin) - rightLegRestPitch);
         }
 
-        void RelaxArm(Transform shoulder, Transform elbow)
+        float SagittalPitch(Transform parent, Transform child)
+        {
+            if (parent == null || child == null) return 0;
+            Vector3 direction = child.position - parent.position;
+            return Mathf.Atan2(Vector3.Dot(direction, transform.forward), -Vector3.Dot(direction, transform.up));
+        }
+
+        void RelaxArm(Transform shoulder, Transform elbow, Transform wrist, bool gait, float restPitch, float oppositeLegPitch)
         {
             if (shoulder == null || elbow == null) return;
             Vector3 direction = elbow.position - shoulder.position;
-            float lengthSquared = direction.sqrMagnitude;
-            if (lengthSquared < .0001f) return;
-            float forward = Vector3.Dot(direction, transform.forward);
-            float outboard = Vector3.Dot(direction, transform.right);
-            float downward = Vector3.Dot(direction, transform.up);
-            float hangingLength = Mathf.Sqrt(Mathf.Max(0, lengthSquared - forward * forward));
-            float relaxedOutboard = hangingLength * Mathf.Sin(10 * Mathf.Deg2Rad);
-            if (downward >= 0 || Mathf.Abs(outboard) <= relaxedOutboard) return;
-            float targetOutboard = Mathf.Sign(outboard) * relaxedOutboard;
-            float targetDownward = -Mathf.Sqrt(Mathf.Max(0, hangingLength * hangingLength - targetOutboard * targetOutboard));
-            Vector3 target = transform.right * targetOutboard + transform.up * targetDownward + transform.forward * forward;
+            float length = direction.magnitude;
+            if (length < .01f) return;
+            float elbowBend = wrist == null ? 0 : Vector3.Angle(direction, wrist.position - elbow.position) * Mathf.Deg2Rad;
+            float pitch = gait ? restPitch + Mathf.Clamp(oppositeLegPitch, -.9f, .9f) * .7f : SagittalPitch(shoulder, elbow);
+            float side = Mathf.Sign(Vector3.Dot(shoulder.position - (pelvis == null ? transform.position : pelvis.position), transform.right));
+            if (side == 0) side = Mathf.Sign(Vector3.Dot(direction, transform.right));
+            Vector3 target = HangingArmDirection(pitch, side) * length;
             shoulder.rotation = Quaternion.FromToRotation(direction, target) * shoulder.rotation;
+            if (wrist == null) return;
+            // Preserve the sampled elbow bend but put it into the same sagittal
+            // plane. Its old local-X curve otherwise still flares the wrist.
+            Vector3 lower = wrist.position - elbow.position;
+            Vector3 lowerTarget = HangingArmDirection(pitch + elbowBend, side) * lower.magnitude;
+            elbow.rotation = Quaternion.FromToRotation(lower, lowerTarget) * elbow.rotation;
+        }
+
+        Vector3 HangingArmDirection(float pitch, float side)
+        {
+            float lateral = Mathf.Sin(10 * Mathf.Deg2Rad);
+            float sagittal = Mathf.Cos(10 * Mathf.Deg2Rad);
+            return transform.right * (side * lateral) +
+                (transform.forward * Mathf.Sin(pitch) - transform.up * Mathf.Cos(pitch)) * sagittal;
         }
 
         void PoseGaze()
@@ -657,13 +683,13 @@ namespace DeadAir
             const float shoulder = -12, elbow = -35;
             if (!pack)
             {
-                if (rightArm != null) rightArm.localRotation *= Quaternion.Euler(shoulder, 0, 0);
-                if (rightForearm != null) rightForearm.localRotation *= Quaternion.Euler(elbow, 0, 0);
+                if (rightArm != null) rightArm.rotation = Quaternion.AngleAxis(shoulder, transform.right) * rightArm.rotation;
+                if (rightForearm != null) rightForearm.rotation = Quaternion.AngleAxis(elbow, transform.right) * rightForearm.rotation;
             }
             if (pack)
             {
-                if (leftArm != null) leftArm.localRotation *= Quaternion.Euler(shoulder, 0, 0);
-                if (leftForearm != null) leftForearm.localRotation *= Quaternion.Euler(elbow, 0, 0);
+                if (leftArm != null) leftArm.rotation = Quaternion.AngleAxis(shoulder, transform.right) * leftArm.rotation;
+                if (leftForearm != null) leftForearm.rotation = Quaternion.AngleAxis(elbow, transform.right) * leftForearm.rotation;
             }
             if (propMode == "flashlight" && rightHand != null)
             {

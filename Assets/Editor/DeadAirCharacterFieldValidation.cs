@@ -160,7 +160,8 @@ namespace DeadAir.Editor
                 if (clip != "Idle")
                     for (int side = 0; side < 2; side++)
                         Require(armMax[side] - armMin[side] > .02f && footMax[side] - footMin[side] > .06f,
-                            role + " " + clip + " lost its actual arm swing or foot stride.");
+                            role + " " + clip + " lost its actual arm swing or foot stride: arm=" +
+                            (armMax[side] - armMin[side]).ToString("F4") + " m, foot=" + (footMax[side] - footMin[side]).ToString("F4") + " m.");
                 geometryReport.Add(role + ": PASSED " + clip + " empty-hand posture at eight phases; maximum lateral upper-arm abduction=" +
                     maximumAbduction.ToString("F2") + " degrees, arm fore/aft spans=" + (armMax[0] - armMin[0]).ToString("F3") + "/" +
                     (armMax[1] - armMin[1]).ToString("F3") + " m, foot spans=" + (footMax[0] - footMin[0]).ToString("F3") + "/" +
