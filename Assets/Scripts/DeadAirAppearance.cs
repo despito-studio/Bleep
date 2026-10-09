@@ -322,7 +322,7 @@ namespace DeadAir
                 var poses = new Matrix4x4[bones.Length];
                 for (int index = 0; index < bones.Length; index++) poses[index] = bones[index].worldToLocalMatrix * root.localToWorldMatrix;
                 mesh.bindposes = poses; mesh.RecalculateNormals(); mesh.RecalculateBounds(); owned.Add(mesh);
-                var child = new GameObject(name); child.transform.SetParent(parent, false);
+                var child = new GameObject(name); child.layer = parent.gameObject.layer; child.transform.SetParent(parent, false);
                 var renderer = child.AddComponent<SkinnedMeshRenderer>(); renderer.sharedMesh = mesh; renderer.sharedMaterial = material;
                 renderer.bones = bones; renderer.rootBone = parent; renderer.localBounds = new Bounds(mesh.bounds.center, mesh.bounds.size + Vector3.one * .35f);
                 renderer.updateWhenOffscreen = false; renderer.receiveShadows = true; renderer.shadowCastingMode = ShadowCastingMode.On;

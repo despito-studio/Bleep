@@ -21,6 +21,10 @@ namespace DeadAir
             Require(ui.HasModal, "Clothing editor must be a working focused modal.");
             GameObject.Find("No clothing").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
             yield return Save("field-01b-adult-no-clothing-option");
+            var preview = FindObjectsByType<DeadAirAppearance>(FindObjectsSortMode.None).FirstOrDefault(actor => actor.name.StartsWith("Selected operative"));
+            Require(preview != null && preview.HasAdultBody, "Wardrobe preview must show the generated adult body.");
+            foreach (var surface in preview.GetComponentsInChildren<SkinnedMeshRenderer>())
+                Require(surface.gameObject.layer == preview.gameObject.layer, "All visible wardrobe body layers must reach the actual preview camera.");
             ui.TryCloseTopModal();
             session.Host("Field verifier", "engineer", true, true);
             session.Command(new NetPacket { type = "start" });
