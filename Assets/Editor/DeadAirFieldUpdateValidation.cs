@@ -62,18 +62,26 @@ namespace DeadAir.Editor
                 rules.EquipMap("host", false);
                 checks.Add("PASSED: world map available at van board only; UI and host agree.");
                 rules.State.phase = "lobby";
-                rules.SetClothing("host", 0);
-                Require(actor.clothingMask == 0, "No-clothing preset must survive authority.");
-                rules.SetClothing("host", DeadAirClothing.All);
-                Require(actor.clothingMask == DeadAirClothing.All, "Garment flags must survive authority.");
-                rules.State.phase = "playing";
-                rules.SetClothing("host", 0);
-                Require(actor.clothingMask == DeadAirClothing.All, "Clothing edits must remain lobby-only.");
-                checks.Add("PASSED: clothing presets and garment flags accepted only in lobby.");
+                var guest = rules.State.Player("guest");
+                Require(actor.clothingMask == -1 && guest.clothingMask == -1, "New crew must wear authored default clothes.");
+                actor.clothingMask = 0;
+                rules.SetClass("host", "engineer");
+                Require(actor.clothingMask == -1, "Changing class must discard legacy outfit edits.");
+                actor.clothingMask = guest.clothingMask = 0;
+                Require(rules.Start("host") == null, "The authored-clothing start fixture must start the operation.");
+                foreach (var crew in rules.State.players)
+                    Require(crew.clothingMask == -1, "Starting must restore every crew member's authored clothes.");
+                rules.State.phase = "lost";
+                actor.clothingMask = guest.clothingMask = 0;
+                Require(rules.Restart("host") == null, "The authored-clothing restart fixture must restart the operation.");
+                foreach (var crew in rules.State.players)
+                    Require(crew.clothingMask == -1, "Restarting must restore every crew member's authored clothes.");
+                rules.State.elapsed = DeadAirVanPresentation.ArrivalDuration + .1f;
+                checks.Add("PASSED: authored character clothes restored on join, class selection, start and restart; legacy edits discarded.");
                 var exit = data.Objective("exit"); rules.State.broadcast = true;
                 var hostExit = DeadAirVanPresentation.SourcePoint(data, new Vector3(-.5f, .6f, -.3f));
                 actor.x = hostExit.x; actor.y = hostExit.y; actor.z = hostExit.z;
-                var guest = rules.State.Player("guest"); guest.x = 0; guest.y = 0; guest.z = 19;
+                guest.x = 0; guest.y = 0; guest.z = 19;
                 Require(rules.Interact("host", "exit") != null && rules.State.phase == "playing", "Extraction must wait for living crew.");
                 var guestSeat = DeadAirVanPresentation.SpawnPoint(data, 1);
                 guest.x = guestSeat.x; guest.y = guestSeat.y; guest.z = guestSeat.z;

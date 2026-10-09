@@ -43,7 +43,7 @@ namespace DeadAir
         static readonly string[] CompassDirections={"Пн","Пн-Сх","Сх","Пд-Сх","Пд","Пд-Зх","Зх","Пн-Зх"};
         public string SelectedClass=>selectedClass;
         public event Action<string> ClassSelected;
-        public bool HasModal=>Active(menuPanel)||Active(lobbyPanel)||Active(pausePanel)||Active(mapPanel)||Active(calibrationPanel)||Active(endingPanel)||Active(settingsPanel)||Active(dossierPanel)||Active(joinPanel)||Active(chapterPanel)||Active(preparationPanel)||Active(networkPanel)||Active(inventoryPanel)||Active(quitPanel)||Active(bookPanel)||Active(clothingPanel);
+        public bool HasModal=>Active(menuPanel)||Active(lobbyPanel)||Active(pausePanel)||Active(mapPanel)||Active(calibrationPanel)||Active(endingPanel)||Active(settingsPanel)||Active(dossierPanel)||Active(joinPanel)||Active(chapterPanel)||Active(preparationPanel)||Active(networkPanel)||Active(inventoryPanel)||Active(quitPanel)||Active(bookPanel);
         public bool RadioOpen=>Active(radioPanel);
         public bool MapOpen=>Active(mapPanel);
         public bool PresentationHidden=>interfaceGroup!=null&&interfaceGroup.alpha==0;
@@ -66,7 +66,6 @@ namespace DeadAir
             designRoot=new GameObject("Safe interface frame",typeof(RectTransform)).GetComponent<RectTransform>();designRoot.SetParent(canvas.transform,false);designRoot.anchorMin=designRoot.anchorMax=designRoot.pivot=new Vector2(.5f,.5f);designRoot.sizeDelta=new Vector2(1920,1080);
             BuildMenu();BuildLobby();BuildHud();BuildRadio();BuildPause();BuildMap();BuildCalibration();BuildEnding();BuildSettings();BuildDossier();BuildJoin();
             BuildSupplies();
-            BuildClothingEditor();
             toastText=Text(designRoot,"Notification","",20,510,210,900,64,TextAnchor.MiddleCenter);toastText.color=Ink;toastText.gameObject.SetActive(false);
             session.Error+=Toast;session.StateChanged+=RefreshPhase;DeadAirSettings.Changed+=RefreshGraphicsSettings;
             SelectClass(selectedClass);RefreshPhase();FocusPanel(menuPanel);
@@ -309,7 +308,7 @@ namespace DeadAir
         {
             var state=session.State;string phase=state?.phase;
             bool changed=phase!=previousPhase;
-            if(changed){previousPhase=phase;HideRadio();foreach(var panel in new[]{pausePanel,mapPanel,calibrationPanel,settingsPanel,dossierPanel,joinPanel,chapterPanel,preparationPanel,networkPanel,inventoryPanel,quitPanel,bookPanel,clothingPanel})if(panel!=null)panel.SetActive(false);}
+            if(changed){previousPhase=phase;HideRadio();foreach(var panel in new[]{pausePanel,mapPanel,calibrationPanel,settingsPanel,dossierPanel,joinPanel,chapterPanel,preparationPanel,networkPanel,inventoryPanel,quitPanel,bookPanel})if(panel!=null)panel.SetActive(false);}
             menuPanel.SetActive(state==null);lobbyPanel.SetActive(phase=="lobby");hudPanel.SetActive(phase=="playing");endingPanel.SetActive(phase=="won"||phase=="lost");
             if(state==null){RefreshModalInput(changed);return;}
             RefreshChapterLabels();
@@ -425,7 +424,7 @@ namespace DeadAir
             return itemId;
         }
         public bool TryCloseTopModal()
-        {if(DeadAirScarePresentation.FullscreenActive)return true;if(RadioOpen){HideRadio();return true;}GameObject top=null;foreach(var p in new[]{settingsPanel,dossierPanel,joinPanel,calibrationPanel,mapPanel,chapterPanel,preparationPanel,networkPanel,inventoryPanel,quitPanel,bookPanel,clothingPanel,endingPanel})if(Active(p)&&(top==null||p.transform.GetSiblingIndex()>top.transform.GetSiblingIndex()))top=p;if(top==endingPanel&&top!=null){ReturnToMenu();return true;}if(top!=null){Close(top);return true;}return false;}
+        {if(DeadAirScarePresentation.FullscreenActive)return true;if(RadioOpen){HideRadio();return true;}GameObject top=null;foreach(var p in new[]{settingsPanel,dossierPanel,joinPanel,calibrationPanel,mapPanel,chapterPanel,preparationPanel,networkPanel,inventoryPanel,quitPanel,bookPanel,endingPanel})if(Active(p)&&(top==null||p.transform.GetSiblingIndex()>top.transform.GetSiblingIndex()))top=p;if(top==endingPanel&&top!=null){ReturnToMenu();return true;}if(top!=null){Close(top);return true;}return false;}
         public void ToggleRadio(){if(DeadAirScarePresentation.FullscreenActive)return;if(RadioOpen)HideRadio();else if(session.State?.phase=="playing"&&!HasModal)radioPanel.SetActive(true);}
         public void HideRadio(){if(radioPanel!=null)radioPanel.SetActive(false);}
         public void ShowPause(bool shown){if(shown){pausePanel.transform.Find("Pause card/Pause note").GetComponent<UnityEngine.UI.Text>().text=session.State?.players.Count>1?"Мережева гра не призупиняється.":"";Open(pausePanel);}else Close(pausePanel);}

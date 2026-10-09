@@ -91,7 +91,6 @@ namespace DeadAir
             preparationChapter=Text(p,"Selected chapter","",20,42,155,950,42);preparationChapter.color=Gold;
             Text(p,"Name caption","ІМ’Я",18,44,217,920,28).color=Muted;
             nameField=Field(p,"Operator name",PlayerPrefs.GetString("DeadAir.PlayerName","Оператор"),42,252,966,53);
-            Button(p,"Edit preparation clothing","ОДЯГ ПЕРСОНАЖА",42,316,966,46,ShowClothingEditor);
             string[] ids={"engineer","operator","journalist","dispatcher"};
             for(int i=0;i<ids.Length;i++)
             {
@@ -247,7 +246,6 @@ namespace DeadAir
             lobbyPlayers=Text(p,"Team","",22,119,358,740,450);
             lobbyChapter=Text(p,"Lobby chapter","",22,720,626,470,184);lobbyChapter.color=Ink;
             lobbyChapterButton=Button(p,"Lobby chapters","ЗМІНИТИ ГЛАВУ",721,830,467,52,ShowChapters);
-            Button(p,"Edit lobby clothing","ОДЯГ ПЕРСОНАЖА",1210,830,588,52,ShowClothingEditor);
             Fill(p,"Lobby footer",0,894,1920,186,new Color(.045f,.032f,.031f,.92f));
             ClassPicker(p,116,963,896);
             startButton=Button(p,"Start operation","ПОЧАТИ ГЛАВУ",1170,954,350,62,()=>session.Command(new NetPacket{type="start"}),true);
@@ -436,7 +434,7 @@ namespace DeadAir
             if(focusPanels==null)
             {
                 focusPanels=new[]{menuPanel,lobbyPanel,pausePanel,mapPanel,calibrationPanel,
-                    endingPanel,settingsPanel,dossierPanel,joinPanel,chapterPanel,preparationPanel,networkPanel,inventoryPanel,quitPanel,bookPanel,clothingPanel};
+                    endingPanel,settingsPanel,dossierPanel,joinPanel,chapterPanel,preparationPanel,networkPanel,inventoryPanel,quitPanel,bookPanel};
                 focusGroups=new CanvasGroup[focusPanels.Length];
                 for(int i=0;i<focusPanels.Length;i++)
                 {

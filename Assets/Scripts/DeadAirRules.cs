@@ -102,6 +102,7 @@ namespace DeadAir
 
         static void ResetRoleItem(PlayerState player)
         {
+            player.clothingMask = -1;
             player.inventory.RemoveAll(DeadAirRoleItems.IsRoleItem);
             var item = DeadAirRoleItems.ForClass(player.characterClass);
             if(item != null)player.inventory.Add(item);
@@ -143,14 +144,6 @@ namespace DeadAir
                 player.uniqueActionCancelled = true;
             }
             else player.uniqueItemEquipped = player.HasSelectedRoleItem && !player.camera;
-            Dirty = true;
-        }
-
-        public void SetClothing(string id, int mask)
-        {
-            var player = State.Player(id);
-            if (State.phase != "lobby" || player == null) return;
-            player.clothingMask = DeadAirClothing.Sanitize(mask);
             Dirty = true;
         }
 

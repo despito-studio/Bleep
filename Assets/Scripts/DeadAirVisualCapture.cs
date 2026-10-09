@@ -21,7 +21,7 @@ namespace DeadAir
         DeadAirFrameRenderer frameRenderer;
         DeadAirScarePresentation captureScare;
         DeadAirWorld captureWorld;
-        bool officeCapture, menuCapture, repairCapture, lightingCapture, horrorCapture, characterCapture, indieCapture, updateCapture, graphicsCapture, fieldCapture, captureWithoutEquipment;
+        bool officeCapture, menuCapture, repairCapture, lightingCapture, horrorCapture, characterCapture, indieCapture, updateCapture, graphicsCapture, fieldCapture, bodyCapture, captureWithoutEquipment;
         bool preferencesCaptured, hadPlayerName, hadChapter;
         string originalPlayerName, originalChapter;
         readonly Dictionary<string,float> originalSliders = new Dictionary<string,float>();
@@ -46,7 +46,7 @@ namespace DeadAir
                 case "-deadAirCapture": case "-deadAirOfficeCapture": case "-deadAirMenuCapture":
                 case "-deadAirRepairCapture": case "-deadAirLightingCapture": case "-deadAirHorrorCapture":
                 case "-deadAirCharacterCapture": case "-deadAirIndieCapture": case "-deadAirUpdateCapture":
-                case "-deadAirGraphicsCapture": case "-deadAirFieldCapture": return true;
+                case "-deadAirGraphicsCapture": case "-deadAirFieldCapture": case "-deadAirBodyCapture": return true;
                 default: return false;
             }
         }
@@ -62,21 +62,22 @@ namespace DeadAir
             updateCapture = Array.IndexOf(args, "-deadAirUpdateCapture") >= 0;
             graphicsCapture = Array.IndexOf(args, "-deadAirGraphicsCapture") >= 0;
             fieldCapture = Array.IndexOf(args, "-deadAirFieldCapture") >= 0;
+            bodyCapture = Array.IndexOf(args, "-deadAirBodyCapture") >= 0;
             if (string.IsNullOrEmpty(output)) { enabled = false; return; }
             if (!Path.IsPathRooted(output)) throw new ArgumentException("-deadAirCapture requires an absolute output folder.");
             Directory.CreateDirectory(output);
-            if(menuCapture||repairCapture||lightingCapture||horrorCapture||characterCapture||indieCapture||updateCapture||graphicsCapture||fieldCapture)
+            if(menuCapture||repairCapture||lightingCapture||horrorCapture||characterCapture||indieCapture||updateCapture||graphicsCapture||fieldCapture||bodyCapture)
             {
                 hadPlayerName=PlayerPrefs.HasKey("DeadAir.PlayerName");originalPlayerName=PlayerPrefs.GetString("DeadAir.PlayerName");
                 hadChapter=PlayerPrefs.HasKey("DeadAir.Chapter");originalChapter=PlayerPrefs.GetString("DeadAir.Chapter");
                 foreach(string key in new[]{"DeadAir.Volume","DeadAir.AmbienceVolume","DeadAir.EffectsVolume","DeadAir.MouseSensitivity","DeadAir.RenderScale","DeadAir.Brightness"})
                     originalSliders[key]=PlayerPrefs.HasKey(key)?PlayerPrefs.GetFloat(key):float.NaN;
-                foreach(string key in new[]{"DeadAir.Fullscreen","DeadAir.Muted","DeadAir.FilmGrain","DeadAir.Flicker","DeadAir.Quality","DeadAir.GraphicsQuality","DeadAir.ShadowQuality","DeadAir.AmbientOcclusion","DeadAir.Bloom","DeadAir.Antialiasing","DeadAir.Reflections","DeadAir.ClothingMask"})
+                foreach(string key in new[]{"DeadAir.Fullscreen","DeadAir.Muted","DeadAir.FilmGrain","DeadAir.Flicker","DeadAir.Quality","DeadAir.GraphicsQuality","DeadAir.ShadowQuality","DeadAir.AmbientOcclusion","DeadAir.Bloom","DeadAir.Antialiasing","DeadAir.Reflections"})
                     originalToggles[key]=PlayerPrefs.HasKey(key)?(int?)PlayerPrefs.GetInt(key):null;
                 preferencesCaptured=true;
             }
             if(Application.isBatchMode)InitializeOffscreenCapture();
-            StartCoroutine(fieldCapture?CaptureFieldUpdate():graphicsCapture?CaptureV176():updateCapture?CaptureUpdate():indieCapture?CaptureIndie():characterCapture?CaptureImportedCharacters():horrorCapture?CaptureHorror():lightingCapture?CaptureLighting():repairCapture?CaptureRepairs():menuCapture?CaptureMenu():officeCapture?CaptureOffice():Capture());
+            StartCoroutine(bodyCapture?CaptureFirstPersonBody():fieldCapture?CaptureFieldUpdate():graphicsCapture?CaptureV176():updateCapture?CaptureUpdate():indieCapture?CaptureIndie():characterCapture?CaptureImportedCharacters():horrorCapture?CaptureHorror():lightingCapture?CaptureLighting():repairCapture?CaptureRepairs():menuCapture?CaptureMenu():officeCapture?CaptureOffice():Capture());
         }
 
         IEnumerator CaptureIndie()

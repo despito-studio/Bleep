@@ -13,6 +13,7 @@ namespace DeadAir
         Camera view;
         Light flashlight;
         DeadAirFirstPersonRig firstPerson;
+        DeadAirFirstPersonBody firstPersonBody;
         DeadAirMenuBackdrop menuBackdrop;
         GameObject menuCharacter;
         string menuClass;
@@ -35,6 +36,7 @@ namespace DeadAir
         public bool Sprinting { get; private set; }
         public float Stamina => stamina;
         public Camera ViewCamera => view;
+        public DeadAirFirstPersonBody FirstPersonBody => firstPersonBody;
         public bool Noclip { get; private set; }
         public void ToggleNoclip() => SetNoclip(!Noclip);
         public void SetNoclip(bool enabled)
@@ -90,6 +92,7 @@ namespace DeadAir
             foreach(var argument in Environment.GetCommandLineArgs())
                 if(argument=="-deadAirCapture"||argument=="-deadAirOfficeCapture"||argument=="-deadAirMenuCapture"||argument=="-deadAirRepairCapture"||argument=="-deadAirLightingCapture"||argument=="-deadAirHorrorCapture"||argument=="-deadAirMovementVerification"||argument=="-deadAirIndieCapture"||argument=="-deadAirUpdateCapture"||argument=="-deadAirGraphicsCapture")verificationAllowed=true;
             if(Array.IndexOf(Environment.GetCommandLineArgs(), "-deadAirFieldCapture") >= 0) verificationAllowed = true;
+            if(Array.IndexOf(Environment.GetCommandLineArgs(), "-deadAirBodyCapture") >= 0) verificationAllowed = true;
             controller = gameObject.AddComponent<CharacterController>();
             controller.height = 1.7f; controller.radius = .22f; controller.center = new Vector3(0, .85f, 0);
             controller.stepOffset = .28f; controller.slopeLimit = 48; controller.skinWidth = .035f;
@@ -117,7 +120,21 @@ namespace DeadAir
             flashlight.transform.localPosition = new Vector3(.16f, -.12f, .15f);
             firstPerson = gameObject.AddComponent<DeadAirFirstPersonRig>();
             firstPerson.Initialize(view, world);
+            firstPersonBody = gameObject.AddComponent<DeadAirFirstPersonBody>();
             menuBackdrop = gameObject.AddComponent<DeadAirMenuBackdrop>();
+        }
+
+        void LateUpdate()
+        {
+            var state = session?.State;
+            var me = state?.Player(session.LocalId);
+            if (firstPersonBody == null) return;
+            if (me == null || (!IsPlaying && !inspectionPose)) { firstPersonBody.SetVisible(false); return; }
+            if (!climbingLadder && !windowCutsceneActive)
+            {
+                var eye = view.transform.localPosition; eye.z = .08f; view.transform.localPosition = eye;
+            }
+            firstPersonBody.Present(me, state, transform, yaw, pitch, inspectionPose ? me.crouching : Crouching, Sprinting);
         }
 
         void Update()
@@ -823,10 +840,11 @@ namespace DeadAir
                     viewObject.transform.position = new Vector3(-p.x, p.y, p.z);
                 }
                 viewObject.transform.position = Vector3.Lerp(viewObject.transform.position, new Vector3(-p.x, p.y + (p.down ? .2f : 0), p.z) + DeadAirVanPresentation.TransitOffset(state), Time.deltaTime * 12);
-                viewObject.transform.rotation = p.ladderClimbing && !p.down ?
-                    LadderFacingRotation(Mathf.Clamp(state.elapsed - p.ladderStartedAt, 0, DeadAirLadder.Duration), p.ladderUp) :
-                    Quaternion.Euler(0, 180 - p.yaw * Mathf.Rad2Deg, p.down ? -90 : 0);
                 remoteMotions.TryGetValue(p.id, out var motion);
+                if (motion == null || p.down || p.ladderClimbing || DeadAirVanPresentation.SeatedWeight(state) > .001f)
+                    viewObject.transform.rotation = p.ladderClimbing && !p.down ?
+                        LadderFacingRotation(Mathf.Clamp(state.elapsed - p.ladderStartedAt, 0, DeadAirLadder.Duration), p.ladderUp) :
+                        Quaternion.Euler(0, 180 - p.yaw * Mathf.Rad2Deg, p.down ? -90 : 0);
                 if (motion != null) { motion.SetTransitPose(DeadAirVanPresentation.SeatedWeight(state)); motion.Present(p, state.elapsed, state.paused, state.phase == "playing"); }
                 viewObject.SetActive(string.IsNullOrEmpty(p.hiding));
             }
@@ -849,6 +867,7 @@ namespace DeadAir
             Cursor.lockState = CursorLockMode.None; Cursor.visible = true;
             flashlight.enabled = false;
             firstPerson.SetVisible(false);
+            firstPersonBody.SetVisible(false);
             InteractionId = InteractionLabel = null;
             menuBackdrop.Frame(view, transform);
             UpdateMenuCharacter();
@@ -858,6 +877,7 @@ namespace DeadAir
         {
             if (controller != null) controller.enabled = false;
             transform.position = new Vector3(-x, y, z);
+            if (firstPersonBody != null) firstPersonBody.ResetPose(yaw, pitch);
             verticalVelocity = 0;
             if (controller != null && !Noclip) controller.enabled = true;
             sentMovement.Clear();
@@ -880,7 +900,7 @@ namespace DeadAir
         void UpdateMenuCharacter()
         {
             string selected = ui.SelectedClass;
-            int mask = ui.ClothingPreviewMask;
+            const int mask = -1;
             if (menuCharacter != null && menuClass == selected) { DeadAirClothing.Apply(menuCharacter, mask, selected); return; }
             if (menuCharacter != null) Destroy(menuCharacter);
             var prefab = Resources.Load<GameObject>("World/character_" + selected);

@@ -14,11 +14,17 @@ namespace DeadAir
         public string ClassId { get => classId; set => classId = value; }
         public float GripContactError { get; private set; }
         public Light FlashlightEmitter => flashlightEmitter;
+        public Quaternion BodyRotation => gaze.BodyRotation;
+        public float BodyYawDegrees => gaze.BodyYawDegrees;
+        public float HeadYawDegrees => gaze.HeadYawDegrees;
+        public float HeadPitchDegrees => gaze.HeadPitchDegrees;
+        public bool TurningInPlace => gaze.TurningInPlace;
 
         readonly List<UnityEngine.Object> owned = new List<UnityEngine.Object>();
         readonly Dictionary<string, Transform> props = new Dictionary<string, Transform>();
         readonly List<Transform> packedCigarettes = new List<Transform>();
         readonly List<Transform> smoke = new List<Transform>();
+        readonly DeadAirGaze gaze = new DeadAirGaze();
         Animation animationPlayer;
         Transform rightSocket, leftSocket, rightArm, leftArm, rightForearm, leftForearm, rightHand, leftHand, head, packLid, cigarette, lighter, flame, ember, compassNeedle, pendulum;
         Transform rightThigh, leftThigh, rightShin, leftShin, rightFoot, leftFoot, pelvis, chest;
@@ -26,6 +32,12 @@ namespace DeadAir
         DeadAirAppearance appearance;
         int secondaryFrame = -1;
         float currentYaw, seatedWeight;
+        float lastHeight;
+        int previousGazeMode = -1;
+        bool gazeEnabled;
+        bool firstPersonPresentation, hasLocomotionOverride, externalCrouching;
+        float externalSpeed;
+        Quaternion headRest = Quaternion.identity, chestRest = Quaternion.identity;
         Vector3 compassHeading = Vector3.forward;
         float ladderAge;
         Vector3 rightGrip, leftGrip, mouthLocal = new Vector3(0, .092f, .132f);
@@ -40,6 +52,8 @@ namespace DeadAir
         int lastSequence = -1;
         Vector2 lastPosition;
         bool initialized, hasSnapshot, preview;
+        Quaternion EquipmentAimRotation => gazeEnabled ? DeadAirGaze.ViewRotation(currentYaw, aimPitch) :
+            transform.rotation * Quaternion.Euler(-aimPitch * Mathf.Rad2Deg, 0, 0);
 
         void Awake() { Initialize(); }
 
@@ -66,9 +80,30 @@ namespace DeadAir
         }
 
         public void SetLocomotionPose(bool isCrouching, float horizontalSpeed)
-        { crouching = isCrouching && !ladderClimbing; moveSpeed = Mathf.Clamp(horizontalSpeed, 0, 8); }
+        {
+            externalCrouching = isCrouching; externalSpeed = Mathf.Clamp(horizontalSpeed, 0, 8); hasLocomotionOverride = true;
+            crouching = isCrouching && !ladderClimbing; moveSpeed = externalSpeed;
+        }
 
         public void SetTransitPose(float weight) { seatedWeight = Mathf.Clamp01(weight); }
+
+        /// <summary>The owner's imported full body uses the existing FPS overlay for hands/items.</summary>
+        public void SetFirstPersonPresentation(bool enabled)
+        {
+            Initialize(); firstPersonPresentation = enabled;
+            if (!enabled) { propMode = null; if (flashlightEmitter != null) flashlightEmitter.gameObject.SetActive(true); return; }
+            foreach (var prop in props) prop.Value.gameObject.SetActive(false);
+            if (cigarette != null) cigarette.gameObject.SetActive(false);
+            if (lighter != null) lighter.gameObject.SetActive(false);
+            if (flashlightEmitter != null) { flashlightEmitter.enabled = false; flashlightEmitter.gameObject.SetActive(false); }
+            propMode = "empty";
+        }
+
+        public void ResetGaze(float yaw, float pitch = 0)
+        {
+            currentYaw = yaw; aimPitch = Mathf.Clamp(pitch, -1.35f, 1.35f);
+            gaze.Step(yaw, pitch, 0, 0, true); previousGazeMode = -1;
+        }
 
         public void ConfigureFlashlight(ClassBonuses bonuses)
         {
@@ -82,7 +117,7 @@ namespace DeadAir
             if (player == null) return;
             Initialize();
             preview = false;
-            DeadAirClothing.Apply(gameObject, player.clothingMask, classId);
+            DeadAirClothing.Apply(gameObject, -1, classId);
             appearance = GetComponent<DeadAirAppearance>();
             crouching = player.crouching && !player.down && !player.ladderClimbing;
             motionPaused = paused || player.down;
@@ -95,7 +130,8 @@ namespace DeadAir
             ladderAge = Mathf.Clamp(elapsed - player.ladderStartedAt, 0, DeadAirLadder.Duration);
             float dt = paused || player.down ? 0 : Mathf.Min(Time.deltaTime, .1f);
             var position = new Vector2(player.x, player.z);
-            bool reset = !hasSnapshot || elapsed < lastElapsed || player.uniqueActionSequence < lastSequence;
+            bool teleport = hasSnapshot && (Vector2.SqrMagnitude(position - lastPosition) >= 9 || Mathf.Abs(player.y - lastHeight) >= 2);
+            bool reset = !hasSnapshot || elapsed < lastElapsed || player.uniqueActionSequence < lastSequence || teleport;
             if (reset)
             {
                 lastPosition = position;
@@ -114,6 +150,21 @@ namespace DeadAir
                 lastPosition = position;
             }
             if (!paused && elapsed - movementAt > .22f) moveSpeed = 0;
+            if (hasLocomotionOverride)
+            {
+                moveSpeed = externalSpeed;
+                crouching = externalCrouching && !player.down && !ladderClimbing;
+                hasLocomotionOverride = false;
+            }
+            int gazeMode = player.down ? 3 : ladderClimbing ? 2 : seatedWeight > .001f ? 1 : 0;
+            gazeEnabled = !player.down;
+            gaze.Step(player.yaw, player.down ? 0 : player.pitch, moveSpeed, dt, reset || gazeMode != previousGazeMode,
+                gazeMode != 0, transform.eulerAngles.y);
+            // The parent owns constrained ladder/down/transit rotations. Normal
+            // local and remote roots use precisely the same body-follow model.
+            if (gazeMode == 0) transform.rotation = gaze.BodyRotation;
+            previousGazeMode = gazeMode;
+            lastHeight = player.y;
             hasSnapshot = true;
             lastElapsed = elapsed;
             lastSequence = player.uniqueActionSequence;
@@ -124,7 +175,7 @@ namespace DeadAir
 
             if (!paused && !player.down)
             {
-                SelectClip(ladderClimbing ? "Idle" : actionTime >= 0 ? "UseItem" : moveSpeed > .15f ? (player.sprinting ? "Run" : "Walk") : "Idle");
+                SelectClip(ladderClimbing ? "Idle" : actionTime >= 0 ? "UseItem" : moveSpeed > .15f ? (player.sprinting ? "Run" : "Walk") : gaze.TurningInPlace ? "Walk" : "Idle");
                 Advance(dt);
                 if (actionTime >= 0 && animationPlayer != null && animationPlayer["UseItem"] != null)
                     clipTime = actionTime / duration * animationPlayer["UseItem"].length;
@@ -141,6 +192,7 @@ namespace DeadAir
         {
             Initialize();
             preview = true;
+            gazeEnabled = false;
             crouching = false;
             aimPitch = 0;
             flashlightRequested = false;
@@ -157,11 +209,21 @@ namespace DeadAir
             PoseEquipment();
         }
 
+        /// <summary>Explicit deterministic gaze fixture, using the same model as Present.</summary>
+        public void SetGazePreview(float yaw, float pitch, float dt, float horizontalSpeed = 0, bool reset = false)
+        {
+            Initialize(); preview = true; gazeEnabled = true; currentYaw = yaw;
+            aimPitch = Mathf.Clamp(pitch, -1.35f, 1.35f);
+            gaze.Step(yaw, pitch, horizontalSpeed, dt, reset);
+            transform.rotation = gaze.BodyRotation;
+            SamplePose(); PoseEquipment(); UpdateFlashlightPose();
+        }
+
         public void SetEquipmentPreview(PlayerState equipment, string name = "Idle", float normalizedTime = 0)
         {
             if (equipment == null) return;
             SetPreview(name, normalizedTime);
-            DeadAirClothing.Apply(gameObject, equipment.clothingMask, classId);
+            DeadAirClothing.Apply(gameObject, -1, classId);
             appearance = GetComponent<DeadAirAppearance>();
             crouching = equipment.crouching;
             aimPitch = Mathf.Clamp(equipment.pitch, -1.35f, 1.35f);
@@ -206,6 +268,8 @@ namespace DeadAir
                 else if (bone.name == "pelvis") pelvis = bone;
                 else if (bone.name == "chest") chest = bone;
             }
+            if (head != null) headRest = head.localRotation;
+            if (chest != null) chestRest = chest.localRotation;
             if (rightSocket == null || leftSocket == null) return;
             if (rightHand != null && leftHand != null)
             {
@@ -346,9 +410,27 @@ namespace DeadAir
                 previous.weight = 1 - transition;
                 previous.time = previousClipTime;
             }
+            // Some authored clips do not key the head. Restore its source rest
+            // transform before every sample, so Present + LateUpdate never add
+            // a second gaze rotation to last frame's pose.
+            if (head != null) head.localRotation = headRest;
+            if (chest != null) chest.localRotation = chestRest;
             animationPlayer.Sample();
             PoseCrouching();
             PoseSeatedTransit();
+            PoseGaze();
+        }
+
+        void PoseGaze()
+        {
+            if (!gazeEnabled || head == null) return;
+            float torsoYaw = Mathf.Clamp(gaze.HeadYawDegrees * .23f, -12, 12);
+            float torsoPitch = Mathf.Clamp(gaze.HeadPitchDegrees * .12f, -6, 6);
+            Vector3 lookRight = Quaternion.AngleAxis(gaze.HeadYawDegrees, transform.up) * transform.right;
+            if (chest != null)
+                chest.rotation = Quaternion.AngleAxis(-torsoPitch, lookRight) * Quaternion.AngleAxis(torsoYaw, transform.up) * chest.rotation;
+            head.rotation = Quaternion.AngleAxis(-(gaze.HeadPitchDegrees - torsoPitch), lookRight) *
+                Quaternion.AngleAxis(gaze.HeadYawDegrees - torsoYaw, transform.up) * head.rotation;
         }
 
         void PoseSeatedTransit()
@@ -406,6 +488,7 @@ namespace DeadAir
 
         void ShowEquipment(PlayerState player)
         {
+            if (firstPersonPresentation) return;
             if (props.Count == 0) return;
             string selected = player.inventory != null && player.selectedSlot >= 0 && player.selectedSlot < player.inventory.Count
                 ? player.inventory[player.selectedSlot] : "empty";
@@ -456,6 +539,7 @@ namespace DeadAir
         void PoseEquipment()
         {
             GripContactError = 0;
+            if (firstPersonPresentation) return;
             if (propMode == "empty" || string.IsNullOrEmpty(propMode)) return;
             if (propMode == "camera") { PoseCamera(); return; }
             if (propMode == "fuel-canister") { PoseFuelCanister(); return; }
@@ -477,7 +561,7 @@ namespace DeadAir
             }
             if (propMode == "flashlight" && rightHand != null)
             {
-                var aim = transform.rotation * Quaternion.Euler(-aimPitch * Mathf.Rad2Deg, 0, 0);
+                var aim = EquipmentAimRotation;
                 rightHand.rotation = Quaternion.LookRotation(-(aim * Vector3.forward), -(aim * Vector3.up));
             }
             if (propMode == "dispatcher") PoseCompass();
@@ -546,7 +630,7 @@ namespace DeadAir
             var camera = props["camera"];
             float shoulderHeight = (transform.InverseTransformPoint(rightArm.position).y + transform.InverseTransformPoint(leftArm.position).y) * .5f;
             camera.localPosition = new Vector3(0, shoulderHeight - (classId == "engineer" ? .035f : .07f), .50f);
-            camera.localRotation = Quaternion.Euler((classId == "engineer" && !flashlightRequested ? 25 : 0) - aimPitch * Mathf.Rad2Deg, 0, 0);
+            camera.rotation = EquipmentAimRotation * Quaternion.Euler(classId == "engineer" && !flashlightRequested ? 25 : 0, 0, 0);
             Quaternion rightRotation = Quaternion.LookRotation(-camera.up, camera.forward);
             Quaternion leftRotation = rightRotation;
             Vector3 origin = camera.position;
@@ -562,12 +646,12 @@ namespace DeadAir
         void UpdateFlashlightPose()
         {
             if (flashlightEmitter == null) return;
-            bool visible = !preview && flashlightRequested && (propMode == "flashlight" || propMode == "camera");
+            bool visible = !firstPersonPresentation && !preview && flashlightRequested && (propMode == "flashlight" || propMode == "camera");
             flashlightEmitter.enabled = visible;
             if (!visible || !props.TryGetValue(propMode, out var item)) return;
-            // Snapshot yaw is already applied to the avatar root. Its positive
-            // pitch looks up, matching the owning player's camera convention.
-            var rotation = transform.rotation * Quaternion.Euler(-aimPitch * Mathf.Rad2Deg, 0, 0);
+            // Body yaw can lag behind the head. The beam always follows the
+            // accepted full view direction, with positive pitch looking up.
+            var rotation = EquipmentAimRotation;
             var position = item.TransformPoint(propMode == "camera" ? new Vector3(-.04f, .175f, .120f) : new Vector3(0, .156f, 0));
             flashlightEmitter.transform.SetPositionAndRotation(position, rotation);
             flashlightEmitter.range = flashlightRange;

@@ -19,8 +19,6 @@ namespace DeadAir.Editor
             {
             var world = WorldData.Load();
             var geometryReport = new List<string>();
-            Require(DeadAirClothing.Sanitize(-1) == -1 && DeadAirClothing.Sanitize(0) == 0 && DeadAirClothing.Sanitize(255) == 31,
-                "Wardrobe sentinel, full removal and unknown-bit sanitization changed.");
             foreach (var role in new[] { "operator", "engineer", "journalist", "dispatcher" }) ValidateAppearance(role, geometryReport);
             ValidateTools(world); ValidateFairAttack(world);
             var monster = new GameObject("Adult monster field validation");
@@ -37,7 +35,7 @@ namespace DeadAir.Editor
             Require(!invalidRotation, "Appearance produced an invalid quaternion-to-matrix conversion.");
             Directory.CreateDirectory("Art/FieldUpdate");
             File.WriteAllLines("Art/FieldUpdate/character-geometry-checks.txt", geometryReport);
-            Debug.Log("DEAD AIR FIELD CHARACTER PASSED: four adult wardrobes with valid body matrices, crouch foot contacts, bounded secondary motion, distinct authoritative tool actions/cooldowns, blind monster and escapable attack wind-up.");
+            Debug.Log("DEAD AIR FIELD CHARACTER PASSED: four authored character outfits with valid body matrices, crouch foot contacts, bounded secondary motion, distinct authoritative tool actions/cooldowns, blind monster and escapable attack wind-up.");
             }
             finally { Application.logMessageReceived -= log; }
         }
@@ -51,35 +49,20 @@ namespace DeadAir.Editor
                 var state = new PlayerState { characterClass = role, clothingMask = -1 };
                 motion.SetEquipmentPreview(state);
                 var appearance = avatar.GetComponent<DeadAirAppearance>();
-                Require(appearance != null && appearance.HasAdultBody && appearance.CurrentMask == DeadAirClothing.DefaultMask(role), role + " lost its original default and underlying adult body.");
+                Require(appearance != null && appearance.CurrentMask == DeadAirClothing.DefaultMask(role), role + " lost its authored default clothes.");
                 var baseline = BakedBounds(avatar);
                 int fullTriangles = appearance.VisibleSourceTriangleCount;
-                int shirtTriangles = appearance.SourceGarmentTriangleCount(DeadAirClothing.Shirt);
-                int trouserTriangles = appearance.SourceGarmentTriangleCount(DeadAirClothing.Trousers);
-                Require(shirtTriangles > 0 && trouserTriangles > 0, role + " source wardrobe has no separable shirt or lower garment geometry.");
-                state.clothingMask = DeadAirClothing.DefaultMask(role) & ~DeadAirClothing.Shirt;
+                Require(fullTriangles > 0, role + " has no visible authored source geometry.");
+                state.clothingMask = 0;
                 motion.SetEquipmentPreview(state);
-                Require(appearance.VisibleSourceTriangleCount == fullTriangles - shirtTriangles, role + " removing its shirt left original shirt triangles visible.");
-                state.clothingMask = DeadAirClothing.DefaultMask(role) & ~DeadAirClothing.Trousers;
-                motion.SetEquipmentPreview(state);
-                Require(appearance.VisibleSourceTriangleCount == fullTriangles - trouserTriangles, role + " removing its lower garment left original trousers visible.");
+                Require(appearance.CurrentMask == DeadAirClothing.DefaultMask(role) && appearance.VisibleSourceTriangleCount == fullTriangles,
+                    role + " a legacy serialized outfit edit changed authored clothes.");
                 state.clothingMask = -1; motion.SetEquipmentPreview(state);
                 Transform head = Find(avatar, "head"), leftFoot = Find(avatar, "foot.L");
                 float headY = head.position.y; Vector3 foot = leftFoot.position;
                 state.crouching = true; motion.SetEquipmentPreview(state);
                 Require(headY - head.position.y > .15f && Vector3.Distance(foot, leftFoot.position) < .045f,
                     role + " crouch needs a lower torso and planted feet.");
-                state.clothingMask = 0; motion.SetEquipmentPreview(state);
-                Require(appearance.CurrentMask == 0 && !DeadAirClothing.FirstPersonSleeves(0, role), role + " full removal left sleeves enabled.");
-                Require(appearance.VisibleSourceTriangleCount == appearance.RetainedSourceTriangleCount && appearance.VisibleSourceTriangleCount < fullTriangles,
-                    role + " full removal retained source torso clothing.");
-                foreach (var renderer in avatar.GetComponentsInChildren<SkinnedMeshRenderer>(true))
-                {
-                    if (renderer.name != "Adult body underneath removable layers") continue;
-                    Require(renderer.sharedMesh.bounds.size.y > .9f, role + " underlying body collapsed during shape construction.");
-                    foreach (var vertex in renderer.sharedMesh.vertices)
-                        Require(Finite(vertex.x) && Finite(vertex.y) && Finite(vertex.z), role + " underlying body contains an invalid vertex.");
-                }
                 state.crouching = false; motion.SetTransitPose(1); motion.SetEquipmentPreview(state);
                 Require(headY - head.position.y > .10f && Mathf.Abs(leftFoot.position.y - foot.y) < .045f,
                     role + " seated arrival needs a lower pelvis and floor-supported feet.");
@@ -96,23 +79,29 @@ namespace DeadAir.Editor
                 Require(!float.IsNaN(spring.MaximumAngle) && spring.MaximumAngle <= 6.001f && spring.ChestDisplacement <= .00601f,
                     role + " secondary motion exceeded its physical bounds.");
                 float largestHeight = 0, largestWidth = 0, largestDepth = 0;
-                for (int mask = 0; mask <= DeadAirClothing.All; mask++)
+                for (int pose = 0; pose < 6; pose++)
                 {
-                    state.clothingMask = mask; state.uniqueItemEquipped = false; state.crouching = (mask & 1) != 0;
-                    motion.SetEquipmentPreview(state);
-                    for (int step = 0; step < 20; step++) spring.Step(.05f, step * .3f, 8, (mask & (DeadAirClothing.Shirt | DeadAirClothing.Jacket)) != 0);
+                    state.uniqueItemEquipped = false; state.crouching = pose == 1 || pose == 4;
+                    motion.SetTransitPose(pose == 5 ? 1 : 0);
+                    string clip = pose == 2 || pose == 4 ? "Walk" : pose == 3 ? "Run" : "Idle";
+                    motion.SetEquipmentPreview(state, clip, .35f);
+                    Require(appearance.CurrentMask == DeadAirClothing.DefaultMask(role) && appearance.VisibleSourceTriangleCount == fullTriangles,
+                        role + " locomotion changed authored clothes.");
+                    for (int step = 0; step < 20; step++) spring.Step(.05f, step * .3f, 8, true);
                     var bounds = BakedBounds(avatar);
                     // Head-bound long hair can swing while crouched. A detached
                     // skinned vertex/incorrect bind matrix cannot grow the model
                     // beyond its original adult proportions by metres.
-                    Require(bounds.size.x < baseline.size.x * 1.6f + .35f && bounds.size.z < baseline.size.z * 1.6f + .40f &&
+                    // A walking stride naturally extends farther in depth than
+                    // an idle torso. Bound that reach by the actor's full height.
+                    Require(bounds.size.x < baseline.size.x * 1.6f + .35f && bounds.size.z < Mathf.Max(baseline.size.z * 1.6f + .40f, baseline.size.y * .85f) &&
                         bounds.size.y < baseline.size.y * 1.35f + .25f && bounds.min.y > -.35f,
-                        role + " mask " + mask + " produced a skinned geometry spike: " + bounds);
+                        role + " pose " + pose + " produced a skinned geometry spike: " + bounds);
                     largestHeight = Mathf.Max(largestHeight, bounds.size.y); largestWidth = Mathf.Max(largestWidth, bounds.size.x); largestDepth = Mathf.Max(largestDepth, bounds.size.z);
                 }
-                geometryReport.Add(role + ": PASSED 32 outfits, visible source shirt/lower garment removal and finite posed BakeMesh bounds; default=" + baseline.size.ToString("F3") +
+                geometryReport.Add(role + ": PASSED authored clothes in six standing/crouching/walking/running/seated poses, discarded legacy serialized edit and finite posed BakeMesh bounds; default=" + baseline.size.ToString("F3") +
                     ", maximum(w,h,d)=" + new Vector3(largestWidth, largestHeight, largestDepth).ToString("F3") + ", source triangles default=" + fullTriangles +
-                    ", retained head/hands=" + appearance.RetainedSourceTriangleCount + ", shirt=" + shirtTriangles + ", lower=" + trouserTriangles + ".");
+                    ".");
             }
             finally { UnityEngine.Object.DestroyImmediate(avatar); }
         }

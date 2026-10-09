@@ -16,16 +16,15 @@ namespace DeadAir
             var data = WorldData.Load();
             DeadAirSettings.Grain = false; DeadAirSettings.Flicker = false;
             DeadAirSettings.ApplyGraphicsPreset(1);
-            ui.ShowClothingEditor();
-            yield return Save("field-01-wardrobe");
-            Require(ui.HasModal, "Clothing editor must be a working focused modal.");
-            GameObject.Find("No clothing").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
-            yield return Save("field-01b-adult-no-clothing-option");
+            PlayerPrefs.SetInt("DeadAir.ClothingMask", 0);
+            session.Initialize(data);
+            Require(!PlayerPrefs.HasKey("DeadAir.ClothingMask"), "Legacy saved outfit edits must be discarded.");
+            yield return Save("field-01-authored-character");
             var preview = FindObjectsByType<DeadAirAppearance>(FindObjectsSortMode.None).FirstOrDefault(actor => actor.name.StartsWith("Selected operative"));
-            Require(preview != null && preview.HasAdultBody, "Wardrobe preview must show the generated adult body.");
+            Require(preview != null && preview.CurrentMask == DeadAirClothing.DefaultMask(ui.SelectedClass),
+                "Menu preview must keep its authored character clothes.");
             foreach (var surface in preview.GetComponentsInChildren<SkinnedMeshRenderer>())
-                Require(surface.gameObject.layer == preview.gameObject.layer, "All visible wardrobe body layers must reach the actual preview camera.");
-            ui.TryCloseTopModal();
+                Require(surface.gameObject.layer == preview.gameObject.layer, "All visible authored character surfaces must reach the actual preview camera.");
             session.Host("Field verifier", "engineer", true, true);
             session.Command(new NetPacket { type = "start" });
             yield return null; yield return null;
@@ -100,19 +99,22 @@ namespace DeadAir
                 session.Host("Field host", "engineer", false, true);
                 peer.Join("127.0.0.1", session.State.code, "Field guest", "dispatcher");
                 yield return Until(() => peer.State != null && session.State.players.Count == 2, "Field LAN join");
-                peer.SetClothing(DeadAirClothing.Underwear);
-                yield return Until(() => session.State.Player(peer.LocalId)?.clothingMask == DeadAirClothing.Underwear &&
-                    peer.State.Player(peer.LocalId)?.clothingMask == DeadAirClothing.Underwear, "Shared clothing snapshot");
+                Require(session.State.Player(peer.LocalId).clothingMask == -1 && peer.State.Player(peer.LocalId).clothingMask == -1,
+                    "Joined players must use authored default clothes.");
+                peer.Command(new NetPacket { type = "clothing", clothingMask = 0 });
+                yield return new WaitForSecondsRealtime(.15f);
+                Require(session.State.Player(peer.LocalId).clothingMask == -1 && peer.State.Player(peer.LocalId).clothingMask == -1,
+                    "Deprecated outfit-edit packets must not change authored clothes.");
                 session.Command(new NetPacket { type = "start" });
                 yield return Until(() => session.State.elapsed > DeadAirVanPresentation.ArrivalDuration, "Coop arrival");
                 var guest = session.State.Player(peer.LocalId);
                 var guestPoint = DeadAirVanPresentation.SpawnPoint(data, 1);
                 peer.Command(new NetPacket { type = "move", x = guestPoint.x, y = guestPoint.y, z = guestPoint.z, crouching = true, moveSequence = 1 });
                 yield return Until(() => guest.crouching && peer.State.Player(peer.LocalId).crouching, "Coop crouch snapshot");
-                Require(guest.clothingMask == DeadAirClothing.Underwear, "Game start must preserve customized clothing.");
+                Require(guest.clothingMask == -1, "Game start must retain authored default clothes.");
                 guest.x = 3; guest.y = 0; guest.z = 20; guest.yaw = Mathf.PI;
                 InspectToward(0, 24, 0, guest.x, guest.y + 1.0f, guest.z);
-                yield return Save("field-08-coop-clothing-and-crouch");
+                yield return Save("field-08-coop-authored-character-and-crouch");
                 player.EndInspection();
                 guest.x = guestPoint.x; guest.y = guestPoint.y; guest.z = guestPoint.z;
                 var host = session.State.Player(session.LocalId); var exit = data.Objective("exit");
@@ -125,7 +127,7 @@ namespace DeadAir
                 Require(session.State.securedItems.Contains("tape-1"), "Departure must count loot brought aboard on the interaction frame.");
                 yield return Save("field-09-departure");
                 yield return Until(() => session.State.phase == "won" && peer.State.phase == "won", "Animated coop victory");
-                checks.Add("PASSED: real LAN guest clothing and crouch replication, synchronized van departure and delayed shared victory.");
+                checks.Add("PASSED: real LAN guest authored clothes, ignored legacy outfit edits, crouch replication, synchronized van departure and delayed shared victory.");
             }
             finally { peer.Leave(); Destroy(peerObject); session.Leave(); }
             File.WriteAllLines(Path.Combine(output, "field-runtime-report.txt"), checks);

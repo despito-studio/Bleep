@@ -93,7 +93,22 @@ namespace DeadAir
         public event Action StateChanged;
         public event Action<string> Error;
 
-        public void Initialize(WorldData data) { world = data; }
+        public void Initialize(WorldData data)
+        {
+            world = data;
+            if (PlayerPrefs.HasKey("DeadAir.ClothingMask"))
+            {
+                PlayerPrefs.DeleteKey("DeadAir.ClothingMask");
+                PlayerPrefs.Save();
+            }
+            RestoreAuthoredClothing(State);
+        }
+
+        static void RestoreAuthoredClothing(RoomState state)
+        {
+            if (state == null) return;
+            foreach (var actor in state.players) actor.clothingMask = -1;
+        }
 
         public void Host(string name, string classId, bool solo, bool creative, string chapterId = DeadAirChapters.DefaultId)
         {
@@ -103,7 +118,6 @@ namespace DeadAir
             LastError = null;
             LocalId = "host";
             rules = new DeadAirRules(world, LocalId, name, classId, solo, creative, chapterId);
-            rules.SetClothing(LocalId, PlayerPrefs.GetInt("DeadAir.ClothingMask", -1));
             State = rules.State;
             if (!solo)
             {
@@ -156,7 +170,7 @@ namespace DeadAir
                         server = new LanPeer(socket, mainQueue, ClientPacket, ServerClosed);
                         server.Start();
                         server.Send(new NetPacket { type = "hello", code = code.Trim().ToUpperInvariant(), name = name, classId = classId,
-                            clothingMask = PlayerPrefs.GetInt("DeadAir.ClothingMask", -1), protocol = NetworkProtocol });
+                            protocol = NetworkProtocol });
                     });
                 }
                 catch (Exception ex) { mainQueue.Enqueue(() => { if (generation == sessionGeneration) Report("З’єднання не встановлено: " + ex.Message); }); }
@@ -184,7 +198,6 @@ namespace DeadAir
                     peer.Send(new NetPacket { type = "error", error = "Не вдалося приєднатися." });
                     peer.Dispose(); return;
                 }
-                rules.SetClothing(peer.id, packet.clothingMask);
                 peer.Send(new NetPacket { type = "welcome", playerId = peer.id, code = State.code, chapterId = State.chapterId });
                 Publish();
                 return;
@@ -205,6 +218,7 @@ namespace DeadAir
                 try
                 {
                     State = JsonUtility.FromJson<RoomState>(packet.stateJson);
+                    RestoreAuthoredClothing(State);
                     // Older room snapshots predate chapters; retain the playable original office.
                     if (State != null && string.IsNullOrEmpty(State.chapterId))
                         State.chapterId = string.IsNullOrEmpty(packet.chapterId) ? DeadAirChapters.DefaultId : packet.chapterId;
@@ -229,13 +243,6 @@ namespace DeadAir
             StateChanged?.Invoke();
         }
 
-        public void SetClothing(int mask)
-        {
-            mask = DeadAirClothing.Sanitize(mask);
-            PlayerPrefs.SetInt("DeadAir.ClothingMask", mask); PlayerPrefs.Save();
-            if (State?.phase == "lobby") Command(new NetPacket { type = "clothing", clothingMask = mask });
-        }
-
         public void Command(NetPacket packet)
         {
             if (rules != null) ApplyCommand(LocalId, packet);
@@ -253,7 +260,6 @@ namespace DeadAir
                 case "restart": error = rules.Restart(id); break;
                 case "pause": rules.Pause(id, packet.paused); break;
                 case "class": rules.SetClass(id, packet.classId); break;
-                case "clothing": rules.SetClothing(id, packet.clothingMask); break;
                 case "move": rules.Move(id, packet); break;
                 case "radio": rules.Radio(id, packet.phrase); break;
                 case "interact": error = rules.Interact(id, packet.id); break;

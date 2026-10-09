@@ -401,28 +401,10 @@ namespace DeadAir
 
         void ApplySleeves(PlayerState player)
         {
-            int mask = DeadAirClothing.Resolve(player);
+            int mask = DeadAirClothing.DefaultMask(player.characterClass);
             if (currentClothing == mask) return;
             currentClothing = mask;
-            if (mask == DeadAirClothing.DefaultMask(player.characterClass)) { SetClass(player.characterClass); return; }
-            bool sleeves = DeadAirClothing.FirstPersonSleeves(mask, player.characterClass);
             SetClass(player.characterClass);
-            bareArms = !sleeves;
-            // Keep imported palms/fingers; only replace the clothing-covered forearms.
-            foreach (var part in handParts)
-                if (part.filter.name == "Tailored forearm" || part.filter.name == "Cuff or bracelet")
-                {
-                    part.filter.sharedMesh = part.proceduralMesh;
-                    part.renderer.sharedMaterials = part.proceduralMaterials;
-                }
-            hands[rightHand].attachments = hands[leftHand].attachments = null;
-            SetTint(sleeve, !sleeves ? skin.color : (mask & DeadAirClothing.Jacket) != 0 ?
-                player.characterClass == "engineer" ? new Color32(32, 34, 33, 255) : new Color32(48, 63, 66, 255) : new Color32(172, 168, 146, 255));
-            foreach (var hand in new[] { rightHand, leftHand })
-            {
-                hand.Find("Tailored forearm").localScale = sleeves ? new Vector3(.104f, .25f, .10f) : new Vector3(.073f, .24f, .071f);
-                hand.Find("Cuff or bracelet").gameObject.SetActive(sleeves);
-            }
         }
 
         bool ApplyImportedHands(string role)
