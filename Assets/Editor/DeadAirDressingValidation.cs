@@ -60,7 +60,7 @@ namespace DeadAir.Editor
                 var room=data.rooms.FirstOrDefault(r=>root.parent.name=="sector:"+r.name);
                 Require(room!=null,"Floor litter has no authored room/yard sector: "+root.name);
                 bool interior=DeadAirOfficeLayout.IsInterior(room),circulation=DeadAirOfficeLayout.IsCirculation(room);
-                float finish=room.floorY+(interior&&!circulation?.016f:0);
+                float finish=room.floorY+(interior&&!circulation&&room.floorY>=0?.016f:0);
                 Require(Mathf.Abs(root.position.y-finish-.001f)<.0005f,"Floor litter is floating above its floor finish: "+root.name);
                 Require(x>room.minX+.4f&&x<room.maxX-.4f&&z>room.minZ+.4f&&z<room.maxZ-.4f,"Floor litter intersects a perimeter wall: "+root.name);
                 Require(!data.doors.Any(d=>Mathf.Abs(d.y-1.4f-room.floorY)<.1f&&Mathf.Abs(x-d.x)<1.6f&&Mathf.Abs(z-d.z)<1.6f),"Floor litter is in an animated doorway: "+root.name);

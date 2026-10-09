@@ -275,6 +275,7 @@ namespace DeadAir
                     else if (InteractionId == "breaker") DeadAirAudio.Play("breaker-toggle");
                     else if (InteractionId == "ladder" || InteractionId == "ladder-spot") DeadAirAudio.Play("ladder");
                     else if (InteractionId.StartsWith("key-")) DeadAirAudio.Play("key");
+                    SendMovement(me, state, true);
                     session.Command(new NetPacket { type = "interact", id = InteractionId });
                 }
             }
@@ -813,14 +814,15 @@ namespace DeadAir
                     remoteViews.Add(p.id, viewObject);
                     remoteClasses[p.id] = p.characterClass;
                     remoteMotions[p.id] = viewObject.GetComponent<DeadAirCharacterMotion>();
+                    if (remoteMotions[p.id] != null) remoteMotions[p.id].ConfigureFlashlight(world.GetClass(p.characterClass).bonuses);
                     viewObject.transform.position = new Vector3(-p.x, p.y, p.z);
                 }
-                remoteMotions.TryGetValue(p.id, out var motion);
-                if (motion != null) motion.Present(p, state.elapsed, state.paused);
                 viewObject.transform.position = Vector3.Lerp(viewObject.transform.position, new Vector3(-p.x, p.y + (p.down ? .2f : 0), p.z), Time.deltaTime * 12);
                 viewObject.transform.rotation = p.ladderClimbing && !p.down ?
                     LadderFacingRotation(Mathf.Clamp(state.elapsed - p.ladderStartedAt, 0, DeadAirLadder.Duration), p.ladderUp) :
                     Quaternion.Euler(0, 180 - p.yaw * Mathf.Rad2Deg, p.down ? -90 : 0);
+                remoteMotions.TryGetValue(p.id, out var motion);
+                if (motion != null) motion.Present(p, state.elapsed, state.paused, state.phase == "playing");
                 viewObject.SetActive(string.IsNullOrEmpty(p.hiding));
             }
             remoteIdsToRemove.Clear();

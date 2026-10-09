@@ -7,7 +7,10 @@ namespace DeadAir
     public sealed class DeadAirSky
     {
         static readonly Vector3 MoonDirection = new Vector3(.35f, .47f, -.81f).normalized;
+        public static Vector3 DirectionToMoon => MoonDirection;
         readonly Transform domeTransform;
+        readonly Light moon;
+        public Light MoonLight => moon;
 
         public DeadAirSky(Transform parent)
         {
@@ -53,15 +56,19 @@ namespace DeadAir
             var lightObject = new GameObject("Directional moonlight");
             lightObject.transform.SetParent(skyRoot.transform, false);
             lightObject.transform.rotation = Quaternion.LookRotation(-MoonDirection, Vector3.up);
-            var moon = lightObject.AddComponent<Light>();
+            moon = lightObject.AddComponent<Light>();
             moon.type = LightType.Directional;
             moon.color = new Color32(159, 179, 212, 255);
-            moon.intensity = .19f;
-            moon.shadows = LightShadows.Hard;
-            moon.shadowStrength = .62f;
-            moon.shadowBias = .025f;
-            moon.shadowNormalBias = .06f;
-            moon.cullingMask = ~((1 << 29) | (1 << 30));
+            // Let the actual moon reveal the yard and mountain-facing facade.
+            // Full occlusion keeps the stronger light out of roofed rooms.
+            moon.intensity = .34f;
+            moon.renderMode = LightRenderMode.ForcePixel;
+            moon.shadows = LightShadows.Soft;
+            moon.shadowStrength = 1;
+            moon.shadowBias = .012f;
+            moon.shadowNormalBias = .035f;
+            moon.shadowCustomResolution = 1024;
+            moon.cullingMask = ~((1 << 28) | (1 << 29) | (1 << 30));
         }
 
         static Vector4 Linear(Color display)
@@ -73,6 +80,10 @@ namespace DeadAir
         public void UpdatePosition(Vector3 cameraPosition)
         {
             if (domeTransform != null) domeTransform.position = cameraPosition;
+            // The authored basement has opaque ceilings and no windows. Its
+            // floor and the lower stair shaft receive no direct celestial light.
+            bool exposed=cameraPosition.y>=-1;
+            if(moon!=null&&moon.enabled!=exposed)moon.enabled=exposed;
         }
     }
 

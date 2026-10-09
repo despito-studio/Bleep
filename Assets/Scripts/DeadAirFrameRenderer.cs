@@ -39,6 +39,7 @@ namespace DeadAir
             camera.depthTextureMode |= DepthTextureMode.DepthNormals;
             camera.gameObject.AddComponent<DeadAirAmbientOcclusion>();
             camera.gameObject.AddComponent<DeadAirPlanarReflections>();
+            foreach(var light in camera.GetComponentsInChildren<Light>(true))DeadAirPlanarReflections.RegisterLocalShadowLight(light);
 
             var output = new GameObject("Dead Air presentation camera");
             output.transform.SetParent(camera.transform, false);

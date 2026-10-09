@@ -154,7 +154,10 @@ namespace DeadAir
             directorWindow = new DeadAirWindowBreak(pane, brokenFrame);
             sky = new DeadAirSky(root);
             foreach(var worldLight in root.GetComponentsInChildren<Light>(true))
+            {
                 worldLight.cullingMask &= ~((1 << 28) | (1 << 29) | (1 << 30));
+                DeadAirPlanarReflections.RegisterLocalShadowLight(worldLight);
+            }
             var moon=root.Find("Dead Air Night Sky & Moon/Directional moonlight")?.GetComponent<Light>();
             if(moon!=null)
             {
@@ -571,17 +574,25 @@ namespace DeadAir
                 if(obj.id=="pressure-valve")view.localRotation=interactionRotations[obj.id]*Quaternion.Euler(0,0,state.valveOpened?180:0);
             }
             bool flicker=DeadAirSettings.Flicker;
+            bool interiorPowered=state.power && state.breakerOn;
             for(int i=0;i<lamps.Count;i++)
             {
-                var lamp=lamps[i];float time=Time.time+i*3.77f;
+                var lamp=lamps[i];
                 Color color=state.broadcast&&lamp.interior?new Color(1,.36f,.19f):lamp.color;
                 if(float.IsNaN(lamp.appliedIntensity)||lamp.appliedColor!=color)
                 { lamp.light.color=color;lamp.appliedColor=color; }
-                float wave=flicker?Mathf.Sin(time*1.7f)*Mathf.Sin(time*13.6f):0;
-                float supply=lamp.interior?((state.power && state.breakerOn)?1f:0f):1f;
+                if(lamp.interior&&!interiorPowered)
+                {
+                    if(lamp.appliedIntensity!=0){lamp.light.intensity=0;lamp.appliedIntensity=0;}
+                    continue;
+                }
+                // An invisible fixture need not evaluate two flicker waves. Its
+                // full output stays ready when culling exposes it again.
+                float time=Time.time+i*3.77f;
+                float wave=flicker&&lamp.light.enabled?Mathf.Sin(time*1.7f)*Mathf.Sin(time*13.6f):0;
                 float flutter=wave>.94f?.72f:1f;
                 if(state.broadcast&&lamp.interior)flutter*=flicker?.86f+Mathf.Sin(Time.time*3)*.08f:.9f;
-                float intensity=lamp.intensity*supply*flutter;
+                float intensity=lamp.intensity*flutter;
                 if(lamp.appliedIntensity!=intensity)
                 { lamp.light.intensity=intensity;lamp.appliedIntensity=intensity; }
             }
@@ -704,6 +715,7 @@ namespace DeadAir
                 l.intensity = 1.55f;
                 l.shadows=LightShadows.Soft;l.shadowBias=.015f;l.shadowNormalBias=.025f;
                 l.color = new Color(1f, .96f, .88f);
+                DeadAirPlanarReflections.RegisterLocalShadowLight(l);
             }
             else if (type == DeadAirSupplies.BatteryItem)
             {

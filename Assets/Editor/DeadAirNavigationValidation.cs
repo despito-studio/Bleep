@@ -41,7 +41,7 @@ namespace DeadAir.Editor
             Debug.Log("DEAD AIR NAVIGATION PASSED: valid floor/stair edges, actual capsule-clear doorway/room/quest routes, every quest destination connected to the entrance, live enemy pursuit around the central archive/editorial block.");
         }
 
-        sealed class PhysicalRoutes
+        internal sealed class PhysicalRoutes
         {
             const float Radius=.22f, Height=1.7f, StepClearance=.32f;
             readonly WorldData world;
@@ -54,10 +54,11 @@ namespace DeadAir.Editor
             public readonly HashSet<int> reachable=new HashSet<int>();
             public int blockedNodes, blockedEdges;
 
-            public PhysicalRoutes(WorldData data)
+            public PhysicalRoutes(WorldData data, Vector3 offset = default, Transform onlyRoot = null)
             {
                 world=data;var doors=new HashSet<string>();foreach(var door in data.doors)doors.Add("door:"+door.id);
-                foreach(var collider in UnityEngine.Object.FindObjectsByType<Collider>(FindObjectsSortMode.None))
+                var colliders=onlyRoot!=null?onlyRoot.GetComponentsInChildren<Collider>(true):UnityEngine.Object.FindObjectsByType<Collider>(FindObjectsSortMode.None);
+                foreach(var collider in colliders)
                     for(var part=collider.transform;part!=null;part=part.parent)
                         if(doors.Contains(part.name)){openableLeaves.Add(collider);break;}
                 Require(openableLeaves.Count>=world.doors.Length,
@@ -67,7 +68,7 @@ namespace DeadAir.Editor
                 for(int index=0;index<positions.Length;index++)
                 {
                     var node=world.navigationNodes[index];
-                    var position=DeadAirOfficeLayout.Position(node.x,node.y,node.z);
+                    var position=offset+DeadAirOfficeLayout.Position(node.x,node.y,node.z);
                     links[index]=new List<int>(4);
                     if(TrySupport(position,out var floor))
                     {

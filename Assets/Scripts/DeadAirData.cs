@@ -83,6 +83,7 @@ namespace DeadAir
         public StairData[] stairs;
         public NavigationNodeData[] navigationNodes;
         public NavigationLinkData[] navigationLinks;
+        [NonSerialized] public bool navigationBaked;
         public ObjectiveData[] objects;
         public DoorData[] doors;
         public LockerData[] lockers;
@@ -118,7 +119,15 @@ namespace DeadAir
         {
             var asset = Resources.Load<TextAsset>("world");
             if (asset == null) throw new Exception("Assets/Resources/world.json is missing. Run node scripts/export-unity-data.mjs.");
-            return JsonUtility.FromJson<WorldData>(asset.text);
+            var world = JsonUtility.FromJson<WorldData>(asset.text);
+            var navigation = Resources.Load<TextAsset>("officeNavigation");
+            if (navigation != null)
+            {
+                var bake = JsonUtility.FromJson<DeadAirNavigationBakeData>(navigation.text);
+                if (!DeadAirNavigationOverlay.TryApply(world, asset.bytes, bake, out var reason))
+                    Debug.LogWarning("Saved office navigation ignored; regenerate its geometry bake: " + reason);
+            }
+            return world;
         }
 
         public ClassData GetClass(string id)

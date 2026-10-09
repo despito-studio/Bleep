@@ -58,7 +58,9 @@ namespace DeadAir
                 var stateDrawer = state.Drawer(pair.Key);
                 var view = pair.Value;
                 var target = view.closed + Vector3.forward * (stateDrawer != null && stateDrawer.open ? .38f : 0);
-                view.root.localPosition = reset ? target : Vector3.MoveTowards(view.root.localPosition, target, deltaTime * 1.5f);
+                var current = view.root.localPosition;
+                var next = reset ? target : Vector3.MoveTowards(current, target, deltaTime * 1.5f);
+                if (!current.Equals(next)) view.root.localPosition = next;
                 bool visible = stateDrawer != null && stateDrawer.open && stateDrawer.searched && !stateDrawer.lootTaken;
                 view.battery.SetActive(visible && stateDrawer.loot == DeadAirSupplies.BatteryItem);
                 view.coins.SetActive(visible && stateDrawer.loot == "coins");

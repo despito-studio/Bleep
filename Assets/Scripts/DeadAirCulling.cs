@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace DeadAir
 {
@@ -11,8 +12,15 @@ namespace DeadAir
         {
             public Bounds bounds;
             public Renderer[] renderers;
+            public ShadowCastingMode[] shadowModes;
+            public Bounds[] rendererBounds;
+            public bool[] dynamicBounds;
+            public bool[] shadowOnly;
+            public Bounds casterBounds;
+            public bool hasCaster;
             public LightVolume[] lights;
             public bool visible = true;
+            public bool nextVisible, keepShadows;
         }
         sealed class LightVolume
         {
@@ -31,6 +39,10 @@ namespace DeadAir
         readonly List<LightVolume> shadowCandidates=new List<LightVolume>();
         static readonly RaycastHit[] occlusionHits=new RaycastHit[32];
         float nextUpdate;
+        public int VisibilityRaycasts { get; private set; }
+        public int EnabledPracticalCount { get; private set; }
+        public int ShadowPracticalCount { get; private set; }
+        public int ShadowOnlyRendererCount { get; private set; }
 
         public DeadAirCulling(WorldData world, Transform station, Transform exterior,
             HashSet<Transform> dynamicRoots, Dictionary<string, DeadAirHingedDoor> doors)
@@ -45,6 +57,19 @@ namespace DeadAir
                 if (renderers.Length == 0) continue;
                 Bounds bounds = renderers[0].bounds;
                 foreach (var renderer in renderers) bounds.Encapsulate(renderer.bounds);
+                var shadowModes=new ShadowCastingMode[renderers.Length];
+                var rendererBounds=new Bounds[renderers.Length];var dynamicBounds=new bool[renderers.Length];
+                Bounds casterBounds=new Bounds();bool hasCaster=false;
+                for(int i=0;i<renderers.Length;i++)
+                {
+                    rendererBounds[i]=renderers[i].bounds;
+                    for(var owner=renderers[i].transform;owner!=null&&owner!=station;owner=owner.parent)
+                        if(dynamicRoots.Contains(owner)){dynamicBounds[i]=true;break;}
+                    shadowModes[i]=renderers[i].shadowCastingMode;
+                    if(shadowModes[i]==ShadowCastingMode.Off)continue;
+                    if(!hasCaster){casterBounds=renderers[i].bounds;hasCaster=true;}
+                    else casterBounds.Encapsulate(renderers[i].bounds);
+                }
                 foreach (var light in lights) bounds.Encapsulate(light.transform.position);
                 // Account for moving door leaves and illumination across doorways.
                 bounds.Expand(new Vector3(4, 1, 4));
@@ -64,17 +89,21 @@ namespace DeadAir
                         light.shadowCustomResolution=DeadAirSettings.ShadowQuality==2?1024:512;
                     }
                 }
-                sectors.Add(new Sector { bounds = bounds, renderers = renderers, lights = volumes });
+                sectors.Add(new Sector { bounds = bounds, renderers = renderers, shadowModes=shadowModes,
+                    rendererBounds=rendererBounds,dynamicBounds=dynamicBounds,
+                    shadowOnly=new bool[renderers.Length],
+                    casterBounds=casterBounds,hasCaster=hasCaster,lights = volumes });
             }
         }
 
         static bool Contains(RoomData room,Vector3 position) => -position.x>=room.minX && -position.x<=room.maxX &&
             position.z>=room.minZ && position.z<=room.maxZ;
 
-        static bool ClearSample(Vector3 origin,Vector3 sample)
+        bool ClearSample(Vector3 origin,Vector3 sample)
         {
             var ray=sample-origin;float distance=ray.magnitude;
             if(distance<.05f)return true;
+            VisibilityRaycasts++;
             int count=Physics.RaycastNonAlloc(origin,ray/distance,occlusionHits,distance-.03f,~0,QueryTriggerInteraction.Ignore);
             for(int i=0;i<count;i++)
             {
@@ -86,7 +115,7 @@ namespace DeadAir
             return true;
         }
 
-        static bool VisiblePractical(LightVolume volume,Vector3 cameraPosition,int cameraFloor)
+        bool VisiblePractical(LightVolume volume,Vector3 cameraPosition,int cameraFloor)
         {
             if(!volume.ceilingFixture)return true;
             if(volume.room!=null && volume.floor==cameraFloor && Contains(volume.room,cameraPosition))return true;
@@ -117,13 +146,14 @@ namespace DeadAir
         {
             floor=Mathf.FloorToInt(position.y/DeadAirOfficeLayout.FloorHeight);
             float x=-position.x,z=position.z;
-            if(x<DeadAirOfficeLayout.BuildingMinX || x>DeadAirOfficeLayout.BuildingMaxX ||
-                z<DeadAirOfficeLayout.BuildingMinZ || z>DeadAirOfficeLayout.BuildingMaxZ || floor<0 || floor>1)return false;
+            if(floor<0 || floor>1)return false;
             // Both levels remain lit when looking through the open stairwell.
             if(world.stairs!=null)
                 foreach(var stair in world.stairs)
                     if(x>=stair.minX-1 && x<=stair.maxX+1 && z>=stair.minZ-1 && z<=stair.maxZ+1)return false;
-            return true;
+            // The envelope also contains open courtyards and recesses in the
+            // stepped building. Only an authored interior room implies a ceiling.
+            return DeadAirOfficeLayout.InteriorAt(world,x,z,floor*DeadAirOfficeLayout.FloorHeight);
         }
 
         public void Update(RoomState state, Camera camera, bool force = false)
@@ -134,24 +164,23 @@ namespace DeadAir
             bool inside=InteriorFloor(cameraPosition,out int cameraFloor);
             GeometryUtility.CalculateFrustumPlanes(camera, planes);
             bool reflectedView=DeadAirSettings.Reflections;
+            var reflections=camera.GetComponent<DeadAirPlanarReflections>();
+            float reflectedFloor=cameraPosition.y>4.6f?4.2f:cameraPosition.y<-1?-4.2f:0;
+            if(reflectedView&&reflections!=null)reflectedView=reflections.HasVisibleReceiver(reflectedFloor);
             if(reflectedView)
             {
-                float floor=cameraPosition.y>4.6f?4.2f:cameraPosition.y<-1?-4.2f:0;
-                var mirror=Matrix4x4.identity;mirror.m11=-1;mirror.m13=2*floor;
+                var mirror=Matrix4x4.identity;mirror.m11=-1;mirror.m13=2*reflectedFloor;
                 GeometryUtility.CalculateFrustumPlanes(camera.projectionMatrix*camera.worldToCameraMatrix*mirror,reflectionPlanes);
             }
             shadowCandidates.Clear();
+            VisibilityRaycasts=0;EnabledPracticalCount=0;ShadowPracticalCount=0;
             int shadowQuality=DeadAirSettings.ShadowQuality;
             foreach (var sector in sectors)
             {
                 float distanceSquared = sector.bounds.SqrDistance(cameraPosition);
                 bool visible = distanceSquared < 9 || distanceSquared < 2500 && (GeometryUtility.TestPlanesAABB(planes, sector.bounds)||
                     reflectedView&&GeometryUtility.TestPlanesAABB(reflectionPlanes,sector.bounds));
-                if (sector.visible != visible)
-                {
-                    sector.visible = visible;
-                    foreach (var renderer in sector.renderers) if (renderer != null) renderer.enabled = visible;
-                }
+                sector.nextVisible=visible;
                 foreach(var volume in sector.lights)
                 {
                     var light=volume.light;if(light==null)continue;
@@ -161,10 +190,14 @@ namespace DeadAir
                     bool nearby=(light.transform.position-cameraPosition).sqrMagnitude<light.range*light.range;
                     bool relevant=floorRelevant && (nearby || GeometryUtility.TestPlanesAABB(planes,volume.bounds)||
                         reflectedView&&GeometryUtility.TestPlanesAABB(reflectionPlanes,volume.bounds));
-                    light.enabled=relevant && VisiblePractical(volume,cameraPosition,cameraFloor);
+                    // A powered-off fixture has no light pool to expose and needs
+                    // neither occlusion queries nor a place in the shadow budget.
+                    bool enabled=light.intensity>.0001f && relevant && VisiblePractical(volume,cameraPosition,cameraFloor);
+                    if(light.enabled!=enabled)light.enabled=enabled;
+                    if(enabled)EnabledPracticalCount++;
                     if(volume.ceilingFixture && volume.shadows!=LightShadows.None)
                     {
-                        if(light.enabled)
+                        if(light.enabled&&shadowQuality>0)
                         {
                             volume.priority=(light.transform.position-cameraPosition).sqrMagnitude;
                             // Keep current room contact shadows before a distant doorway.
@@ -175,8 +208,16 @@ namespace DeadAir
                     }
                 }
             }
-            shadowCandidates.Sort((a,b)=>a.priority.CompareTo(b.priority));
             int shadowBudget=shadowQuality==0?0:shadowQuality==2?3:1;
+            // Only the nearest one/three candidates matter. Select that prefix
+            // without sorting every visible fixture or allocating a comparer.
+            for(int i=0;i<Mathf.Min(shadowBudget,shadowCandidates.Count);i++)
+            {
+                int nearest=i;
+                for(int j=i+1;j<shadowCandidates.Count;j++)
+                    if(shadowCandidates[j].priority<shadowCandidates[nearest].priority)nearest=j;
+                var selected=shadowCandidates[nearest];shadowCandidates[nearest]=shadowCandidates[i];shadowCandidates[i]=selected;
+            }
             for(int i=0;i<shadowCandidates.Count;i++)
             {
                 var volume=shadowCandidates[i];
@@ -184,7 +225,75 @@ namespace DeadAir
                 int resolution=shadowQuality==2?1024:512;
                 if(volume.light.shadowCustomResolution!=resolution)volume.light.shadowCustomResolution=resolution;
                 if(volume.light.shadows!=shadows)volume.light.shadows=shadows;
+                if(shadows!=LightShadows.None)ShadowPracticalCount++;
             }
+            ShadowOnlyRendererCount=0;
+            float shadowReach=QualitySettings.shadowDistance+6;
+            float shadowReachSquared=shadowReach*shadowReach;
+            bool moonRelevant=cameraPosition.y>=-1;
+            foreach(var sector in sectors)
+            {
+                bool keepShadows=false;
+                if(!sector.nextVisible&&sector.hasCaster&&shadowQuality>0)
+                {
+                    if(sector.casterBounds.SqrDistance(cameraPosition)<shadowReachSquared)
+                        keepShadows=CasterRelevant(sector.casterBounds,reflectedFloor,moonRelevant,reflectedView,shadowBudget);
+                }
+                // A room intersecting one light volume need not submit every
+                // hidden desk and bookcase. Test immutable renderer bounds only
+                // after the broad sector test; moving doors use their live bounds.
+                if(sector.visible!=sector.nextVisible||sector.keepShadows!=keepShadows||keepShadows)
+                {
+                    bool visibilityChanged=sector.visible!=sector.nextVisible;
+                    sector.visible=sector.nextVisible;sector.keepShadows=keepShadows;
+                    for(int i=0;i<sector.renderers.Length;i++)
+                    {
+                        var renderer=sector.renderers[i];if(renderer==null)continue;
+                        bool shadowOnly=false;
+                        if(!sector.visible&&keepShadows&&sector.shadowModes[i]!=ShadowCastingMode.Off)
+                        {
+                            var bounds=sector.dynamicBounds[i]?renderer.bounds:sector.rendererBounds[i];
+                            shadowOnly=bounds.SqrDistance(cameraPosition)<shadowReachSquared&&
+                                CasterRelevant(bounds,reflectedFloor,moonRelevant,reflectedView,shadowBudget);
+                        }
+                        if(visibilityChanged||sector.shadowOnly[i]!=shadowOnly)
+                        {
+                            renderer.shadowCastingMode=shadowOnly?ShadowCastingMode.ShadowsOnly:sector.shadowModes[i];
+                            renderer.enabled=sector.visible||shadowOnly;
+                            sector.shadowOnly[i]=shadowOnly;
+                        }
+                        if(shadowOnly)ShadowOnlyRendererCount++;
+                    }
+                }
+            }
+        }
+
+        bool CasterRelevant(Bounds caster,float floor,bool moonRelevant,bool reflectedView,int shadowBudget)
+        {
+            if(moonRelevant&&caster.max.y>floor+.01f)
+            {
+                var projected=MoonShadowBounds(caster,floor);
+                if(GeometryUtility.TestPlanesAABB(planes,projected)||
+                    reflectedView&&GeometryUtility.TestPlanesAABB(reflectionPlanes,projected))return true;
+            }
+            for(int i=0;i<Mathf.Min(shadowBudget,shadowCandidates.Count);i++)
+            {
+                var light=shadowCandidates[i].light;
+                if(caster.SqrDistance(light.transform.position)<light.range*light.range)return true;
+            }
+            return false;
+        }
+
+        static Bounds MoonShadowBounds(Bounds caster,float floor)
+        {
+            var towardMoon=DeadAirSky.DirectionToMoon;
+            float lower=Mathf.Max(0,caster.min.y-floor),upper=Mathf.Max(lower,caster.max.y-floor);
+            float height=(lower+upper)*.5f;
+            var center=new Vector3(caster.center.x-towardMoon.x/towardMoon.y*height,floor,
+                caster.center.z-towardMoon.z/towardMoon.y*height);
+            var size=new Vector3(caster.size.x+Mathf.Abs(towardMoon.x/towardMoon.y)*(upper-lower),.15f,
+                caster.size.z+Mathf.Abs(towardMoon.z/towardMoon.y)*(upper-lower));
+            return new Bounds(center,size);
         }
     }
 }

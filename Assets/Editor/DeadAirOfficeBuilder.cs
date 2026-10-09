@@ -23,7 +23,7 @@ namespace DeadAir.Editor
         static GameObject station, exterior;
         static int meshSerial;
         static Font signFont;
-        static Material plaster, brick, trim, floor, carpet, ceilingPanel, metal, wood, doorWood, asphalt, grass, glass, darkScreen, lightSurface, paper, black, signLetters, cobwebSilk, wastePaper, signPlateWhite, blood;
+        static Material plaster, brick, trim, floor, carpet, ceilingPanel, metal, wood, doorWood, asphalt, grass, glass, darkScreen, lightSurface, paper, black, signLetters, cobwebSilk, wastePaper, signPlateWhite, blood, sovietPaint, parquet;
 
         [MenuItem("Dead Air/Repair Generated Mesh Tangents")]
         public static void RepairGeneratedMeshTangents()
@@ -102,13 +102,14 @@ namespace DeadAir.Editor
                 BuildCourtyards();
                 foreach (var room in world.rooms)
                 {
-                    var parent = room.floorY < -1 ? station.transform : (room.minZ >= 6 || room.maxZ <= -54 || room.maxX <= -18 || room.minX >= 18 ? exterior.transform : station.transform);
+                    var parent = DeadAirOfficeLayout.IsInterior(room) ? station.transform : exterior.transform;
                     sectors[SectorKey(room)] = Group(parent, "sector:" + room.name);
                 }
                 foreach (var prop in world.props) BuildProp(prop);
                 foreach (var door in world.doors) BuildDoor(door);
                 foreach (var locker in world.lockers) BuildLocker(locker);
                 foreach (var objective in world.objects) BuildObjective(objective);
+                DeadAirSovietOfficeArt.Interiors(station.transform, world, Block, Sign, wood, metal, paper, trim, black);
                 BuildOfficeDressing();
                 BuildLighting();
                 BatchStaticGeometry(station.transform.Find("shell"), "station-shell");
@@ -124,6 +125,7 @@ namespace DeadAir.Editor
                 UnityEngine.Object.DestroyImmediate(exterior);
             }
             Validate();
+            DeadAirNavigationBake.BakeSavedPrefabs();
             Debug.Log("Branched Blackpine office saved: two floors, " + world.rooms.Count(r=>DeadAirOfficeLayout.IsInterior(r)&&!DeadAirOfficeLayout.IsCirculation(r)) + " rooms, cross halls and side galleries, " + world.doors.Length + " animated doors, eight vented lockers.");
         }
 
@@ -382,6 +384,10 @@ namespace DeadAir.Editor
             signPlateWhite = Surface("sign-plate-white", new Color(.94f, .95f, .94f), 0);
             blood = Surface("blood-pool", new Color(.30f, .03f, .03f), 0);
             blood.SetFloat("_Glossiness", .85f);
+            sovietPaint = Surface("worn-sage-paint", new Color(.25f,.35f,.29f), 12);
+            sovietPaint.SetFloat("_Glossiness", .10f);
+            parquet = Surface("aged-parquet", new Color(.36f,.245f,.135f), 11);
+            parquet.SetFloat("_Glossiness", .20f);
             plaster.SetFloat("_Glossiness", .12f);
             brick.SetFloat("_Glossiness", .08f);
             trim.SetFloat("_Glossiness", .38f);
@@ -441,7 +447,7 @@ namespace DeadAir.Editor
         static Material Surface(string name, Color color, int pattern, Color? emission = null, float alpha = 1f)
         {
             string texturePath = Folder + "/Textures/" + name + ".png";
-            int resolution = pattern == 10 || pattern == 3 ? 256 : 64;
+            int resolution = pattern == 10 || pattern == 3 || pattern == 11 || pattern == 12 ? 256 : 64;
             var texture = new Texture2D(resolution,resolution,TextureFormat.RGBA32,false);
             var colors = new Color[resolution * resolution];
             for(int z=0;z<resolution;z++) for(int x=0;x<resolution;x++)
@@ -465,6 +471,22 @@ namespace DeadAir.Editor
                     float ring = Mathf.Sin(x * 1.8f + z * .08f) * .035f;
                     float fine = ((hash & 255) / 255f - .5f) * .025f;
                     shade = 1f + grain + ring + fine;
+                }
+                if(pattern==11)
+                {
+                    // Interlocked parquet boards: eight narrow fingers per repeating square.
+                    bool vertical=((x/64+z/64)&1)==0;
+                    int cross=vertical?x:z,along=vertical?z:x;
+                    uint board=(uint)((cross/8)*31+(along/64)*47);
+                    shade=.82f+(board%13)*.025f+Mathf.Sin(along*.43f+cross*.03f)*.075f+noise;
+                    if(cross%8==0||along%64==0)shade=.52f;
+                }
+                if(pattern==12)
+                {
+                    float wear=Mathf.PerlinNoise(x/19f,z/23f);
+                    shade=.93f+noise;
+                    if(wear>.68f)shade=1.48f;
+                    if(x%83==(int)(18+Mathf.Sin(z*.032f)*7))shade=.59f;
                 }
                 colors[z*resolution+x] = color*shade; colors[z*resolution+x].a=alpha;
             }
@@ -509,10 +531,7 @@ namespace DeadAir.Editor
         {
             var shell=Group(station.transform,"shell");
             // Ground slab sections with opening under stairs for basement descent
-            Box(shell,"Ground left slab",-9.90f,-.18f,-24,16.20f,.36f,60,floor);
-            Box(shell,"Ground right slab",9.90f,-.18f,-24,16.20f,.36f,60,floor);
-            Box(shell,"Ground corridor front",0,-.18f,-16.5f,3.70f,.36f,45,floor);
-            Box(shell,"Ground rear landing",0,-.18f,-52.5f,3.70f,.36f,3,floor);
+            FootprintSlab("Ground",0,-.18f,.36f,floor,true,true);
             // Landing under door-basement from z = -51 to z = -49.5 at y = 0
             Box(shell,"Basement landing slab",0,-.18f,-50.25f,3.70f,.36f,1.5f,floor);
 
@@ -528,25 +547,17 @@ namespace DeadAir.Editor
             Box(shell,"Basement stair foundation",0,-Storey-.18f,-45.25f,3.72f,.36f,11.5f,floor);
 
             BuildBasement(shell);
-            Box(shell,"Upper left slab",-9.93f,Storey-.16f,-24,16.14f,.32f,60,carpet);
-            Box(shell,"Upper right slab",9.93f,Storey-.16f,-24,16.14f,.32f,60,carpet);
-            Box(shell,"Upper corridor front",0,Storey-.16f,-16.5f,3.72f,.32f,45,carpet);
-            Box(shell,"Upper rear landing",0,Storey-.16f,-52.5f,3.72f,.32f,3,carpet);
-            Box(shell,"Roof slab",0,Storey+Ceiling+.17f,-24,36.7f,.34f,60.7f,brick);
+            FootprintSlab("Upper",Storey,Storey-.16f,.32f,carpet,true,true);
+            FootprintSlab("Roof",Storey,Storey+Ceiling+.17f,.34f,brick,false,true);
             // Thin acoustic panels sit below their structural slabs. Ground panels use the same
             // stair opening as the upper floor, so no ceiling panel cuts through the flight.
             float lowerCeiling=Storey-.355f;
-            Box(shell,"Lower ceiling left",-9.93f,lowerCeiling,-24,16.14f,.03f,60,ceilingPanel,false);
-            Box(shell,"Lower ceiling right",9.93f,lowerCeiling,-24,16.14f,.03f,60,ceilingPanel,false);
-            Box(shell,"Lower ceiling corridor front",0,lowerCeiling,-16.5f,3.72f,.03f,45,ceilingPanel,false);
-            Box(shell,"Lower ceiling rear landing",0,lowerCeiling,-52.5f,3.72f,.03f,3,ceilingPanel,false);
-            Box(shell,"Upper acoustic ceiling",0,Storey+Ceiling-.035f,-24,36,.03f,60,ceilingPanel,false);
+            FootprintSlab("Lower ceiling",Storey,lowerCeiling,.03f,ceilingPanel,true,false);
+            FootprintSlab("Upper acoustic ceiling",Storey,Storey+Ceiling-.035f,.03f,ceilingPanel,false,false);
             for(int f=0;f<2;f++)
             {
                 float y=f*Storey;
-                SideFacade(shell,-18,y);SideFacade(shell,18,y);
-                EndFacade(shell,6,y,f==0?"door-front":null);
-                EndFacade(shell,-54,y,f==0?"door-rear":null);
+                BuildFootprintFacades(shell,y);
                 BuildRoomPartitions(shell,y);
                 HangingSign(shell,"WEST OFFICES  <  /  >  EAST OFFICES",new Vector3(0,y+3.2f,-8.9f),4.3f,.43f,y+Ceiling);
                 HangingSign(shell,"STAIRS  /  SERVICE ROOMS",new Vector3(0,y+3.2f,-26),3.8f,.43f,y+Ceiling);
@@ -560,6 +571,13 @@ namespace DeadAir.Editor
             // Lettering is in front of a physical backing fixed flush to the brick face.
             Sign(shell,"BLACKPINE\nBROADCAST CENTRE",new Vector3(0,7.68f,6.19f),Quaternion.identity,6,.48f);
             Sign(shell,"SERVICE / GENERATOR",new Vector3(5.5f,2.9f,-54.19f),Quaternion.Euler(0,180,0),3,.30f);
+            DeadAirSovietOfficeArt.Architecture(shell, world, Block, Sign, brick, plaster, metal, wood, trim);
+
+            void FootprintSlab(string name,float footprintY,float y,float thickness,Material material,bool opening,bool collide)
+            {
+                foreach(var rect in DeadAirOfficeFootprint.Slabs(world,footprintY,opening))
+                    Box(shell,name+" slab section",rect.center.x,y,rect.center.y,rect.width,thickness,rect.height,material,collide);
+            }
         }
 
         static void BuildBasement(Transform shell)
@@ -652,7 +670,7 @@ namespace DeadAir.Editor
                 Edge(false,room.minZ,room.minX,room.maxX);Edge(false,room.maxZ,room.minX,room.maxX);
                 bool tiled=room.mapLabel=="ARCHIVE"||room.mapLabel=="WC"||room.mapLabel=="KITCHEN"||room.mapLabel=="MAINTENANCE";
                 Box(shell,"Room floor "+room.mapLabel,(room.minX+room.maxX)/2,baseY+.008f,(room.minZ+room.maxZ)/2,
-                    room.maxX-room.minX-.26f,.016f,room.maxZ-room.minZ-.26f,tiled?floor:carpet,false);
+                    room.maxX-room.minX-.26f,.016f,room.maxZ-room.minZ-.26f,tiled?floor:parquet,false);
             }
             foreach(var run in runs.Values)
             {
@@ -660,18 +678,23 @@ namespace DeadAir.Editor
                 foreach(int unit in run.units)
                 {
                     if(start==int.MinValue){start=last=unit;continue;}
-                    if(unit!=last+1){CutRun(run,start,last+1);start=unit;}
+                    if(unit!=last+1){CutRun(run,start*.5f,(last+1)*.5f);start=unit;}
                     last=unit;
                 }
-                if(start!=int.MinValue)CutRun(run,start,last+1);
+                if(start!=int.MinValue)CutRun(run,start*.5f,(last+1)*.5f);
             }
 
             void Edge(bool vertical,float coordinate,float from,float to)
             {
-                if(vertical&&(Mathf.Abs(coordinate)==18)||!vertical&&(coordinate==6||coordinate==-54))return;
                 string key=(vertical?"X":"Z")+coordinate;
                 if(!runs.TryGetValue(key,out var run)){run=new PartitionRun{vertical=vertical,coordinate=coordinate};runs[key]=run;}
-                for(int i=Mathf.RoundToInt(from);i<Mathf.RoundToInt(to);i++)run.units.Add(i);
+                for(int i=Mathf.RoundToInt(from*2);i<Mathf.RoundToInt(to*2);i++)
+                {
+                    float mid=(i+.5f)*.5f;
+                    bool a=DeadAirOfficeLayout.InteriorAt(world,vertical?coordinate-.02f:mid,vertical?mid:coordinate-.02f,baseY);
+                    bool b=DeadAirOfficeLayout.InteriorAt(world,vertical?coordinate+.02f:mid,vertical?mid:coordinate+.02f,baseY);
+                    if(a&&b)run.units.Add(i);
+                }
             }
             void CutRun(PartitionRun run,float from,float to)
             {
@@ -701,6 +724,80 @@ namespace DeadAir.Editor
                 foreach(float side in new[]{-.13f,.13f})
                     Box(shell,"Partition skirting",run.vertical?run.coordinate+side:center,baseY+.1f,
                         run.vertical?center:run.coordinate+side,run.vertical?.035f:to-from,.2f,run.vertical?to-from:.035f,trim,false);
+                foreach(float side in new[]{-1f,1f})
+                {
+                    float px=run.vertical?run.coordinate+side*.2f:center;
+                    float pz=run.vertical?center:run.coordinate+side*.2f;
+                    var adjacent=world.rooms.FirstOrDefault(r=>Mathf.Abs(r.floorY-baseY)<.01f&&px>r.minX&&px<r.maxX&&pz>r.minZ&&pz<r.maxZ);
+                    bool timber=adjacent!=null&&(adjacent.mapLabel=="DIRECTOR"||adjacent.mapLabel=="MEETING"||adjacent.mapLabel=="TAPE LIBRARY");
+                    float h=timber?2.45f:1.32f;
+                    Box(shell,timber?"Oak wall panelling":"Chipped green dado",run.vertical?run.coordinate+side*.119f:center,baseY+h/2,
+                        run.vertical?center:run.coordinate+side*.119f,run.vertical?.012f:to-from,h,run.vertical?to-from:.012f,timber?wood:sovietPaint,false);
+                    Box(shell,"Dado picture rail",run.vertical?run.coordinate+side*.14f:center,baseY+h,
+                        run.vertical?center:run.coordinate+side*.14f,run.vertical?.045f:to-from,.055f,run.vertical?to-from:.045f,wood,false);
+                }
+            }
+        }
+
+        static void BuildFootprintFacades(Transform shell,float baseY)
+        {
+            var edges=DeadAirOfficeFootprint.Boundary(world,baseY).GroupBy(e=>(e.vertical,e.coordinate,e.outward));
+            foreach(var group in edges)
+            {
+                float start=float.NaN,end=0;
+                foreach(var edge in group.OrderBy(e=>e.from))
+                {
+                    if(float.IsNaN(start)){start=edge.from;end=edge.to;continue;}
+                    if(Mathf.Abs(end-edge.from)>.01f){Run(group.Key.vertical,group.Key.coordinate,start,end);start=edge.from;}
+                    end=edge.to;
+                }
+                if(!float.IsNaN(start))Run(group.Key.vertical,group.Key.coordinate,start,end);
+            }
+            void Run(bool side,float coordinate,float from,float to)
+            {
+                var cuts=new SortedSet<float>{from,to};
+                foreach(var room in world.rooms.Where(r=>DeadAirOfficeLayout.IsInterior(r)&&Mathf.Abs(r.floorY-baseY)<.01f))
+                {
+                    bool touches=side?Mathf.Abs(room.minX-coordinate)<.01f||Mathf.Abs(room.maxX-coordinate)<.01f:
+                        Mathf.Abs(room.minZ-coordinate)<.01f||Mathf.Abs(room.maxZ-coordinate)<.01f;
+                    if(!touches)continue;
+                    foreach(float v in side?new[]{room.minZ,room.maxZ}:new[]{room.minX,room.maxX})if(v>from&&v<to)cuts.Add(v);
+                }
+                // Keep the mission's director window and ladder aligned with the original bay.
+                if(!side&&coordinate==6){cuts.Add(-18);cuts.Add(18);}
+                var doors=world.doors.Where(d=>Mathf.Abs(d.y-1.4f-baseY)<.1f&&
+                    (side?Mathf.Abs(Mathf.Sin(d.rotation))<.1f&&Mathf.Abs(d.x-coordinate)<.1f:
+                        Mathf.Abs(Mathf.Cos(d.rotation))<.1f&&Mathf.Abs(d.z-coordinate)<.1f)&&
+                    (side?d.z:d.x)>from&&(side?d.z:d.x)<to).OrderBy(d=>side?d.z:d.x).ToArray();
+                float cursor=from;
+                foreach(var door in doors)
+                {
+                    float center=side?door.z:door.x,half=door.w/2+.10f;
+                    Span(cursor,center-half);
+                    Wall(center-half,center+half,2.88f,Ceiling-2.88f,"Facade door header");
+                    cursor=center+half;
+                }
+                Span(cursor,to);
+                void Span(float a,float b)
+                {
+                    var breaks=cuts.Where(v=>v>a&&v<b).Prepend(a).Append(b).ToArray();
+                    for(int i=0;i<breaks.Length-1;i++)
+                    {
+                        float left=breaks[i],right=breaks[i+1];
+                        if(right-left<.01f)continue;
+                        Wall(left,right,0,1.24f,"Facade sill");
+                        Wall(left,right,3.12f,Ceiling-3.12f,"Facade head");
+                        if((!side&&coordinate==6&&baseY==0&&left>=-6&&right<=6)||right-left<1.5f)
+                            Wall(left,right,1.24f,1.88f,"Solid facade pier");
+                        else FacadeBay(shell,side,coordinate,baseY,left,right);
+                    }
+                }
+                void Wall(float a,float b,float bottom,float height,string name)
+                {
+                    if(b-a<.001f||height<=0)return;
+                    Box(shell,name,side?coordinate:(a+b)/2,baseY+bottom+height/2,side?(a+b)/2:coordinate,
+                        side?.35f:b-a,height,side?b-a:.35f,brick);
+                }
             }
         }
 
@@ -719,8 +816,20 @@ namespace DeadAir.Editor
             if(doorway!=null)
             {
                 float half=doorway=="door-front"?1.4f:1.2f;
-                Box(shell,"End facade left",(-18-half)/2,y+Ceiling/2,z,18-half,Ceiling,.35f,brick);
-                Box(shell,"End facade right",(18+half)/2,y+Ceiling/2,z,18-half,Ceiling,.35f,brick);
+                foreach(var span in new[]{new Vector2(-18,-half),new Vector2(half,18)})
+                {
+                    float length=span.y-span.x,mid=(span.x+span.y)/2;
+                    Box(shell,"End facade sill",mid,y+.62f,z,length,1.24f,.35f,brick);
+                    Box(shell,"End facade head",mid,y+3.52f,z,length,.8f,.35f,brick);
+                    // Each wing has usable windows, while the entry bay stays solid.
+                    var cuts=FacadeBreaks(false,z,y).Where(c=>c>span.x&&c<span.y).Prepend(span.x).Append(span.y).ToArray();
+                    for(int i=0;i<cuts.Length-1;i++)
+                    {
+                        if(z==6&&cuts[i]>=-6&&cuts[i+1]<=6)
+                            Box(shell,"Solid entrance risalit",(cuts[i]+cuts[i+1])/2,y+2.18f,z,cuts[i+1]-cuts[i],1.88f,.35f,brick);
+                        else FacadeBay(shell,false,z,y,cuts[i],cuts[i+1]);
+                    }
+                }
                 Box(shell,"Entrance header",0,y+(2.8f+Ceiling)/2,z,half*2,Ceiling-2.8f,.35f,brick);
             }
             else
@@ -890,8 +999,8 @@ namespace DeadAir.Editor
                 var shard = Block(groundGlass, "Ground glass shard " + g, new Vector3(gx, 0.003f, gz), new Vector3(sq, 0.004f, sq2), glass, false);
                 shard.transform.localRotation = Quaternion.Euler(0, rot, 0);
             }
-            Box(shell,"Left service path",-24,-.18f,-24,12,.36f,60,asphalt);
-            Box(shell,"Right service path",24,-.18f,-24,12,.36f,60,asphalt);
+            foreach(var r in world.rooms.Where(r=>r.mapLabel=="PATH"||r.mapLabel=="COURTYARD"))
+                Box(shell,r.mapLabel=="COURTYARD"?"Airwell courtyard paving":"Service path section",(r.minX+r.maxX)/2,-.18f,(r.minZ+r.maxZ)/2,r.maxX-r.minX,.36f,r.maxZ-r.minZ,asphalt);
             // Raised kerbs define the entrance path and parking without overlapping the ground plane.
             foreach(float x in new[]{-4.5f,4.5f})Box(shell,"Path kerb",x,.04f,16,.14f,.08f,18,trim);
             for(int i=0;i<9;i++)Box(shell,"Pedestrian paver",0,.015f,8+i*1.8f,8.8f,.03f,1.73f,floor,false);
@@ -903,6 +1012,7 @@ namespace DeadAir.Editor
             for(int side=-1;side<=1;side+=2)for(int i=0;i<10;i++)Tree(shell,side*(32+(i%3)), -72+i*11);
             for(int i=0;i<8;i++)Tree(shell,-28+i*8,-80);
             BuildBeyondFence();
+            DeadAirSovietOfficeArt.Mountains(exterior.transform);
             Sign(shell,"BLACKPINE  /  STAFF PARKING",new Vector3(19,1.9f,35.2f),Quaternion.identity,3.2f,.5f);
             foreach(float x in new[]{18.1f,19.9f})Block(shell,"Parking sign post",new Vector3(x,1.025f,35.165f),new Vector3(.07f,2.05f,.07f),metal,true);
         }
@@ -992,9 +1102,12 @@ namespace DeadAir.Editor
                 {
                     // The web sits just inside the two real wall faces, under the
                     // acoustic ceiling. It is a strand mesh, never a filled plane.
-                    float xInset=Mathf.Abs(room.minX)==18?.175f:.11f;
-                    float zInset=room.minZ==-54?.175f:.11f;
-                    float ceilingY=room.floorY+(room.floorY<1?Storey-.37f:Ceiling-.05f);
+                    bool basement=room.floorY<-1;
+                    float xInset=basement&&room.minX==DeadAirOfficeLayout.BasementMinX?0:
+                        !DeadAirOfficeLayout.InteriorAt(world,room.minX-.02f,room.minZ+.4f,room.floorY)?.175f:.11f;
+                    float zInset=basement&&Mathf.Abs(room.minZ-DeadAirOfficeLayout.BasementMinZ)<.01f?0:
+                        !DeadAirOfficeLayout.InteriorAt(world,room.minX+.4f,room.minZ-.02f,room.floorY)?.175f:.11f;
+                    float ceilingY=room.floorY+(basement?3.74f:room.floorY<1?Storey-.37f:Ceiling-.05f);
                     var corner=DeadAirOfficeLayout.Position(room.minX+xInset+.009f,ceilingY-.009f,room.minZ+zInset+.009f);
                     var web=Cobweb(parent,"Cobweb:wall:"+(webIndex++),corner,Quaternion.Euler(0,180,0),new Vector2(.85f+(webIndex%3)*.17f,.72f+(webIndex%2)*.18f));
                     WebAnchor(web,"Web anchor ceiling",new Vector3(1,0,0));
@@ -1008,7 +1121,7 @@ namespace DeadAir.Editor
                         float x=Mathf.Lerp(room.minX+.60f,room.maxX-.60f,(float)random.NextDouble());
                         float z=Mathf.Lerp(room.minZ+.60f,room.maxZ-.60f,(float)random.NextDouble());
                         if(!ClearDressingFloor(x,room.floorY,z))continue;
-                        FloorLitter(parent,"Floor litter:"+(litterIndex++),x,room.floorY+(circulation?0:.016f),z,
+                        FloorLitter(parent,"Floor litter:"+(litterIndex++),x,room.floorY+(circulation||room.floorY<0?0:.016f),z,
                             random.Next(4),(float)random.NextDouble()*360);
                         break;
                     }
@@ -1179,6 +1292,7 @@ namespace DeadAir.Editor
         {
             if(p.type=="locker")return; // The animated locker is generated once from LockerData.
             var root=PropRoot(p);
+            if(DeadAirPeriodProps.TryBuild(root,p,Block,Sign,wood,trim,metal,paper,black,darkScreen))return;
             bool generated=p.type=="table"||p.type=="archivistDesk"||p.type=="workstation"||p.type=="chair"||p.type=="shelf"||p.type=="cardCatalog"||p.type=="serverRack"||p.type=="crt"||
                 p.type=="dieselGenerator"||p.type=="fusePanel"||p.type=="monitorWall"||p.type=="mixingConsole"||p.type=="anchorDesk";
             if(!generated&&templates.TryGetValue(p.type,out var template))
@@ -1299,8 +1413,10 @@ namespace DeadAir.Editor
                     for(int i=0;i<5;i++)Block(root,"Cupboard seam",new Vector3(-w/2+i*w/4,.46f,d/2+.012f),new Vector3(.012f,.72f,.012f),black,false);
                     Block(root,"Kitchen sink",new Vector3(-w*.25f,.985f,0),new Vector3(.70f,.025f,d*.65f),metal,false);
                     Block(root,"Kitchen tap",new Vector3(-w*.25f,1.1f,-d*.30f),new Vector3(.04f,.25f,.04f),metal,false);
-                    Block(root,"Counter microwave",new Vector3(w*.24f,1.19f,0),new Vector3(.65f,.40f,.45f),paper,false);
-                    Block(root,"Microwave window",new Vector3(w*.24f,1.2f,.235f),new Vector3(.46f,.24f,.023f),black,false);break;
+                    Block(root,"Enamel kettle",new Vector3(w*.24f,1.13f,0),new Vector3(.28f,.29f,.28f),paper,false);
+                    Block(root,"Kettle lid",new Vector3(w*.24f,1.285f,0),new Vector3(.23f,.025f,.23f),metal,false);
+                    Block(root,"Kettle spout",new Vector3(w*.24f+.19f,1.18f,0),new Vector3(.16f,.08f,.07f),metal,false);
+                    Block(root,"Kettle handle",new Vector3(w*.24f,1.40f,0),new Vector3(.20f,.045f,.055f),black,false);break;
                 case "fridge":
                     Block(root,"Refrigerator",new Vector3(0,.9f,0),new Vector3(w,1.8f,d),paper,true);
                     Block(root,"Fridge handle",new Vector3(w*.3f,1.2f,d*.5f+.05f),new Vector3(.05f,.36f,.04f),metal,false);break;
@@ -1311,7 +1427,7 @@ namespace DeadAir.Editor
                 case "toilet":
                     Block(root,"WC pan",new Vector3(0,.28f,0),new Vector3(.5f,.56f,.65f),paper,true);
                     Block(root,"WC cistern",new Vector3(0,.72f,-.35f),new Vector3(.52f,.55f,.25f),paper,true);
-                    foreach(float x in new[]{-1.35f,1.35f})Block(root,"Cubicle divider",new Vector3(x,1.3f,-.25f),new Vector3(.05f,2.6f,3.1f),trim,true);
+                    foreach(float x in new[]{-1.35f,1.35f})Block(root,"Cubicle divider",new Vector3(x,1.3f,-.18f),new Vector3(.05f,2.6f,2.96f),trim,true);
                     // A one metre doorway leaves every cubicle accessible from the washbasins.
                     foreach(float x in new[]{-.9f,.9f})Block(root,"Cubicle front side",new Vector3(x,1.3f,1.3f),new Vector3(.8f,2.6f,.06f),trim,true);
                     Block(root,"Cubicle door head",new Vector3(0,2.48f,1.3f),new Vector3(1,.24f,.06f),trim,true);break;
@@ -1340,7 +1456,8 @@ namespace DeadAir.Editor
                     foreach(float x in new[]{-w*.35f,w*.35f})Block(root,"Crate band",new Vector3(x,w*.5f,d*.5f+.012f),new Vector3(.06f,w,.025f),trim,false);break;
                 case "archivistDesk":
                     Table(root,w,d);Paperwork(root,new Vector3(-w*.33f,.83f,-d*.20f));
-                    Block(root,"Desk telephone",new Vector3(w*.32f,.88f,-d*.24f),new Vector3(.32f,.12f,.25f),black,false);break;
+                    var phone=Group(root,"Fitted rotary telephone");phone.localPosition=new Vector3(w*.32f,.82f,-d*.24f);
+                    DeadAirPeriodProps.TryBuild(phone,new PropData{type="rotaryTelephone"},Block,Sign,wood,trim,metal,paper,black,darkScreen);break;
                 case "table":case "anchorDesk":
                     Table(root,w,d);break;
                 case "mixingConsole":
@@ -1780,7 +1897,8 @@ namespace DeadAir.Editor
             var sources=parent.GetComponentsInChildren<MeshRenderer>(true).Where(r=>r.gameObject.activeInHierarchy&&
                 r.GetComponent<TextMesh>()==null&&r.TryGetComponent<MeshFilter>(out var filter)&&filter.sharedMesh!=null&&
                 !AnimatedAncestor(r.transform,parent)&&r.sharedMaterials.All(m=>m==null||m.renderQueue<2500)).ToArray();
-            var groups=new Dictionary<Material,List<CombineInstance>>();
+            bool spatial=groupId.EndsWith("shell",StringComparison.Ordinal);
+            var groups=new Dictionary<(Material material,int x,int y,int z),List<CombineInstance>>();
             foreach(var renderer in sources)
             {
                 var mesh=renderer.GetComponent<MeshFilter>().sharedMesh;
@@ -1788,7 +1906,9 @@ namespace DeadAir.Editor
                 {
                     var material=renderer.sharedMaterials[Mathf.Min(sub,renderer.sharedMaterials.Length-1)];
                     if(material==null)continue;
-                    if(!groups.TryGetValue(material,out var list)){list=new List<CombineInstance>();groups.Add(material,list);}
+                    Vector3 center=parent.InverseTransformPoint(renderer.bounds.center);
+                    var key=(material,spatial?Mathf.FloorToInt(center.x/10):0,spatial?Mathf.FloorToInt((center.y+.25f)/Storey):0,spatial?Mathf.FloorToInt(center.z/10):0);
+                    if(!groups.TryGetValue(key,out var list)){list=new List<CombineInstance>();groups.Add(key,list);}
                     list.Add(new CombineInstance{mesh=mesh,subMeshIndex=sub,transform=parent.worldToLocalMatrix*renderer.transform.localToWorldMatrix});
                 }
             }
@@ -1798,12 +1918,12 @@ namespace DeadAir.Editor
                 string path=Folder+"/Meshes/static_"+groupId+"_"+(index++)+".asset";
                 var combined=AssetDatabase.LoadAssetAtPath<Mesh>(path);
                 if(combined==null){combined=new Mesh();AssetDatabase.CreateAsset(combined,path);}
-                combined.Clear();combined.name="Office static "+groupId+" / "+entry.Key.name;
+                combined.Clear();combined.name="Office static "+groupId+" / "+entry.Key.material.name;
                 combined.indexFormat=IndexFormat.UInt32;combined.CombineMeshes(entry.Value.ToArray(),true,true,false);
                 combined.RecalculateTangents();combined.RecalculateBounds();EditorUtility.SetDirty(combined);
-                var obj=new GameObject("Batched surfaces / "+entry.Key.name);obj.transform.SetParent(parent,false);
+                var obj=new GameObject("Batched surfaces / "+entry.Key.material.name);obj.transform.SetParent(parent,false);
                 obj.AddComponent<MeshFilter>().sharedMesh=combined;
-                var renderer=obj.AddComponent<MeshRenderer>();renderer.sharedMaterial=entry.Key;
+                var renderer=obj.AddComponent<MeshRenderer>();renderer.sharedMaterial=entry.Key.material;
                 renderer.shadowCastingMode=ShadowCastingMode.On;renderer.receiveShadows=true;
             }
             foreach(var renderer in sources)

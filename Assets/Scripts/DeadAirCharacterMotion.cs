@@ -13,6 +13,7 @@ namespace DeadAir
         [SerializeField] string classId = "engineer";
         public string ClassId { get => classId; set => classId = value; }
         public float GripContactError { get; private set; }
+        public Light FlashlightEmitter => flashlightEmitter;
 
         readonly List<UnityEngine.Object> owned = new List<UnityEngine.Object>();
         readonly Dictionary<string, Transform> props = new Dictionary<string, Transform>();
@@ -25,6 +26,9 @@ namespace DeadAir
         float ladderAge;
         Vector3 rightGrip, leftGrip, mouthLocal = new Vector3(0, .092f, .132f);
         Material dark, metal, brass, paper, red, glass, smokeMaterial;
+        Light flashlightEmitter;
+        float aimPitch, flashlightRange = 24, flashlightAngle = 55.385f;
+        bool flashlightRequested;
         Mesh boxMesh, tubeMesh;
         string clipName = "Idle", previousClip, propMode;
         float clipTime, previousClipTime, transition = 1, moveSpeed, movementAt = -100, sampleAt;
@@ -44,6 +48,7 @@ namespace DeadAir
                 // after the network view has moved/turned its root this frame.
                 SamplePose();
                 if (ladderClimbing) PoseLadder(); else PoseEquipment();
+                UpdateFlashlightPose();
                 return;
             }
             Initialize();
@@ -54,11 +59,21 @@ namespace DeadAir
             SamplePose();
         }
 
-        public void Present(PlayerState player, float elapsed, bool paused)
+        public void ConfigureFlashlight(ClassBonuses bonuses)
+        {
+            if (bonuses == null) return;
+            flashlightRange = bonuses.flashlightDist;
+            flashlightAngle = bonuses.flashlightAngle * Mathf.Rad2Deg * 2;
+        }
+
+        public void Present(PlayerState player, float elapsed, bool paused, bool playing = true)
         {
             if (player == null) return;
             Initialize();
             preview = false;
+            aimPitch = Mathf.Clamp(player.pitch, -1.35f, 1.35f);
+            flashlightRequested = playing && player.flashlight && DeadAirSupplies.HasCharge(player) &&
+                !player.down && !player.ladderClimbing && !player.mapOpen && !player.uniqueItemEquipped && string.IsNullOrEmpty(player.hiding);
             ladderClimbing = player.ladderClimbing && !player.down;
             ladderUp = player.ladderUp;
             ladderAge = Mathf.Clamp(elapsed - player.ladderStartedAt, 0, DeadAirLadder.Duration);
@@ -101,6 +116,7 @@ namespace DeadAir
             SamplePose();
             ShowEquipment(player);
             if (ladderClimbing) PoseLadder(); else PoseEquipment();
+            UpdateFlashlightPose();
         }
 
         /// <summary>Samples the exact imported clip for editor captures without starting gameplay.</summary>
@@ -108,6 +124,9 @@ namespace DeadAir
         {
             Initialize();
             preview = true;
+            aimPitch = 0;
+            flashlightRequested = false;
+            if (flashlightEmitter != null) flashlightEmitter.enabled = false;
             SelectClip(name);
             previousClip = null;
             transition = 1;
@@ -124,6 +143,7 @@ namespace DeadAir
         {
             if (equipment == null) return;
             SetPreview(name, normalizedTime);
+            aimPitch = Mathf.Clamp(equipment.pitch, -1.35f, 1.35f);
             SamplePose();
             ShowEquipment(equipment);
             PoseEquipment();
@@ -370,7 +390,10 @@ namespace DeadAir
                 if (leftForearm != null) leftForearm.localRotation *= Quaternion.Euler(elbow, 0, 0);
             }
             if (propMode == "flashlight" && rightHand != null)
-                rightHand.rotation = Quaternion.LookRotation(-transform.forward, -transform.up);
+            {
+                var aim = transform.rotation * Quaternion.Euler(-aimPitch * Mathf.Rad2Deg, 0, 0);
+                rightHand.rotation = Quaternion.LookRotation(-(aim * Vector3.forward), -(aim * Vector3.up));
+            }
             if (propMode == "dispatcher") PoseCompass();
         }
 
@@ -437,7 +460,7 @@ namespace DeadAir
             var camera = props["camera"];
             float shoulderHeight = (transform.InverseTransformPoint(rightArm.position).y + transform.InverseTransformPoint(leftArm.position).y) * .5f;
             camera.localPosition = new Vector3(0, shoulderHeight - (classId == "engineer" ? .035f : .07f), .50f);
-            camera.localRotation = Quaternion.Euler(classId == "engineer" ? 25 : 0, 0, 0);
+            camera.localRotation = Quaternion.Euler((classId == "engineer" && !flashlightRequested ? 25 : 0) - aimPitch * Mathf.Rad2Deg, 0, 0);
             Quaternion rightRotation = Quaternion.LookRotation(-camera.up, camera.forward);
             Quaternion leftRotation = rightRotation;
             Vector3 origin = camera.position;
@@ -448,6 +471,22 @@ namespace DeadAir
             camera.position = origin;
             SolveHand(true, camera.TransformPoint(new Vector3(.085f, .015f, .025f)), rightRotation);
             SolveHand(false, camera.TransformPoint(new Vector3(-.085f, .015f, .025f)), leftRotation);
+        }
+
+        void UpdateFlashlightPose()
+        {
+            if (flashlightEmitter == null) return;
+            bool visible = !preview && flashlightRequested && (propMode == "flashlight" || propMode == "camera");
+            flashlightEmitter.enabled = visible;
+            if (!visible || !props.TryGetValue(propMode, out var item)) return;
+            // Snapshot yaw is already applied to the avatar root. Its positive
+            // pitch looks up, matching the owning player's camera convention.
+            var rotation = transform.rotation * Quaternion.Euler(-aimPitch * Mathf.Rad2Deg, 0, 0);
+            var position = item.TransformPoint(propMode == "camera" ? new Vector3(-.04f, .175f, .120f) : new Vector3(0, .156f, 0));
+            flashlightEmitter.transform.SetPositionAndRotation(position, rotation);
+            flashlightEmitter.range = flashlightRange;
+            flashlightEmitter.spotAngle = flashlightAngle;
+            flashlightEmitter.innerSpotAngle = flashlightAngle * .28f;
         }
 
         void PosePersonalInspection()
@@ -625,6 +664,19 @@ namespace DeadAir
             smokeMaterial.renderQueue = 3000;
             boxMesh = Own(BoxMesh());
             tubeMesh = Own(TubeMesh());
+            flashlightEmitter = Group("Cooperative flashlight beam", transform).gameObject.AddComponent<Light>();
+            flashlightEmitter.enabled = false;
+            flashlightEmitter.type = LightType.Spot;
+            flashlightEmitter.color = new Color32(255, 239, 211, 255);
+            flashlightEmitter.intensity = 1.45f;
+            flashlightEmitter.cullingMask = ~((1 << 28) | (1 << 29) | (1 << 30));
+            flashlightEmitter.shadows = LightShadows.Soft;
+            flashlightEmitter.shadowStrength = .78f;
+            flashlightEmitter.shadowBias = .012f;
+            flashlightEmitter.shadowNormalBias = .04f;
+            flashlightEmitter.shadowCustomResolution = 512;
+            flashlightEmitter.renderMode = LightRenderMode.ForcePixel;
+            DeadAirPlanarReflections.RegisterLocalShadowLight(flashlightEmitter);
 
             var g = Prop("flashlight", rightSocket);
             Part("Grip", g, tubeMesh, dark, Vector3.zero, new Vector3(.075f, .17f, .075f));
@@ -785,6 +837,8 @@ namespace DeadAir
             mesh.RecalculateNormals(); mesh.RecalculateBounds();
             return mesh;
         }
+        void OnDisable() { if (flashlightEmitter != null) flashlightEmitter.enabled = false; }
+
         void OnDestroy()
         {
             foreach (var resource in owned)

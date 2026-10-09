@@ -653,18 +653,7 @@ namespace DeadAir
                 if(door.open)
                 {
                     door.openedAt=State.elapsed;
-                    var casingRot = DeadAirOfficeLayout.Rotation(doorData.rotation);
-                    var casingRight = casingRot * Vector3.right;
-                    var playerPos = DeadAirOfficeLayout.Position(p.x, p.y, p.z);
-                    var doorPos = DeadAirOfficeLayout.Position(doorData.x, doorData.y - 1.4f, doorData.z);
-                    var lookDir = Quaternion.Euler(0, 180 - p.yaw * Mathf.Rad2Deg, 0) * Vector3.forward;
-                    float dot = Vector3.Dot(lookDir, casingRight);
-                    if (Mathf.Abs(dot) < 0.05f)
-                    {
-                        var toDoor = (doorPos - playerPos).normalized;
-                        dot = Vector3.Dot(toDoor, casingRight);
-                    }
-                    door.openSign = dot >= 0 ? 1f : -1f;
+                    door.openSign = DeadAirHingedDoor.OpeningSign(doorData, p);
                 }
                 HearNoise(doorData.x,doorData.y-1.4f,doorData.z,18,7);
                 State.message = doorData.label + (door.open ? ": відчинено." : ": зачинено.");
@@ -1507,9 +1496,9 @@ namespace DeadAir
                 {
                     if(visited[next])continue;
                     var to=NavigationPosition(next);
-                    // Wall and furniture clearance are baked into the graph. Door state
-                    // remains dynamic, so a key-locked portal cannot be a valid edge.
-                    if(NavigationDoorBlocked(from,to))continue;
+                    // Trust static clearance only when the saved graph matches the
+                    // authored world. Raw or edited layouts retain the physical fallback.
+                    if(world.navigationBaked?NavigationDoorBlocked(from,to):NavigationSegmentBlocked(from,to))continue;
                     float cost=costs[current]+Vector3.Distance(from,to);
                     if(cost>=costs[next])continue;
                     costs[next]=cost;previous[next]=current;

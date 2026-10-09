@@ -29,39 +29,44 @@ for(let f=0;f<2;f++) {
   room('СХІДНА ГАЛЕРЕЯ'+suffix,'HALL EAST',6,10,-24,-11,y);
   room('СЛУЖБОВИЙ ХОЛ'+suffix,'HALL CROSS',-18,18,-28,-24,y);
   room('СХОДОВИЙ ХОЛ'+suffix,'HALL STAIRS',-3,3,-51,-28,y);
-  room('ЗАХІДНИЙ СЛУЖБОВИЙ ПРОХІД'+suffix,'HALL SERVICE W',-8,-3,-51,-28,y);
+  room('ЗАХІДНА ГАЛЕРЕЯ · ВНУТРІШНІЙ ДВІР'+suffix,'HALL SERVICE W',-12,-7,-38.5,-28,y);
+  room('ЗАХІДНИЙ ПРОХІД · ПОВОРОТ'+suffix,'HALL TURN W',-12,-3,-40.5,-38.5,y);
+  room('ЗАХІДНИЙ ЗАДНІЙ ПРОХІД'+suffix,'HALL REAR W',-8,-3,-51,-40.5,y);
   room('СХІДНИЙ СЛУЖБОВИЙ ПРОХІД'+suffix,'HALL SERVICE E',3,8,-51,-28,y);
   room('ЗАДНІЙ ХОЛ'+suffix,'HALL REAR',-18,18,-54,-51,y);
   const specs=f?[
-    ['director','КАБІНЕТ ДИРЕКТОРА','DIRECTOR',-18,-6,-7,6,-6,-.5,null],
-    ['apparatus','АПАРАТНА','CONTROL',6,18,-7,6,6,-.5,null],
+    ['director','КАБІНЕТ ДИРЕКТОРА','DIRECTOR',-22,-6,-7,6,-6,-.5,null],
+    ['apparatus','АПАРАТНА','CONTROL',6,22,-7,6,6,-.5,null],
     ['editorial','РЕДАКЦІЯ','EDITORIAL',-6,6,-24,-11,0,-11,null,pi/2],
     ['meeting','ПЕРЕГОВОРНА','MEETING',-18,-10,-17,-11,-10,-14,null],
     ['dispatch','ДИСПЕТЧЕРСЬКА','RADIO',-18,-10,-24,-17,-10,-20.5,null],
     ['studio','СТУДІЯ 04','STUDIO',10,18,-17,-11,10,-14,null],
     ['server','СЕРВЕРНА','SERVERS',10,18,-24,-17,10,-20.5,'keycard-engineer'],
-    ['editing','МОНТАЖНА','EDIT SUITE',-18,-8,-39,-28,-8,-33.5,null],
-    ['library','ФОНОТЕКА','TAPE LIBRARY',-18,-8,-51,-39,-8,-45,null],
+    ['editing','МОНТАЖНА','EDIT SUITE',-22,-12,-38.5,-28,-12,-33.5,null],
+    ['library','ФОНОТЕКА','TAPE LIBRARY',-18,-8,-51,-40.5,-8,-45,null],
     ['vent','ВЕНТВУЗОЛ','VENT',8,18,-39,-28,8,-33.5,'keycard-guard'],
     ['greenroom','ГРИМЕРНА ТА ВІДПОЧИНОК','GREEN ROOM',8,18,-51,-39,8,-45,null]
   ]:[
-    ['reception','РЕЦЕПЦІЯ','RECEPTION',-18,-6,-7,6,-6,-.5,null],
-    ['security','ОХОРОНА','SECURITY',6,18,-7,6,6,-.5,null],
+    ['reception','РЕЦЕПЦІЯ','RECEPTION',-22,-6,-7,6,-6,-.5,null],
+    ['security','ОХОРОНА','SECURITY',6,22,-7,6,6,-.5,null],
     ['archive','АРХІВ','ARCHIVE',-6,6,-24,-11,0,-11,'keycard-guard',pi/2],
     ['generator','ІНЖЕНЕРНА','ENGINEER',-18,-10,-17,-11,-10,-14,'keycard-engineer'],
     ['tech','МАЙСТЕРНЯ','WORKSHOP',-18,-10,-24,-17,-10,-20.5,'keycard-engineer'],
     ['break','КУХНЯ ТА ЇДАЛЬНЯ','KITCHEN',10,18,-17,-11,10,-14,null],
     ['wc','САНВУЗОЛ','WC',10,18,-24,-17,10,-20.5,null],
-    ['storage','СКЛАД РЕКВІЗИТУ','STORAGE',-18,-8,-39,-28,-8,-33.5,null],
-    ['mail','ПОШТА Й КОПІЮВАННЯ','MAIL / PRINT',-18,-8,-51,-39,-8,-45,null],
+    ['storage','СКЛАД РЕКВІЗИТУ','STORAGE',-22,-12,-38.5,-28,-12,-33.5,null],
+    ['mail','ПОШТА Й КОПІЮВАННЯ','MAIL / PRINT',-18,-8,-51,-40.5,-8,-45,null],
     ['staff','КІМНАТА ПЕРСОНАЛУ','STAFF ROOM',8,18,-39,-28,8,-33.5,null],
     ['maintenance','ГОСПОДАРСЬКА','MAINTENANCE',8,18,-51,-39,8,-45,null]
   ];
   for(const [id,name,map,a,b,c,d,x,z,key,rot=0] of specs){room(name,map,a,b,c,d,y);door(id,name,x,y,z,key,rot,2.2,x>0?-90:90);}
   door(f?'editorial-rear':'archive-rear',f?'РЕДАКЦІЯ · СЛУЖБОВИЙ ВХІД':'АРХІВ · СЛУЖБОВИЙ ВХІД',0,y,-24,f?null:'keycard-guard',pi/2,2.4,90);
 }
+room('ВНУТРІШНІЙ ДВОРИК','COURTYARD',-7,-3,-38.5,-28,0);
+door('courtyard','Внутрішній дворик',-7,0,-33.5,null,0,2.2,-90);
 room('ПЕРЕДНІЙ ДВІР','FRONT YARD',-30,30,6,38,0);room('ЗАДНІЙ ДВІР · ГЕНЕРАТОР','GENERATOR',-30,30,-76,-54,0);
-room('СЛУЖБОВИЙ ПРОХІД','PATH',-30,-18,-54,6,0);room('БОКОВИЙ ПРОХІД','PATH',18,30,-54,6,0);
+for(const [name,a,b,c,d] of [['ЗАХІДНИЙ ПРОХІД',-30,-22,-54,6],['ЗАХІДНА НІША',-22,-18,-28,-7],['ЗАДНЯ НІША',-22,-18,-54,-38.5],['СХІДНИЙ ПРОХІД',22,30,-54,6],['СХІДНА НІША',18,22,-54,-7]])room(name,'PATH',a,b,c,d,0);
+room('ЗАХІДНИЙ ПРОХІД · МІЖ КРИЛАМИ','PATH',-18,-12,-40.5,-38.5,0);
 door('front','Головний вхід',0,0,6,'key-main',pi/2,2.8,-90);door('rear','Вихід у задній двір',0,0,-54,'key-main',pi/2,2.4,90);
 room('ПІДВАЛ · СЛУЖБОВИЙ ВХІД','HALL BASEMENT ENTRY',-1.8,1.8,-51,-49.5,0);
 door('basement','Підвал під сходами',0,0,-51,'key-basement',pi/2,2.0,90);
@@ -170,7 +175,7 @@ prop('shelf',-5.5,-H,-31.5,pi/2,2.2,.6,'Стелаж з інструментам
 prop('shelf',-3.7,-H,-39,0,2.2,.6,'Стелаж із запчастинами');
 // Wayfinding, waiting niches and shared office equipment make circulation useful.
 for(let f=0;f<2;f++){const y=f*H;prop('directory',-3.8,y,-10.82,0,2.2,.12);prop('officePlant',4.8,y,3.8,0,.75,.75);prop('bench',4.9,y,-4.2,-pi/2,2.3,.65);
-  prop('bench',-6.8,y,-31,pi/2,2.4,.65);prop('vendingMachine',6.75,y,-30.7,-pi/2,1.1,.8);prop('officePlant',-6.9,y,-37.2,0,.75,.75);
+  prop('bench',-9.5,y,-31,pi/2,2.4,.65);prop('vendingMachine',6.75,y,-30.7,-pi/2,1.1,.8);prop('officePlant',-9.3,y,-37.2,0,.75,.75);
   prop('corkboard',-5.82,y,-18,pi/2,2.8,.1);prop('corkboard',5.82,y,-18,-pi/2,2.8,.1);
 }
 // Front: arrival, parking, pedestrian route, benches, planters and lights.
@@ -178,7 +183,7 @@ prop('van',-10,0,26,0,2.7,5.3,'Фургон знімальної групи');
 for(const x of [10,15,20])prop('abandonedCar',x,0,28,pi,2.1,4.2,'Службовий автомобіль');
 for(const x of [-8,8])for(const z of [11,17])prop('planter',x,0,z,0,2,1.2,'Клумба перед входом');
 for(const x of [-15,15])prop('bench',x,0,13,0,2.2,.65,'Лавка у дворі');
-for(const x of [-24,24])for(const z of [12,32,-62,-72])prop('yardLamp',x,0,z,0,.25,.25);
+for(const x of [-24,24])for(const z of [12,32,-62,-72])prop('yardLamp',x===24&&z===-62?28:x,0,z,0,.25,.25);
 prop('trashBin',-15,0,10,0,.5,.5);prop('trashBin',15,0,10,0,.5,.5);
 prop('gateBarrier',0,0,35.5,0,6,.45,'Шлагбаум');
 // Rear: generator under a weather shelter, fuel store, loading area.
@@ -188,16 +193,73 @@ prop('fuelStore',-15,0,-61.5,0,3,1.5,'Паливо і сервісний інв�
 for(const x of [11,14,17])prop('crate',x,0,-62,0,1.1,1.1,'Вантажний майданчик');
 prop('dumpster',21,0,-70,0,2.4,1.7,'Сервісний контейнер');
 prop('cableSpool',8,0,-70,0,1.2,1.2);
+// Late Soviet regional broadcast office: analog desks, archive equipment and
+// repaired source props. Small desktop pieces share a table's floor footprint.
+for(const p of props.filter(p=>['table','archivistDesk','anchorDesk'].includes(p.type)&&p.y>=0)) {
+  // Task pickups retain the central part of each desk; dress only the side ends.
+  const s=Math.sin(p.rotation),c=Math.cos(p.rotation);
+  const at=(dx,dz)=>[p.x+dx*c+dz*s,p.z-dx*s+dz*c];
+  let [x,z]=at(-p.w*.34,p.type==='archivistDesk'?p.d*.24:-p.d*.20);
+  prop('deskLamp',x,p.y+.82,z,p.rotation,.20,.22,'Лампа чергового');
+  if(p.type==='archivistDesk')continue; // This desk already has its fitted rotary phone.
+  [x,z]=at(p.w*.33,-p.d*.22);
+  prop('rotaryTelephone',x,p.y+.82,z,p.rotation,.32,.27,'Дисковий телефон');
+}
+// Actual unused source models gain a purpose in the occupied rooms and yards.
+prop('fireSafetyBoard',-9,0,-7+.17,0,1.4,.12,'Пожежний щит · рецепція','period-fire-reception');
+prop('fireSafetyBoard',16.2,0,-49.7,0,1.4,.12,'Пожежний щит · господарська','period-fire-maintenance');
+prop('fireSafetyBoard',-25,0,-73,0,1.4,.12,'Пожежний щит · генератор','period-fire-yard');
+prop('securityTurnstile',14.7,0,3.7,0,1.2,.75,'Закритий контрольний прохід · охорона','period-turnstile');
+prop('guardBooth',-24,0,30,Math.PI,2.2,2,'Будка вахтера','period-guard-booth');
+prop('floodlightTower',-25,0,-69,0,.9,.9,'Щогла освітлення двору','period-flood-tower');
+prop('abandonedTruck',24.3,0,-63,Math.PI,2.5,5.8,'Службова вантажівка ГАЗ-66','period-gaz66');
+prop('camera',-12,0,-34,Math.PI/4,1,1,'Стара студійна камера · склад','period-stored-camera');
+prop('micStand',-16.3,0,-34.5,0,.65,.65,'Мікрофон · склад','period-stored-microphone');
+prop('micStand',15.8,H,-15.1,0,.65,.65,'Студійний мікрофон','period-studio-microphone');
+for(const [x,y,z,r] of [[-10.9,0,-2.05,0],[10.7,0,-2.4,0],[-13.7,0,-20.2,0],[-13.45,H,-20.4,0],[11.6,H,-36.8,0]])
+  prop('tapeRecorder',x,y+.82,z,r,.70,.25,'Котушковий магнітофон');
+prop('typewriter',3.5,-H+.82,-32,0,.67,.50,'Журнал чергового електрика','period-basement-typewriter');
+prop('wallMap',11,H,-7+.155,0,5.6,.09,'Мнемосхема мережі передавачів','period-control-map');
+// Swap one repeating monitor bank for the dispatch diagram from the references.
+const redundantBank=props.findIndex(p=>p.type==='monitorWall'&&p.y===H&&p.x===11);
+if(redundantBank>=0)props.splice(redundantBank,1);
+// Shift the west service wing together with all its authored furniture.
+for(const p of props)if(p.y>=0&&p.y<=H+.01&&p.x< -8&&p.z>=-39&&p.z<=-28&&!(p.type==='bench'&&p.z===-31)&&!(p.type==='officePlant'&&p.z===-37.2)){p.x-=4;if(p.type==='corkboard'&&p.z<-38.5)p.z+=.5;}
+for(const p of props)if(p.type==='corkboard'&&p.y===H&&p.z===-38.32){p.x=-12.16;p.z=-30.2;p.rotation=-Math.PI/2;}
+for(const p of props)if(p.type==='shelf'&&p.y===H&&p.x< -8&&p.z===-40.3)p.z=-41.25;
+// Expanded front bays receive their own wall furniture rather than leaving empty margins.
+for(const y of [0,H]) {
+  shelves([-20],y,-6.15,y?'Архів директора':'Довідкова література');
+  prop('officePlant',-20.5,y,4.4,0,.75,.75);
+  prop('cardCatalog',20.8,y,-3,-Math.PI/2,1.5,.6,'Картотека');
+  prop('bench',19.5,y,4.3,Math.PI,2.4,.65,'Лава біля вікна');
+}
+prop('planter',-5,0,-30.1,0,1.4,.9,'Зарослий внутрішній дворик');
+prop('bench',-5,0,-37.6,0,2.1,.65,'Лава у дворику');
+const interiorRoom=r=>!['COURTYARD','PATH','FRONT YARD','GENERATOR'].includes(r.mapLabel)&&(r.floorY<0||(r.minX>=-22&&r.maxX<=22&&r.minZ>=-54&&r.maxZ<=6));
+for(const r of rooms.filter(r=>r.floorY>=0&&interiorRoom(r)&&!r.mapLabel.startsWith('HALL'))) {
+  if(['WC','VENT','SERVERS','MAINTENANCE'].includes(r.mapLabel))continue;
+  const cx=['ARCHIVE','EDITORIAL'].includes(r.mapLabel)?r.minX+2:(r.minX+r.maxX)/2;
+  if(['STORAGE','EDIT SUITE'].includes(r.mapLabel))prop('wallClock',r.maxX-.16,r.floorY,-36.7,-Math.PI/2,.4,.1,'Зупинений годинник · '+r.name);
+  else prop('wallClock',cx,r.floorY,r.minZ+.18,0,.4,.1,'Зупинений годинник · '+r.name);
+  // Radiators fit beneath the outside windows; one room-facing unit per wing.
+  if(r.minX<=-18||r.maxX>=18) {
+    const side=r.minX<=-18?-1:1,wall=side<0?r.minX:r.maxX;
+    prop('radiator',wall-side*.38,r.floorY,(r.minZ+r.maxZ)/2,side<0?Math.PI/2:-Math.PI/2,1.65,.3,'Чавунний радіатор · '+r.name);
+  }
+}
 // Board backs meet the actual wall face. The source plan used a generic .18 m
 // offset for decorations with different depths, leaving paper panels suspended.
-const mountedDepth={corkboard:.09,toolboard:.09,directory:.09,mirror:.08,whiteboard:.06,fusePanel:.22,fan:.10};
+const mountedDepth={corkboard:.09,toolboard:.09,directory:.09,mirror:.08,whiteboard:.06,fusePanel:.22,fan:.10,wallClock:.10,wallMap:.09};
 for(const p of props)if(mountedDepth[p.type]) {
   const half=mountedDepth[p.type]/2;
   const nx=Math.sin(p.rotation),nz=Math.cos(p.rotation);
   const candidates=[];
-  for(const r of rooms.filter(r=>r.floorY===p.y&&r.minX>=-18&&r.maxX<=18&&r.minZ>=-54&&r.maxZ<=6&&!r.mapLabel.startsWith('HALL'))){
-    if(Math.abs(nx)>.99&&p.z>=r.minZ&&p.z<=r.maxZ)for(const x of [r.minX,r.maxX])candidates.push({distance:Math.abs(x-p.x),x:x+nx*(.11+half),z:p.z});
-    if(Math.abs(nz)>.99&&p.x>=r.minX&&p.x<=r.maxX)for(const z of [r.minZ,r.maxZ])candidates.push({distance:Math.abs(z-p.z),x:p.x,z:z+nz*(.11+half)});
+  const occupied=(x,z)=>rooms.some(r=>r.floorY===p.y&&interiorRoom(r)&&x>=r.minX&&x<=r.maxX&&z>=r.minZ&&z<=r.maxZ);
+  const wallHalf=(x,z,dx,dz)=>occupied(x+dx*.02,z+dz*.02)&&occupied(x-dx*.02,z-dz*.02)?.11:.175;
+  for(const r of rooms.filter(r=>r.floorY===p.y&&interiorRoom(r)&&!r.mapLabel.startsWith('HALL'))){
+    if(Math.abs(nx)>.99&&p.z>=r.minZ&&p.z<=r.maxZ)for(const x of [r.minX,r.maxX])candidates.push({distance:Math.abs(x-p.x),x:x+nx*(wallHalf(x,p.z,1,0)+half),z:p.z});
+    if(Math.abs(nz)>.99&&p.x>=r.minX&&p.x<=r.maxX)for(const z of [r.minZ,r.maxZ])candidates.push({distance:Math.abs(z-p.z),x:p.x,z:z+nz*(wallHalf(p.x,z,0,1)+half)});
   }
   candidates.sort((a,b)=>a.distance-b.distance);
   if(candidates[0]&&candidates[0].distance<.6){p.x=candidates[0].x;p.z=candidates[0].z;}
@@ -210,12 +272,12 @@ const stairs=[
 ];
 const circulation=r=>r.mapLabel.startsWith('HALL');
 const inside=(r,x,z,pad=0)=>x>=r.minX+pad&&x<=r.maxX-pad&&z>=r.minZ+pad&&z<=r.maxZ-pad;
-const interior=(x,z)=>x>-18&&x<18&&z>-54&&z<6;
+const interior=(x,z,y=0)=>rooms.some(r=>r.floorY===y&&interiorRoom(r)&&inside(r,x,z));
 let navigationNodes=[], navigationLinks=[];
 const navInfo=[], nodeBuckets=new Map();
 function inFurniture(x,y,z){
   return props.some(p=>{
-    if(Math.abs(p.y-y)>.2||['corkboard','whiteboard','mirror','toolboard','directory','fan'].includes(p.type))return false;
+    if(Math.abs(p.y-y)>.2||['corkboard','whiteboard','mirror','toolboard','directory','fan','wallClock','wallMap'].includes(p.type))return false;
     const dx=x-p.x,dz=z-p.z,c=Math.cos(p.rotation),s=Math.sin(p.rotation);
     // A conservative capsule allowance leaves the space around desks usable.
     const px=dx*c-dz*s,pz=dx*s+dz*c;
@@ -230,7 +292,7 @@ function inFurniture(x,y,z){
 }
 for(let f=-1;f<2;f++)for(let ix=-29;ix<30;ix++)for(let iz=-75;iz<38;iz++){
   const x=ix+.5,z=iz+.5;
-  if(f>0&&!interior(x,z))continue;
+  if(f>0&&!interior(x,z,f*H))continue;
   if(f<0&&!inside({minX:-18,maxX:18,minZ:-51,maxZ:-27},x,z))continue;
   const stair=stairs.find(s=>inside(s,x,z)&&(Math.abs(s.lowerY-f*H)<.1||Math.abs(s.upperY-f*H)<.1));
   if(f>=-1&&stair&&Math.abs(stair.upperY-f*H)<.1)continue; // real opening in the upper slab
@@ -271,7 +333,7 @@ for(let i=0;i<navigationNodes.length;i++){
       if(!(ai.stair&&bi.stair)&&other.z>s.minZ&&other.z<s.maxZ)continue;
     }else if(ai.r!==bi.r){
       const sameCirculation=circulation(ai.r)&&circulation(bi.r);
-      const bothOutside=!interior(a.x,a.z)&&!interior(b.x,b.z);
+      const bothOutside=ai.r.floorY===0&&bi.r.floorY===0&&!interior(a.x,a.z)&&!interior(b.x,b.z);
       if(!sameCirculation&&!bothOutside&&!aperture(a,b))continue;
     }
     navigationLinks.push({a:i,b:j});
@@ -289,7 +351,7 @@ for(let start=0;start<navigationNodes.length;start++)if(!visited.has(start)){
 }
 const keep=new Set(largest),remap=new Map();navigationNodes=navigationNodes.filter((node,index)=>{if(!keep.has(index))return false;remap.set(index,remap.size);return true;});
 navigationLinks=navigationLinks.filter(edge=>keep.has(edge.a)&&keep.has(edge.b)).map(edge=>({a:remap.get(edge.a),b:remap.get(edge.b)}));
-const exteriorObstacles=props.filter(p=>p.y===0&&(p.z>6||p.z<-54)&&['van','abandonedCar','planter','bench','dieselGenerator','fuelStore','crate','dumpster'].includes(p.type)).map(p=>({id:p.id,minX:p.x-p.w/2,maxX:p.x+p.w/2,minZ:p.z-p.d/2,maxZ:p.z+p.d/2}));
+const exteriorObstacles=props.filter(p=>p.y===0&&(p.z>6||p.z<-54)&&['van','abandonedCar','planter','bench','dieselGenerator','fuelStore','crate','dumpster','guardBooth','abandonedTruck','floodlightTower','fireSafetyBoard'].includes(p.type)).map(p=>({id:p.id,minX:p.x-p.w/2,maxX:p.x+p.w/2,minZ:p.z-p.d/2,maxZ:p.z+p.d/2}));
 const data={spawn:{x:0,y:0,z:19},courtyard:{minX:-30,maxX:30,minZ:-76,maxZ:38},extraction:{x:-8.1,y:1.2,z:26},stairs,exteriorObstacles,rooms,objects,doors,lockers,props,navigationNodes,navigationLinks,classes:old.classes};
 const outputFile = typeof process !== 'undefined' && process.argv[2] ? process.argv[2] : file;
 fs.writeFileSync(outputFile,JSON.stringify(data,null,2)+'\n');

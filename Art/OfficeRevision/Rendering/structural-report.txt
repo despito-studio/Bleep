@@ -1,0 +1,7 @@
+PASSED: physical moon direction matches the sky disc, .34 directional intensity, full soft roof/wall occlusion, world-only layers, position-independent sky.
+PASSED: direct moon is culled only below -1m in the fully covered windowless basement; the upper stair landing restores it.
+PASSED: polished floor retains reflections; other storey, sky-only view and inactive receiver suppress unnecessary mirrored-camera work.
+PASSED: mirror shadow suspension preserves the fixed 1024 soft moon map and full roof occlusion, suspends only local point/spot maps and restores their exact modes.
+PASSED: unpowered fixtures use 0 occlusion rays/0 shadow maps; a roofed room culls the other floor; an open courtyard retains both; shadow-free preset preserves light pools.
+PASSED: offscreen geometry whose lunar shadow reaches visible floor stays ShadowsOnly; opaque shell and all colliders remain enabled; shadow-free preset skips hidden furniture.
+PASSED: per-renderer shadow relevance skips unrelated furniture within the same sector; a windowless basement view skips aboveground lunar casters.

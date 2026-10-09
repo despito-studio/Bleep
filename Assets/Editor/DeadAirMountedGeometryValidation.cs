@@ -23,7 +23,7 @@ namespace DeadAir.Editor
                 var pane=(window.Find("Recessed glass") ?? window.Find("state:directorWindowPane/Recessed glass"))?.GetComponent<BoxCollider>();
                 Require(pane!=null,"Window has no glazing collision envelope.");
                 float width=pane.size.x+.08f;
-                bool side=Mathf.Abs(window.position.x)>17;
+                bool side=Mathf.Abs(window.forward.x)>.9f;
                 float coordinate=side?-window.position.x:window.position.z;
                 float center=side?window.position.z:-window.position.x;
                 float floorY=Mathf.Floor(window.position.y/DeadAirOfficeLayout.FloorHeight)*DeadAirOfficeLayout.FloorHeight;
@@ -32,7 +32,13 @@ namespace DeadAir.Editor
                     Mathf.Abs(r.minZ-coordinate)<.01f||Mathf.Abs(r.maxZ-coordinate)<.01f));
                 Require(spans.Any(r=>center-width/2>=(side?r.minZ:r.minX)+.42f&&center+width/2<=(side?r.maxZ:r.maxX)-.42f),
                     "Window overlaps a room junction or leaves no solid pier: "+window.position);
-                Require(Mathf.Abs(coordinate-(side?(coordinate<0?-18:18):(coordinate<0?-54:6)))<.001f,"Window is outside its facade plane.");
+                Require(ExposedBoundaryCovers(data,floorY,side,coordinate,center-width/2,center+width/2),"Window is outside an exposed facade plane: "+window.position);
+                foreach(float along in new[]{center-width/2,center,center+width/2})
+                {
+                    bool before=DeadAirOfficeLayout.InteriorAt(data,side?coordinate-.02f:along,side?along:coordinate-.02f,floorY);
+                    bool after=DeadAirOfficeLayout.InteriorAt(data,side?coordinate+.02f:along,side?along:coordinate+.02f,floorY);
+                    Require(before!=after,"Window is placed on an internal partition or unsupported exterior edge: "+window.position);
+                }
                 Require(window.Cast<Transform>().Count(t=>t.name=="Window reveal side")==2&&window.Cast<Transform>().Count(t=>t.name=="Window frame side")==4&&window.Find("Interior sill")!=null,
                     "Window lacks full-depth reveal, inside/outside frame or sill.");
                 windowCount++;
@@ -87,6 +93,20 @@ namespace DeadAir.Editor
                 case "fan":return .10f;
                 default:return 0;
             }
+        }
+        static bool ExposedBoundaryCovers(WorldData data,float floorY,bool vertical,float coordinate,float from,float to)
+        {
+            // The union helper cuts at every room coordinate, including unrelated
+            // stair/room edges. A glazing bay can cross those contiguous segments.
+            float cursor=from;
+            foreach(var edge in DeadAirOfficeFootprint.Boundary(data,floorY).Where(edge=>edge.vertical==vertical&&Mathf.Abs(edge.coordinate-coordinate)<.001f).OrderBy(edge=>edge.from))
+            {
+                if(edge.to<cursor-.001f)continue;
+                if(edge.from>cursor+.001f)return false;
+                cursor=Mathf.Max(cursor,edge.to);
+                if(cursor>=to-.001f)return true;
+            }
+            return false;
         }
         static bool Contains(BoxCollider box,Vector3 point,float allowance)
         {

@@ -1,0 +1,85 @@
+FINAL OFFICE REMODEL PERFORMANCE REPORT
+Build: Builds/Windows-OfficeRemodel (version 1.7.7)
+Baseline: Builds/Verification-OfficeRemodel-Baseline/Results
+Final: Builds/Verification-OfficeRemodel-Final/OptimizedBenchmark/Results
+
+Both runs: Unity 6000.6.4f1; NVIDIA GeForce GT 730; Direct3D11; Linear color.
+1280x720 output. World targets: High 1280x720, Medium 1088x612, Low 832x468.
+Explicit world/equipment/output/UI rendering without readback; normal solo simulation,
+stationary zero input, vSync 0, target frame rate unrestricted. Each phase has 3 seconds
+and at least 5 rendered warmup frames followed by one 6-second sample.
+
+Phase | FPS baseline -> final | median frame ms | p95 frame ms | submitted triangles/frame (millions)
+High powered-gallery | 7.773 -> 8.110 (+4.3%) | 128.301 -> 124.647 | 133.608 -> 155.078 | 3.698828 -> 4.224172 (14.2%)
+High powered-archive | 11.878 -> 11.918 (+0.3%) | 84.000 -> 83.712 | 88.765 -> 91.659 | 2.011241 -> 2.026623 (0.8%)
+High dark-basement-torch | 18.277 -> 21.292 (+16.5%) | 56.298 -> 46.760 | 67.113 -> 51.340 | 1.553134 -> 1.161280 (-25.2%)
+Medium powered-gallery | 12.918 -> 13.096 (+1.4%) | 77.330 -> 77.258 | 85.724 -> 111.115 | 2.533289 -> 2.938919 (16.0%)
+Medium powered-archive | 18.303 -> 19.050 (+4.1%) | 53.524 -> 62.960 | 71.256 -> 76.976 | 1.504498 -> 1.449683 (-3.6%)
+Low powered-gallery | 26.201 -> 23.497 (-10.3%) | 38.224 -> 33.802 | 42.770 -> 88.856 | 1.189305 -> 1.184204 (-0.4%)
+Low powered-archive | 40.064 -> 40.301 (+0.6%) | 24.791 -> 24.777 | 30.086 -> 29.111 | 0.452368 -> 0.396677 (-12.3%)
+High menu | 26.596 -> 25.463 (-4.3%) | 37.865 -> 38.952 | 57.460 -> 60.641 | 0.205966 -> 0.205966 (0.0%)
+
+World.Apply instrumented CPU scope (baseline -> final):
+High powered-gallery | 1.982 -> 3.020 ms/frame
+High powered-archive | 1.242 -> 1.626 ms/frame
+High dark-basement-torch | 1.742 -> 0.526 ms/frame
+Medium powered-gallery | 1.156 -> 1.454 ms/frame
+Medium powered-archive | 1.235 -> 1.336 ms/frame
+Low powered-gallery | 1.001 -> 1.336 ms/frame
+Low powered-archive | 0.722 -> 0.798 ms/frame
+High menu | 0.001 -> 0.005 ms/frame
+
+Submitted triangles include all rendering passes, including shadows/reflections.
+They are not the unique mesh triangle count. World.Apply is a script scope; it
+does not include all camera rendering. Main Thread Frame Time includes render waits.
+
+The final build improves basement mean FPS 16.5% and p95 from 67.113 to 51.340ms,
+with 25.2% fewer submitted triangles and World.Apply 1.742 -> 0.526ms/frame.
+High gallery mean FPS increases 4.3%; High archive is essentially baseline (+0.3%).
+Medium mean FPS increases 1.4%/4.1%, and Low archive is essentially baseline (+0.6%).
+
+Low gallery remains a regression: mean FPS 26.201 -> 23.497 (-10.3%) and
+p95 42.770 -> 88.856ms, despite median 38.224 -> 33.802ms and nearly unchanged
+triangles. High/Medium p95 also remains higher in several phases. Menu geometry
+is identical but mean FPS is 4.3% lower. These results do not establish that all
+presets or frame-time tails improved. No direct cause for the remaining tails
+was measured. Earlier repeated/probe runs also showed variable tails.
+
+The final implementation keeps the moon at a fixed 1024 soft-shadow resolution
+for both main and reflected cameras, preserves opaque roof/wall occlusion and
+culls direct moon work only in the covered windowless basement. Local mirror
+point/spot shadow suspension restores exact modes. Hidden furniture uses precise
+cast-only bounds while structural shell/colliders remain enabled. Prop geometry
+and settled door/drawer transform writes were also optimized.
+
+Provenance checks PASS:
+- Exact same NativeBenchmark.dll as baseline; SHA256:
+  A65EDC08C83FE8C5F1D542E1989C7AB3B3A24815B7D78F3597C9C42B1ED12E06
+- Current original source game DLL matches recorded sourceGameSHA256 and its
+  build-info.json file record:
+  6FFEA9E822CB52CAB1640F06991CBCC19F0080A296058EC92B103414D135095C
+- Current original build-info.json matches recorded sourceManifestSHA256:
+  97861A22A7AE14E6C09A2B3F8EF8E7DB49B82B32A81A8B699C61F42F94F2F616
+- Instrumented benchmark copy matches the SHA256 recorded in provenance:
+  48B03C98E394C552462FF255DB537C7D2D3D1989545BBE27FE0E4F9E3004EFC6
+- Source player: D:\DeadAirUnityProject\Builds\Windows-OfficeRemodel
+- Final report: COMPLETE failures 0, phases 8, original preferences restored True.
+- Every phase has sampled frame/world-render/output-render parity:
+High powered-gallery: 49 sampled frames = 49 world renders = 49 output renders.
+High powered-archive: 72 sampled frames = 72 world renders = 72 output renders.
+High dark-basement-torch: 128 sampled frames = 128 world renders = 128 output renders.
+Medium powered-gallery: 79 sampled frames = 79 world renders = 79 output renders.
+Medium powered-archive: 115 sampled frames = 115 world renders = 115 output renders.
+Low powered-gallery: 141 sampled frames = 141 world renders = 141 output renders.
+Low powered-archive: 242 sampled frames = 242 world renders = 242 output renders.
+High menu: 153 sampled frames = 153 world renders = 153 output renders.
+
+Startup allocated memory: 260276303 -> 283639887 bytes.
+Loaded scene: transforms 8557 -> 10353; renderers 3056 -> 4142;
+colliders 2043 -> 2366. The remodel adds content/structural chunks.
+
+Limits: one 6-second sample per pose/preset on this GT 730. GPU timing and
+per-frame allocation measurements are unavailable (all GPU/allocation sample
+counts 0, not measured zero cost). Draw-call/batch counters are unavailable.
+Mean/median/p95 can differ substantially in a short sample with outliers.
+The data supports the measured changes above, not a general FPS guarantee.

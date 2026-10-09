@@ -15,7 +15,8 @@ namespace DeadAir.Editor
             ValidateBatteryLife(world);
             ValidateSharedSupplyAndTransfer(world);
             ValidateSerializationResetAndBook(world);
-            Debug.Log("DEAD AIR SUPPLIES PASSED: all drawers, one-time loot, distance/closed/pause restrictions, finite lamp, manual reload, shared four van cells, drop transfers, snapshots, reset and readable prison book.");
+            ValidateDrawerPresentation(world);
+            Debug.Log("DEAD AIR SUPPLIES PASSED: all drawers, one-time loot, distance/closed/pause restrictions, finite lamp, manual reload, shared four van cells, drop transfers, snapshots, reset and readable prison book; drawer animation, rewind and idle transforms.");
         }
 
         static void Require(bool condition, string message)
@@ -162,6 +163,58 @@ namespace DeadAir.Editor
             Require(actor.flashlightCharge == DeadAirSupplies.FlashlightSeconds && actor.spareBatteries == 0 && actor.coins == 0 &&
                 !actor.HasItem(book.id) && !rules.State.Drawer(drawer.id).searched && !rules.State.Drawer(drawer.id).open &&
                 !rules.State.Collected(world.Batteries[0].id), "Restart must restore charge/van and reroll all drawers next round.");
+        }
+
+        static void ValidateDrawerPresentation(WorldData world)
+        {
+            var fixture = new GameObject("Drawer idle transform fixture");
+            var materials = new System.Collections.Generic.HashSet<Material>();
+            try
+            {
+                var data = world.Drawers[0];
+                var drawer = new GameObject("drawer:" + data.id).transform;
+                drawer.SetParent(fixture.transform, false); drawer.localPosition = data.localPosition;
+                var closed = drawer.localPosition; var opened = closed + Vector3.forward * .38f;
+                var presentation = new DeadAirDrawerPresentation(fixture.transform, world);
+                foreach (var renderer in fixture.GetComponentsInChildren<Renderer>(true)) materials.Add(renderer.sharedMaterial);
+                var state = Started(world).State; state.elapsed = 5;
+                var snapshot = state.Drawer(data.id);
+                presentation.Apply(state, .1f);
+                RequireDrawerIdle(presentation, drawer, state, "Initialized closed drawer");
+                snapshot.open = true; drawer.hasChanged = false;
+                presentation.Apply(state, 0);
+                Require(!drawer.hasChanged, "A paused drawer must not dirty its transform.");
+                presentation.Apply(state, .1f);
+                Require(drawer.hasChanged && drawer.localPosition.z > closed.z && drawer.localPosition.z < opened.z,
+                    "An idle drawer must resume its opening animation.");
+                presentation.Apply(state, 1);
+                Require(drawer.localPosition.Equals(opened), "Drawer opening must finish at its full extension.");
+                RequireDrawerIdle(presentation, drawer, state, "Open drawer");
+                snapshot.open = false; presentation.Apply(state, .1f);
+                Require(drawer.localPosition.z > closed.z && drawer.localPosition.z < opened.z,
+                    "An open idle drawer must resume its closing animation.");
+                snapshot.open = true; presentation.Apply(state, 1);
+                Require(drawer.localPosition.Equals(opened), "An interrupted closing must reopen the drawer.");
+                state.elapsed = 0; snapshot.open = false; drawer.hasChanged = false;
+                presentation.Apply(state, 0);
+                Require(drawer.hasChanged && drawer.localPosition.Equals(closed),
+                    "A rewound snapshot must restore the authored closed position immediately.");
+                RequireDrawerIdle(presentation, drawer, state, "Reset closed drawer");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(fixture);
+                foreach (var material in materials) if (material != null) UnityEngine.Object.DestroyImmediate(material);
+            }
+        }
+
+        static void RequireDrawerIdle(DeadAirDrawerPresentation presentation, Transform drawer, RoomState state, string context)
+        {
+            var position = drawer.localPosition;
+            drawer.hasChanged = false;
+            for (int i = 0; i < 8; i++) presentation.Apply(state, .1f);
+            Require(!drawer.hasChanged && drawer.localPosition.Equals(position),
+                context + " must retain its position without writing the transform.");
         }
     }
 }
