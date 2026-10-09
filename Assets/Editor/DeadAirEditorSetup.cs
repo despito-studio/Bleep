@@ -143,14 +143,16 @@ namespace DeadAir.Editor
             PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.StandaloneWindows64, false);
             PlayerSettings.SetGraphicsAPIs(BuildTarget.StandaloneWindows64,
                 new[] { UnityEngine.Rendering.GraphicsDeviceType.Direct3D11 });
-            DeadAirOfficeBuilder.RepairGeneratedMeshTangents();
             AssetDatabase.SaveAssets();
-            EditorSceneManager.OpenScene("Assets/Scenes/Blackpine.unity");
             string executable = DeadAirReleaseBuild.OutputPath();
             Directory.CreateDirectory(Path.GetDirectoryName(executable));
             // A failed rebuild must not leave a previous success manifest usable.
             File.WriteAllText(Path.Combine(Path.GetDirectoryName(executable), "build-info.json"),
                 "{\"schemaVersion\":2,\"version\":\"" + DeadAirVersion.Current + "\",\"buildResult\":\"Building\",\"runtimeVerification\":\"pending\"}\n");
+            // Mesh tangents are saved by office generation/the explicit repair
+            // menu. A player build consumes saved assets instead of loading and
+            // editing every office mesh again before scene serialization.
+            EditorSceneManager.OpenScene("Assets/Scenes/Blackpine.unity");
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
             {
                 scenes = new[] { "Assets/Scenes/Blackpine.unity" },
