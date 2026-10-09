@@ -12,7 +12,7 @@ if($fieldManifest.version -ne '1.7.9' -or $fieldManifest.buildResult -ne 'Succee
 git diff --quiet $fieldManifest.sourceCommit HEAD -- Assets Packages ProjectSettings scripts
 if($LASTEXITCODE -ne 0){throw 'The built game does not match the current game source.'}
 $fieldChecks=Get-Content -LiteralPath $fieldReport
-if(@($fieldChecks | Where-Object {$_ -like 'PASSED:*'}).Count -ne 6 -or (Get-Item -LiteralPath $fieldReport).LastWriteTimeUtc -lt (Get-Item -LiteralPath $fieldExe).LastWriteTimeUtc){throw 'The six focused native checks must pass on this build.'}
+if(@($fieldChecks | Where-Object {$_ -like 'PASSED:*'}).Count -ne 6 -or (Get-Item -LiteralPath $fieldReport).LastWriteTimeUtc -lt [DateTime]::Parse($fieldManifest.builtAtUtc).ToUniversalTime()){throw 'The six focused native checks must pass on this build.'}
 $fieldZip=[IO.Path]::GetFullPath($OutputPath)
 [IO.Directory]::CreateDirectory((Split-Path -Parent $fieldZip)) | Out-Null
 if(Test-Path -LiteralPath $fieldZip){throw 'The release ZIP already exists; choose a fresh output path.'}
