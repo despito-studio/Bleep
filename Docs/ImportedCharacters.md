@@ -1,4 +1,21 @@
-# Персонажі з наданих моделей
+# Моделі персонажів і відтворення ресурсів
+
+Поточні ігрові ресурси перероблені зі збереженням образів Vivian, Victor, Edgar та Hazel. Нові редаговані моделі й звіти зберігаються в `Art/Characters/IndieCast`; геометрія та UV створені заново, а матеріали використовують чисті атласи `<role>_indie_albedo.png` розміром 256×128. Кожен скелет має 52 кістки, включно з ключицями, носками стоп і пальцями. Дев'ять рухів: `Idle`, `Walk`, `Run`, `UseItem`, `WalkBack`, `StrafeLeft`, `StrafeRight`, `CrouchIdle`, `CrouchWalk`. Пози запікаються з розрахунком IK при 60 FPS.
+
+Відтворення поточних моделей і 44 частин рук для кожного героя:
+
+```powershell
+& 'C:/Program Files/Blender Foundation/Blender 4.5/blender.exe' --background --factory-startup --python-exit-code 1 --python Tools/Characters/build_indie_cast.py -- --skip-render
+& 'C:/Program Files/Blender Foundation/Blender 4.5/blender.exe' --background --factory-startup --python-exit-code 1 --python Tools/Characters/build_indie_hands.py
+```
+
+Після генерації запустіть `DeadAirCharacterImporter.ImportAll()` у Unity. `DeadAirIndieCharacterValidation.ValidateAll()` перевіряє імпорт, ваги, матеріали, повні цикли, контакти рук і тіло від першої особи. `RunRuntimeContracts()` окремо перевіряє рух, схил, сходинку, повороти, паузу та повторне застосування IK. `Capture()` створює кадри Unity та послідовність руху у `Art/Characters/IndieCast/Unity`. Статус конкретного запуску визначається його звітом; наявність перевірок сама по собі не означає їх проходження.
+
+`DeadAirCharacterLocomotion` виконує контакт стоп у світових координатах поверх авторських кліпів. `EyeSocket`, `TorsoFront` та маркери підошов задають підгонку нового тіла. Старий класифікатор одягу за кольорами попереднього атласу до нової геометрії не застосовується.
+
+## Попередні імпортовані моделі
+
+Нижче описана збережена підготовка вихідних моделей. Її команди відтворюють попередній набір та перезаписують поточні ігрові FBX; для нової версії використовуйте команди вище.
 
 Джерела — чотири файли з `D:/1`. Оригінали збережені без змін. У грі використовується по одному повному персонажу з кожного файлу:
 

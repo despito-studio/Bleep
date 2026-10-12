@@ -25,12 +25,23 @@ namespace DeadAir
         public float FirstPersonEyeHeight => Vector3.Dot(FirstPersonEyePosition - transform.position, transform.up);
         public float FirstPersonChestForward => chest == null ? 0 : Vector3.Dot(chest.position - transform.position, transform.forward);
         public float FirstPersonCrouchLeanDegrees { get; private set; }
+        public float LocomotionPhase => locomotion == null ? 0 : locomotion.Phase;
+        public float LocomotionCadence => locomotion == null ? 0 : locomotion.Cadence;
+        public float FootContactError => locomotion == null ? 0 : locomotion.ContactError;
+        public float PlantedFootSlip => locomotion == null ? 0 : locomotion.PlantedSlip;
+        public Vector3 LeftFootContact => locomotion == null ? transform.position : locomotion.LeftContact;
+        public Vector3 RightFootContact => locomotion == null ? transform.position : locomotion.RightContact;
+        public Vector3 LocomotionVelocity => locomotion == null ? Vector3.zero : locomotion.Velocity;
 
         readonly List<UnityEngine.Object> owned = new List<UnityEngine.Object>();
         readonly Dictionary<string, Transform> props = new Dictionary<string, Transform>();
         readonly List<Transform> packedCigarettes = new List<Transform>();
         readonly List<Transform> smoke = new List<Transform>();
         readonly DeadAirGaze gaze = new DeadAirGaze();
+        DeadAirCharacterLocomotion locomotion;
+        struct RestBone { public Transform bone; public Vector3 position; public Quaternion rotation; }
+        RestBone[] skeletalRest;
+        bool authoredArmAxes;
         Animation animationPlayer;
         Transform rightSocket, leftSocket, rightArm, leftArm, rightForearm, leftForearm, rightHand, leftHand, head, packLid, cigarette, lighter, flame, ember, compassNeedle, pendulum;
         Transform rightThigh, leftThigh, rightShin, leftShin, rightFoot, leftFoot, pelvis, spine, chest;
@@ -43,6 +54,8 @@ namespace DeadAir
         bool gazeEnabled;
         bool firstPersonPresentation, hasLocomotionOverride, externalCrouching;
         float externalSpeed;
+        Vector3 movementVelocity, externalVelocity;
+        bool hasDirectionalOverride;
         Quaternion headRest = Quaternion.identity, chestRest = Quaternion.identity;
         Quaternion rightArmRest = Quaternion.identity, leftArmRest = Quaternion.identity;
         Quaternion rightForearmRest = Quaternion.identity, leftForearmRest = Quaternion.identity;
@@ -65,7 +78,7 @@ namespace DeadAir
         float lastElapsed, actionTime = -1;
         int lastSequence = -1;
         Vector2 lastPosition;
-        bool initialized, hasSnapshot, preview;
+        bool initialized, hasSnapshot, preview, locomotionPreview;
         Quaternion EquipmentAimRotation => gazeEnabled ? DeadAirGaze.ViewRotation(currentYaw, aimPitch) :
             transform.rotation * Quaternion.Euler(-aimPitch * Mathf.Rad2Deg, 0, 0);
 
@@ -88,6 +101,7 @@ namespace DeadAir
             if (animationPlayer == null) return;
             float dt = Mathf.Min(Time.deltaTime, .1f);
             SelectClip("Idle");
+            locomotion?.Step(Vector3.zero, false, false, firstPersonPresentation, dt, false, false);
             Advance(dt);
             SamplePose();
             UpdateSecondaryMotion();
@@ -97,6 +111,23 @@ namespace DeadAir
         {
             externalCrouching = isCrouching; externalSpeed = Mathf.Clamp(horizontalSpeed, 0, 8); hasLocomotionOverride = true;
             crouching = isCrouching && !ladderClimbing; moveSpeed = externalSpeed;
+        }
+
+        public void SetLocomotionPose(bool isCrouching, float horizontalSpeed, Vector3 worldVelocity)
+        {
+            SetLocomotionPose(isCrouching, horizontalSpeed);
+            externalVelocity = Vector3.ClampMagnitude(worldVelocity, 8); externalVelocity.y = 0;
+            hasDirectionalOverride = true;
+        }
+
+        public void ResetLocomotionContacts() => locomotion?.ResetContacts();
+
+        /// <summary>Final contact pass when an owner adapter has adjusted the avatar root after Present.</summary>
+        public void ReapplyGroundContacts()
+        {
+            SamplePose();
+            if (ladderClimbing) PoseLadder(); else PoseEquipment();
+            UpdateFlashlightPose();
         }
 
         public void SetTransitPose(float weight) { seatedWeight = Mathf.Clamp01(weight); }
@@ -131,6 +162,7 @@ namespace DeadAir
             if (player == null) return;
             Initialize();
             preview = false;
+            locomotionPreview = false;
             DeadAirClothing.Apply(gameObject, -1, classId);
             appearance = GetComponent<DeadAirAppearance>();
             crouching = player.crouching && !player.down && !player.ladderClimbing;
@@ -151,6 +183,7 @@ namespace DeadAir
                 lastPosition = position;
                 sampleAt = elapsed;
                 moveSpeed = 0;
+                movementVelocity = Vector3.zero;
                 movementAt = -100;
             }
             else if (Vector2.SqrMagnitude(position - lastPosition) > .000001f)
@@ -159,16 +192,20 @@ namespace DeadAir
                 float distance = Vector2.Distance(position, lastPosition);
                 // Spawn/teleport corrections must not look like sprinting.
                 moveSpeed = distance < 3 ? Mathf.Min(distance / interval, 8) : 0;
+                movementVelocity = new Vector3(-(position.x - lastPosition.x), 0, position.y - lastPosition.y) / interval;
+                movementVelocity = Vector3.ClampMagnitude(movementVelocity, 8);
                 movementAt = elapsed;
                 sampleAt = elapsed;
                 lastPosition = position;
             }
-            if (!paused && elapsed - movementAt > .22f) moveSpeed = 0;
+            if (!paused && elapsed - movementAt > .22f) { moveSpeed = 0; movementVelocity = Vector3.zero; }
             if (hasLocomotionOverride)
             {
                 moveSpeed = externalSpeed;
+                movementVelocity = hasDirectionalOverride ? externalVelocity : transform.forward * externalSpeed;
                 crouching = externalCrouching && !player.down && !ladderClimbing;
                 hasLocomotionOverride = false;
+                hasDirectionalOverride = false;
             }
             int gazeMode = player.down ? 3 : ladderClimbing ? 2 : seatedWeight > .001f ? 1 : 0;
             gazeEnabled = !player.down;
@@ -177,6 +214,8 @@ namespace DeadAir
             // The parent owns constrained ladder/down/transit rotations. Normal
             // local and remote roots use precisely the same body-follow model.
             if (gazeMode == 0) transform.rotation = gaze.BodyRotation;
+            locomotion?.Step(movementVelocity, crouching, player.sprinting, firstPersonPresentation, dt, reset,
+                player.down || ladderClimbing || seatedWeight > .001f || !playing || !string.IsNullOrEmpty(player.hiding));
             previousGazeMode = gazeMode;
             lastHeight = player.y;
             hasSnapshot = true;
@@ -189,7 +228,7 @@ namespace DeadAir
 
             if (!paused && !player.down)
             {
-                SelectClip(ladderClimbing ? "Idle" : actionTime >= 0 ? "UseItem" : moveSpeed > .15f ? (player.sprinting ? "Run" : "Walk") : gaze.TurningInPlace ? "Walk" : "Idle");
+                SelectClip(ladderClimbing ? "Idle" : actionTime >= 0 ? "UseItem" : LocomotionClip(player.sprinting));
                 Advance(dt);
                 if (actionTime >= 0 && animationPlayer != null && animationPlayer["UseItem"] != null)
                     clipTime = actionTime / duration * animationPlayer["UseItem"].length;
@@ -206,6 +245,7 @@ namespace DeadAir
         {
             Initialize();
             preview = true;
+            locomotionPreview = false;
             gazeEnabled = false;
             crouching = false;
             aimPitch = 0;
@@ -226,7 +266,7 @@ namespace DeadAir
         /// <summary>Explicit deterministic gaze fixture, using the same model as Present.</summary>
         public void SetGazePreview(float yaw, float pitch, float dt, float horizontalSpeed = 0, bool reset = false)
         {
-            Initialize(); preview = true; gazeEnabled = true; currentYaw = yaw;
+            Initialize(); preview = true; locomotionPreview = false; gazeEnabled = true; currentYaw = yaw;
             aimPitch = Mathf.Clamp(pitch, DeadAirLocomotion.MaximumDownwardPitch, 1.35f);
             gaze.Step(yaw, pitch, horizontalSpeed, dt, reset);
             transform.rotation = gaze.BodyRotation;
@@ -246,6 +286,17 @@ namespace DeadAir
             PoseEquipment();
         }
 
+        /// <summary>Deterministic locomotion fixture; caller moves/turns the root between samples as in gameplay.</summary>
+        public void SetLocomotionPreview(Vector3 worldVelocity, bool isCrouching, bool running, float dt, bool reset = false)
+        {
+            Initialize(); preview = true; locomotionPreview = true; gazeEnabled = false; ladderClimbing = false; seatedWeight = 0;
+            crouching = isCrouching; movementVelocity = worldVelocity; movementVelocity.y = 0;
+            moveSpeed = movementVelocity.magnitude; actionTime = -1; motionPaused = dt <= 0;
+            locomotion?.Step(movementVelocity, isCrouching, running, firstPersonPresentation, dt, reset, false);
+            SelectClip(LocomotionClip(running)); Advance(Mathf.Clamp(dt, 0, .1f));
+            SamplePose(); PoseEquipment(); UpdateFlashlightPose();
+        }
+
         void Initialize()
         {
             if (initialized) return;
@@ -262,6 +313,12 @@ namespace DeadAir
                 state.wrapMode = state.name == "UseItem" ? WrapMode.ClampForever : WrapMode.Loop;
             }
             var transforms = GetComponentsInChildren<Transform>(true);
+            var rest = new List<RestBone>();
+            foreach (var bone in transforms)
+                if (bone != transform && bone.GetComponent<Renderer>() == null)
+                    rest.Add(new RestBone { bone = bone, position = bone.localPosition, rotation = bone.localRotation });
+            skeletalRest = rest.ToArray();
+            authoredArmAxes = Array.Exists(transforms, bone => bone.name == "clavicle.L");
             rightSocket = FindSocket(transforms, "ItemSocket.R", "hand.R", "RightHand");
             leftSocket = FindSocket(transforms, "ItemSocket.L", "hand.L", "LeftHand");
             foreach (var bone in transforms)
@@ -288,7 +345,8 @@ namespace DeadAir
                 headRest = head.localRotation;
                 // SourceEye is measured on the actual supplied mesh. Cache it in
                 // head space before the owner adapter normalizes avatar scale.
-                headLocalEye = head.InverseTransformPoint(transform.TransformPoint(DeadAirBodyFit.SourceEye(classId)));
+                var eye = Array.Find(transforms, bone => bone.name == "EyeSocket");
+                headLocalEye = head.InverseTransformPoint(eye != null ? eye.position : transform.TransformPoint(DeadAirBodyFit.SourceEye(classId)));
             }
             if (chest != null) chestRest = chest.localRotation;
             if (rightArm != null) rightArmRest = rightArm.localRotation;
@@ -301,6 +359,7 @@ namespace DeadAir
             leftLegRestPitch = SagittalPitch(leftThigh, leftShin);
             if (pelvis != null) { pelvisRest = pelvis.localRotation; pelvisRestPosition = pelvis.localPosition; }
             if (spine != null) { spineRest = spine.localRotation; spineRestPosition = spine.localPosition; }
+            locomotion = new DeadAirCharacterLocomotion(transform, pelvis, chest, transforms);
             if (rightSocket == null || leftSocket == null) return;
             if (rightHand != null && leftHand != null)
             {
@@ -319,13 +378,17 @@ namespace DeadAir
 
         Vector3 MeasureGrip(Transform hand)
         {
+            foreach (var marker in hand.GetComponentsInChildren<Transform>(true))
+                if (marker.name == "GripContact.R" || marker.name == "GripContact.L") return hand.InverseTransformPoint(marker.position);
             var bounds = new Bounds();
             var points = new List<Vector3>();
             bool found = false;
             foreach (var renderer in GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {
-                int boneIndex = Array.IndexOf(renderer.bones, hand);
-                if (boneIndex < 0 || renderer.sharedMesh == null) continue;
+                if (Array.IndexOf(renderer.bones, hand) < 0 || renderer.sharedMesh == null) continue;
+                var handBones = new HashSet<int>();
+                for (int i = 0; i < renderer.bones.Length; i++)
+                    if (renderer.bones[i] == hand || renderer.bones[i] != null && renderer.bones[i].IsChildOf(hand)) handBones.Add(i);
                 var baked = new Mesh();
                 try
                 {
@@ -335,8 +398,9 @@ namespace DeadAir
                     for (int i = 0; i < vertices.Length && i < weights.Length; i++)
                     {
                         var w = weights[i];
-                        if (!((w.boneIndex0 == boneIndex && w.weight0 > .8f) || (w.boneIndex1 == boneIndex && w.weight1 > .8f) ||
-                            (w.boneIndex2 == boneIndex && w.weight2 > .8f) || (w.boneIndex3 == boneIndex && w.weight3 > .8f))) continue;
+                        float handWeight = (handBones.Contains(w.boneIndex0) ? w.weight0 : 0) + (handBones.Contains(w.boneIndex1) ? w.weight1 : 0) +
+                            (handBones.Contains(w.boneIndex2) ? w.weight2 : 0) + (handBones.Contains(w.boneIndex3) ? w.weight3 : 0);
+                        if (handWeight < .8f) continue;
                         var point = hand.InverseTransformPoint(renderer.transform.TransformPoint(vertices[i]));
                         points.Add(point);
                         if (!found) { bounds = new Bounds(point, Vector3.zero); found = true; }
@@ -417,10 +481,30 @@ namespace DeadAir
             transition = 0;
         }
 
+        string AvailableClip(string preferred, string fallback) => animationPlayer != null && animationPlayer[preferred] != null ? preferred : fallback;
+
+        string LocomotionClip(bool running)
+        {
+            if (moveSpeed < .12f && !gaze.TurningInPlace) return crouching ? AvailableClip("CrouchIdle", "Idle") : "Idle";
+            if (crouching) return AvailableClip("CrouchWalk", "Walk");
+            Vector3 local = transform.InverseTransformDirection(movementVelocity);
+            if (Mathf.Abs(local.x) > Mathf.Abs(local.z) * 1.25f)
+                return AvailableClip(local.x < 0 ? "StrafeLeft" : "StrafeRight", running ? "Run" : "Walk");
+            if (local.z < -.12f) return AvailableClip("WalkBack", running ? "Run" : "Walk");
+            return running ? "Run" : "Walk";
+        }
+
+        static bool GaitClip(string name) => name == "Walk" || name == "Run" || name == "WalkBack" ||
+            name == "StrafeLeft" || name == "StrafeRight" || name == "CrouchWalk";
+
         void Advance(float dt)
         {
             clipTime += dt;
             previousClipTime += dt;
+            if (locomotion != null && GaitClip(clipName) && animationPlayer[clipName] != null)
+                clipTime = locomotion.Phase * animationPlayer[clipName].length;
+            if (locomotion != null && previousClip != null && GaitClip(previousClip) && animationPlayer[previousClip] != null)
+                previousClipTime = locomotion.Phase * animationPlayer[previousClip].length;
             transition = Mathf.MoveTowards(transition, 1, dt / .14f);
             if (transition >= 1) previousClip = null;
         }
@@ -441,6 +525,11 @@ namespace DeadAir
                 previous.weight = 1 - transition;
                 previous.time = previousClipTime;
             }
+            // Restore every skeletal local transform: fingers and contact markers may
+            // be unkeyed, and two passes in one frame must never accumulate IK or gaze.
+            if (skeletalRest != null)
+                foreach (var rest in skeletalRest)
+                    if (rest.bone != null) { rest.bone.localPosition = rest.position; rest.bone.localRotation = rest.rotation; }
             // Some authored clips do not key the head. Restore its source rest
             // transform before every sample, so Present + LateUpdate never add
             // a second gaze rotation to last frame's pose.
@@ -456,6 +545,7 @@ namespace DeadAir
             animationPlayer.Sample();
             PoseCrouching();
             PoseSeatedTransit();
+            if (!preview || locomotionPreview) locomotion?.Apply();
             PoseGaze();
             PoseRelaxedArms();
         }
@@ -466,10 +556,9 @@ namespace DeadAir
             // the authored X gait curves flap laterally instead of swinging.
             // Use the actual opposite leg's sagittal motion at the authored
             // 0.7 arm/leg amplitude, with a relaxed 10-degree lateral hang.
-            if (firstPersonPresentation || ladderClimbing || crouching || seatedWeight > .001f || actionTime >= 0 ||
+            if (authoredArmAxes || firstPersonPresentation || ladderClimbing || seatedWeight > .001f || actionTime >= 0 ||
                 clipName == "UseItem" || previousClip == "UseItem" && transition < 1) return;
-            bool gait = clipName == "Walk" || clipName == "Run" ||
-                transition < 1 && (previousClip == "Walk" || previousClip == "Run");
+            bool gait = GaitClip(clipName) || transition < 1 && GaitClip(previousClip);
             RelaxArm(rightArm, rightForearm, rightHand, gait,
                 rightArmRestPitch, SagittalPitch(leftThigh, leftShin) - leftLegRestPitch);
             RelaxArm(leftArm, leftForearm, leftHand, gait,
@@ -542,7 +631,11 @@ namespace DeadAir
 
         void PoseCrouching()
         {
-            if (!crouching || ladderClimbing || pelvis == null) return;
+            float weight = (!preview || locomotionPreview) && locomotion != null ? locomotion.CrouchWeight : crouching ? 1 : 0;
+            if (weight <= .001f || ladderClimbing || pelvis == null) return;
+            // The new cast includes a connected authored crouch pose. Only the owner's
+            // eye clearance needs the adapter below; legacy rigs retain the fallback.
+            if (authoredArmAxes && !firstPersonPresentation && (clipName == "CrouchWalk" || clipName == "CrouchIdle")) return;
             Vector3 rightTarget = rightFoot != null ? rightFoot.position : Vector3.zero;
             Vector3 leftTarget = leftFoot != null ? leftFoot.position : Vector3.zero;
             Quaternion rightRotation = rightFoot != null ? rightFoot.rotation : Quaternion.identity;
@@ -555,6 +648,7 @@ namespace DeadAir
                 // height, then lean the connected upper body around that pelvis
                 // until its actual source eye is below the crouched camera eye.
                 // Feet are solved back to the unchanged contacts after the lean.
+                if (authoredArmAxes && FirstPersonEyeHeight <= DeadAirLocomotion.CrouchingEye - .06f) return;
                 float sourceHip = Vector3.Dot(pelvis.position - transform.position, transform.up);
                 float floorContact = (Vector3.Dot(rightTarget - transform.position, transform.up) +
                     Vector3.Dot(leftTarget - transform.position, transform.up)) * .5f;
@@ -562,13 +656,14 @@ namespace DeadAir
                 // rig: their shin/cuff blend can otherwise cross the floor.
                 float minimumHip = classId == "engineer" ? .40f : .33f;
                 float targetHip = Mathf.Max(floorContact + .23f, Mathf.Clamp(sourceHip * .48f, minimumHip, .42f));
+                targetHip = Mathf.Lerp(sourceHip, targetHip, weight);
                 pelvis.position -= transform.up * Mathf.Max(0, sourceHip - targetHip);
                 Vector3 eyeOffset = FirstPersonEyePosition - pelvis.position;
                 float vertical = Vector3.Dot(eyeOffset, transform.up), forward = Vector3.Dot(eyeOffset, transform.forward);
                 float radius = Mathf.Sqrt(vertical * vertical + forward * forward);
-                float targetEye = DeadAirLocomotion.CrouchingEye - .08f;
+                float targetEye = Mathf.Lerp(FirstPersonEyeHeight, DeadAirLocomotion.CrouchingEye - .08f, weight);
                 float angle = radius > .01f ? Mathf.Acos(Mathf.Clamp((targetEye - targetHip) / radius, -1, 1)) - Mathf.Atan2(forward, vertical) : 0;
-                FirstPersonCrouchLeanDegrees = Mathf.Clamp(angle * Mathf.Rad2Deg, 18, 68);
+                FirstPersonCrouchLeanDegrees = Mathf.Clamp(angle * Mathf.Rad2Deg, 18 * weight, 68);
                 Quaternion lean = Quaternion.AngleAxis(FirstPersonCrouchLeanDegrees, transform.right);
                 Transform upperBody = spine != null ? spine : chest;
                 if (upperBody != null)
@@ -587,8 +682,8 @@ namespace DeadAir
             }
             else
             {
-                pelvis.position -= transform.up * Mathf.Min(.41f, hipHeight * .48f);
-                if (chest != null) chest.rotation = Quaternion.AngleAxis(12, transform.right) * chest.rotation;
+                pelvis.position -= transform.up * (Mathf.Min(.41f, hipHeight * .48f) * weight);
+                if (chest != null) chest.rotation = Quaternion.AngleAxis(12 * weight, transform.right) * chest.rotation;
             }
             CrouchLeg(rightThigh, rightShin, rightFoot, rightTarget, rightRotation);
             CrouchLeg(leftThigh, leftShin, leftFoot, leftTarget, leftRotation);

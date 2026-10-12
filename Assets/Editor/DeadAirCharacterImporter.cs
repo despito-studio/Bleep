@@ -12,6 +12,7 @@ namespace DeadAir.Editor
     {
         static readonly string[] Roles = { "engineer", "operator", "journalist", "dispatcher" };
         static readonly string[] ClipNames = { "Idle", "Walk", "Run", "UseItem" };
+        static readonly string[] IndieClipNames = { "Idle", "Walk", "Run", "UseItem", "WalkBack", "StrafeLeft", "StrafeRight", "CrouchIdle", "CrouchWalk" };
         const string ModelFolder = "Assets/Resources/Characters";
         const string MaterialFolder = "Assets/Characters/Materials";
         const string PrefabFolder = "Assets/Resources/World";
@@ -62,11 +63,14 @@ namespace DeadAir.Editor
 
             var defaults = importer.defaultClipAnimations;
             var clips = new List<ModelImporterClipAnimation>();
-            foreach (string expected in ClipNames)
+            bool indie = defaults.Any(c => c.name.IndexOf("CrouchWalk", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                c.takeName.IndexOf("CrouchWalk", StringComparison.OrdinalIgnoreCase) >= 0);
+            var expectedClips = indie ? IndieClipNames : ClipNames;
+            foreach (string expected in expectedClips)
             {
                 var clip = defaults.FirstOrDefault(c => string.Equals(c.name, expected, StringComparison.OrdinalIgnoreCase)) ??
-                    defaults.FirstOrDefault(c => c.name.IndexOf(expected, StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        c.takeName.IndexOf(expected, StringComparison.OrdinalIgnoreCase) >= 0);
+                    defaults.FirstOrDefault(c => ActionName(c.name).Equals(expected, StringComparison.OrdinalIgnoreCase) ||
+                        ActionName(c.takeName).Equals(expected, StringComparison.OrdinalIgnoreCase));
                 if (clip == null)
                     throw new InvalidOperationException(path + " has no baked " + expected + " action. Takes: " + string.Join(", ", defaults.Select(c => c.name)));
                 clip.name = expected;
@@ -106,11 +110,14 @@ namespace DeadAir.Editor
                     visual.transform.localScale *= 1.8f / Mathf.Max(.0001f, bounds.size.y);
                     bounds = MeasureGeometry(root);
                 }
-                visual.transform.localPosition -= new Vector3(bounds.center.x, bounds.min.y, bounds.center.z);
+                // The new cast authors its rig origin and contact sockets in metres.
+                // Bounds-centering asymmetric clothing would shift those measured eye/grip contacts.
+                visual.transform.localPosition -= indie ? new Vector3(0, bounds.min.y, 0) :
+                    new Vector3(bounds.center.x, bounds.min.y, bounds.center.z);
                 var animation = visual.GetComponentInChildren<Animation>(true);
                 if (animation == null) animation = visual.AddComponent<Animation>();
                 var importedClips = AssetDatabase.LoadAllAssetsAtPath(path).OfType<AnimationClip>()
-                    .Where(clip => ClipNames.Contains(clip.name)).ToArray();
+                    .Where(clip => expectedClips.Contains(clip.name)).ToArray();
                 foreach (var clip in importedClips) animation.AddClip(clip, clip.name);
                 animation.clip = animation.GetClip("Idle");
                 animation.playAutomatically = false;
@@ -119,9 +126,9 @@ namespace DeadAir.Editor
                 // imported clip references explicitly after an FBX reimport.
                 var serializedAnimation = new SerializedObject(animation);
                 var savedClips = serializedAnimation.FindProperty("m_Animations");
-                savedClips.arraySize = ClipNames.Length;
-                for (int i = 0; i < ClipNames.Length; i++)
-                    savedClips.GetArrayElementAtIndex(i).objectReferenceValue = importedClips.Single(clip => clip.name == ClipNames[i]);
+                savedClips.arraySize = expectedClips.Length;
+                for (int i = 0; i < expectedClips.Length; i++)
+                    savedClips.GetArrayElementAtIndex(i).objectReferenceValue = importedClips.Single(clip => clip.name == expectedClips[i]);
                 serializedAnimation.FindProperty("m_Animation").objectReferenceValue = importedClips.Single(clip => clip.name == "Idle");
                 serializedAnimation.ApplyModifiedPropertiesWithoutUndo();
                 var motion = root.AddComponent<DeadAirCharacterMotion>();
@@ -132,6 +139,13 @@ namespace DeadAir.Editor
                 Debug.Log("Imported Blender " + role + ": " + renderers.Length + " skinned meshes; " + bounds.size.ToString("F3") + " m.");
             }
             finally { UnityEngine.Object.DestroyImmediate(root); }
+        }
+
+        static string ActionName(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return "";
+            int separator = name.LastIndexOf('|');
+            return separator >= 0 ? name.Substring(separator + 1) : name;
         }
 
         static Material ImportMaterial(string role, Material source)
@@ -152,14 +166,21 @@ namespace DeadAir.Editor
                 source.HasProperty("_BaseColor") ? source.GetColor("_BaseColor") : Color.white;
             material.mainTexture = source.HasProperty("_MainTex") ? source.GetTexture("_MainTex") :
                 source.HasProperty("_BaseMap") ? source.GetTexture("_BaseMap") : null;
-            var atlas = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Characters/Textures/" + role + "_albedo.png");
+            bool indie = source.name.StartsWith(role + "_indie_palette", StringComparison.Ordinal);
+            bool indieHand = source.name.StartsWith(role + "_indie_hand_", StringComparison.Ordinal);
+            string atlasPath = "Assets/Characters/Textures/" + role + (indie ? "_indie_albedo.png" : "_albedo.png");
+            var atlas = indieHand ? null : AssetDatabase.LoadAssetAtPath<Texture2D>(atlasPath);
+            if (indie && atlas == null) throw new InvalidOperationException("Missing indie cast palette: " + atlasPath);
             if (atlas != null)
             {
                 material.mainTexture = atlas;
-                // All four supplied sources use this original diffuse factor.
-                // FBX material conversion can otherwise replace it with white.
-                material.color = new Color(.8f, .8f, .8f, 1);
+                // Original sources used an authored .8 factor; the new atlas is final colour.
+                // Keep these contracts separate when old assets remain in the project.
+                material.color = indie ? Color.white : new Color(.8f, .8f, .8f, 1);
             }
+            if (indieHand) material.mainTexture = null; // Newly authored FPS parts carry solid palette colours.
+            material.SetTextureScale("_MainTex", Vector2.one);
+            material.SetTextureOffset("_MainTex", Vector2.zero);
             material.SetFloat("_Glossiness", .06f);
             material.SetFloat("_Metallic", 0);
             material.SetFloat("_Cull", 2);
@@ -175,7 +196,12 @@ namespace DeadAir.Editor
 
         static void ConfigureTexture(string role)
         {
-            string path = "Assets/Characters/Textures/" + role + "_albedo.png";
+            ConfigureTexture("Assets/Characters/Textures/" + role + "_albedo.png", false);
+            ConfigureTexture("Assets/Characters/Textures/" + role + "_indie_albedo.png", true);
+        }
+
+        static void ConfigureTexture(string path, bool indie)
+        {
             if (!File.Exists(path)) return; // The original reference cast has a flat material palette.
             var importer = AssetImporter.GetAtPath(path) as TextureImporter;
             if (importer == null) throw new InvalidOperationException("Missing character atlas importer: " + path);
@@ -184,9 +210,9 @@ namespace DeadAir.Editor
             importer.alphaSource = TextureImporterAlphaSource.None;
             importer.maxTextureSize = 1024;
             importer.mipmapEnabled = true;
-            importer.filterMode = FilterMode.Bilinear;
+            importer.filterMode = indie ? FilterMode.Point : FilterMode.Bilinear;
             importer.wrapMode = TextureWrapMode.Clamp;
-            importer.textureCompression = TextureImporterCompression.CompressedHQ;
+            importer.textureCompression = indie ? TextureImporterCompression.Uncompressed : TextureImporterCompression.CompressedHQ;
             importer.isReadable = false;
             importer.SaveAndReimport();
         }
@@ -268,7 +294,7 @@ namespace DeadAir.Editor
                     child.AddComponent<MeshRenderer>().sharedMaterials = renderer.sharedMaterials.Select(m => ImportMaterial(role, m)).ToArray();
                 }
                 PrefabUtility.SaveAsPrefabAsset(root, HandFolder + "/hand_" + role + ".prefab");
-                Debug.Log("IMPORTED CHARACTER HANDS: " + role + " parts=44 atlas retained; shared meshes/materials for every equipment grip.");
+                Debug.Log("IMPORTED CHARACTER HANDS: " + role + " parts=44; source palette and shared meshes/materials retained for every equipment grip.");
             }
             finally
             {
@@ -361,12 +387,13 @@ namespace DeadAir.Editor
                     var animatedBounds = MeasureGeometry(instance);
                     if (animatedBounds.size.y < .8f || animatedBounds.size.y > 3.2f || animatedBounds.size.x > 3)
                         throw new InvalidOperationException(role + " Walk produces invalid skin bounds: " + animatedBounds);
+                    int clipCount = 0; foreach (AnimationState state in instanceAnimation) clipCount++;
                     Debug.Log("BLENDER CHARACTER VALIDATED: " + role + " triangles=" + triangles + " bones=" + renderers.Max(r => r.bones.Length) +
-                        " clips=4 dimensions=" + bounds.size.ToString("F3"));
+                        " clips=" + clipCount + " dimensions=" + bounds.size.ToString("F3"));
                 }
                 finally { UnityEngine.Object.DestroyImmediate(instance); }
             }
-            Debug.Log("DEAD AIR BLENDER CHARACTERS PASSED: four rigged characters, four baked actions each, materials and metre-scale geometry.");
+            Debug.Log("DEAD AIR BLENDER CHARACTERS PASSED: four rigged characters, required Idle/Walk/Run/UseItem actions, materials and metre-scale geometry.");
         }
 
         static Vector3[] SkinVertices(GameObject root)

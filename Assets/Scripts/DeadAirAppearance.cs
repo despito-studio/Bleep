@@ -38,6 +38,9 @@ namespace DeadAir
         string classId;
         int currentMask = -2;
         bool initialized;
+        bool authoredOutfit;
+        int authoredTriangleCount;
+        public bool UsesAuthoredOutfit => authoredOutfit;
         public int CurrentMask => currentMask;
         public DeadAirSecondaryMotion SecondaryMotion => secondary;
         public bool HasAdultBody => baseBody != null;
@@ -59,6 +62,14 @@ namespace DeadAir
             mask = mask < 0 ? DeadAirClothing.DefaultMask(role) : DeadAirClothing.Sanitize(mask);
             if (currentMask == mask) return;
             currentMask = mask;
+            if (authoredOutfit)
+            {
+                // The rebuilt cast has complete, authored clothing and joint weights.
+                // The old colour classifier describes an unrelated source atlas:
+                // applying it here would cut arbitrary holes and rebind face vertices.
+                VisibleSourceTriangleCount = authoredTriangleCount;
+                return;
+            }
             VisibleSourceTriangleCount = 0;
             foreach (var surface in surfaces) VisibleSourceTriangleCount += surface.Apply(mask);
             // Full original clothing keeps its authored surface untouched. The
@@ -75,6 +86,15 @@ namespace DeadAir
             initialized = true; classId = role;
             var sources = GetComponentsInChildren<SkinnedMeshRenderer>(true);
             if (sources.Length == 0) return;
+            authoredOutfit = DeadAirBodyFit.FindLandmark(transform, "IndieCast") != null;
+            if (authoredOutfit)
+            {
+                foreach (var source in sources)
+                    if (source.sharedMesh != null)
+                        for (int submesh = 0; submesh < source.sharedMesh.subMeshCount; submesh++)
+                            authoredTriangleCount += (int)source.sharedMesh.GetIndexCount(submesh) / 3;
+                return;
+            }
             var found = new Dictionary<string, Transform>();
             foreach (var bone in GetComponentsInChildren<Transform>(true)) if (!found.ContainsKey(bone.name)) found.Add(bone.name, bone);
             found.TryGetValue("pelvis", out pelvis); found.TryGetValue("spine", out spine);

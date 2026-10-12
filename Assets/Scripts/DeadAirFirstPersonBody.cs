@@ -17,6 +17,8 @@ namespace DeadAir
         DeadAirCharacterMotion motion;
         Light bodyBounce;
         float eyeClearance;
+        float authoredBodyOffset;
+        bool authoredCast;
         Vector3 previousFeet;
         bool hasFeet;
         public GameObject Avatar => avatar;
@@ -35,7 +37,7 @@ namespace DeadAir
             avatar.SetActive(true);
             // Sample at the collision feet, then fit the visual rig to its actual
             // source eye. Bone pivots and face depth differ between the models.
-            avatar.transform.position = feet.position - feet.forward * .12f;
+            avatar.transform.position = feet.position - feet.forward * (authoredCast ? authoredBodyOffset : .12f);
             float seated = DeadAirVanPresentation.SeatedWeight(state);
             if (player.ladderClimbing || seated > .001f) avatar.transform.rotation = feet.rotation;
             pose.characterClass = player.characterClass;
@@ -44,9 +46,12 @@ namespace DeadAir
             pose.down = false; pose.ladderClimbing = player.ladderClimbing;
             pose.ladderUp = player.ladderUp; pose.ladderStartedAt = player.ladderStartedAt;
             pose.clothingMask = -1;
-            float distance = hasFeet ? Vector3.Distance(new Vector3(feet.position.x, 0, feet.position.z), new Vector3(previousFeet.x, 0, previousFeet.z)) : 0;
+            Vector3 displacement = hasFeet ? feet.position - previousFeet : Vector3.zero;
+            displacement.y = 0;
+            float distance = displacement.magnitude;
             float speed = distance < 3 && Time.deltaTime > 0 ? Mathf.Clamp(distance / Time.deltaTime, 0, 8) : 0;
-            motion.SetLocomotionPose(crouching, speed);
+            Vector3 velocity = distance > .0001f ? displacement.normalized * speed : Vector3.zero;
+            motion.SetLocomotionPose(crouching, speed, velocity);
             motion.SetTransitPose(seated);
             motion.Present(pose, state.elapsed, state.paused, true);
             bodyBounce.transform.rotation = avatar.transform.rotation * Quaternion.Euler(35, 180, 0);
@@ -57,7 +62,9 @@ namespace DeadAir
             // needs the small lens clearance rather than the upright coat fit.
             Vector3 eyeDelta = eye - motion.FirstPersonEyePosition - avatar.transform.forward * (crouching ? .08f : eyeClearance);
             eyeDelta.y = 0;
-            avatar.transform.position += eyeDelta;
+            // Authored rigs keep a stable root before foot IK. Moving the root
+            // after contact solving drags both planted feet whenever the head bobs.
+            if (!authoredCast) avatar.transform.position += eyeDelta;
             bodyView.SetVector("_DeadAirOwnerBodyEye", new Vector4(eye.x, eye.y, eye.z, 1));
             bodyView.SetVector("_DeadAirOwnerBodyUp", look * Vector3.up);
             bodyView.SetVector("_DeadAirOwnerBodyForward", look * Vector3.forward);
@@ -84,11 +91,14 @@ namespace DeadAir
             bodyBounce.type = LightType.Directional; bodyBounce.cullingMask = 1 << 27;
             bodyBounce.color = new Color32(192, 202, 215, 255); bodyBounce.intensity = .48f;
             bodyBounce.shadows = LightShadows.None; bodyBounce.renderMode = LightRenderMode.ForcePixel;
-            Vector3 sourceEye = DeadAirBodyFit.SourceEye(role);
+            authoredCast = DeadAirBodyFit.FindLandmark(avatar.transform, "EyeSocket") != null;
+            Vector3 sourceEye = DeadAirBodyFit.SourceEye(role, avatar.transform);
             avatar.transform.localScale *= DeadAirLocomotion.StandingEye / sourceEye.y;
             // Keep the owner's removed neckline outside the downward viewport.
             // Retain the complete authored chest instead of drawing a cap over it.
-            eyeClearance = Mathf.Max(.30f, (DeadAirBodyFit.TorsoFront(role) - sourceEye.z) * avatar.transform.lossyScale.z + .08f);
+            eyeClearance = Mathf.Max(authoredCast ? .12f : .30f,
+                (DeadAirBodyFit.TorsoFront(role, avatar.transform) - sourceEye.z) * avatar.transform.lossyScale.z + .08f);
+            authoredBodyOffset = Mathf.Clamp(sourceEye.z * avatar.transform.lossyScale.z + eyeClearance - .08f, .02f, .26f);
             VisibleTriangles = HiddenTriangles = 0;
             foreach (var renderer in avatar.GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {
@@ -141,7 +151,13 @@ namespace DeadAir
             return false;
         }
         public void SetVisible(bool visible) { if (avatar != null) avatar.SetActive(visible); }
-        public void ResetPose(float yaw, float pitch) { hasFeet = false; if (motion != null) motion.ResetGaze(yaw, pitch); }
+        public void ResetPose(float yaw, float pitch)
+        {
+            hasFeet = false;
+            if (motion == null) return;
+            motion.ResetGaze(yaw, pitch);
+            motion.ResetLocomotionContacts();
+        }
         void DisposeAvatar()
         {
             if (avatar != null) Release(avatar);

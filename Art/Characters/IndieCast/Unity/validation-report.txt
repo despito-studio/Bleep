@@ -1,0 +1,11 @@
+INDIE CAST VALIDATION
+UTC 2026-10-12T16:35:29.3079628Z
+Unity 6000.6.4f1
+operator: vertices=5501, triangles=2988, deform bones=52, max weight error=0.00000, replacement atlas=Assets/Characters/Textures/operator_indie_albedo.png
+operator raw Idle: 121 samples, lowest sole=0.00000 m, highest two-foot minimum=0.00000 m.
+operator raw Walk: 46 samples, lowest sole=-0.00234 m, highest two-foot minimum=0.00034 m.
+FAIL: System.InvalidOperationException: Indie cast validation: operator Run baked soles penetrate the floor by 0.00868 m.
+  at DeadAir.Editor.DeadAirIndieCharacterValidation.Require (System.Boolean value, System.String message) [0x00014] in D:\DeadAirUnityProject\Assets\Editor\DeadAirIndieCharacterValidation.cs:637 
+  at DeadAir.Editor.DeadAirIndieCharacterValidation.ValidateClip (System.String role, System.String name, UnityEngine.Animation animation, UnityEngine.GameObject instance, UnityEngine.SkinnedMeshRenderer skin, System.Collections.Generic.HashSet`1[T] feet, System.Collections.Generic.Dictionary`2[TKey,TValue] bones, System.Collections.Generic.Dictionary`2[TKey,TValue] rest, System.Collections.Generic.List`1[T] report) [0x000eb] in D:\DeadAirUnityProject\Assets\Editor\DeadAirIndieCharacterValidation.cs:419 
+  at DeadAir.Editor.DeadAirIndieCharacterValidation.ValidateCharacter (System.String role, System.Collections.Generic.List`1[T] report) [0x00163] in D:\DeadAirUnityProject\Assets\Editor\DeadAirIndieCharacterValidation.cs:278 
+  at DeadAir.Editor.DeadAirIndieCharacterValidation.Validate () [0x0005a] in D:\DeadAirUnityProject\Assets\Editor\DeadAirIndieCharacterValidation.cs:241 

@@ -57,6 +57,7 @@ namespace DeadAir
         public bool IsUsingUnique => actionTime >= 0;
         public bool UsingImportedHands { get; private set; }
         public string ImportedHandsRole { get; private set; }
+        DeadAirFirstPersonBody ownerBody;
 
         public void CompleteEquipTransition()
         {
@@ -235,13 +236,18 @@ namespace DeadAir
                 foreach (var item in items) item.Value.gameObject.SetActive(item.Key == mode);
             }
             equip = Mathf.MoveTowards(equip, 0, presentationDt * .9f);
-            float swayX = Mathf.Sin(clock * 7.5f) * .008f * bob;
-            float swayY = Mathf.Abs(Mathf.Cos(clock * 7.5f)) * .007f * bob;
+            if (ownerBody == null) ownerBody = GetComponent<DeadAirFirstPersonBody>();
+            // Carry motion follows the actual foot cycle. A separate fixed clock
+            // makes the hands bounce out of step when walking speed changes.
+            float gait = ownerBody != null && ownerBody.Motion != null && ownerBody.Avatar.activeInHierarchy
+                ? ownerBody.Motion.LocomotionPhase * Mathf.PI * 2 : clock * 7.5f;
+            float swayX = Mathf.Sin(gait) * .008f * bob;
+            float swayY = Mathf.Abs(Mathf.Cos(gait)) * .007f * bob;
             var turn = sourceCamera.transform.InverseTransformDirection(previousForward - sourceCamera.transform.forward);
             previousForward = Vector3.Lerp(previousForward, sourceCamera.transform.forward, dt * 12);
             float handLift = mode == "map" ? 0 : .09f;
             rig.localPosition = new Vector3(swayX + Mathf.Clamp(turn.x * .05f, -.025f, .025f), swayY + handLift - equip, 0);
-            rig.localRotation = Quaternion.Euler(Mathf.Clamp(turn.y * 4, -2, 2), 0, Mathf.Sin(clock * 3.75f) * bob);
+            rig.localRotation = Quaternion.Euler(Mathf.Clamp(turn.y * 4, -2, 2), 0, Mathf.Sin(gait) * .8f * bob);
             RelaxHand(rightHand, new Vector3(.25f, -.30f, .43f), new Vector3(-18, -12, -10));
             RelaxHand(leftHand, new Vector3(-.25f, -.31f, .43f), new Vector3(-18, 12, 10));
             rightHand.gameObject.SetActive(mode != "empty");
