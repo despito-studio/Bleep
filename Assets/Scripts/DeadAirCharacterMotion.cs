@@ -45,6 +45,7 @@ namespace DeadAir
         Animation animationPlayer;
         Transform rightSocket, leftSocket, rightArm, leftArm, rightForearm, leftForearm, rightHand, leftHand, head, packLid, cigarette, lighter, flame, ember, compassNeedle, pendulum;
         Transform rightThigh, leftThigh, rightShin, leftShin, rightFoot, leftFoot, pelvis, spine, chest;
+        Transform ownerTieEnd, ownerTieTip;
         bool ladderClimbing, ladderUp, crouching, motionPaused;
         DeadAirAppearance appearance;
         int secondaryFrame = -1;
@@ -120,13 +121,18 @@ namespace DeadAir
             hasDirectionalOverride = true;
         }
 
-        public void ResetLocomotionContacts() => locomotion?.ResetContacts();
+        public void ResetLocomotionContacts()
+        {
+            locomotion?.ResetContacts();
+            appearance?.SecondaryMotion?.ResetMotion();
+        }
 
         /// <summary>Final contact pass when an owner adapter has adjusted the avatar root after Present.</summary>
         public void ReapplyGroundContacts()
         {
             SamplePose();
             if (ladderClimbing) PoseLadder(); else PoseEquipment();
+            appearance?.SecondaryMotion?.ReapplyPose();
             UpdateFlashlightPose();
         }
 
@@ -259,7 +265,7 @@ namespace DeadAir
             actionTime = clipName == "UseItem" ? Mathf.Clamp01(normalizedTime) * (classId == "operator" ? SmokingDuration : PersonalActionDuration) : -1;
             lastElapsed = Mathf.Max(0, actionTime);
             SamplePose();
-            ShowEquipment(new PlayerState { characterClass = classId, uniqueItemEquipped = true, cigarettesRemaining = 12 });
+            ShowEquipment(new PlayerState { characterClass = classId, inventory = new List<string>() });
             PoseEquipment();
         }
 
@@ -294,7 +300,11 @@ namespace DeadAir
             moveSpeed = movementVelocity.magnitude; actionTime = -1; motionPaused = dt <= 0;
             locomotion?.Step(movementVelocity, isCrouching, running, firstPersonPresentation, dt, reset, false);
             SelectClip(LocomotionClip(running)); Advance(Mathf.Clamp(dt, 0, .1f));
+            ShowEquipment(new PlayerState { characterClass = classId, inventory = new List<string>() });
             SamplePose(); PoseEquipment(); UpdateFlashlightPose();
+            appearance = GetComponent<DeadAirAppearance>();
+            appearance?.SecondaryMotion?.Step(Mathf.Clamp(dt, 0, .1f), transform.eulerAngles.y * Mathf.Deg2Rad,
+                moveSpeed, true, reset);
         }
 
         void Initialize()
@@ -339,6 +349,8 @@ namespace DeadAir
                 else if (bone.name == "pelvis") pelvis = bone;
                 else if (bone.name == "spine") spine = bone;
                 else if (bone.name == "chest") chest = bone;
+                else if (bone.name == "secondary_cloth.tie.03") ownerTieEnd = bone;
+                else if (bone.name == "secondary_cloth.tie.03_tip") ownerTieTip = bone;
             }
             if (head != null)
             {
@@ -548,6 +560,26 @@ namespace DeadAir
             if (!preview || locomotionPreview) locomotion?.Apply();
             PoseGaze();
             PoseRelaxedArms();
+            PoseOwnerTie();
+            // Secondary offsets are relative to this clean animation/body pose,
+            // including authored clothing corrections such as the crouched tie.
+            if (appearance == null) appearance = GetComponent<DeadAirAppearance>();
+            appearance?.SecondaryMotion?.CaptureAnimatedPose();
+        }
+
+        void PoseOwnerTie()
+        {
+            if (!firstPersonPresentation || !authoredArmAxes || classId != "engineer" ||
+                ownerTieEnd == null || ownerTieTip == null || ladderClimbing || seatedWeight > .001f) return;
+            float weight = (!preview || locomotionPreview) && locomotion != null ? locomotion.CrouchWeight : crouching ? 1 : 0;
+            if (weight <= .001f) return;
+            // The owner's extra chest lean rotates the baked crouch bend down
+            // through the floor. Hold the final cloth link forward in body space,
+            // slightly above horizontal, before capturing the spring base pose.
+            float angle = 95 * Mathf.Deg2Rad;
+            Vector3 direction = transform.forward * Mathf.Sin(angle) - transform.up * Mathf.Cos(angle);
+            Quaternion correction = Quaternion.FromToRotation(ownerTieTip.position - ownerTieEnd.position, direction);
+            ownerTieEnd.rotation = Quaternion.Slerp(Quaternion.identity, correction, weight) * ownerTieEnd.rotation;
         }
 
         void PoseRelaxedArms()
@@ -707,7 +739,15 @@ namespace DeadAir
 
         void UpdateSecondaryMotion(bool reset = false)
         {
-            if (appearance == null || appearance.SecondaryMotion == null || secondaryFrame == Time.frameCount && !reset) return;
+            if (appearance == null || appearance.SecondaryMotion == null) return;
+            // SamplePose restores all local transforms before every evaluation.
+            // A second pass still needs the cached spring pose even though it
+            // must not integrate the spring simulation a second time.
+            if (secondaryFrame == Time.frameCount && !reset)
+            {
+                appearance.SecondaryMotion.ReapplyPose();
+                return;
+            }
             secondaryFrame = Time.frameCount;
             bool clothed = (appearance.CurrentMask & (DeadAirClothing.Shirt | DeadAirClothing.Jacket)) != 0;
             appearance.SecondaryMotion.Step(motionPaused ? 0 : Time.deltaTime, currentYaw, moveSpeed, clothed, reset);

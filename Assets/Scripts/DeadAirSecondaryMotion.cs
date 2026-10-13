@@ -2,22 +2,53 @@ using UnityEngine;
 
 namespace DeadAir
 {
-    // Render-only critically damped offsets on proxy bones. The imported head,
-    // chest and hands remain untouched, as do the capsule and authoritative pose.
+    // Render-only dynamics on the authored deform chains; the older wardrobe
+    // keeps its bounded proxy fallback. Gameplay capsules are never modified.
     public sealed class DeadAirSecondaryMotion : MonoBehaviour
     {
         public Transform hair, chest, tie;
         Vector3 angle, velocity, chestOffset, chestVelocity;
         float oldYaw, phase;
         bool initialized;
-        public float MaximumAngle => angle.magnitude;
-        public float ChestDisplacement => chestOffset.magnitude;
+        DeadAirSpringBoneRig authored;
+        bool lastClothed = true;
+        public bool UsesAuthoredBones => authored != null && authored.BoneCount > 0;
+        public int BoneCount => authored == null ? 0 : authored.BoneCount;
+        public int HairBoneCount => authored == null ? 0 : authored.HairBoneCount;
+        public int ClothBoneCount => authored == null ? 0 : authored.ClothBoneCount;
+        public int BreastBoneCount => authored == null ? 0 : authored.BreastBoneCount;
+        public float MaximumAngle => UsesAuthoredBones ? authored.MaximumAngle : angle.magnitude;
+        public float ChestDisplacement => UsesAuthoredBones ? authored.BreastDisplacement : chestOffset.magnitude;
+        public float MaximumCollisionPenetration => authored == null ? 0 : authored.MaximumCollisionPenetration;
+
+        public void ConfigureAuthoredRig(string role)
+        {
+            authored = new DeadAirSpringBoneRig(transform, role);
+            initialized = false;
+        }
 
         public void ResetMotion()
-        { angle = velocity = chestOffset = chestVelocity = Vector3.zero; phase = 0; initialized = false; ApplyPose(true); }
+        {
+            angle = velocity = chestOffset = chestVelocity = Vector3.zero;
+            phase = 0; initialized = false; authored?.Reset(); ApplyPose(true);
+        }
+
+        /// <summary>Capture a freshly sampled body pose, never an already offset spring pose.</summary>
+        public void CaptureAnimatedPose()
+        {
+            authored?.CaptureAnimatedPose();
+        }
+
+        public void ReapplyPose()
+        {
+            if (UsesAuthoredBones) authored.Reapply();
+            else ApplyPose(lastClothed);
+        }
 
         public void Step(float dt, float yaw, float speed, bool clothed, bool reset = false)
         {
+            lastClothed = clothed;
+            if (UsesAuthoredBones) { authored.Step(dt, clothed, reset); return; }
             if (reset || !initialized) { ResetMotion(); initialized = true; oldYaw = yaw; }
             dt = Mathf.Clamp(dt, 0, .05f);
             if (dt <= 0) { ApplyPose(clothed); return; }
@@ -46,5 +77,6 @@ namespace DeadAir
             if (tie != null) tie.localRotation = Quaternion.Euler(angle.x * 1.4f, 0, angle.z * 1.6f);
             if (chest != null) chest.localPosition = chestOffset * (clothed ? 1 : .65f);
         }
+        void OnDisable() { ResetMotion(); }
     }
 }

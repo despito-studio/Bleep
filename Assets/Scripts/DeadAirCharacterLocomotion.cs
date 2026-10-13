@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace DeadAir
@@ -11,6 +12,8 @@ namespace DeadAir
             public Transform thigh, shin, foot, toe, contact, surface;
             public Vector3 neutral, soleLocal, plant, surfacePoint, swingFrom, swingTo, normal = Vector3.up;
             public Vector3 toeSoleDelta;
+            public Vector3[] soleFootprint;
+            public SoleVertex[] soleVertices;
             public Quaternion restRotation;
             public Quaternion plantedRotation;
             public Quaternion orientation;
@@ -20,11 +23,28 @@ namespace DeadAir
             public bool planted, settling;
         }
 
+        // Cached skinning samples, not per-frame mesh baking. The lower hull
+        // is bounded to 32 samples per shoe, including the raised toe edge.
+        sealed class SoleVertex
+        {
+            public readonly Transform[] bones = new Transform[4];
+            public readonly Vector3[] positions = new Vector3[4];
+            public readonly float[] weights = new float[4];
+            public Vector3 initial;
+            public Vector3 WorldPoint()
+            {
+                Vector3 point = Vector3.zero;
+                for (int i = 0; i < 4; i++)
+                    if (bones[i] != null && weights[i] > 0) point += bones[i].TransformPoint(positions[i]) * weights[i];
+                return point;
+            }
+        }
+
         readonly Transform root, pelvis, chest;
         readonly Leg left, right;
         readonly RaycastHit[] hits = new RaycastHit[24];
-        Vector3 previousRoot, velocity, acceleration, filteredAcceleration;
-        float previousYaw, phase, frequency, crouchWeight, pelvisOffset, turnSpeed, dt;
+        Vector3 previousRoot, velocity, acceleration, filteredAcceleration, pelvisOffset;
+        float previousYaw, phase, frequency, crouchWeight, turnSpeed, dt;
         bool initialized, suspended, firstPerson, running;
         int stepSerial, appliedSerial = -1;
         public float Phase => phase;
@@ -59,7 +79,7 @@ namespace DeadAir
             var toe = Find(bones, "toe." + side);
             var toeContact = Find(bones, "FootToeContact." + side);
             Vector3 sole = marker == null ? new Vector3(foot.position.x, root.position.y, foot.position.z) : marker.position;
-            return new Leg
+            var leg = new Leg
             {
                 thigh = thigh, shin = shin, foot = foot, toe = toe, contact = marker,
                 toeRest = toe == null ? Quaternion.identity : toe.localRotation,
@@ -69,11 +89,87 @@ namespace DeadAir
                 restRotation = Quaternion.Inverse(root.rotation) * foot.rotation,
                 upper = Vector3.Distance(thigh.position, shin.position), lower = Vector3.Distance(shin.position, foot.position)
             };
+            leg.soleFootprint = MeasureSole(leg, sole);
+            return leg;
         }
+
+        Vector3[] MeasureSole(Leg leg, Vector3 sole)
+        {
+            // Use the actual shoe perimeter. A single toe marker underestimates
+            // wide boots and can leave the toe inside the next stair tread.
+            var candidates = new List<SoleVertex>();
+            float minHeight = float.PositiveInfinity;
+            var skins = root.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+            bool separateShoes = Array.Exists(skins, skin => skin.name.EndsWith("_Shoes", StringComparison.Ordinal));
+            foreach (var skin in skins)
+            {
+                if (skin.sharedMesh == null) continue;
+                if (separateShoes && !skin.name.EndsWith("_Shoes", StringComparison.Ordinal)) continue;
+                int footIndex = Array.IndexOf(skin.bones, leg.foot), toeIndex = Array.IndexOf(skin.bones, leg.toe);
+                if (footIndex < 0) continue;
+                var weights = skin.sharedMesh.boneWeights;
+                var vertices = skin.sharedMesh.vertices;
+                var bind = skin.sharedMesh.bindposes;
+                for (int v = 0; v < vertices.Length && v < weights.Length; v++)
+                {
+                    var w = weights[v];
+                    float influence = SoleWeight(w.boneIndex0, w.weight0, footIndex, toeIndex) +
+                        SoleWeight(w.boneIndex1, w.weight1, footIndex, toeIndex) +
+                        SoleWeight(w.boneIndex2, w.weight2, footIndex, toeIndex) +
+                        SoleWeight(w.boneIndex3, w.weight3, footIndex, toeIndex);
+                    if (influence <= .5f) continue;
+                    var sample = new SoleVertex();
+                    int[] indices = { w.boneIndex0, w.boneIndex1, w.boneIndex2, w.boneIndex3 };
+                    float[] amounts = { w.weight0, w.weight1, w.weight2, w.weight3 };
+                    for (int i = 0; i < 4; i++)
+                    {
+                        int index = indices[i];
+                        if (amounts[i] <= 0 || index >= skin.bones.Length || index >= bind.Length) continue;
+                        sample.bones[i] = skin.bones[index]; sample.weights[i] = amounts[i];
+                        sample.positions[i] = bind[index].MultiplyPoint3x4(vertices[v]);
+                    }
+                    sample.initial = sample.WorldPoint(); candidates.Add(sample);
+                    minHeight = Mathf.Min(minHeight, Vector3.Dot(sample.initial - sole, root.up));
+                }
+            }
+            if (candidates.Count == 0)
+            { leg.soleVertices = Array.Empty<SoleVertex>(); return new[] { leg.toeSoleDelta, -leg.toeSoleDelta }; }
+            // Preserve each sample's actual height: Edgar's curved sole rises
+            // away from its heel, so a 12mm bottom slice loses the entire toe.
+            float band = Mathf.Max(.055f * root.lossyScale.y, Mathf.Abs(Vector3.Dot(leg.foot.position - sole, root.up)) * .55f);
+            candidates.RemoveAll(p => Vector3.Dot(p.initial - sole, root.up) > minHeight + band);
+            float minX = float.PositiveInfinity, maxX = float.NegativeInfinity, minZ = minX, maxZ = maxX;
+            foreach (var p in candidates)
+            {
+                Vector3 d = p.initial - sole; float x = Vector3.Dot(d, root.right), z = Vector3.Dot(d, root.forward);
+                minX = Mathf.Min(minX, x); maxX = Mathf.Max(maxX, x); minZ = Mathf.Min(minZ, z); maxZ = Mathf.Max(maxZ, z);
+            }
+            var selected = new SoleVertex[32];
+            var values = new float[32];
+            for (int i = 0; i < 32; i++) values[i] = i < 24 ? float.PositiveInfinity : float.NegativeInfinity;
+            foreach (var p in candidates)
+            {
+                Vector3 d = p.initial - sole; float x = Vector3.Dot(d, root.right), z = Vector3.Dot(d, root.forward), y = Vector3.Dot(d, root.up);
+                int cell = Mathf.Min(3, Mathf.FloorToInt(Mathf.InverseLerp(minX, maxX, x) * 4)) +
+                    4 * Mathf.Min(5, Mathf.FloorToInt(Mathf.InverseLerp(minZ, maxZ, z) * 6));
+                if (y < values[cell]) { values[cell] = y; selected[cell] = p; }
+                for (int i = 0; i < 8; i++)
+                {
+                    float angle = i * Mathf.PI / 4, distance = x * Mathf.Cos(angle) + z * Mathf.Sin(angle);
+                    if (distance > values[24 + i]) { values[24 + i] = distance; selected[24 + i] = p; }
+                }
+            }
+            var hull = new List<SoleVertex>(); var footprint = new List<Vector3>();
+            foreach (var p in selected) if (p != null && !hull.Contains(p))
+            { hull.Add(p); footprint.Add(leg.foot.InverseTransformVector(p.initial - sole)); }
+            leg.soleVertices = hull.ToArray(); return footprint.ToArray();
+        }
+
+        static float SoleWeight(int index, float weight, int foot, int toe) => index == foot || index == toe ? weight : 0;
 
         public void ResetContacts()
         {
-            initialized = false; frequency = pelvisOffset = turnSpeed = 0;
+            initialized = false; frequency = turnSpeed = 0; pelvisOffset = Vector3.zero;
             velocity = filteredAcceleration = acceleration = Vector3.zero;
         }
 
@@ -93,7 +189,8 @@ namespace DeadAir
             right.upper = Vector3.Distance(right.thigh.position, right.shin.position);
             right.lower = Vector3.Distance(right.shin.position, right.foot.position);
             bool movedFar = initialized && (root.position - previousRoot).sqrMagnitude > 4;
-            if (!initialized || reset || movedFar)
+            bool acquire = !initialized || reset || movedFar;
+            if (acquire)
             {
                 initialized = true; phase = 0; velocity = worldVelocity;
                 crouchWeight = crouching ? 1 : 0; filteredAcceleration = acceleration = Vector3.zero;
@@ -101,7 +198,7 @@ namespace DeadAir
                 left.orientation = root.rotation * left.restRotation;
                 right.orientation = root.rotation * right.restRotation;
                 Plant(left, root.TransformPoint(left.neutral)); Plant(right, root.TransformPoint(right.neutral));
-                left.phase = 0; right.phase = .5f; pelvisOffset = turnSpeed = 0;
+                left.phase = 0; right.phase = .5f; pelvisOffset = Vector3.zero; turnSpeed = 0;
             }
             if (suspended)
             {
@@ -118,20 +215,49 @@ namespace DeadAir
             crouchWeight = Mathf.MoveTowards(crouchWeight, crouching ? 1 : 0, dt / .18f);
             float speed = velocity.magnitude;
             float legLength = (left.upper + left.lower + right.upper + right.lower) * .5f;
-            float stride = Mathf.Max(.35f, legLength * (crouching ? 1.05f : isRunning ? 2.05f : 1.7f));
+            // This distance is a complete left/right cycle, not one step.
+            // Running needs a longer stride with an aerial phase; using a walk
+            // duty factor at sprint speed produces six tiny steps per second.
+            float walkStride = Mathf.Lerp(1.65f, 2.25f, Mathf.InverseLerp(.7f, 2.5f, speed));
+            float stride = Mathf.Max(.35f, legLength * (crouching ? 1.65f : isRunning ? 3.1f : walkStride));
             float targetFrequency = speed > .08f ? Mathf.Clamp(speed / stride, .45f, crouching ? 1.8f : 3.2f) : 0;
             bool turning = speed < .15f && Mathf.Abs(turnSpeed) > 25;
             if (turning) targetFrequency = Mathf.Clamp(Mathf.Abs(turnSpeed) / 150, .65f, 1.5f);
-            frequency = Mathf.Lerp(frequency, targetFrequency, 1 - Mathf.Exp(-14 * dt));
+            frequency = acquire ? targetFrequency : Mathf.Lerp(frequency, targetFrequency, 1 - Mathf.Exp(-14 * dt));
+            if (acquire && speed > .08f)
+            {
+                // A remote avatar may first appear halfway through movement.
+                // Acquire a valid pair of contacts for the current gait rather
+                // than dragging both neutral feet through a complete stance.
+                AcquireMovingLeg(left, 0);
+                AcquireMovingLeg(right, .5f);
+            }
             bool stepping = speed > .08f || turning;
             if (stepping) phase = Mathf.Repeat(phase + frequency * dt, 1);
             AdvanceLeg(left, phase, stepping, turning);
             AdvanceLeg(right, Mathf.Repeat(phase + .5f, 1), stepping, turning);
+            ClearSwing(left); ClearSwing(right);
+        }
+
+        void AcquireMovingLeg(Leg leg, float atPhase)
+        {
+            Vector3 neutral = root.TransformPoint(leg.neutral);
+            float stance = Stance;
+            Vector3 from = neutral + velocity * ((stance * .45f - atPhase) / frequency);
+            Plant(leg, from);
+            if (atPhase < stance) return;
+            // At a running spawn the opposite leg is already in flight. Its
+            // endpoints belong to the surrounding two touchdowns, not to the
+            // root's current position.
+            leg.planted = false; leg.surface = null;
+            leg.swingFrom = leg.plant;
+            Vector3 to = neutral + velocity * ((1 - atPhase + stance * .45f) / frequency);
+            Support(leg, to, out leg.swingTo, out leg.normal, out _);
         }
 
         void AdvanceLeg(Leg leg, float nextPhase, bool stepping, bool turning)
         {
-            float stance = running ? .53f : Mathf.Lerp(.61f, .69f, crouchWeight);
+            float stance = Stance;
             bool wrapped = nextPhase < leg.phase;
             if (leg.planted && leg.surface != null) leg.plant = leg.surface.TransformPoint(leg.surfacePoint);
             Vector3 neutral = root.TransformPoint(leg.neutral);
@@ -155,12 +281,15 @@ namespace DeadAir
             if (nextPhase >= stance && leg.planted)
             {
                 leg.planted = false; leg.surface = null; leg.swingFrom = leg.plant;
-                float remaining = (1 - stance) / Mathf.Max(.45f, frequency);
+                // A recovery settle can finish after the scheduled toe-off.
+                // Predict only the time still left in this swing; a full swing
+                // duration would put a short leg's touchdown beyond its reach.
+                float remaining = (1 - nextPhase) / Mathf.Max(.45f, frequency);
                 // Place the foot relative to the pelvis at touchdown. Clamping
                 // the future root travel as if it were a leg extension leaves
                 // fast steps behind the body before the foot has even landed.
                 Vector3 placement = velocity * (stance / Mathf.Max(.45f, frequency) * .45f);
-                placement = Vector3.ClampMagnitude(placement, (leg.upper + leg.lower) * .48f);
+                placement = Vector3.ClampMagnitude(placement, (leg.upper + leg.lower) * .64f);
                 leg.swingTo = neutral + velocity * remaining + placement;
                 if (turning) leg.swingTo = neutral;
                 Support(leg, leg.swingTo, out leg.swingTo, out leg.normal, out _);
@@ -177,10 +306,16 @@ namespace DeadAir
                 leg.plant = Vector3.Lerp(leg.swingFrom, leg.swingTo, ease) + root.up * (Mathf.Sin(t * Mathf.PI) * clearance);
             }
             // Recovery after a collision/root correction avoids a hyperextended locked leg.
-            if (leg.planted && Vector3.ProjectOnPlane(leg.plant - leg.thigh.position, root.up).magnitude >
-                (leg.upper + leg.lower) * .85f) BeginSettle(leg, neutral);
+            // Reach belongs to the ankle, not an offset marker on a wide shoe.
+            // While moving, the settling contact must also account for the
+            // root travel before it lands, just like a regular swing target.
+            Vector3 ankle = leg.plant - GroundRotation(leg) * Vector3.Scale(leg.soleLocal, leg.foot.lossyScale);
+            if (leg.planted && Vector3.ProjectOnPlane(ankle - leg.thigh.position, root.up).magnitude >
+                (leg.upper + leg.lower) * .85f) BeginSettle(leg, neutral + velocity * .18f);
             leg.phase = nextPhase;
         }
+
+        float Stance => running ? .38f : Mathf.Lerp(.61f, .69f, crouchWeight);
 
         void BeginSettle(Leg leg, Vector3 target)
         {
@@ -230,34 +365,56 @@ namespace DeadAir
         {
             Probe(point, out ground, out normal, out surface);
             Quaternion orientation = Quaternion.FromToRotation(root.up, normal) * leg.orientation;
-            Vector3 toe = orientation * Vector3.Scale(leg.toeSoleDelta, leg.foot.lossyScale);
-            // The sole is an area. A toe or heel can already overlap the next
-            // tread while its centre is still above the lower floor.
-            for (int end = -1; end <= 1; end += 2)
+            // Keep the whole sole supported, including the outside corners.
+            float raise = 0;
+            foreach (Vector3 solePoint in leg.soleFootprint)
             {
-                Vector3 sample = ground + toe * end;
+                Vector3 sample = ground + orientation * Vector3.Scale(solePoint, leg.foot.lossyScale);
                 if (!Probe(sample, out Vector3 support, out _, out Transform supportSurface)) continue;
-                float rise = Vector3.Dot(support - sample, normal);
-                if (rise <= .001f || rise > .30f) continue;
-                ground += normal * rise;
+                float rise = Vector3.Dot(support - sample, root.up);
+                if (rise <= raise || rise > .30f) continue;
+                raise = rise;
                 surface = supportSurface;
             }
+            ground += root.up * raise;
+        }
+
+        void ClearSwing(Leg leg)
+        {
+            if (leg.planted) return;
+            // The centre arc alone does not guarantee clearance when a boot's
+            // leading edge reaches a raised tread before its centre does.
+            Quaternion orientation = GroundRotation(leg);
+            float raise = 0;
+            foreach (Vector3 solePoint in leg.soleFootprint)
+            {
+                Vector3 point = leg.plant + orientation * Vector3.Scale(solePoint, leg.foot.lossyScale);
+                if (!Probe(point, out Vector3 ground, out _, out _)) continue;
+                raise = Mathf.Max(raise, Vector3.Dot(ground - point, root.up));
+            }
+            leg.plant += root.up * Mathf.Clamp(raise, 0, .30f);
         }
 
         public void Apply()
         {
             ContactError = PlantedSlip = 0;
             if (!Ready || !initialized || suspended) return;
-            // Reach is calculated from each sampled hip; pelvis lowering keeps both leg solves feasible.
-            float needed = Mathf.Max(RequiredPelvisDrop(left), RequiredPelvisDrop(right));
             float bob = velocity.magnitude > .1f ? Mathf.Cos(phase * Mathf.PI * 4) * (running ? .015f : .009f) : 0;
-            float targetOffset = -Mathf.Clamp(needed + .003f, 0, .24f) + Mathf.Min(0, bob) * (1 - crouchWeight * .65f);
-            if (dt > 0 && appliedSerial != stepSerial)
-                pelvisOffset = targetOffset < pelvisOffset ? targetOffset : Mathf.Lerp(pelvisOffset, targetOffset, 1 - Mathf.Exp(-18 * dt));
+            Vector3 correction = pelvisOffset;
+            bool advanceCorrection = dt > 0 && appliedSerial != stepSerial;
+            if (advanceCorrection)
+            {
+                correction *= Mathf.Exp(-18 * dt);
+                correction += root.up * (Mathf.Min(0, bob) * (1 - crouchWeight * .65f));
+                if (!firstPerson && velocity.sqrMagnitude > .01f)
+                    correction += root.right * (Mathf.Sin(phase * Mathf.PI * 2) * Mathf.Lerp(.012f, .006f, crouchWeight));
+            }
+            // Project the sampled pelvis into both legs' actual reachable
+            // shells. Vertical-only lowering cannot fix a backward/sideways
+            // target, and unequal thighs/calves also have a minimum reach.
+            correction = ReachablePelvisOffset(correction);
             appliedSerial = stepSerial;
-            pelvis.position += root.up * pelvisOffset;
-            if (!firstPerson && velocity.sqrMagnitude > .01f)
-                pelvis.position += root.right * (Mathf.Sin(phase * Mathf.PI * 2) * Mathf.Lerp(.012f, .006f, crouchWeight));
+            pelvis.position += correction;
             if (!firstPerson && chest != null)
             {
                 Vector3 localAcceleration = root.InverseTransformDirection(filteredAcceleration);
@@ -266,17 +423,61 @@ namespace DeadAir
                 chest.rotation = Quaternion.AngleAxis(side, root.forward) * Quaternion.AngleAxis(lean, root.right) * chest.rotation;
             }
             SolveLeg(left); SolveLeg(right);
+            // Final terrain clearance uses weighted shoe vertices in their
+            // solved pose, including toe deformation and their real heights.
+            bool raised = RaiseSole(left) | RaiseSole(right);
+            if (raised)
+            {
+                Vector3 clearanceCorrection = ReachablePelvisOffset(Vector3.zero);
+                pelvis.position += clearanceCorrection; correction += clearanceCorrection;
+                SolveLeg(left); SolveLeg(right);
+            }
+            pelvisOffset = correction;
+            ContactError = PlantedSlip = 0;
+            RecordContact(left); RecordContact(right);
         }
 
-        float RequiredPelvisDrop(Leg leg)
+        Vector3 ReachablePelvisOffset(Vector3 correction)
+        {
+            for (int iteration = 0; iteration < 10; iteration++)
+            {
+                Vector3 previous = correction;
+                FitReach(left, ref correction); FitReach(right, ref correction);
+                if ((correction - previous).sqrMagnitude < .00000001f) break;
+            }
+            return correction;
+        }
+
+        void FitReach(Leg leg, ref Vector3 correction)
         {
             Quaternion rotation = GroundRotation(leg);
             Vector3 ankle = leg.plant - rotation * Vector3.Scale(leg.soleLocal, leg.foot.lossyScale);
-            Vector3 offset = leg.thigh.position - ankle;
-            float horizontal = Vector3.ProjectOnPlane(offset, root.up).magnitude;
-            float length = (Vector3.Distance(leg.thigh.position, leg.shin.position) + Vector3.Distance(leg.shin.position, leg.foot.position)) * .985f;
-            float height = Mathf.Sqrt(Mathf.Max(.015f, length * length - horizontal * horizontal));
-            return Mathf.Max(0, Vector3.Dot(offset, root.up) - height);
+            Vector3 offset = leg.thigh.position + correction - ankle;
+            float a = Vector3.Distance(leg.thigh.position, leg.shin.position), b = Vector3.Distance(leg.shin.position, leg.foot.position);
+            float maxReach = a + b - .006f, minReach = Mathf.Abs(a - b) + .006f;
+            float distance = offset.magnitude;
+            if (distance > maxReach && distance > .00001f) correction -= offset * ((distance - maxReach) / distance);
+            else if (distance < minReach)
+            {
+                float horizontal = Vector3.ProjectOnPlane(offset, root.up).sqrMagnitude;
+                float requiredHeight = Mathf.Sqrt(Mathf.Max(0, minReach * minReach - horizontal));
+                correction += root.up * Mathf.Max(0, requiredHeight - Vector3.Dot(offset, root.up));
+            }
+        }
+
+        bool RaiseSole(Leg leg)
+        {
+            float raise = 0;
+            foreach (var sample in leg.soleVertices)
+            {
+                Vector3 point = sample.WorldPoint();
+                if (Probe(point, out Vector3 ground, out _, out _))
+                    raise = Mathf.Max(raise, Vector3.Dot(ground - point, root.up));
+            }
+            if (raise <= .0005f) return false;
+            leg.plant += root.up * Mathf.Min(raise + .001f, .30f);
+            if (leg.surface != null) leg.surfacePoint = leg.surface.InverseTransformPoint(leg.plant);
+            return true;
         }
 
         Quaternion GroundRotation(Leg leg)
@@ -289,7 +490,7 @@ namespace DeadAir
                 (leg.planted ? leg.plantedRotation : leg.orientation);
             if (!leg.planted && !leg.settling)
             {
-                float stance = running ? .53f : Mathf.Lerp(.61f, .69f, crouchWeight);
+                float stance = Stance;
                 float swing = Mathf.Clamp01((leg.phase - stance) / (1 - stance));
                 rotation = Quaternion.AngleAxis(-Mathf.Sin(swing * Mathf.PI) * 8, root.right) * rotation;
             }
@@ -320,6 +521,10 @@ namespace DeadAir
             // Authored toe-off belongs to the swing. A grounded toe cannot rotate
             // below its support plane after the ankle has been aligned by IK.
             if (leg.toe != null && leg.planted) leg.toe.localRotation = leg.toeRest;
+        }
+
+        void RecordContact(Leg leg)
+        {
             Vector3 solved = leg.foot.TransformPoint(leg.soleLocal);
             float error = Vector3.Distance(solved, leg.plant);
             ContactError = Mathf.Max(ContactError, error);

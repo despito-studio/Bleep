@@ -1,0 +1,3168 @@
+{
+  "role": "journalist",
+  "name": "Edgar",
+  "source": "Art\\Characters\\Imported\\journalist.blend",
+  "source_sha256": "128b5251aed816a252fe99bec57bf7386c843a15f4853bec7273c9987f7235b6",
+  "original": {
+    "vertices": 1359,
+    "triangles": 2716,
+    "boundary_edges": 52,
+    "nonmanifold_edges": 110,
+    "degenerate_faces": 0
+  },
+  "refined": {
+    "vertices": 8156,
+    "triangles": 14942,
+    "boundary_edges": 1266,
+    "nonmanifold_edges": 1276,
+    "degenerate_faces": 0
+  },
+  "parts": {
+    "SM_Char_Edgar_Body": {
+      "vertices": 3283,
+      "triangles": 6052,
+      "boundary_edges": 492,
+      "nonmanifold_edges": 492,
+      "degenerate_faces": 0
+    },
+    "SM_Char_Edgar_Hair": {
+      "vertices": 362,
+      "triangles": 704,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "degenerate_faces": 0
+    },
+    "SM_Char_Edgar_Beard": {
+      "vertices": 415,
+      "triangles": 642,
+      "boundary_edges": 190,
+      "nonmanifold_edges": 190,
+      "degenerate_faces": 0
+    },
+    "SM_Char_Edgar_Jacket": {
+      "vertices": 1514,
+      "triangles": 2718,
+      "boundary_edges": 310,
+      "nonmanifold_edges": 318,
+      "degenerate_faces": 0
+    },
+    "SM_Char_Edgar_Shirt": {
+      "vertices": 67,
+      "triangles": 102,
+      "boundary_edges": 30,
+      "nonmanifold_edges": 31,
+      "degenerate_faces": 0
+    },
+    "SM_Char_Edgar_Tie": {
+      "vertices": 37,
+      "triangles": 54,
+      "boundary_edges": 18,
+      "nonmanifold_edges": 19,
+      "degenerate_faces": 0
+    },
+    "SM_Char_Edgar_Trousers": {
+      "vertices": 248,
+      "triangles": 468,
+      "boundary_edges": 24,
+      "nonmanifold_edges": 24,
+      "degenerate_faces": 0
+    },
+    "SM_Char_Edgar_Cap": {
+      "vertices": 202,
+      "triangles": 400,
+      "boundary_edges": 0,
+      "nonmanifold_edges": 0,
+      "degenerate_faces": 0
+    },
+    "SM_Char_Edgar_Badge": {
+      "vertices": 125,
+      "triangles": 222,
+      "boundary_edges": 18,
+      "nonmanifold_edges": 18,
+      "degenerate_faces": 0
+    },
+    "SM_Char_Edgar_Shoes": {
+      "vertices": 284,
+      "triangles": 540,
+      "boundary_edges": 24,
+      "nonmanifold_edges": 24,
+      "degenerate_faces": 0
+    },
+    "SM_Char_Edgar_Equipment": {
+      "vertices": 1619,
+      "triangles": 3040,
+      "boundary_edges": 160,
+      "nonmanifold_edges": 160,
+      "degenerate_faces": 0
+    }
+  },
+  "topology": {
+    "recovered_quad_regions": 639,
+    "source_faces": 2716,
+    "separated_nonmanifold_sheet_edges": 58,
+    "overlapping_triangle_joins_prevented": 866,
+    "removed_collapsed_support_faces": 0,
+    "local_ear_vertices_rounded": 0,
+    "max_ear_adjustment_m": 0.0,
+    "protected_source_vertices": 1317,
+    "transition_source_vertices": 161,
+    "support_subdivision": "one simple subdivision; authored UV interpolation",
+    "surface_finish": "two 0.18 passes; open boundaries, part seams, thin details and sharp corners pinned"
+  },
+  "modular": {
+    "role": "journalist",
+    "source_mesh": "Edgar_RestoredBody",
+    "source_faces": 6870,
+    "texture_budget_pixels": 4194304,
+    "texture_pixels": 2433024,
+    "source_texture": [
+      1024,
+      1024
+    ],
+    "parts": [
+      {
+        "part": "body",
+        "object": "SM_Char_Edgar_Body",
+        "vertices": 3283,
+        "triangles": 6052,
+        "source_faces": 3026,
+        "uv_layers": [
+          "GarmentUV",
+          "SourceAtlasUV"
+        ],
+        "texture": "D:\\DeadAirUnityProject\\Assets\\Characters\\Textures\\Restored\\journalist\\journalist_restored_body_albedo.png",
+        "size": [
+          512,
+          1024
+        ],
+        "uv_charts": 422,
+        "source_density": 1.0,
+        "gutter_pixels": 4,
+        "material": "journalist_restored_body"
+      },
+      {
+        "part": "hair",
+        "object": "SM_Char_Edgar_Hair",
+        "vertices": 181,
+        "triangles": 266,
+        "source_faces": 133,
+        "uv_layers": [
+          "GarmentUV",
+          "SourceAtlasUV"
+        ],
+        "texture": "D:\\DeadAirUnityProject\\Assets\\Characters\\Textures\\Restored\\journalist\\journalist_restored_hair_albedo.png",
+        "size": [
+          128,
+          256
+        ],
+        "uv_charts": 21,
+        "source_density": 1.0,
+        "gutter_pixels": 4,
+        "material": "journalist_restored_hair"
+      },
+      {
+        "part": "beard",
+        "object": "SM_Char_Edgar_Beard",
+        "vertices": 415,
+        "triangles": 642,
+        "source_faces": 321,
+        "uv_layers": [
+          "GarmentUV",
+          "SourceAtlasUV"
+        ],
+        "texture": "D:\\DeadAirUnityProject\\Assets\\Characters\\Textures\\Restored\\journalist\\journalist_restored_beard_albedo.png",
+        "size": [
+          256,
+          512
+        ],
+        "uv_charts": 58,
+        "source_density": 1.0,
+        "gutter_pixels": 4,
+        "material": "journalist_restored_beard"
+      },
+      {
+        "part": "jacket",
+        "object": "SM_Char_Edgar_Jacket",
+        "vertices": 1514,
+        "triangles": 2718,
+        "source_faces": 1049,
+        "uv_layers": [
+          "GarmentUV",
+          "SourceAtlasUV"
+        ],
+        "texture": "D:\\DeadAirUnityProject\\Assets\\Characters\\Textures\\Restored\\journalist\\journalist_restored_jacket_albedo.png",
+        "size": [
+          1024,
+          1024
+        ],
+        "uv_charts": 172,
+        "source_density": 1.0,
+        "gutter_pixels": 4,
+        "material": "journalist_restored_jacket",
+        "edge_return_faces": 310,
+        "edge_return_depth_m": 0.0018
+      },
+      {
+        "part": "shirt",
+        "object": "SM_Char_Edgar_Shirt",
+        "vertices": 67,
+        "triangles": 102,
+        "source_faces": 21,
+        "uv_layers": [
+          "GarmentUV",
+          "SourceAtlasUV"
+        ],
+        "texture": "D:\\DeadAirUnityProject\\Assets\\Characters\\Textures\\Restored\\journalist\\journalist_restored_shirt_albedo.png",
+        "size": [
+          128,
+          128
+        ],
+        "uv_charts": 4,
+        "source_density": 1.0,
+        "gutter_pixels": 4,
+        "material": "journalist_restored_shirt",
+        "edge_return_faces": 30,
+        "edge_return_depth_m": 0.0018
+      },
+      {
+        "part": "tie",
+        "object": "SM_Char_Edgar_Tie",
+        "vertices": 37,
+        "triangles": 54,
+        "source_faces": 9,
+        "uv_layers": [
+          "GarmentUV",
+          "SourceAtlasUV"
+        ],
+        "texture": "D:\\DeadAirUnityProject\\Assets\\Characters\\Textures\\Restored\\journalist\\journalist_restored_tie_albedo.png",
+        "size": [
+          32,
+          256
+        ],
+        "uv_charts": 3,
+        "source_density": 1.0,
+        "gutter_pixels": 4,
+        "material": "journalist_restored_tie",
+        "edge_return_faces": 18,
+        "edge_return_depth_m": 0.0018
+      },
+      {
+        "part": "trousers",
+        "object": "SM_Char_Edgar_Trousers",
+        "vertices": 248,
+        "triangles": 468,
+        "source_faces": 210,
+        "uv_layers": [
+          "GarmentUV",
+          "SourceAtlasUV"
+        ],
+        "texture": "D:\\DeadAirUnityProject\\Assets\\Characters\\Textures\\Restored\\journalist\\journalist_restored_trousers_albedo.png",
+        "size": [
+          256,
+          512
+        ],
+        "uv_charts": 33,
+        "source_density": 1.0,
+        "gutter_pixels": 4,
+        "material": "journalist_restored_trousers",
+        "edge_return_faces": 24,
+        "edge_return_depth_m": 0.0018
+      },
+      {
+        "part": "cap",
+        "object": "SM_Char_Edgar_Cap",
+        "vertices": 202,
+        "triangles": 400,
+        "source_faces": 200,
+        "uv_layers": [
+          "GarmentUV",
+          "SourceAtlasUV"
+        ],
+        "texture": "D:\\DeadAirUnityProject\\Assets\\Characters\\Textures\\Restored\\journalist\\journalist_restored_cap_albedo.png",
+        "size": [
+          256,
+          512
+        ],
+        "uv_charts": 31,
+        "source_density": 1.0,
+        "gutter_pixels": 4,
+        "material": "journalist_restored_cap",
+        "edge_return_faces": 0
+      },
+      {
+        "part": "badge",
+        "object": "SM_Char_Edgar_Badge",
+        "vertices": 125,
+        "triangles": 222,
+        "source_faces": 111,
+        "uv_layers": [
+          "GarmentUV",
+          "SourceAtlasUV"
+        ],
+        "texture": "D:\\DeadAirUnityProject\\Assets\\Characters\\Textures\\Restored\\journalist\\journalist_restored_badge_albedo.png",
+        "size": [
+          128,
+          128
+        ],
+        "uv_charts": 20,
+        "source_density": 1.0,
+        "gutter_pixels": 4,
+        "material": "journalist_restored_badge"
+      },
+      {
+        "part": "shoes",
+        "object": "SM_Char_Edgar_Shoes",
+        "vertices": 284,
+        "triangles": 540,
+        "source_faces": 270,
+        "uv_layers": [
+          "GarmentUV",
+          "SourceAtlasUV"
+        ],
+        "texture": "D:\\DeadAirUnityProject\\Assets\\Characters\\Textures\\Restored\\journalist\\journalist_restored_shoes_albedo.png",
+        "size": [
+          256,
+          512
+        ],
+        "uv_charts": 27,
+        "source_density": 1.0,
+        "gutter_pixels": 4,
+        "material": "journalist_restored_shoes"
+      },
+      {
+        "part": "equipment",
+        "object": "SM_Char_Edgar_Equipment",
+        "vertices": 1619,
+        "triangles": 3040,
+        "source_faces": 1520,
+        "uv_layers": [
+          "GarmentUV",
+          "SourceAtlasUV"
+        ],
+        "texture": "D:\\DeadAirUnityProject\\Assets\\Characters\\Textures\\Restored\\journalist\\journalist_restored_equipment_albedo.png",
+        "size": [
+          512,
+          512
+        ],
+        "uv_charts": 261,
+        "source_density": 1.0,
+        "gutter_pixels": 4,
+        "material": "journalist_restored_equipment"
+      }
+    ]
+  },
+  "hair_finish": {
+    "SM_Char_Edgar_Hair": {
+      "open_hair_components": 5,
+      "closed_components_preserved": 0,
+      "inner_faces": 133,
+      "rim_faces": 86,
+      "thickness_m": 0.0015,
+      "separated_hair_sheet_edges": 0,
+      "boundary_edges_after": 0,
+      "nonmanifold_edges_after": 0
+    }
+  },
+  "bodice": {},
+  "secondary_bones": {
+    "secondary_hair.L.01": {
+      "head": [
+        0.13020431995391846,
+        -0.29180118441581726,
+        1.8046343326568604
+      ],
+      "tail": [
+        0.13020431995391846,
+        -0.29180118441581726,
+        1.6260037422180176
+      ],
+      "parent": "head"
+    },
+    "secondary_hair.L.02": {
+      "head": [
+        0.13020431995391846,
+        -0.29180118441581726,
+        1.6260037422180176
+      ],
+      "tail": [
+        0.13020431995391846,
+        -0.29180118441581726,
+        1.4473731517791748
+      ],
+      "parent": "secondary_hair.L.01"
+    },
+    "secondary_hair.L.03": {
+      "head": [
+        0.13020431995391846,
+        -0.29180118441581726,
+        1.4473731517791748
+      ],
+      "tail": [
+        0.13020431995391846,
+        -0.29180118441581726,
+        1.268742561340332
+      ],
+      "parent": "secondary_hair.L.02"
+    },
+    "secondary_hair.R.01": {
+      "head": [
+        -0.052676837891340256,
+        -0.3270234763622284,
+        1.8046343326568604
+      ],
+      "tail": [
+        -0.052676837891340256,
+        -0.3270234763622284,
+        1.6260037422180176
+      ],
+      "parent": "head"
+    },
+    "secondary_hair.R.02": {
+      "head": [
+        -0.052676837891340256,
+        -0.3270234763622284,
+        1.6260037422180176
+      ],
+      "tail": [
+        -0.052676837891340256,
+        -0.3270234763622284,
+        1.4473731517791748
+      ],
+      "parent": "secondary_hair.R.01"
+    },
+    "secondary_hair.R.03": {
+      "head": [
+        -0.052676837891340256,
+        -0.3270234763622284,
+        1.4473731517791748
+      ],
+      "tail": [
+        -0.052676837891340256,
+        -0.3270234763622284,
+        1.268742561340332
+      ],
+      "parent": "secondary_hair.R.02"
+    },
+    "secondary_cloth.L.01": {
+      "head": [
+        0.1808808594942093,
+        0.037745796144008636,
+        1.0703363418579102
+      ],
+      "tail": [
+        0.1808808594942093,
+        0.037745796144008636,
+        0.8550731539726257
+      ],
+      "parent": "thigh.L"
+    },
+    "secondary_cloth.L.02": {
+      "head": [
+        0.1808808594942093,
+        0.037745796144008636,
+        0.8550731539726257
+      ],
+      "tail": [
+        0.1808808594942093,
+        0.037745796144008636,
+        0.6398099660873413
+      ],
+      "parent": "secondary_cloth.L.01"
+    },
+    "secondary_cloth.R.01": {
+      "head": [
+        -0.10896036773920059,
+        0.0023253713734447956,
+        1.0703363418579102
+      ],
+      "tail": [
+        -0.10896036773920059,
+        0.0023253713734447956,
+        0.8550731539726257
+      ],
+      "parent": "thigh.R"
+    },
+    "secondary_cloth.R.02": {
+      "head": [
+        -0.10896036773920059,
+        0.0023253713734447956,
+        0.8550731539726257
+      ],
+      "tail": [
+        -0.10896036773920059,
+        0.0023253713734447956,
+        0.6398099660873413
+      ],
+      "parent": "secondary_cloth.R.01"
+    }
+  },
+  "static_integrity": {
+    "parts": {
+      "SM_Char_Edgar_Body": {
+        "part": "body",
+        "triangles": 6052,
+        "invalid_skin_vertices": 0,
+        "invalid_uv_loops": 0,
+        "degenerate_faces": 0,
+        "nonfinite_vertices": 0,
+        "materials": [
+          "journalist_restored_body"
+        ]
+      },
+      "SM_Char_Edgar_Hair": {
+        "part": "hair",
+        "triangles": 704,
+        "invalid_skin_vertices": 0,
+        "invalid_uv_loops": 0,
+        "degenerate_faces": 0,
+        "nonfinite_vertices": 0,
+        "materials": [
+          "journalist_restored_hair"
+        ]
+      },
+      "SM_Char_Edgar_Beard": {
+        "part": "beard",
+        "triangles": 642,
+        "invalid_skin_vertices": 0,
+        "invalid_uv_loops": 0,
+        "degenerate_faces": 0,
+        "nonfinite_vertices": 0,
+        "materials": [
+          "journalist_restored_beard"
+        ]
+      },
+      "SM_Char_Edgar_Jacket": {
+        "part": "jacket",
+        "triangles": 2718,
+        "invalid_skin_vertices": 0,
+        "invalid_uv_loops": 0,
+        "degenerate_faces": 0,
+        "nonfinite_vertices": 0,
+        "materials": [
+          "journalist_restored_jacket"
+        ]
+      },
+      "SM_Char_Edgar_Shirt": {
+        "part": "shirt",
+        "triangles": 102,
+        "invalid_skin_vertices": 0,
+        "invalid_uv_loops": 0,
+        "degenerate_faces": 0,
+        "nonfinite_vertices": 0,
+        "materials": [
+          "journalist_restored_shirt"
+        ]
+      },
+      "SM_Char_Edgar_Tie": {
+        "part": "tie",
+        "triangles": 54,
+        "invalid_skin_vertices": 0,
+        "invalid_uv_loops": 0,
+        "degenerate_faces": 0,
+        "nonfinite_vertices": 0,
+        "materials": [
+          "journalist_restored_tie"
+        ]
+      },
+      "SM_Char_Edgar_Trousers": {
+        "part": "trousers",
+        "triangles": 468,
+        "invalid_skin_vertices": 0,
+        "invalid_uv_loops": 0,
+        "degenerate_faces": 0,
+        "nonfinite_vertices": 0,
+        "materials": [
+          "journalist_restored_trousers"
+        ]
+      },
+      "SM_Char_Edgar_Cap": {
+        "part": "cap",
+        "triangles": 400,
+        "invalid_skin_vertices": 0,
+        "invalid_uv_loops": 0,
+        "degenerate_faces": 0,
+        "nonfinite_vertices": 0,
+        "materials": [
+          "journalist_restored_cap"
+        ]
+      },
+      "SM_Char_Edgar_Badge": {
+        "part": "badge",
+        "triangles": 222,
+        "invalid_skin_vertices": 0,
+        "invalid_uv_loops": 0,
+        "degenerate_faces": 0,
+        "nonfinite_vertices": 0,
+        "materials": [
+          "journalist_restored_badge"
+        ]
+      },
+      "SM_Char_Edgar_Shoes": {
+        "part": "shoes",
+        "triangles": 540,
+        "invalid_skin_vertices": 0,
+        "invalid_uv_loops": 0,
+        "degenerate_faces": 0,
+        "nonfinite_vertices": 0,
+        "materials": [
+          "journalist_restored_shoes"
+        ]
+      },
+      "SM_Char_Edgar_Equipment": {
+        "part": "equipment",
+        "triangles": 3040,
+        "invalid_skin_vertices": 0,
+        "invalid_uv_loops": 0,
+        "degenerate_faces": 0,
+        "nonfinite_vertices": 0,
+        "materials": [
+          "journalist_restored_equipment"
+        ]
+      }
+    },
+    "textures": {
+      "Assets/Characters/Textures/Restored/journalist/journalist_restored_body_albedo.png": {
+        "width": 512,
+        "height": 1024
+      },
+      "Assets/Characters/Textures/Restored/journalist/journalist_restored_hair_albedo.png": {
+        "width": 128,
+        "height": 256
+      },
+      "Assets/Characters/Textures/Restored/journalist/journalist_restored_beard_albedo.png": {
+        "width": 256,
+        "height": 512
+      },
+      "Assets/Characters/Textures/Restored/journalist/journalist_restored_jacket_albedo.png": {
+        "width": 1024,
+        "height": 1024
+      },
+      "Assets/Characters/Textures/Restored/journalist/journalist_restored_shirt_albedo.png": {
+        "width": 128,
+        "height": 128
+      },
+      "Assets/Characters/Textures/Restored/journalist/journalist_restored_tie_albedo.png": {
+        "width": 32,
+        "height": 256
+      },
+      "Assets/Characters/Textures/Restored/journalist/journalist_restored_trousers_albedo.png": {
+        "width": 256,
+        "height": 512
+      },
+      "Assets/Characters/Textures/Restored/journalist/journalist_restored_cap_albedo.png": {
+        "width": 256,
+        "height": 512
+      },
+      "Assets/Characters/Textures/Restored/journalist/journalist_restored_badge_albedo.png": {
+        "width": 128,
+        "height": 128
+      },
+      "Assets/Characters/Textures/Restored/journalist/journalist_restored_shoes_albedo.png": {
+        "width": 256,
+        "height": 512
+      },
+      "Assets/Characters/Textures/Restored/journalist/journalist_restored_equipment_albedo.png": {
+        "width": 512,
+        "height": 512
+      }
+    },
+    "texture_pixels": 2433024,
+    "texture_budget_pixels": 4194304,
+    "triangles": 14942,
+    "passed": true
+  },
+  "surface_refinement": {
+    "role": "journalist",
+    "original_likeness_retained": true,
+    "production_written": false,
+    "garment_edges": {
+      "jacket": {
+        "old_return_faces_removed": 310,
+        "edge_vertices_rounded": 38,
+        "max_adjustment_m": 0.0013,
+        "edge_return_faces": 310,
+        "edge_return_depth_m": 0.0012
+      },
+      "shirt": {
+        "old_return_faces_removed": 30,
+        "edge_vertices_rounded": 1,
+        "max_adjustment_m": 0.0013,
+        "edge_return_faces": 30,
+        "edge_return_depth_m": 0.0012
+      },
+      "tie": {
+        "old_return_faces_removed": 18,
+        "edge_vertices_rounded": 0,
+        "max_adjustment_m": 0,
+        "edge_return_faces": 18,
+        "edge_return_depth_m": 0.0012
+      },
+      "trousers": {
+        "old_return_faces_removed": 24,
+        "edge_vertices_rounded": 0,
+        "max_adjustment_m": 0,
+        "edge_return_faces": 24,
+        "edge_return_depth_m": 0.0012
+      },
+      "cap": {
+        "old_return_faces_removed": 0,
+        "edge_vertices_rounded": 0,
+        "max_adjustment_m": 0,
+        "edge_return_faces": 0
+      }
+    },
+    "audit": {
+      "used_texture_pixels": 2433024,
+      "texture_budget_pixels": 4194304,
+      "resized_maps": [],
+      "bad_weights": 0,
+      "max_influences": 4,
+      "nonfinite_vertices": 0,
+      "triangles": 14942
+    }
+  },
+  "individual_rig": {
+    "role": "journalist",
+    "profile": {
+      "hip": 0.815,
+      "knee": 0.415,
+      "ankle": 0.155,
+      "abduction": 7,
+      "elbow_flex": 12
+    },
+    "bones_before": {
+      "root": {
+        "head": [
+          0.05999999865889549,
+          0.02500000037252903,
+          0.0
+        ],
+        "tail": [
+          0.05999999865889549,
+          0.02500000037252903,
+          0.1599999964237213
+        ],
+        "length": 0.1599999964237213,
+        "rest_quaternion": [
+          0.7071067690849304,
+          0.7071067690849304,
+          0.0,
+          0.0
+        ]
+      },
+      "pelvis": {
+        "head": [
+          0.05999999865889549,
+          0.02500000037252903,
+          0.8399999141693115
+        ],
+        "tail": [
+          0.05999999865889549,
+          0.02500000037252903,
+          1.0700000524520874
+        ],
+        "length": 0.23000013828277588,
+        "rest_quaternion": [
+          0.7071067690849304,
+          0.7071067690849304,
+          0.0,
+          0.0
+        ]
+      },
+      "spine": {
+        "head": [
+          0.05999999865889549,
+          0.02500000037252903,
+          1.0700000524520874
+        ],
+        "tail": [
+          0.05999999865889549,
+          0.02500000037252903,
+          1.2474561929702759
+        ],
+        "length": 0.17745614051818848,
+        "rest_quaternion": [
+          0.7071067690849304,
+          0.7071067690849304,
+          0.0,
+          0.0
+        ]
+      },
+      "chest": {
+        "head": [
+          0.05999999865889549,
+          0.02500000037252903,
+          1.2474561929702759
+        ],
+        "tail": [
+          0.05999999865889549,
+          0.02500000037252903,
+          1.3274562358856201
+        ],
+        "length": 0.08000004291534424,
+        "rest_quaternion": [
+          0.7071067690849304,
+          0.7071067690849304,
+          0.0,
+          0.0
+        ]
+      },
+      "neck": {
+        "head": [
+          0.05999999865889549,
+          0.02500000037252903,
+          1.3274562358856201
+        ],
+        "tail": [
+          0.05999999865889549,
+          0.02500000037252903,
+          1.649999976158142
+        ],
+        "length": 0.322543740272522,
+        "rest_quaternion": [
+          0.7071067690849304,
+          0.7071067690849304,
+          0.0,
+          0.0
+        ]
+      },
+      "head": {
+        "head": [
+          0.05999999865889549,
+          0.02500000037252903,
+          1.649999976158142
+        ],
+        "tail": [
+          0.05999999865889549,
+          0.02500000037252903,
+          2.0450000762939453
+        ],
+        "length": 0.3950001001358032,
+        "rest_quaternion": [
+          0.7071067690849304,
+          0.7071067690849304,
+          0.0,
+          0.0
+        ]
+      },
+      "secondary_hair.L.01": {
+        "head": [
+          0.13020431995391846,
+          -0.29180118441581726,
+          1.8046343326568604
+        ],
+        "tail": [
+          0.13020431995391846,
+          -0.29180118441581726,
+          1.6260037422180176
+        ],
+        "length": 0.17863062024116516,
+        "rest_quaternion": [
+          0.7071067690849304,
+          -0.7071067690849304,
+          -3.0908619663705394e-08,
+          3.0908619663705394e-08
+        ]
+      },
+      "secondary_hair.L.02": {
+        "head": [
+          0.13020431995391846,
+          -0.29180118441581726,
+          1.6260037422180176
+        ],
+        "tail": [
+          0.13020431995391846,
+          -0.29180118441581726,
+          1.4473731517791748
+        ],
+        "length": 0.17863060534000397,
+        "rest_quaternion": [
+          0.7071067690849304,
+          -0.7071067690849304,
+          0.0,
+          0.0
+        ]
+      },
+      "secondary_hair.L.03": {
+        "head": [
+          0.13020431995391846,
+          -0.29180118441581726,
+          1.4473731517791748
+        ],
+        "tail": [
+          0.13020431995391846,
+          -0.29180118441581726,
+          1.268742561340332
+        ],
+        "length": 0.17863060534000397,
+        "rest_quaternion": [
+          0.7071067690849304,
+          -0.7071067690849304,
+          0.0,
+          0.0
+        ]
+      },
+      "secondary_hair.R.01": {
+        "head": [
+          -0.052676837891340256,
+          -0.3270234763622284,
+          1.8046343326568604
+        ],
+        "tail": [
+          -0.052676837891340256,
+          -0.3270234763622284,
+          1.6260037422180176
+        ],
+        "length": 0.17863062024116516,
+        "rest_quaternion": [
+          0.7071067690849304,
+          -0.7071067690849304,
+          -3.0908619663705394e-08,
+          3.0908619663705394e-08
+        ]
+      },
+      "secondary_hair.R.02": {
+        "head": [
+          -0.052676837891340256,
+          -0.3270234763622284,
+          1.6260037422180176
+        ],
+        "tail": [
+          -0.052676837891340256,
+          -0.3270234763622284,
+          1.4473731517791748
+        ],
+        "length": 0.17863060534000397,
+        "rest_quaternion": [
+          0.7071067690849304,
+          -0.7071067690849304,
+          0.0,
+          0.0
+        ]
+      },
+      "secondary_hair.R.03": {
+        "head": [
+          -0.052676837891340256,
+          -0.3270234763622284,
+          1.4473731517791748
+        ],
+        "tail": [
+          -0.052676837891340256,
+          -0.3270234763622284,
+          1.268742561340332
+        ],
+        "length": 0.17863060534000397,
+        "rest_quaternion": [
+          0.7071067690849304,
+          -0.7071067690849304,
+          0.0,
+          0.0
+        ]
+      },
+      "clavicle.L": {
+        "head": [
+          0.05999999865889549,
+          0.02500000037252903,
+          1.3274562358856201
+        ],
+        "tail": [
+          0.2561630606651306,
+          -0.14051896333694458,
+          1.3274562358856201
+        ],
+        "length": 0.25666412711143494,
+        "rest_quaternion": [
+          0.42137548327445984,
+          7.394006473759873e-08,
+          1.8485016184399683e-08,
+          -0.9068862795829773
+        ]
+      },
+      "upper_arm.L": {
+        "head": [
+          0.2561630606651306,
+          -0.14051896333694458,
+          1.3274562358856201
+        ],
+        "tail": [
+          0.326722115278244,
+          -0.1405189484357834,
+          1.1528161764144897
+        ],
+        "length": 0.18835532665252686,
+        "rest_quaternion": [
+          0.5862179398536682,
+          -0.39540913701057434,
+          0.3954092860221863,
+          -0.586217999458313
+        ]
+      },
+      "forearm.L": {
+        "head": [
+          0.326722115278244,
+          -0.1405189484357834,
+          1.1528161764144897
+        ],
+        "tail": [
+          0.3859917223453522,
+          -0.1405189484357834,
+          1.0061185359954834
+        ],
+        "length": 0.15821848809719086,
+        "rest_quaternion": [
+          0.5862179398536682,
+          -0.39540913701057434,
+          0.39540931582450867,
+          -0.5862180590629578
+        ]
+      },
+      "hand.L": {
+        "head": [
+          0.3859917223453522,
+          -0.1405189484357834,
+          1.0061185359954834
+        ],
+        "tail": [
+          0.414087176322937,
+          -0.1405189484357834,
+          0.936579704284668
+        ],
+        "length": 0.07500003278255463,
+        "rest_quaternion": [
+          0.5862178802490234,
+          -0.3954092562198639,
+          0.39540934562683105,
+          -0.586217999458313
+        ]
+      },
+      "index.01.L": {
+        "head": [
+          0.414087176322937,
+          -0.16301894187927246,
+          0.936579704284668
+        ],
+        "tail": [
+          0.42319759726524353,
+          -0.16301894187927246,
+          0.9140305519104004
+        ],
+        "length": 0.024320034310221672,
+        "rest_quaternion": [
+          0.5862178802490234,
+          -0.39540940523147583,
+          0.395409494638443,
+          -0.5862178802490234
+        ]
+      },
+      "index.02.L": {
+        "head": [
+          0.42319759726524353,
+          -0.16301894187927246,
+          0.9140305519104004
+        ],
+        "tail": [
+          0.4315887689590454,
+          -0.16301894187927246,
+          0.8932616114616394
+        ],
+        "length": 0.022400017827749252,
+        "rest_quaternion": [
+          0.5862178206443787,
+          -0.39540934562683105,
+          0.3954094648361206,
+          -0.5862179398536682
+        ]
+      },
+      "index.03.L": {
+        "head": [
+          0.4315887689590454,
+          -0.16301894187927246,
+          0.8932616114616394
+        ],
+        "tail": [
+          0.4380619525909424,
+          -0.16301894187927246,
+          0.8772398829460144
+        ],
+        "length": 0.017279990017414093,
+        "rest_quaternion": [
+          0.5862178802490234,
+          -0.3954092562198639,
+          0.39540937542915344,
+          -0.586217999458313
+        ]
+      },
+      "middle.01.L": {
+        "head": [
+          0.414087176322937,
+          -0.148018941283226,
+          0.936579704284668
+        ],
+        "tail": [
+          0.4244787395000458,
+          -0.148018941283226,
+          0.9108595848083496
+        ],
+        "length": 0.027740031480789185,
+        "rest_quaternion": [
+          0.5862178802490234,
+          -0.3954094648361206,
+          0.39540955424308777,
+          -0.5862178206443787
+        ]
+      },
+      "middle.02.L": {
+        "head": [
+          0.4244787395000458,
+          -0.148018941283226,
+          0.9108595848083496
+        ],
+        "tail": [
+          0.43404993414878845,
+          -0.148018941283226,
+          0.8871700167655945
+        ],
+        "length": 0.025550024583935738,
+        "rest_quaternion": [
+          0.586217999458313,
+          -0.39540916681289673,
+          0.3954092562198639,
+          -0.5862180590629578
+        ]
+      },
+      "middle.03.L": {
+        "head": [
+          0.43404993414878845,
+          -0.148018941283226,
+          0.8871700167655945
+        ],
+        "tail": [
+          0.4414334297180176,
+          -0.148018941283226,
+          0.8688952326774597
+        ],
+        "length": 0.01970999501645565,
+        "rest_quaternion": [
+          0.5862180590629578,
+          -0.3954089879989624,
+          0.39540907740592957,
+          -0.5862181782722473
+        ]
+      },
+      "ring.01.L": {
+        "head": [
+          0.414087176322937,
+          -0.13301895558834076,
+          0.936579704284668
+        ],
+        "tail": [
+          0.42376700043678284,
+          -0.13301895558834076,
+          0.912621259689331
+        ],
+        "length": 0.02584001049399376,
+        "rest_quaternion": [
+          0.5862179398536682,
+          -0.39540913701057434,
+          0.39540931582450867,
+          -0.5862180590629578
+        ]
+      },
+      "ring.02.L": {
+        "head": [
+          0.42376700043678284,
+          -0.13301895558834076,
+          0.912621259689331
+        ],
+        "tail": [
+          0.4326826333999634,
+          -0.13301895558834076,
+          0.8905542492866516
+        ],
+        "length": 0.023800034075975418,
+        "rest_quaternion": [
+          0.5862178802490234,
+          -0.3954092860221863,
+          0.39540931582450867,
+          -0.586217999458313
+        ]
+      },
+      "ring.03.L": {
+        "head": [
+          0.4326826333999634,
+          -0.13301895558834076,
+          0.8905542492866516
+        ],
+        "tail": [
+          0.4395604133605957,
+          -0.13301895558834076,
+          0.8735311031341553
+        ],
+        "length": 0.01836005039513111,
+        "rest_quaternion": [
+          0.5862178802490234,
+          -0.39540934562683105,
+          0.39540940523147583,
+          -0.5862179398536682
+        ]
+      },
+      "little.01.L": {
+        "head": [
+          0.414087176322937,
+          -0.11801894754171371,
+          0.936579704284668
+        ],
+        "tail": [
+          0.4214893877506256,
+          -0.11801894754171371,
+          0.918258547782898
+        ],
+        "length": 0.019759999588131905,
+        "rest_quaternion": [
+          0.5862178802490234,
+          -0.3954092562198639,
+          0.39540940523147583,
+          -0.586217999458313
+        ]
+      },
+      "little.02.L": {
+        "head": [
+          0.4214893877506256,
+          -0.11801894754171371,
+          0.918258547782898
+        ],
+        "tail": [
+          0.4283072054386139,
+          -0.11801894754171371,
+          0.9013838171958923
+        ],
+        "length": 0.0181999821215868,
+        "rest_quaternion": [
+          0.5862178802490234,
+          -0.3954092562198639,
+          0.39540937542915344,
+          -0.586217999458313
+        ]
+      },
+      "little.03.L": {
+        "head": [
+          0.4283072054386139,
+          -0.11801894754171371,
+          0.9013838171958923
+        ],
+        "tail": [
+          0.4335666596889496,
+          -0.11801894754171371,
+          0.888366162776947
+        ],
+        "length": 0.014039987698197365,
+        "rest_quaternion": [
+          0.5862177610397339,
+          -0.3954094350337982,
+          0.3954095244407654,
+          -0.5862178802490234
+        ]
+      },
+      "thumb.01.L": {
+        "head": [
+          0.39460766315460205,
+          -0.17451894283294678,
+          0.9847933053970337
+        ],
+        "tail": [
+          0.3998521566390991,
+          -0.18551895022392273,
+          0.9718127250671387
+        ],
+        "length": 0.017804505303502083,
+        "rest_quaternion": [
+          0.3624034821987152,
+          -0.5029351115226746,
+          0.2444441318511963,
+          -0.745631992816925
+        ]
+      },
+      "thumb.02.L": {
+        "head": [
+          0.3998521566390991,
+          -0.18551895022392273,
+          0.9718127250671387
+        ],
+        "tail": [
+          0.4050966501235962,
+          -0.19651895761489868,
+          0.9588321447372437
+        ],
+        "length": 0.017804505303502083,
+        "rest_quaternion": [
+          0.3624034523963928,
+          -0.5029351115226746,
+          0.24444414675235748,
+          -0.745631992816925
+        ]
+      },
+      "thumb.03.L": {
+        "head": [
+          0.4050966501235962,
+          -0.1965189427137375,
+          0.9588321447372437
+        ],
+        "tail": [
+          0.41034114360809326,
+          -0.20751893520355225,
+          0.9458515644073486
+        ],
+        "length": 0.017804495990276337,
+        "rest_quaternion": [
+          0.36240363121032715,
+          -0.5029349327087402,
+          0.2444443702697754,
+          -0.7456319332122803
+        ]
+      },
+      "clavicle.R": {
+        "head": [
+          0.05999999865889549,
+          0.02500000037252903,
+          1.3274562358856201
+        ],
+        "tail": [
+          -0.2561630308628082,
+          -0.1405189484357834,
+          1.3274562358856201
+        ],
+        "length": 0.3568691611289978,
+        "rest_quaternion": [
+          0.5177796483039856,
+          1.045067321570059e-07,
+          -6.749392866822745e-08,
+          0.8555140495300293
+        ]
+      },
+      "upper_arm.R": {
+        "head": [
+          -0.2561630308628082,
+          -0.1405189484357834,
+          1.3274562358856201
+        ],
+        "tail": [
+          -0.3267221450805664,
+          -0.140518918633461,
+          1.1528161764144897
+        ],
+        "length": 0.18835535645484924,
+        "rest_quaternion": [
+          0.5862181186676025,
+          -0.39540910720825195,
+          -0.3954092562198639,
+          0.5862179398536682
+        ]
+      },
+      "forearm.R": {
+        "head": [
+          -0.3267221450805664,
+          -0.140518918633461,
+          1.1528161764144897
+        ],
+        "tail": [
+          -0.38599178194999695,
+          -0.1405189037322998,
+          1.0061185359954834
+        ],
+        "length": 0.15821850299835205,
+        "rest_quaternion": [
+          0.5862180590629578,
+          -0.39540910720825195,
+          -0.3954092860221863,
+          0.5862180590629578
+        ]
+      },
+      "hand.R": {
+        "head": [
+          -0.38599178194999695,
+          -0.1405189037322998,
+          1.0061185359954834
+        ],
+        "tail": [
+          -0.4140872657299042,
+          -0.1405188888311386,
+          0.936579704284668
+        ],
+        "length": 0.07500005513429642,
+        "rest_quaternion": [
+          0.5862181186676025,
+          -0.39540910720825195,
+          -0.3954092860221863,
+          0.5862179398536682
+        ]
+      },
+      "index.01.R": {
+        "head": [
+          -0.4140872657299042,
+          -0.16301888227462769,
+          0.936579704284668
+        ],
+        "tail": [
+          -0.4231976866722107,
+          -0.16301888227462769,
+          0.9140305519104004
+        ],
+        "length": 0.02432003989815712,
+        "rest_quaternion": [
+          0.5862178802490234,
+          -0.39540937542915344,
+          -0.39540940523147583,
+          0.5862178802490234
+        ]
+      },
+      "index.02.R": {
+        "head": [
+          -0.4231976866722107,
+          -0.16301888227462769,
+          0.9140305519104004
+        ],
+        "tail": [
+          -0.43158888816833496,
+          -0.16301888227462769,
+          0.8932616114616394
+        ],
+        "length": 0.022400030866265297,
+        "rest_quaternion": [
+          0.5862181186676025,
+          -0.39540910720825195,
+          -0.3954090476036072,
+          0.5862181782722473
+        ]
+      },
+      "index.03.R": {
+        "head": [
+          -0.43158888816833496,
+          -0.16301888227462769,
+          0.8932616114616394
+        ],
+        "tail": [
+          -0.43806207180023193,
+          -0.16301888227462769,
+          0.8772398829460144
+        ],
+        "length": 0.017279986292123795,
+        "rest_quaternion": [
+          0.5862179398536682,
+          -0.39540934562683105,
+          -0.39540937542915344,
+          0.5862179398536682
+        ]
+      },
+      "middle.01.R": {
+        "head": [
+          -0.4140872657299042,
+          -0.14801888167858124,
+          0.936579704284668
+        ],
+        "tail": [
+          -0.4244788587093353,
+          -0.14801888167858124,
+          0.9108595848083496
+        ],
+        "length": 0.02774004451930523,
+        "rest_quaternion": [
+          0.5862180590629578,
+          -0.39540913701057434,
+          -0.3954092264175415,
+          0.5862180590629578
+        ]
+      },
+      "middle.02.R": {
+        "head": [
+          -0.4244788587093353,
+          -0.14801888167858124,
+          0.9108595848083496
+        ],
+        "tail": [
+          -0.434050053358078,
+          -0.14801888167858124,
+          0.8871700167655945
+        ],
+        "length": 0.025550024583935738,
+        "rest_quaternion": [
+          0.586217999458313,
+          -0.39540916681289673,
+          -0.3954092562198639,
+          0.586217999458313
+        ]
+      },
+      "middle.03.R": {
+        "head": [
+          -0.434050053358078,
+          -0.14801888167858124,
+          0.8871700167655945
+        ],
+        "tail": [
+          -0.44143354892730713,
+          -0.14801888167858124,
+          0.8688952326774597
+        ],
+        "length": 0.0197099968791008,
+        "rest_quaternion": [
+          0.5862181186676025,
+          -0.39540910720825195,
+          -0.3954090476036072,
+          0.5862181782722473
+        ]
+      },
+      "ring.01.R": {
+        "head": [
+          -0.4140872657299042,
+          -0.13301889598369598,
+          0.936579704284668
+        ],
+        "tail": [
+          -0.42376708984375,
+          -0.13301889598369598,
+          0.912621259689331
+        ],
+        "length": 0.025840016081929207,
+        "rest_quaternion": [
+          0.5862179398536682,
+          -0.3954091966152191,
+          -0.3954092562198639,
+          0.586217999458313
+        ]
+      },
+      "ring.02.R": {
+        "head": [
+          -0.42376708984375,
+          -0.13301889598369598,
+          0.912621259689331
+        ],
+        "tail": [
+          -0.43268272280693054,
+          -0.13301889598369598,
+          0.8905542492866516
+        ],
+        "length": 0.023800035938620567,
+        "rest_quaternion": [
+          0.5862179398536682,
+          -0.39540934562683105,
+          -0.39540934562683105,
+          0.5862179398536682
+        ]
+      },
+      "ring.03.R": {
+        "head": [
+          -0.43268272280693054,
+          -0.13301889598369598,
+          0.8905542492866516
+        ],
+        "tail": [
+          -0.43956050276756287,
+          -0.13301889598369598,
+          0.8735311031341553
+        ],
+        "length": 0.01836005225777626,
+        "rest_quaternion": [
+          0.5862178802490234,
+          -0.3954092860221863,
+          -0.39540937542915344,
+          0.5862179398536682
+        ]
+      },
+      "little.01.R": {
+        "head": [
+          -0.4140872657299042,
+          -0.11801889538764954,
+          0.936579704284668
+        ],
+        "tail": [
+          -0.42148950695991516,
+          -0.11801889538764954,
+          0.918258547782898
+        ],
+        "length": 0.01976001262664795,
+        "rest_quaternion": [
+          0.5862182378768921,
+          -0.3954089879989624,
+          -0.39540895819664,
+          0.5862182378768921
+        ]
+      },
+      "little.02.R": {
+        "head": [
+          -0.42148950695991516,
+          -0.11801889538764954,
+          0.918258547782898
+        ],
+        "tail": [
+          -0.42830732464790344,
+          -0.11801889538764954,
+          0.9013838171958923
+        ],
+        "length": 0.0181999821215868,
+        "rest_quaternion": [
+          0.5862179398536682,
+          -0.39540937542915344,
+          -0.39540937542915344,
+          0.5862179398536682
+        ]
+      },
+      "little.03.R": {
+        "head": [
+          -0.42830732464790344,
+          -0.11801889538764954,
+          0.9013838171958923
+        ],
+        "tail": [
+          -0.4335668087005615,
+          -0.11801889538764954,
+          0.888366162776947
+        ],
+        "length": 0.014039999805390835,
+        "rest_quaternion": [
+          0.5862182974815369,
+          -0.3954089283943176,
+          -0.39540889859199524,
+          0.5862181186676025
+        ]
+      },
+      "thumb.01.R": {
+        "head": [
+          -0.3946077227592468,
+          -0.1745188981294632,
+          0.9847933053970337
+        ],
+        "tail": [
+          -0.3998522162437439,
+          -0.18551890552043915,
+          0.9718127250671387
+        ],
+        "length": 0.017804505303502083,
+        "rest_quaternion": [
+          0.3624034821987152,
+          -0.5029351711273193,
+          -0.24444419145584106,
+          0.745631992816925
+        ]
+      },
+      "thumb.02.R": {
+        "head": [
+          -0.3998522162437439,
+          -0.18551890552043915,
+          0.9718127250671387
+        ],
+        "tail": [
+          -0.40509670972824097,
+          -0.1965189129114151,
+          0.9588321447372437
+        ],
+        "length": 0.017804507166147232,
+        "rest_quaternion": [
+          0.3624034821987152,
+          -0.5029351115226746,
+          -0.24444420635700226,
+          0.745631992816925
+        ]
+      },
+      "thumb.03.R": {
+        "head": [
+          -0.40509670972824097,
+          -0.1965188980102539,
+          0.9588321447372437
+        ],
+        "tail": [
+          -0.41034120321273804,
+          -0.20751889050006866,
+          0.9458515644073486
+        ],
+        "length": 0.017804494127631187,
+        "rest_quaternion": [
+          0.3624037206172943,
+          -0.5029350519180298,
+          -0.2444443702697754,
+          0.7456318736076355
+        ]
+      },
+      "thigh.L": {
+        "head": [
+          0.16300000250339508,
+          0.02500000037252903,
+          0.8399999737739563
+        ],
+        "tail": [
+          0.16699999570846558,
+          0.032999999821186066,
+          0.4699999988079071
+        ],
+        "length": 0.370108038187027,
+        "rest_quaternion": [
+          0.7147080898284912,
+          -0.6993820071220398,
+          1.218380845102729e-07,
+          -0.007561040110886097
+        ]
+      },
+      "shin.L": {
+        "head": [
+          0.16699999570846558,
+          0.032999999821186066,
+          0.4699999988079071
+        ],
+        "tail": [
+          0.17999999225139618,
+          0.02500000223517418,
+          0.13999998569488525
+        ],
+        "length": 0.3303528130054474,
+        "rest_quaternion": [
+          0.6984925866127014,
+          -0.7150627374649048,
+          8.335582890595106e-08,
+          -0.028169171884655952
+        ]
+      },
+      "foot.L": {
+        "head": [
+          0.17999999225139618,
+          0.02500000223517418,
+          0.13999998569488525
+        ],
+        "tail": [
+          0.17999999225139618,
+          -0.05499999597668648,
+          0.05500001460313797
+        ],
+        "length": 0.11672614514827728,
+        "rest_quaternion": [
+          0.39663276076316833,
+          -0.9179773926734924,
+          4.565418976198998e-08,
+          -1.8531162382373623e-08
+        ]
+      },
+      "toe.L": {
+        "head": [
+          0.17999999225139618,
+          -0.05499999597668648,
+          0.05500001460313797
+        ],
+        "tail": [
+          0.17999999225139618,
+          -0.14499999582767487,
+          0.04000001400709152
+        ],
+        "length": 0.09124144911766052,
+        "rest_quaternion": [
+          0.0824805349111557,
+          -0.9965927004814148,
+          3.327760111915268e-08,
+          -3.873069864823719e-09
+        ]
+      },
+      "secondary_cloth.L.01": {
+        "head": [
+          0.1808808594942093,
+          0.037745796144008636,
+          1.0703363418579102
+        ],
+        "tail": [
+          0.1808808594942093,
+          0.037745796144008636,
+          0.8550731539726257
+        ],
+        "length": 0.21526314318180084,
+        "rest_quaternion": [
+          0.7071067690849304,
+          -0.7071067690849304,
+          -2.8554074660291917e-09,
+          -4.983843737704774e-08
+        ]
+      },
+      "secondary_cloth.L.02": {
+        "head": [
+          0.1808808594942093,
+          0.037745796144008636,
+          0.8550731539726257
+        ],
+        "tail": [
+          0.1808808594942093,
+          0.037745796144008636,
+          0.6398099660873413
+        ],
+        "length": 0.21526315808296204,
+        "rest_quaternion": [
+          0.7071067690849304,
+          -0.7071067690849304,
+          4.840301670583358e-08,
+          -1.0289756546821849e-10
+        ]
+      },
+      "thigh.R": {
+        "head": [
+          -0.0430000014603138,
+          0.02500000037252903,
+          0.8399999737739563
+        ],
+        "tail": [
+          -0.04700000211596489,
+          0.032999999821186066,
+          0.4699999988079071
+        ],
+        "length": 0.370108038187027,
+        "rest_quaternion": [
+          0.7147080898284912,
+          -0.6993820071220398,
+          -7.19952311101224e-08,
+          0.007561027072370052
+        ]
+      },
+      "shin.R": {
+        "head": [
+          -0.04700000211596489,
+          0.032999999821186066,
+          0.4699999988079071
+        ],
+        "tail": [
+          -0.05999999865889549,
+          0.02500000223517418,
+          0.13999998569488525
+        ],
+        "length": 0.3303528130054474,
+        "rest_quaternion": [
+          0.6984925866127014,
+          -0.7150627374649048,
+          -1.1591669846211516e-07,
+          0.02816917933523655
+        ]
+      },
+      "foot.R": {
+        "head": [
+          -0.05999999865889549,
+          0.02500000223517418,
+          0.13999998569488525
+        ],
+        "tail": [
+          -0.05999999865889549,
+          -0.05499999597668648,
+          0.05500000715255737
+        ],
+        "length": 0.11672615259885788,
+        "rest_quaternion": [
+          0.3966328799724579,
+          -0.9179773330688477,
+          -7.101763799255423e-08,
+          4.203990044970851e-08
+        ]
+      },
+      "toe.R": {
+        "head": [
+          -0.05999999865889549,
+          -0.05499999597668648,
+          0.05500000715255737
+        ],
+        "tail": [
+          -0.05999999865889549,
+          -0.14499999582767487,
+          0.03999999910593033
+        ],
+        "length": 0.09124143421649933,
+        "rest_quaternion": [
+          0.08248059451580048,
+          -0.9965927004814148,
+          -4.7291599969412346e-08,
+          5.6335847098409886e-09
+        ]
+      },
+      "secondary_cloth.R.01": {
+        "head": [
+          -0.10896036773920059,
+          0.0023253713734447956,
+          1.0703363418579102
+        ],
+        "tail": [
+          -0.10896036773920059,
+          0.0023253713734447956,
+          0.8550731539726257
+        ],
+        "length": 0.21526314318180084,
+        "rest_quaternion": [
+          0.7071067690849304,
+          -0.7071067690849304,
+          -6.679595543346295e-08,
+          1.2553502681811324e-09
+        ]
+      },
+      "secondary_cloth.R.02": {
+        "head": [
+          -0.10896036773920059,
+          0.0023253713734447956,
+          0.8550731539726257
+        ],
+        "tail": [
+          -0.10896036773920059,
+          0.0023253713734447956,
+          0.6398099660873413
+        ],
+        "length": 0.21526315808296204,
+        "rest_quaternion": [
+          0.7071067690849304,
+          -0.7071067690849304,
+          -6.815934483483943e-08,
+          -7.665868495543293e-10
+        ]
+      }
+    },
+    "bones_after": {
+      "root": {
+        "head": [
+          0.05999999865889549,
+          0.02500000037252903,
+          0.0
+        ],
+        "tail": [
+          0.05999999865889549,
+          0.02500000037252903,
+          0.1599999964237213
+        ],
+        "length": 0.1599999964237213,
+        "rest_quaternion": [
+          0.7071067690849304,
+          0.7071067690849304,
+          0.0,
+          0.0
+        ]
+      },
+      "pelvis": {
+        "head": [
+          0.056327201426029205,
+          -0.05686535686254501,
+          0.8149999380111694
+        ],
+        "tail": [
+          0.05999999865889549,
+          0.02499999850988388,
+          1.0700000524520874
+        ],
+        "length": 0.26784417033195496,
+        "rest_quaternion": [
+          0.8079744577407837,
+          0.5891563892364502,
+          -5.763317045826e-10,
+          -0.00848569069057703
+        ]
+      },
+      "spine": {
+        "head": [
+          0.05999999865889549,
+          0.02499999850988388,
+          1.0700000524520874
+        ],
+        "tail": [
+          0.05999999865889549,
+          0.02500000409781933,
+          1.2474561929702759
+        ],
+        "length": 0.17745617032051086,
+        "rest_quaternion": [
+          0.7071067690849304,
+          0.7071067690849304,
+          4.115903451396008e-10,
+          -2.469542070837605e-10
+        ]
+      },
+      "chest": {
+        "head": [
+          0.05999999865889549,
+          0.02500000409781933,
+          1.2474561929702759
+        ],
+        "tail": [
+          0.05999999865889549,
+          0.02500000409781933,
+          1.3274562358856201
+        ],
+        "length": 0.08000005036592484,
+        "rest_quaternion": [
+          0.7071067690849304,
+          0.7071067690849304,
+          1.646361241780525e-10,
+          -6.585445522233613e-10
+        ]
+      },
+      "neck": {
+        "head": [
+          0.02988840453326702,
+          -0.16161563992500305,
+          1.3274562358856201
+        ],
+        "tail": [
+          0.02988840453326702,
+          -0.20324429869651794,
+          1.649999976158142
+        ],
+        "length": 0.3252190351486206,
+        "rest_quaternion": [
+          0.6603023409843445,
+          0.7509999871253967,
+          -6.990968914877271e-10,
+          -8.172823529051243e-10
+        ]
+      },
+      "head": {
+        "head": [
+          0.02988840453326702,
+          -0.20324429869651794,
+          1.649999976158142
+        ],
+        "tail": [
+          0.05909770727157593,
+          -0.2576996684074402,
+          1.8058186769485474
+        ],
+        "length": 0.16762471199035645,
+        "rest_quaternion": [
+          0.5810057520866394,
+          0.7999654412269592,
+          -4.656814045489455e-09,
+          -0.14995907247066498
+        ]
+      },
+      "secondary_hair.L.01": {
+        "head": [
+          0.13020431995391846,
+          -0.29180118441581726,
+          1.8046343326568604
+        ],
+        "tail": [
+          0.13020433485507965,
+          -0.29180118441581726,
+          1.6260037422180176
+        ],
+        "length": 0.17863060534000397,
+        "rest_quaternion": [
+          0.7071069478988647,
+          -0.7071065902709961,
+          -3.029299762147275e-07,
+          1.0747427268142928e-06
+        ]
+      },
+      "secondary_hair.L.02": {
+        "head": [
+          0.13020433485507965,
+          -0.29180118441581726,
+          1.6260037422180176
+        ],
+        "tail": [
+          0.13020433485507965,
+          -0.29180118441581726,
+          1.4473731517791748
+        ],
+        "length": 0.1786305457353592,
+        "rest_quaternion": [
+          0.7071069478988647,
+          -0.7071065902709961,
+          -2.7658825274556875e-07,
+          1.1221579825360095e-06
+        ]
+      },
+      "secondary_hair.L.03": {
+        "head": [
+          0.13020433485507965,
+          -0.29180118441581726,
+          1.4473731517791748
+        ],
+        "tail": [
+          0.13020433485507965,
+          -0.29180118441581726,
+          1.268742561340332
+        ],
+        "length": 0.1786305457353592,
+        "rest_quaternion": [
+          0.7071069478988647,
+          -0.7071065902709961,
+          -2.7658825274556875e-07,
+          1.1221579825360095e-06
+        ]
+      },
+      "secondary_hair.R.01": {
+        "head": [
+          -0.05267684906721115,
+          -0.3270234763622284,
+          1.8046343326568604
+        ],
+        "tail": [
+          -0.05267684534192085,
+          -0.3270234763622284,
+          1.6260037422180176
+        ],
+        "length": 0.17863060534000397,
+        "rest_quaternion": [
+          0.7071067690849304,
+          -0.7071067690849304,
+          -4.6361520844584447e-07,
+          5.584456062024401e-07
+        ]
+      },
+      "secondary_hair.R.02": {
+        "head": [
+          -0.05267684534192085,
+          -0.3270234763622284,
+          1.6260037422180176
+        ],
+        "tail": [
+          -0.05267684534192085,
+          -0.3270234763622284,
+          1.4473731517791748
+        ],
+        "length": 0.17863060534000397,
+        "rest_quaternion": [
+          0.7071067690849304,
+          -0.7071067690849304,
+          -4.7678568648734654e-07,
+          6.032261694599583e-07
+        ]
+      },
+      "secondary_hair.R.03": {
+        "head": [
+          -0.05267684534192085,
+          -0.3270234763622284,
+          1.4473731517791748
+        ],
+        "tail": [
+          -0.05267684534192085,
+          -0.3270234763622284,
+          1.268742561340332
+        ],
+        "length": 0.17863060534000397,
+        "rest_quaternion": [
+          0.7071067690849304,
+          -0.7071067690849304,
+          -4.7678568648734654e-07,
+          6.032261694599583e-07
+        ]
+      },
+      "clavicle.L": {
+        "head": [
+          0.05999999865889549,
+          0.02500000409781933,
+          1.3274562358856201
+        ],
+        "tail": [
+          0.28895002603530884,
+          -0.1592150777578354,
+          1.340703010559082
+        ],
+        "length": 0.2941577434539795,
+        "rest_quaternion": [
+          0.43229272961616516,
+          0.05208612605929375,
+          -6.207246272538214e-09,
+          -0.9002277851104736
+        ]
+      },
+      "upper_arm.L": {
+        "head": [
+          0.2889500856399536,
+          -0.1592150777578354,
+          1.340703010559082
+        ],
+        "tail": [
+          0.3119308054447174,
+          -0.15450087189674377,
+          1.1535396575927734
+        ],
+        "length": 0.18862783908843994,
+        "rest_quaternion": [
+          0.04291807487607002,
+          0.04339127987623215,
+          0.714600682258606,
+          -0.6968652009963989
+        ]
+      },
+      "forearm.L": {
+        "head": [
+          0.3119308054447174,
+          -0.15450087189674377,
+          1.1535396575927734
+        ],
+        "tail": [
+          0.3143342137336731,
+          -0.1877930909395218,
+          0.9969297647476196
+        ],
+        "length": 0.16012747585773468,
+        "rest_quaternion": [
+          0.0026759947650134563,
+          0.008620569482445717,
+          0.6293150782585144,
+          -0.7770978212356567
+        ]
+      },
+      "hand.L": {
+        "head": [
+          0.3143342137336731,
+          -0.1877930909395218,
+          0.9969297647476196
+        ],
+        "tail": [
+          0.28295084834098816,
+          -0.19681453704833984,
+          0.9347384572029114
+        ],
+        "length": 0.07024286687374115,
+        "rest_quaternion": [
+          0.3218291699886322,
+          -0.6223902106285095,
+          0.5763764977455139,
+          -0.4205312728881836
+        ]
+      },
+      "index.01.L": {
+        "head": [
+          0.2948709726333618,
+          -0.24901920557022095,
+          0.9538277983665466
+        ],
+        "tail": [
+          0.2766874432563782,
+          -0.2537538409233093,
+          0.9291309118270874
+        ],
+        "length": 0.0310321357101202,
+        "rest_quaternion": [
+          0.2545633018016815,
+          -0.6533141732215881,
+          0.5990923047065735,
+          -0.38660913705825806
+        ]
+      },
+      "index.02.L": {
+        "head": [
+          0.2766874432563782,
+          -0.2537538409233093,
+          0.9291309118270874
+        ],
+        "tail": [
+          0.3098008632659912,
+          -0.2654586732387543,
+          0.9074908494949341
+        ],
+        "length": 0.04125278443098068,
+        "rest_quaternion": [
+          0.5959420204162598,
+          -0.37521108984947205,
+          0.05464543029665947,
+          -0.7078726291656494
+        ]
+      },
+      "index.03.L": {
+        "head": [
+          0.3098008632659912,
+          -0.2654586732387543,
+          0.9074908494949341
+        ],
+        "tail": [
+          0.30924850702285767,
+          -0.2717500925064087,
+          0.8906302452087402
+        ],
+        "length": 0.018004637211561203,
+        "rest_quaternion": [
+          0.3917698562145233,
+          -0.5834795832633972,
+          0.4144871234893799,
+          -0.5781593322753906
+        ]
+      },
+      "middle.01.L": {
+        "head": [
+          0.2669437527656555,
+          -0.21105077862739563,
+          0.9405750036239624
+        ],
+        "tail": [
+          0.27052178978919983,
+          -0.22144953906536102,
+          0.9128627777099609
+        ],
+        "length": 0.02981448918581009,
+        "rest_quaternion": [
+          0.43466323614120483,
+          -0.5522680878639221,
+          0.36969858407974243,
+          -0.6077753901481628
+        ]
+      },
+      "middle.02.L": {
+        "head": [
+          0.27052178978919983,
+          -0.22144953906536102,
+          0.9128627777099609
+        ],
+        "tail": [
+          0.30196380615234375,
+          -0.23911988735198975,
+          0.889435887336731
+        ],
+        "length": 0.04300766438245773,
+        "rest_quaternion": [
+          0.5413964986801147,
+          -0.45319971442222595,
+          0.03817712143063545,
+          -0.7071368098258972
+        ]
+      },
+      "middle.03.L": {
+        "head": [
+          0.30196380615234375,
+          -0.23911988735198975,
+          0.889435887336731
+        ],
+        "tail": [
+          0.3164070248603821,
+          -0.23556636273860931,
+          0.8652727603912354
+        ],
+        "length": 0.028374120593070984,
+        "rest_quaternion": [
+          0.6321629881858826,
+          -0.29579484462738037,
+          0.40371906757354736,
+          -0.5915119051933289
+        ]
+      },
+      "ring.01.L": {
+        "head": [
+          0.27232301235198975,
+          -0.18035519123077393,
+          0.9289449453353882
+        ],
+        "tail": [
+          0.3230878710746765,
+          -0.19323310256004333,
+          0.896244466304779
+        ],
+        "length": 0.06174325570464134,
+        "rest_quaternion": [
+          0.6228844523429871,
+          -0.3254980742931366,
+          0.08791591227054596,
+          -0.7059298157691956
+        ]
+      },
+      "ring.02.L": {
+        "head": [
+          0.3230878710746765,
+          -0.19323310256004333,
+          0.896244466304779
+        ],
+        "tail": [
+          0.32021358609199524,
+          -0.19887852668762207,
+          0.86543208360672
+        ],
+        "length": 0.031456876546144485,
+        "rest_quaternion": [
+          0.4232359528541565,
+          -0.5587742328643799,
+          0.48076874017715454,
+          -0.5267865657806396
+        ]
+      },
+      "ring.03.L": {
+        "head": [
+          0.32021358609199524,
+          -0.19887852668762207,
+          0.86543208360672
+        ],
+        "tail": [
+          0.3139738440513611,
+          -0.20940016210079193,
+          0.8440952301025391
+        ],
+        "length": 0.02459472417831421,
+        "rest_quaternion": [
+          0.29147371649742126,
+          -0.6407684087753296,
+          0.44848954677581787,
+          -0.5507413148880005
+        ]
+      },
+      "little.01.L": {
+        "head": [
+          0.29766571521759033,
+          -0.14683285355567932,
+          0.9156061410903931
+        ],
+        "tail": [
+          0.30266261100769043,
+          -0.16548150777816772,
+          0.8928911685943604
+        ],
+        "length": 0.029811255633831024,
+        "rest_quaternion": [
+          0.35476821660995483,
+          -0.6110366582870483,
+          0.2477114200592041,
+          -0.6628822088241577
+        ]
+      },
+      "little.02.L": {
+        "head": [
+          0.30266261100769043,
+          -0.16548150777816772,
+          0.8928911685943604
+        ],
+        "tail": [
+          0.3272993266582489,
+          -0.173516184091568,
+          0.8679019808769226
+        ],
+        "length": 0.03599974885582924,
+        "rest_quaternion": [
+          0.5958431363105774,
+          -0.3714851140975952,
+          0.18269574642181396,
+          -0.6881803274154663
+        ]
+      },
+      "little.03.L": {
+        "head": [
+          0.3272993266582489,
+          -0.173516184091568,
+          0.8679019808769226
+        ],
+        "tail": [
+          0.32660624384880066,
+          -0.1873786896467209,
+          0.8521298170089722
+        ],
+        "length": 0.021009771153330803,
+        "rest_quaternion": [
+          0.28074175119400024,
+          -0.6488218307495117,
+          0.3021222949028015,
+          -0.639481246471405
+        ]
+      },
+      "thumb.01.L": {
+        "head": [
+          0.2889123857021332,
+          -0.2184552103281021,
+          0.9892283082008362
+        ],
+        "tail": [
+          0.2838018536567688,
+          -0.2499678134918213,
+          0.9848989248275757
+        ],
+        "length": 0.03221653029322624,
+        "rest_quaternion": [
+          0.006932984571903944,
+          0.7145223021507263,
+          -0.10429269820451736,
+          0.6917607188224792
+        ]
+      },
+      "thumb.02.L": {
+        "head": [
+          0.2838018536567688,
+          -0.2499678134918213,
+          0.9848989248275757
+        ],
+        "tail": [
+          0.27869129180908203,
+          -0.2814804017543793,
+          0.98056960105896
+        ],
+        "length": 0.03221650794148445,
+        "rest_quaternion": [
+          0.006934026721864939,
+          0.7145217657089233,
+          -0.10429243743419647,
+          0.6917612552642822
+        ]
+      },
+      "thumb.03.L": {
+        "head": [
+          0.27869129180908203,
+          -0.2814804017543793,
+          0.98056960105896
+        ],
+        "tail": [
+          0.27471640706062317,
+          -0.30599015951156616,
+          0.9772023558616638
+        ],
+        "length": 0.02505725808441639,
+        "rest_quaternion": [
+          0.006934128701686859,
+          0.7145220637321472,
+          -0.10429252684116364,
+          0.6917609572410583
+        ]
+      },
+      "clavicle.R": {
+        "head": [
+          0.05999999865889549,
+          0.02500000409781933,
+          1.3274562358856201
+        ],
+        "tail": [
+          -0.272431880235672,
+          -0.1640162467956543,
+          1.334029197692871
+        ],
+        "length": 0.3824673891067505,
+        "rest_quaternion": [
+          0.5028904676437378,
+          0.01708695851266384,
+          -4.256889596376823e-08,
+          0.8641812205314636
+        ]
+      },
+      "upper_arm.R": {
+        "head": [
+          -0.272431880235672,
+          -0.1640162467956543,
+          1.334029197692871
+        ],
+        "tail": [
+          -0.29557502269744873,
+          -0.15926870703697205,
+          1.1455433368682861
+        ],
+        "length": 0.18996068835258484,
+        "rest_quaternion": [
+          0.04878140985965729,
+          0.03767058998346329,
+          -0.7142243981361389,
+          0.6971977949142456
+        ]
+      },
+      "forearm.R": {
+        "head": [
+          -0.29557502269744873,
+          -0.15926870703697205,
+          1.1455433368682861
+        ],
+        "tail": [
+          -0.2979532778263092,
+          -0.19221271574497223,
+          0.9905713796615601
+        ],
+        "length": 0.15845276415348053,
+        "rest_quaternion": [
+          0.0043947650119662285,
+          0.006498222704976797,
+          -0.6293055415153503,
+          0.7771183848381042
+        ]
+      },
+      "hand.R": {
+        "head": [
+          -0.2979532778263092,
+          -0.19221271574497223,
+          0.9905713796615601
+        ],
+        "tail": [
+          -0.3019496500492096,
+          -0.19264283776283264,
+          0.9240644574165344
+        ],
+        "length": 0.06662827730178833,
+        "rest_quaternion": [
+          0.4805992543697357,
+          -0.513964831829071,
+          0.5155547261238098,
+          -0.488945871591568
+        ]
+      },
+      "index.01.R": {
+        "head": [
+          -0.3026431202888489,
+          -0.2782851457595825,
+          0.9441052079200745
+        ],
+        "tail": [
+          -0.2936836779117584,
+          -0.27622541785240173,
+          0.9132416248321533
+        ],
+        "length": 0.03220365196466446,
+        "rest_quaternion": [
+          0.5756996273994446,
+          -0.4014742374420166,
+          0.4478277862071991,
+          -0.5539301037788391
+        ]
+      },
+      "index.02.R": {
+        "head": [
+          -0.2936836779117584,
+          -0.27622541785240173,
+          0.9132416248321533
+        ],
+        "tail": [
+          -0.30134710669517517,
+          -0.28801196813583374,
+          0.8890835642814636
+        ],
+        "length": 0.027951078489422798,
+        "rest_quaternion": [
+          0.29254046082496643,
+          -0.6511118412017822,
+          0.45119577646255493,
+          -0.5356265306472778
+        ]
+      },
+      "index.03.R": {
+        "head": [
+          -0.30134710669517517,
+          -0.28801196813583374,
+          0.8890835642814636
+        ],
+        "tail": [
+          -0.31324502825737,
+          -0.27803319692611694,
+          0.8663991093635559
+        ],
+        "length": 0.02749037742614746,
+        "rest_quaternion": [
+          0.47881636023521423,
+          -0.5034224987030029,
+          0.6724809408187866,
+          -0.2550884485244751
+        ]
+      },
+      "middle.01.R": {
+        "head": [
+          -0.3218073844909668,
+          -0.2125644087791443,
+          0.9300557971000671
+        ],
+        "tail": [
+          -0.30901777744293213,
+          -0.2256837636232376,
+          0.89991694688797
+        ],
+        "length": 0.03527098149061203,
+        "rest_quaternion": [
+          0.49249914288520813,
+          -0.51573246717453,
+          0.26732975244522095,
+          -0.6480735540390015
+        ]
+      },
+      "middle.02.R": {
+        "head": [
+          -0.30901777744293213,
+          -0.2256837636232376,
+          0.89991694688797
+        ],
+        "tail": [
+          -0.30138689279556274,
+          -0.24884530901908875,
+          0.8750237822532654
+        ],
+        "length": 0.034847624599933624,
+        "rest_quaternion": [
+          0.355955570936203,
+          -0.626068651676178,
+          0.20240981876850128,
+          -0.6635991930961609
+        ]
+      },
+      "middle.03.R": {
+        "head": [
+          -0.30138689279556274,
+          -0.24884530901908875,
+          0.8750237822532654
+        ],
+        "tail": [
+          -0.3213344216346741,
+          -0.23140865564346313,
+          0.8493223190307617
+        ],
+        "length": 0.036912135779857635,
+        "rest_quaternion": [
+          0.48813778162002563,
+          -0.48982545733451843,
+          0.705629289150238,
+          -0.15453089773654938
+        ]
+      },
+      "ring.01.R": {
+        "head": [
+          -0.30274680256843567,
+          -0.15988250076770782,
+          0.9164700508117676
+        ],
+        "tail": [
+          -0.3064196705818176,
+          -0.16321112215518951,
+          0.884711503982544
+        ],
+        "length": 0.03214304521679878,
+        "rest_quaternion": [
+          0.4415394961833954,
+          -0.5508019924163818,
+          0.5032540559768677,
+          -0.498392790555954
+        ]
+      },
+      "ring.02.R": {
+        "head": [
+          -0.3064196705818176,
+          -0.16321112215518951,
+          0.884711503982544
+        ],
+        "tail": [
+          -0.317087322473526,
+          -0.182394877076149,
+          0.8597148656845093
+        ],
+        "length": 0.033266302198171616,
+        "rest_quaternion": [
+          0.21220561861991882,
+          -0.685886561870575,
+          0.4082067310810089,
+          -0.5638223886489868
+        ]
+      },
+      "ring.03.R": {
+        "head": [
+          -0.317087322473526,
+          -0.182394877076149,
+          0.8597148656845093
+        ],
+        "tail": [
+          -0.31872013211250305,
+          -0.17782282829284668,
+          0.8354641199111938
+        ],
+        "length": 0.02473193220794201,
+        "rest_quaternion": [
+          0.5229576230049133,
+          -0.4642457664012909,
+          0.5647543668746948,
+          -0.438228040933609
+        ]
+      },
+      "little.01.R": {
+        "head": [
+          -0.28060129284858704,
+          -0.11983925104141235,
+          0.9056267738342285
+        ],
+        "tail": [
+          -0.2856018841266632,
+          -0.1356813609600067,
+          0.8773273825645447
+        ],
+        "length": 0.03281514719128609,
+        "rest_quaternion": [
+          0.31455421447753906,
+          -0.6421875953674316,
+          0.3995893597602844,
+          -0.5735669732093811
+        ]
+      },
+      "little.02.R": {
+        "head": [
+          -0.2856018841266632,
+          -0.1356813609600067,
+          0.8773273825645447
+        ],
+        "tail": [
+          -0.3173964321613312,
+          -0.1259121298789978,
+          0.8474102020263672
+        ],
+        "length": 0.04473666101694107,
+        "rest_quaternion": [
+          0.35449591279029846,
+          -0.6001924276351929,
+          0.6953549981117249,
+          -0.1748807728290558
+        ]
+      },
+      "little.03.R": {
+        "head": [
+          -0.3173964321613312,
+          -0.1259121298789978,
+          0.8474102020263672
+        ],
+        "tail": [
+          -0.324010968208313,
+          -0.14839734137058258,
+          0.8301308751106262
+        ],
+        "length": 0.02911892719566822,
+        "rest_quaternion": [
+          0.1564343273639679,
+          -0.7056692242622375,
+          0.2990579605102539,
+          -0.6229956746101379
+        ]
+      },
+      "thumb.01.R": {
+        "head": [
+          -0.2858968675136566,
+          -0.23243848979473114,
+          0.9790855050086975
+        ],
+        "tail": [
+          -0.28766104578971863,
+          -0.26913267374038696,
+          0.9746132493019104
+        ],
+        "length": 0.037007782608270645,
+        "rest_quaternion": [
+          0.02788947895169258,
+          -0.7285863757133484,
+          0.058814968913793564,
+          -0.6818540096282959
+        ]
+      },
+      "thumb.02.R": {
+        "head": [
+          -0.28766104578971863,
+          -0.26913267374038696,
+          0.9746132493019104
+        ],
+        "tail": [
+          -0.28942519426345825,
+          -0.305826872587204,
+          0.9701409935951233
+        ],
+        "length": 0.03700779750943184,
+        "rest_quaternion": [
+          0.02788998931646347,
+          -0.7285889983177185,
+          0.05881458520889282,
+          -0.6818512082099915
+        ]
+      },
+      "thumb.03.R": {
+        "head": [
+          -0.28942519426345825,
+          -0.305826872587204,
+          0.9701409935951233
+        ],
+        "tail": [
+          -0.29079729318618774,
+          -0.3343667984008789,
+          0.966662585735321
+        ],
+        "length": 0.028783833608031273,
+        "rest_quaternion": [
+          0.0278897974640131,
+          -0.7285863161087036,
+          0.05881435051560402,
+          -0.6818540692329407
+        ]
+      },
+      "thigh.L": {
+        "head": [
+          0.1763962209224701,
+          -0.05788187310099602,
+          0.8149999976158142
+        ],
+        "tail": [
+          0.19828130304813385,
+          -0.11684009432792664,
+          0.4149998128414154
+        ],
+        "length": 0.40491390228271484,
+        "rest_quaternion": [
+          0.017860691994428635,
+          0.020682422444224358,
+          0.6533584594726562,
+          -0.7565553784370422
+        ]
+      },
+      "shin.L": {
+        "head": [
+          0.19828130304813385,
+          -0.11684009432792664,
+          0.4149998128414154
+        ],
+        "tail": [
+          0.20325009524822235,
+          -0.1274481564760208,
+          0.15499979257583618
+        ],
+        "length": 0.2602638602256775,
+        "rest_quaternion": [
+          0.006617225706577301,
+          0.006893204990774393,
+          0.692514955997467,
+          -0.7213402986526489
+        ]
+      },
+      "foot.L": {
+        "head": [
+          0.20325009524822235,
+          -0.1274481564760208,
+          0.15499979257583618
+        ],
+        "tail": [
+          0.17345213890075684,
+          -0.38199591636657715,
+          0.039999768137931824
+        ],
+        "length": 0.2809061110019684,
+        "rest_quaternion": [
+          0.05694139748811722,
+          -0.012190858833491802,
+          -0.20897726714611053,
+          0.9761852025985718
+        ]
+      },
+      "toe.L": {
+        "head": [
+          0.17345213890075684,
+          -0.38199591636657715,
+          0.039999768137931824
+        ],
+        "tail": [
+          0.1606815904378891,
+          -0.49108782410621643,
+          0.017999770119786263
+        ],
+        "length": 0.11201906949281693,
+        "rest_quaternion": [
+          0.057947173714637756,
+          -0.005746178794652224,
+          -0.09851156920194626,
+          0.9934307336807251
+        ]
+      },
+      "secondary_cloth.L.01": {
+        "head": [
+          0.18088087439537048,
+          0.037745796144008636,
+          1.0703362226486206
+        ],
+        "tail": [
+          0.18088087439537048,
+          0.03774578124284744,
+          0.8550728559494019
+        ],
+        "length": 0.21526344120502472,
+        "rest_quaternion": [
+          0.70710688829422,
+          -0.7071066498756409,
+          1.266594495064055e-06,
+          6.981812248341157e-07
+        ]
+      },
+      "secondary_cloth.L.02": {
+        "head": [
+          0.18088087439537048,
+          0.03774578124284744,
+          0.8550728559494019
+        ],
+        "tail": [
+          0.18088087439537048,
+          0.03774578124284744,
+          0.6398096680641174
+        ],
+        "length": 0.2152632623910904,
+        "rest_quaternion": [
+          0.7071069478988647,
+          -0.7071065902709961,
+          1.2575716255014413e-06,
+          7.069568823681038e-07
+        ]
+      },
+      "thigh.R": {
+        "head": [
+          -0.06374183297157288,
+          -0.055848851799964905,
+          0.8149999380111694
+        ],
+        "tail": [
+          -0.08634445816278458,
+          -0.11424235254526138,
+          0.4149998426437378
+        ],
+        "length": 0.40487140417099,
+        "rest_quaternion": [
+          0.01845850981771946,
+          0.021344562992453575,
+          -0.6538699269294739,
+          0.7560805678367615
+        ]
+      },
+      "shin.R": {
+        "head": [
+          -0.08634445816278458,
+          -0.11424235254526138,
+          0.4149998426437378
+        ],
+        "tail": [
+          -0.08963900059461594,
+          -0.12744812667369843,
+          0.15499985218048096
+        ],
+        "length": 0.26035594940185547,
+        "rest_quaternion": [
+          0.004363868851214647,
+          0.0045918007381260395,
+          -0.688926637172699,
+          0.7248033881187439
+        ]
+      },
+      "foot.R": {
+        "head": [
+          -0.08963900059461594,
+          -0.12744812667369843,
+          0.15499985218048096
+        ],
+        "tail": [
+          -0.06867281347513199,
+          -0.3819957971572876,
+          0.039999864995479584
+        ],
+        "length": 0.28010445833206177,
+        "rest_quaternion": [
+          0.04016406089067459,
+          -0.008624713867902756,
+          0.20978358387947083,
+          -0.9768844842910767
+        ]
+      },
+      "toe.R": {
+        "head": [
+          -0.06867281347513199,
+          -0.3819957971572876,
+          0.039999864995479584
+        ],
+        "tail": [
+          -0.059687305241823196,
+          -0.4910876750946045,
+          0.01799987256526947
+        ],
+        "length": 0.11164974421262741,
+        "rest_quaternion": [
+          0.04087788611650467,
+          -0.004066948778927326,
+          0.09892547130584717,
+          -0.9942465424537659
+        ]
+      },
+      "secondary_cloth.R.01": {
+        "head": [
+          -0.10896039009094238,
+          0.00232536718249321,
+          1.0703362226486206
+        ],
+        "tail": [
+          -0.10896039009094238,
+          0.00232536718249321,
+          0.8550729751586914
+        ],
+        "length": 0.2152632474899292,
+        "rest_quaternion": [
+          0.7071066498756409,
+          -0.70710688829422,
+          -8.413313139499223e-07,
+          -5.959773474728536e-08
+        ]
+      },
+      "secondary_cloth.R.02": {
+        "head": [
+          -0.10896039009094238,
+          0.00232536718249321,
+          0.8550729751586914
+        ],
+        "tail": [
+          -0.10896039009094238,
+          0.00232536718249321,
+          0.639809787273407
+        ],
+        "length": 0.21526318788528442,
+        "rest_quaternion": [
+          0.7071066498756409,
+          -0.70710688829422,
+          -7.612761123709788e-07,
+          -1.2705770302545716e-07
+        ]
+      }
+    },
+    "digit_fit": {
+      "L": {
+        "total_surface_length": 0.14171523414552212,
+        "palm_length": 0.07024288922548294,
+        "digit_lengths": {
+          "index": 0.09028960620328896,
+          "middle": 0.10119633566765154,
+          "ring": 0.1177949027969557,
+          "little": 0.08682086693374083,
+          "thumb": 0.08949034720217067
+        }
+      },
+      "R": {
+        "total_surface_length": 0.14769457081445034,
+        "palm_length": 0.06662830710411072,
+        "digit_lengths": {
+          "index": 0.08764513177845992,
+          "middle": 0.10703075708501686,
+          "ring": 0.0901413316181038,
+          "little": 0.10667078457103175,
+          "thumb": 0.10279942959045396
+        }
+      }
+    },
+    "leg_weight_vertices": 1363,
+    "bind_moved_vertices": 1467,
+    "max_bind_shift_m": 0.19732968546055316,
+    "shoes_orientation": {
+      "rotated_vertices": 284,
+      "closed_cuff_vertices": 24,
+      "yaw_degrees": 180
+    },
+    "topology_uv_material_sha256": "9fcf1247332039b65750332dcf84988a2a0d04bde9cc5fab15dc787a0a7621c2",
+    "retarget": {
+      "space": "Blender Z up, -Y forward",
+      "reference": "fitted rest",
+      "arm_rule": "source sagittal motion relative to fitted neutral; do not copy source Idle abduction",
+      "knee_poles": {
+        "L": [
+          0.19828130304813385,
+          -0.5668400526046753,
+          0.4149998128414154
+        ],
+        "R": [
+          -0.08634445816278458,
+          -0.5642423629760742,
+          0.4149998426437378
+        ]
+      }
+    }
+  },
+  "weight_finish": {
+    "role": "journalist",
+    "part": "trousers",
+    "changed_vertices": 212,
+    "max_weight_change": 0.8015630290226794,
+    "foot_to_shin_transition_z": {
+      "R": [
+        0.16499998569488525,
+        0.5499999988079071
+      ],
+      "L": [
+        0.16499998569488525,
+        0.5499999988079071
+      ]
+    },
+    "max_influences": 3,
+    "geometry_uv_materials_unchanged": true,
+    "method": "smooth planted-foot support for loose lower trousers; existing knee blend retained",
+    "cuff_seams": {
+      "matched_vertices": 24,
+      "changed_vertices": 24,
+      "method": "identical deform weights on coincident trouser/shoe cuff seams"
+    }
+  }
+}

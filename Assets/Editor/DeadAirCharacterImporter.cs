@@ -91,6 +91,12 @@ namespace DeadAir.Editor
             {
                 var visual = UnityEngine.Object.Instantiate(model, root.transform);
                 visual.name = "Blender character";
+                var importedClips = AssetDatabase.LoadAllAssetsAtPath(path).OfType<AnimationClip>()
+                    .Where(clip => expectedClips.Contains(clip.name)).ToArray();
+                var idleClip = importedClips.Single(clip => clip.name == "Idle");
+                // FBX's imported default transform can belong to another take.
+                // Measure and serialize the standing pose, never a crouched eye.
+                idleClip.SampleAnimation(visual, 0);
                 var renderers = visual.GetComponentsInChildren<SkinnedMeshRenderer>(true);
                 if (renderers.Length == 0) throw new InvalidOperationException(path + " has no skinned meshes.");
                 foreach (var renderer in renderers)
@@ -116,8 +122,6 @@ namespace DeadAir.Editor
                     new Vector3(bounds.center.x, bounds.min.y, bounds.center.z);
                 var animation = visual.GetComponentInChildren<Animation>(true);
                 if (animation == null) animation = visual.AddComponent<Animation>();
-                var importedClips = AssetDatabase.LoadAllAssetsAtPath(path).OfType<AnimationClip>()
-                    .Where(clip => expectedClips.Contains(clip.name)).ToArray();
                 foreach (var clip in importedClips) animation.AddClip(clip, clip.name);
                 animation.clip = animation.GetClip("Idle");
                 animation.playAutomatically = false;
@@ -131,6 +135,7 @@ namespace DeadAir.Editor
                     savedClips.GetArrayElementAtIndex(i).objectReferenceValue = importedClips.Single(clip => clip.name == expectedClips[i]);
                 serializedAnimation.FindProperty("m_Animation").objectReferenceValue = importedClips.Single(clip => clip.name == "Idle");
                 serializedAnimation.ApplyModifiedPropertiesWithoutUndo();
+                idleClip.SampleAnimation(visual, 0);
                 var motion = root.AddComponent<DeadAirCharacterMotion>();
                 motion.ClassId = role;
                 string prefabPath = PrefabFolder + "/character_" + role + ".prefab";
@@ -167,22 +172,28 @@ namespace DeadAir.Editor
             material.mainTexture = source.HasProperty("_MainTex") ? source.GetTexture("_MainTex") :
                 source.HasProperty("_BaseMap") ? source.GetTexture("_BaseMap") : null;
             bool indie = source.name.StartsWith(role + "_indie_palette", StringComparison.Ordinal);
+            bool restored = source.name.StartsWith(role + "_restored_", StringComparison.Ordinal);
+            bool restoredAtlas = source.name.StartsWith(role + "_restored_atlas", StringComparison.Ordinal);
             bool indieHand = source.name.StartsWith(role + "_indie_hand_", StringComparison.Ordinal);
-            string atlasPath = "Assets/Characters/Textures/" + role + (indie ? "_indie_albedo.png" : "_albedo.png");
+            string atlasPath = restored && !restoredAtlas ?
+                "Assets/Characters/Textures/Restored/" + role + "/" + source.name + "_albedo.png" :
+                "Assets/Characters/Textures/" + role + (restored ? "_restored_albedo.png" : indie ? "_indie_albedo.png" : "_albedo.png");
             var atlas = indieHand ? null : AssetDatabase.LoadAssetAtPath<Texture2D>(atlasPath);
-            if (indie && atlas == null) throw new InvalidOperationException("Missing indie cast palette: " + atlasPath);
+            if ((indie || restored) && atlas == null) throw new InvalidOperationException("Missing authored character atlas: " + atlasPath);
             if (atlas != null)
             {
                 material.mainTexture = atlas;
                 // Original sources used an authored .8 factor; the new atlas is final colour.
                 // Keep these contracts separate when old assets remain in the project.
-                material.color = indie ? Color.white : new Color(.8f, .8f, .8f, 1);
+                material.color = indie || restored ? Color.white : new Color(.8f, .8f, .8f, 1);
             }
             if (indieHand) material.mainTexture = null; // Newly authored FPS parts carry solid palette colours.
             material.SetTextureScale("_MainTex", Vector2.one);
             material.SetTextureOffset("_MainTex", Vector2.zero);
-            material.SetFloat("_Glossiness", .06f);
-            material.SetFloat("_Metallic", 0);
+            bool jewelry = restored && (source.name.Contains("jewelry") || source.name.Contains("badge") || source.name.Contains("buckle"));
+            bool skinOrHair = restored && (source.name.Contains("body") || source.name.Contains("hair"));
+            material.SetFloat("_Glossiness", jewelry ? .45f : skinOrHair ? .18f : .08f);
+            material.SetFloat("_Metallic", jewelry ? .65f : 0);
             material.SetFloat("_Cull", 2);
             material.SetFloat("_SrcBlend", (float)BlendMode.One);
             material.SetFloat("_DstBlend", (float)BlendMode.Zero);
@@ -198,9 +209,14 @@ namespace DeadAir.Editor
         {
             ConfigureTexture("Assets/Characters/Textures/" + role + "_albedo.png", false);
             ConfigureTexture("Assets/Characters/Textures/" + role + "_indie_albedo.png", true);
+            ConfigureTexture("Assets/Characters/Textures/" + role + "_restored_albedo.png", false, true);
+            string parts = "Assets/Characters/Textures/Restored/" + role;
+            if (Directory.Exists(parts))
+                foreach (string path in Directory.GetFiles(parts, "*_albedo.png"))
+                    ConfigureTexture(path.Replace('\\', '/'), false, true);
         }
 
-        static void ConfigureTexture(string path, bool indie)
+        static void ConfigureTexture(string path, bool indie, bool restored = false)
         {
             if (!File.Exists(path)) return; // The original reference cast has a flat material palette.
             var importer = AssetImporter.GetAtPath(path) as TextureImporter;
@@ -208,11 +224,12 @@ namespace DeadAir.Editor
             importer.textureType = TextureImporterType.Default;
             importer.sRGBTexture = true;
             importer.alphaSource = TextureImporterAlphaSource.None;
-            importer.maxTextureSize = 1024;
+            importer.maxTextureSize = restored ? 2048 : 1024;
             importer.mipmapEnabled = true;
-            importer.filterMode = indie ? FilterMode.Point : FilterMode.Bilinear;
+            importer.filterMode = restored ? FilterMode.Trilinear : indie ? FilterMode.Point : FilterMode.Bilinear;
             importer.wrapMode = TextureWrapMode.Clamp;
-            importer.textureCompression = indie ? TextureImporterCompression.Uncompressed : TextureImporterCompression.CompressedHQ;
+            importer.textureCompression = indie || restored ? TextureImporterCompression.Uncompressed : TextureImporterCompression.CompressedHQ;
+            importer.anisoLevel = restored ? 4 : 1;
             importer.isReadable = false;
             importer.SaveAndReimport();
         }
@@ -346,13 +363,14 @@ namespace DeadAir.Editor
                 var motion = prefab.GetComponent<DeadAirCharacterMotion>();
                 if (motion == null || motion.ClassId != role) throw new InvalidOperationException("Missing character presentation for " + role);
                 var renderers = prefab.GetComponentsInChildren<SkinnedMeshRenderer>(true);
-                if (renderers.Length == 0 || renderers.Any(r => r.sharedMesh == null || r.bones.Length < 10 || r.bones.Any(b => b == null)))
+                bool restored = prefab.GetComponentsInChildren<Transform>(true).Any(t => t.name == "RestoredCast");
+                if (renderers.Length == 0 || renderers.Any(r => r.sharedMesh == null || r.bones.Length < (restored ? 1 : 10) || r.bones.Any(b => b == null)))
                     throw new InvalidOperationException(role + " has missing skinning or bone references.");
                 int triangles = renderers.Sum(r => (int)r.sharedMesh.GetIndexCount(0) / 3);
                 foreach (var renderer in renderers)
                     for (int submesh = 1; submesh < renderer.sharedMesh.subMeshCount; submesh++)
                         triangles += (int)renderer.sharedMesh.GetIndexCount(submesh) / 3;
-                if (triangles < 100 || triangles > 20000) throw new InvalidOperationException(role + " triangle budget is invalid: " + triangles);
+                if (triangles < 100 || triangles > (restored ? 60000 : 20000)) throw new InvalidOperationException(role + " triangle budget is invalid: " + triangles);
                 var instance = UnityEngine.Object.Instantiate(prefab);
                 try
                 {

@@ -39,7 +39,7 @@ namespace DeadAir.Editor
                         instance.hideFlags = HideFlags.HideAndDontSave;
                         try
                         {
-                            var skin = instance.GetComponentInChildren<SkinnedMeshRenderer>(true);
+                            var skin = FootwearSkin(instance);
                             var feet = FootVertices(skin);
                             var bones = instance.GetComponentsInChildren<Transform>(true).GroupBy(t => t.name).ToDictionary(g => g.Key, g => g.First());
                             var rest = ChainLengths(bones); var roleFailures = new List<Exception>();
@@ -80,7 +80,7 @@ namespace DeadAir.Editor
                     instance.hideFlags = HideFlags.HideAndDontSave;
                     try
                     {
-                        var skin = instance.GetComponentInChildren<SkinnedMeshRenderer>(true);
+                        var skin = FootwearSkin(instance);
                         var feet = FootVertices(skin);
                         var motion = instance.GetComponent<DeadAirCharacterMotion>();
                         var roleFailures = new List<Exception>();
@@ -304,9 +304,16 @@ namespace DeadAir.Editor
             var prefab = Resources.Load<GameObject>("World/character_" + role);
             Require(prefab != null, role + " prefab missing.");
             var sourceSkins = prefab.GetComponentsInChildren<SkinnedMeshRenderer>(true);
-            Require(sourceSkins.Length == 1, role + " must use exactly one replacement body.");
-            var skin = sourceSkins[0];
-            ValidateSkin(role, skin, prefab.transform, report);
+            bool restored = DeadAirImportedCharacterValidation.IsRestored(prefab.transform);
+            Require(restored ? sourceSkins.Length > 1 : sourceSkins.Length == 1,
+                role + (restored ? " must retain separate restored body/clothing meshes." : " must use exactly one replacement body."));
+            foreach (var skin in sourceSkins) ValidateSkin(role, skin, prefab.transform, report);
+            int triangles = sourceSkins.Sum(skin => skin.sharedMesh.triangles.Length / 3);
+            int triangleBudget = restored ? 60000 : 20000;
+            Require(restored ? triangles <= triangleBudget : triangles < triangleBudget,
+                role + " exceeds its complete character triangle budget: " + triangles + "/" + triangleBudget);
+            Require(sourceSkins.Sum(skin => skin.sharedMesh.vertexCount) > 500, role + " complete character geometry missing.");
+            report.Add(role + ": complete character=" + sourceSkins.Length + " skins, " + triangles + "/" + triangleBudget + " triangles.");
             var instance = UnityEngine.Object.Instantiate(prefab);
             instance.hideFlags = HideFlags.HideAndDontSave;
             instance.transform.position = new Vector3(1500, 20, 1500);
@@ -316,7 +323,7 @@ namespace DeadAir.Editor
                 Require(animation != null, role + " animation missing.");
                 animation.playAutomatically = false;
                 var bones = instance.GetComponentsInChildren<Transform>(true).GroupBy(t => t.name).ToDictionary(g => g.Key, g => g.First());
-                var mesh = instance.GetComponentInChildren<SkinnedMeshRenderer>(true);
+                var mesh = FootwearSkin(instance);
                 var footIndices = FootVertices(mesh);
                 Require(footIndices.Count > 20, role + " soles must have real foot/toe skin weights.");
                 var lengths = ChainLengths(bones);
@@ -332,15 +339,27 @@ namespace DeadAir.Editor
         static void ValidateSkin(string role, SkinnedMeshRenderer skin, Transform root, List<string> report)
         {
             var mesh = skin.sharedMesh;
-            Require(mesh != null && mesh.isReadable && mesh.vertexCount > 500, role + " readable body mesh missing.");
+            bool restored = DeadAirImportedCharacterValidation.IsRestored(root);
+            Require(mesh != null && mesh.isReadable && mesh.vertexCount > (restored ? 0 : 500), role + "/" + skin.name + " readable mesh missing.");
             int triangles = mesh.triangles.Length / 3;
-            Require(triangles < 20000, role + " exceeds the established 20k character triangle budget.");
             Require(mesh.vertices.All(Finite) && mesh.normals.Length == mesh.vertexCount && mesh.normals.All(Finite), role + " nonfinite geometry or missing normals.");
-            Require(mesh.uv.Length == mesh.vertexCount && mesh.uv.All(p => Finite(p.x) && Finite(p.y) && p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1), role + " palette UV coordinates invalid.");
-            Require(skin.bones.Length >= 40 && skin.bones.All(b => b != null && b.IsChildOf(root)), role + " replacement deform skeleton incomplete or external.");
+            Require(mesh.uv.Length == mesh.vertexCount && mesh.uv.All(p => Finite(p.x) && Finite(p.y) && p.x >= 0 && p.x <= 1 && p.y >= 0 && p.y <= 1), role + " atlas UV coordinates invalid.");
+            Require(skin.bones.Length >= (restored ? 1 : 40) && skin.bones.All(b => b != null && b.IsChildOf(root)), role + " replacement deform skeleton incomplete or external.");
             Require(skin.bones.Select(b => b.name).Distinct().Count() == skin.bones.Length, role + " duplicate deform bone names.");
             Require(mesh.bindposes.Length == skin.bones.Length && mesh.bindposes.All(Finite), role + " bind matrices invalid.");
-            var bones = skin.bones.ToDictionary(b => b.name);
+            var rigBones = skin.bones;
+            if (restored)
+            {
+                var roots = root.GetComponentsInChildren<Transform>(true).Where(t => t.name == "root").ToArray();
+                Require(roots.Length == 1, role + " restored pieces must share one source skeleton root.");
+                Require(skin.bones.All(b => b.IsChildOf(roots[0])), role + "/" + skin.name + " uses a different skeleton.");
+                // FBX may prune unused bones from each clothing renderer. The
+                // complete humanoid hierarchy belongs to their shared rig.
+                rigBones = roots[0].GetComponentsInChildren<Transform>(true);
+                Require(rigBones.Length >= 40, role + " restored humanoid skeleton incomplete.");
+                Require(rigBones.Select(b => b.name).Distinct().Count() == rigBones.Length, role + " duplicate source rig names.");
+            }
+            var bones = rigBones.ToDictionary(b => b.name);
             foreach (string name in RequiredBones) Require(bones.ContainsKey(name), role + " missing " + name);
             foreach (string side in new[] { "L", "R" })
             {
@@ -352,7 +371,7 @@ namespace DeadAir.Editor
                 CheckParent(bones, "shin." + side, "thigh." + side, role);
                 CheckParent(bones, "foot." + side, "shin." + side, role);
                 CheckParent(bones, "toe." + side, "foot." + side, role);
-                Require(skin.bones.Count(b => b.IsChildOf(bones["hand." + side]) && b != bones["hand." + side]) >= 12,
+                Require(rigBones.Count(b => b.IsChildOf(bones["hand." + side]) && b != bones["hand." + side]) >= 12,
                     role + " missing articulated finger chains on " + side);
             }
             var transforms = root.GetComponentsInChildren<Transform>(true);
@@ -374,15 +393,20 @@ namespace DeadAir.Editor
                 maximumWeightError = Mathf.Max(maximumWeightError, Mathf.Abs(sum - 1));
             }
             Require(maximumWeightError < .001f, role + " unweighted or unnormalised vertices: " + maximumWeightError);
-            Require(skin.sharedMaterials.Length == 1 && mesh.subMeshCount == 1, role + " must use one clean palette material.");
-            var material = skin.sharedMaterial;
-            Require(material != null && material.shader != null && material.shader.name == "Dead Air/Source Surface", role + " surface shader incorrect.");
-            var atlas = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Characters/Textures/" + role + "_indie_albedo.png");
-            Require(atlas != null && material.mainTexture == atlas, role + " new UVs still use the previous character atlas.");
-            Require(material.color == Color.white && material.GetColor("_EmissionColor").maxColorComponent < .001f, role + " palette tint/emission incorrect.");
-            Require(material.GetTextureScale("_MainTex") == Vector2.one && material.GetTextureOffset("_MainTex") == Vector2.zero, role + " atlas transform changed.");
-            report.Add(role + ": vertices=" + mesh.vertexCount + ", triangles=" + triangles + ", deform bones=" + skin.bones.Length +
-                ", max weight error=" + F(maximumWeightError) + ", replacement atlas=" + AssetDatabase.GetAssetPath(atlas));
+            Require(skin.sharedMaterials.Length == mesh.subMeshCount && mesh.subMeshCount > 0 && (restored || mesh.subMeshCount == 1),
+                role + "/" + skin.name + " authored material slots incomplete.");
+            foreach (var material in skin.sharedMaterials)
+            {
+                Require(material != null && material.shader != null && material.shader.name == "Dead Air/Source Surface", role + " surface shader incorrect.");
+                var atlas = restored ? DeadAirImportedCharacterValidation.RestoredAlbedo(role, material) :
+                    AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Characters/Textures/" + role + "_indie_albedo.png");
+                Require(atlas != null && material.mainTexture == atlas, role + " mesh and authored texture generation do not match.");
+                Require(material.color == Color.white && material.GetColor("_EmissionColor").maxColorComponent < .001f, role + " palette tint/emission incorrect.");
+                Require(material.GetTextureScale("_MainTex") == Vector2.one && material.GetTextureOffset("_MainTex") == Vector2.zero, role + " atlas transform changed.");
+                report.Add(role + "/" + skin.name + ": material=" + material.name + ", texture=" + AssetDatabase.GetAssetPath(atlas));
+            }
+            report.Add(role + "/" + skin.name + ": vertices=" + mesh.vertexCount + ", triangles=" + triangles + ", deform bones=" + skin.bones.Length +
+                ", max weight error=" + F(maximumWeightError));
         }
 
         static void CheckParent(Dictionary<string, Transform> bones, string child, string parent, string role)
@@ -390,10 +414,25 @@ namespace DeadAir.Editor
             Require(bones[child].parent == bones[parent], role + " hierarchy broken: " + child + " -> " + parent);
         }
 
-        static HashSet<int> FootVertices(SkinnedMeshRenderer skin)
+        static SkinnedMeshRenderer FootwearSkin(GameObject instance)
+        {
+            if (!DeadAirImportedCharacterValidation.IsRestored(instance.transform))
+                return instance.GetComponentInChildren<SkinnedMeshRenderer>(true);
+            var shoes = instance.GetComponentsInChildren<SkinnedMeshRenderer>(true)
+                .Where(skin => skin.name.EndsWith("_Shoes", StringComparison.Ordinal)).ToArray();
+            Require(shoes.Length == 1, instance.name + " must contain its authored Shoes renderer for sole measurements.");
+            var result = shoes[0];
+            Require(result.sharedMesh != null && result.sharedMesh.isReadable, instance.name + " footwear mesh is not readable.");
+            Require(FootVertices(result).Count > 20 && FootVertices(result, "L").Count > 0 && FootVertices(result, "R").Count > 0,
+                instance.name + " footwear must contain weighted soles on both feet.");
+            return result;
+        }
+
+        static HashSet<int> FootVertices(SkinnedMeshRenderer skin, string side = null)
         {
             var footBones = new HashSet<int>(skin.bones.Select((b, i) => (b, i)).Where(p =>
-                p.b.name.StartsWith("foot.", StringComparison.Ordinal) || p.b.name.StartsWith("toe.", StringComparison.Ordinal)).Select(p => p.i));
+                p.b != null && (p.b.name.StartsWith("foot.", StringComparison.Ordinal) || p.b.name.StartsWith("toe.", StringComparison.Ordinal)) &&
+                (side == null || p.b.name.EndsWith("." + side, StringComparison.Ordinal))).Select(p => p.i));
             var vertices = new HashSet<int>();
             var weights = skin.sharedMesh.boneWeights;
             for (int i = 0; i < weights.Length; i++)
@@ -560,7 +599,25 @@ namespace DeadAir.Editor
         [MenuItem("Dead Air/Capture Indie Character Remake")]
         public static void Capture()
         {
+            Capture(false);
+        }
+
+        [MenuItem("Dead Air/Capture Restored Character Models")]
+        public static void CaptureRestoredModels()
+        {
+            Capture(true);
+        }
+
+        [MenuItem("Dead Air/Capture Restored Character Poses")]
+        public static void CaptureRestoredPoses()
+        {
+            Capture(true, posesOnly: true);
+        }
+
+        static void Capture(bool staticOnly, bool posesOnly = false)
+        {
             const int layer = 29;
+            string captureFolder = Path.GetFullPath(staticOnly ? "Art/Characters/RestoredCast/Unity" : OutputFolder);
             var stage = new GameObject("Indie cast validation studio") { hideFlags = HideFlags.HideAndDontSave };
             stage.transform.position = new Vector3(1500, 20, 1500);
             var lightMasks = UnityEngine.Object.FindObjectsByType<Light>(FindObjectsSortMode.None).Select(l => (l, l.cullingMask)).ToArray();
@@ -569,14 +626,14 @@ namespace DeadAir.Editor
             var oldTarget = RenderTexture.active;
             try
             {
-                Directory.CreateDirectory(OutputFolder);
+                Directory.CreateDirectory(captureFolder);
                 foreach (var pair in lightMasks) pair.l.cullingMask &= ~(1 << layer);
                 RenderSettings.fog = false; RenderSettings.ambientMode = AmbientMode.Flat; RenderSettings.ambientLight = new Color(.18f, .20f, .23f);
                 var camera = new GameObject("Cast camera").AddComponent<Camera>(); camera.transform.SetParent(stage.transform, false);
                 camera.enabled = false; camera.cullingMask = 1 << layer; camera.clearFlags = CameraClearFlags.SolidColor;
                 camera.backgroundColor = new Color(.045f, .055f, .073f); camera.orthographic = true; camera.orthographicSize = 1.38f;
                 camera.nearClipPlane = .05f; camera.farClipPlane = 20;
-                target = new RenderTexture(1600, 800, 24, RenderTextureFormat.ARGB32) { antiAliasing = 2 }; target.Create(); camera.targetTexture = target;
+                target = new RenderTexture(posesOnly ? 384 : 1600, posesOnly ? 480 : 800, 24, RenderTextureFormat.ARGB32) { antiAliasing = 2 }; target.Create(); camera.targetTexture = target;
                 StudioLight(stage.transform, layer, new Vector3(-3, 4, 5), 1.0f, new Color(1, .87f, .75f));
                 StudioLight(stage.transform, layer, new Vector3(3, 3, 2), .55f, new Color(.66f, .80f, 1));
                 StudioLight(stage.transform, layer, new Vector3(0, 3, -4), .7f, new Color(.81f, .95f, 1));
@@ -590,14 +647,33 @@ namespace DeadAir.Editor
                     foreach (var t in actors[i].GetComponentsInChildren<Transform>(true)) t.gameObject.layer = layer;
                     foreach (var skin in actors[i].GetComponentsInChildren<SkinnedMeshRenderer>(true)) skin.updateWhenOffscreen = true;
                     actors[i].transform.localPosition = new Vector3(-2.25f + i * 1.5f, 0, 0);
-                    actors[i].GetComponent<DeadAirCharacterMotion>().SetPreview("Idle", .2f);
+                    if (!posesOnly) actors[i].GetComponent<DeadAirCharacterMotion>().SetPreview("Idle", .2f);
+                }
+                if (posesOnly)
+                {
+                    CapturePoseSheets(stage.transform, actors, camera, target, captureFolder);
+                    File.WriteAllText(Path.Combine(captureFolder, "pose-capture-report.txt"),
+                        "Restored Unity prefab pose sheets: one 1152x480 image per role, three 384x480 tiles.\n" +
+                        "Columns: Walk at phase 0.25; CrouchWalk at phase 0.25; UseItem at phase 0.5.\n" +
+                        "Four roles, three poses each: exactly 12 renders using the imported meshes and their own materials.\n");
+                    Debug.Log("RESTORED CAST POSE CAPTURES SAVED: " + captureFolder);
+                    return;
                 }
                 camera.transform.localPosition = new Vector3(0, 2.1f, 8); camera.transform.LookAt(stage.transform.position + Vector3.up * 1.02f);
-                SaveFrame(camera, target, "lineup-front.png");
+                SaveFrame(camera, target, Path.Combine(captureFolder, "lineup-front.png"));
                 foreach (var actor in actors) actor.transform.localRotation = Quaternion.Euler(0, -55, 0);
-                SaveFrame(camera, target, "lineup-three-quarter.png");
+                SaveFrame(camera, target, Path.Combine(captureFolder, "lineup-three-quarter.png"));
                 foreach (var actor in actors) actor.transform.localRotation = Quaternion.Euler(0, 90, 0);
-                SaveFrame(camera, target, "lineup-side.png");
+                SaveFrame(camera, target, Path.Combine(captureFolder, "lineup-side.png"));
+                if (staticOnly)
+                {
+                    File.WriteAllText(Path.Combine(captureFolder, "capture-report.txt"),
+                        "Unity prefab model renders: front, three-quarter and side.\n" +
+                        "Lineup order: Vivian/operator, Victor/engineer, Edgar/journalist, Hazel/dispatcher.\n" +
+                        "Fixed Idle pose at phase 0.2; no gait sheets or runtime locomotion capture.\n");
+                    Debug.Log("RESTORED CAST MODEL CAPTURES SAVED: " + captureFolder);
+                    return;
+                }
                 foreach (var actor in actors) actor.SetActive(false);
                 target.Release(); UnityEngine.Object.DestroyImmediate(target);
                 target = new RenderTexture(384, 480, 24, RenderTextureFormat.ARGB32) { antiAliasing = 2 }; target.Create(); camera.targetTexture = target;
@@ -612,10 +688,7 @@ namespace DeadAir.Editor
                         for (int row = 0; row < poses.Length; row++) for (int column = 0; column < 4; column++)
                         {
                             actor.GetComponent<DeadAirCharacterMotion>().SetPreview(poses[row], column * .25f);
-                            camera.Render(); RenderTexture.active = target;
-                            var tile = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
-                            try { tile.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0); tile.Apply(); sheet.SetPixels(column * 384, (3 - row) * 480, 384, 480, tile.GetPixels()); }
-                            finally { UnityEngine.Object.DestroyImmediate(tile); }
+                            CopyFrameToSheet(camera, target, sheet, column, 3 - row);
                         }
                         sheet.Apply(); File.WriteAllBytes(Path.Combine(OutputFolder, Roles[i] + "-gait-sheet.png"), sheet.EncodeToPNG());
                     }
@@ -640,6 +713,78 @@ namespace DeadAir.Editor
                 if (floorMaterial != null) UnityEngine.Object.DestroyImmediate(floorMaterial);
                 UnityEngine.Object.DestroyImmediate(stage);
             }
+        }
+
+        static void CapturePoseSheets(Transform stage, GameObject[] actors, Camera camera, RenderTexture target, string folder)
+        {
+            foreach (var actor in actors) actor.SetActive(false);
+            camera.orthographicSize = 1.15f;
+            camera.transform.localPosition = new Vector3(0, 1.5f, 6);
+            camera.transform.LookAt(stage.position + Vector3.up * 1.02f);
+            var poses = new[] { ("Walk", .25f), ("CrouchWalk", .25f), ("UseItem", .5f) };
+            for (int i = 0; i < actors.Length; i++)
+            {
+                var actor = actors[i]; actor.SetActive(true);
+                actor.transform.localPosition = Vector3.zero;
+                actor.transform.localRotation = Quaternion.Euler(0, -25, 0);
+                var motion = actor.GetComponent<DeadAirCharacterMotion>();
+                var sheet = new Texture2D(target.width * poses.Length, target.height, TextureFormat.RGB24, false);
+                try
+                {
+                    for (int column = 0; column < poses.Length; column++)
+                    {
+                        motion.SetPreview(poses[column].Item1, poses[column].Item2);
+                        CopyBakedPoseToSheet(actor, camera, target, sheet, column);
+                    }
+                    sheet.Apply();
+                    File.WriteAllBytes(Path.Combine(folder, Roles[i] + "-pose-sheet.png"), sheet.EncodeToPNG());
+                }
+                finally { UnityEngine.Object.DestroyImmediate(sheet); actor.SetActive(false); }
+            }
+        }
+
+        static void CopyBakedPoseToSheet(GameObject actor, Camera camera, RenderTexture target, Texture2D sheet, int column)
+        {
+            // Consecutive Camera.Render calls share one editor frame and may
+            // reuse a GPU skin buffer. A fresh CPU snapshot captures this pose.
+            var skins = actor.GetComponentsInChildren<SkinnedMeshRenderer>(true)
+                .Where(s => s.enabled && s.gameObject.activeInHierarchy).ToArray();
+            var snapshots = new List<GameObject>(); var meshes = new List<Mesh>();
+            try
+            {
+                foreach (var skin in skins)
+                {
+                    var mesh = new Mesh(); meshes.Add(mesh); skin.BakeMesh(mesh, true);
+                    var snapshot = new GameObject("Pose capture / " + skin.name) { hideFlags = HideFlags.HideAndDontSave };
+                    snapshots.Add(snapshot); snapshot.layer = skin.gameObject.layer;
+                    snapshot.transform.SetParent(skin.transform, false);
+                    snapshot.AddComponent<MeshFilter>().sharedMesh = mesh;
+                    var renderer = snapshot.AddComponent<MeshRenderer>();
+                    renderer.sharedMaterials = skin.sharedMaterials;
+                    renderer.shadowCastingMode = skin.shadowCastingMode; renderer.receiveShadows = skin.receiveShadows;
+                    var properties = new MaterialPropertyBlock(); skin.GetPropertyBlock(properties); renderer.SetPropertyBlock(properties);
+                    skin.enabled = false;
+                }
+                CopyFrameToSheet(camera, target, sheet, column, 0);
+            }
+            finally
+            {
+                foreach (var skin in skins) if (skin != null) skin.enabled = true;
+                foreach (var snapshot in snapshots) UnityEngine.Object.DestroyImmediate(snapshot);
+                foreach (var mesh in meshes) UnityEngine.Object.DestroyImmediate(mesh);
+            }
+        }
+
+        static void CopyFrameToSheet(Camera camera, RenderTexture target, Texture2D sheet, int column, int row)
+        {
+            camera.Render(); RenderTexture.active = target;
+            var tile = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+            try
+            {
+                tile.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0); tile.Apply();
+                sheet.SetPixels(column * target.width, row * target.height, target.width, target.height, tile.GetPixels());
+            }
+            finally { UnityEngine.Object.DestroyImmediate(tile); }
         }
 
         static void CaptureLocomotionFrames(Transform stage, GameObject[] actors, Camera camera, RenderTexture target)

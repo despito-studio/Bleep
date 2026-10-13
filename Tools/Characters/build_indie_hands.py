@@ -35,7 +35,7 @@ def material(role, name, color):
     return mat
 
 
-def ring_mesh(name, rings, sides=10):
+def ring_mesh(name, rings, sides=16):
     """Canonical Z-longitudinal rings, with deliberate wrist/knuckle taper."""
     vertices = [(math.cos(i * math.tau / sides) * x,
                  math.sin(i * math.tau / sides) * y, z)
@@ -88,14 +88,25 @@ def finish(mesh, mats, material_index=0):
     for face in bm.faces:
         if material_index:
             face.material_index = material_index
-        face.smooth = False
+        face.smooth = True
         for loop in face.loops:
             loop[layer].uv = (.5, .5)
     bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+    # Round the authored knuckles/phalanges with interpolated normals while
+    # retaining crisp nails and end caps. This does not move the grip surfaces.
+    for face in bm.faces:
+        cap_axis = 1 if name_is_palm(mesh.name) else 2
+        face.smooth = abs(face.normal[cap_axis]) < .995 and face.material_index != 1
+    for edge in bm.edges:
+        edge.smooth = len(edge.link_faces) == 2 and edge.calc_face_angle(0) < math.radians(50)
     bmesh.ops.triangulate(bm, faces=list(bm.faces))
     bm.to_mesh(mesh)
     bm.free()
     mesh.update()
+
+
+def name_is_palm(name):
+    return name.endswith("_palm")
 
 
 def build(role, colors):

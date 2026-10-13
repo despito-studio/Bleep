@@ -76,7 +76,7 @@ namespace DeadAir.Editor
                 }
                 var spring = appearance.SecondaryMotion;
                 for (int step = 0; step < 400; step++) spring.Step(step % 17 == 0 ? 2 : .016f, step * .51f, 8, step % 2 == 0);
-                Require(!float.IsNaN(spring.MaximumAngle) && spring.MaximumAngle <= 6.001f && spring.ChestDisplacement <= .00601f,
+                Require(!float.IsNaN(spring.MaximumAngle) && spring.MaximumAngle <= (spring.UsesAuthoredBones ? 26.01f : 6.001f) && spring.ChestDisplacement <= .00601f,
                     role + " secondary motion exceeded its physical bounds.");
                 float largestHeight = 0, largestWidth = 0, largestDepth = 0;
                 for (int pose = 0; pose < 6; pose++)

@@ -80,7 +80,8 @@ namespace DeadAir
             Navigation(p,"Network","Мережева гра",114,587,570,()=>Open(networkPanel));
             Navigation(p,"Settings","Налаштування",114,654,570,ShowSettings);
             Navigation(p,"Dossier","Керування",114,721,570,ShowDossier);
-            Navigation(p,"Exit","Вийти",114,788,570,()=>Open(quitPanel));
+            Navigation(p,"Character gallery","Персонажі / анімації",114,788,650,ShowCharacterGallery);
+            Navigation(p,"Exit","Вийти",114,855,570,()=>Open(quitPanel));
             Text(p,"Build version","v"+Application.version,18,144,968,600,28).color=Muted;
             BuildPreparation();BuildChapters();BuildNetwork();BuildInventory();BuildQuit();RefreshChapterLabels();
         }
@@ -437,7 +438,7 @@ namespace DeadAir
             if(focusPanels==null)
             {
                 focusPanels=new[]{menuPanel,lobbyPanel,pausePanel,mapPanel,calibrationPanel,
-                    endingPanel,settingsPanel,dossierPanel,joinPanel,chapterPanel,preparationPanel,networkPanel,inventoryPanel,quitPanel,bookPanel};
+                    endingPanel,settingsPanel,dossierPanel,joinPanel,chapterPanel,preparationPanel,networkPanel,inventoryPanel,quitPanel,bookPanel,characterGalleryPanel};
                 focusGroups=new CanvasGroup[focusPanels.Length];
                 for(int i=0;i<focusPanels.Length;i++)
                 {

@@ -37,13 +37,21 @@ namespace DeadAir.Editor
             var visual=prefab.transform.Find("Blender character");
             Require(visual!=null&&prefab.transform.childCount==1,role+" contains an alternate source body or sibling character.");
             var skins=prefab.GetComponentsInChildren<SkinnedMeshRenderer>(true);
-            Require(skins.Length==1&&skins.All(renderer=>renderer.transform.IsChildOf(visual)),role+" must contain exactly one supplied skinned body inside its source character.");
+            bool restored=IsRestored(visual);
+            Require((restored ? skins.Length>1 : skins.Length==1)&&skins.All(renderer=>renderer.transform.IsChildOf(visual)),
+                role+(restored ? " must contain separate restored meshes inside one source character." : " must contain exactly one supplied skinned body inside its source character."));
             Require(prefab.GetComponentsInChildren<Animation>(true).Length==1,role+" contains more than one animation rig.");
+            var rigRoots=visual.GetComponentsInChildren<Transform>(true).Where(t=>t.name=="root").ToArray();
+            if(restored)Require(rigRoots.Length==1,role+" restored clothing must share one skeleton root.");
             var signatures=new HashSet<string>();var textures=new HashSet<Texture>();
+            int triangles=0;
             foreach(var skin in skins)
             {
                 Require(skin.sharedMesh!=null&&skin.sharedMesh.vertexCount>0,role+" has an empty body mesh.");
                 ValidateMesh(skin.sharedMesh,role+"/"+skin.name);
+                triangles+=skin.sharedMesh.triangles.Length/3;
+                Require(skin.bones.Length>0&&skin.bones.All(b=>b!=null&&b.IsChildOf(visual)),role+" has missing or external skin bones.");
+                if(restored)Require(skin.bones.All(b=>b.IsChildOf(rigRoots[0])),role+" clothing uses a different skeleton.");
                 string signature=MeshSignature(skin.sharedMesh)+"/"+string.Join("|",skin.bones.Select(b=>AnimationUtility.CalculateTransformPath(b,visual)))+"/"+skin.transform.localToWorldMatrix;
                 Require(signatures.Add(signature),role+" renders the same body mesh and skeleton twice.");
                 Require(skin.sharedMaterials.Length>=skin.sharedMesh.subMeshCount&&skin.sharedMaterials.All(m=>m!=null),role+" has an unassigned body material.");
@@ -51,6 +59,7 @@ namespace DeadAir.Editor
                 {
                     Require(material.shader!=null&&material.shader.name=="Dead Air/Source Surface",role+" has an unsupported body material.");
                     Require(Finite(material.color)&&Finite(material.GetColor("_EmissionColor")),role+" has nonfinite material colors.");
+                    if(restored)RestoredAlbedo(role,material);
                     foreach(string property in material.GetTexturePropertyNames())
                     {
                         var texture=material.GetTexture(property);if(texture==null)continue;
@@ -69,6 +78,7 @@ namespace DeadAir.Editor
                     CheckBone(weight.boneIndex3,weight.weight3,skin.bones.Length,role);
                 }
             }
+            if(restored)Require(triangles<=60000,role+" complete restored character exceeds 60000 triangles: "+triangles);
             Require(textures.Count>0,role+" lost its supplied character texture/atlas.");
             var instance=UnityEngine.Object.Instantiate(prefab);
             try
@@ -92,9 +102,33 @@ namespace DeadAir.Editor
                     Require(maximum>(clipName=="Idle" ? .0005f : .01f),role+" "+clipName+" does not deform the actual character skin.");
                     evidence.Add(role+" "+clipName+": max skin displacement "+maximum.ToString("F4")+" m");
                 }
-                evidence.Add(role+": one source character, "+skins.Length+" skinned meshes, "+textures.Count+" source textures, no duplicated mesh/skeleton pair.");
+                evidence.Add(role+": one source character, "+skins.Length+" skinned meshes, "+triangles+" total triangles, "+textures.Count+" source textures, no duplicated mesh/skeleton pair.");
             }
             finally{UnityEngine.Object.DestroyImmediate(instance);}
+        }
+
+        internal static bool IsRestored(Transform root)
+        {
+            return root!=null&&root.GetComponentsInChildren<Transform>(true).Any(t=>t.name=="RestoredCast");
+        }
+
+        internal static Texture2D RestoredAlbedo(string role,Material material)
+        {
+            Require(material!=null,role+" has an unassigned restored material.");
+            // ImportMaterial prefixes the source Blender name with the role
+            // when creating the Unity .mat asset (e.g. operator_operator_restored_body).
+            string sourceName=material.name;
+            if(sourceName.StartsWith(role+"_"+role+"_restored_",StringComparison.Ordinal))
+                sourceName=sourceName.Substring(role.Length+1);
+            string prefix=role+"_restored_";
+            Require(sourceName.StartsWith(prefix,StringComparison.Ordinal)&&sourceName.Length>prefix.Length&&sourceName!=prefix+"atlas",
+                role+" material is not an independently authored restored part: "+material.name);
+            string materialPath="Assets/Characters/Materials/"+role+"_"+sourceName+".mat";
+            Require(AssetDatabase.GetAssetPath(material)==materialPath,role+" restored material provenance differs: "+material.name);
+            string texturePath="Assets/Characters/Textures/Restored/"+role+"/"+sourceName+"_albedo.png";
+            var texture=AssetDatabase.LoadAssetAtPath<Texture2D>(texturePath);
+            Require(texture!=null&&material.mainTexture==texture,role+" restored material must use its matching part texture: "+texturePath);
+            return texture;
         }
 
         static void ValidateHands(List<string> evidence)

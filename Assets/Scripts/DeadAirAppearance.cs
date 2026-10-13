@@ -86,13 +86,18 @@ namespace DeadAir
             initialized = true; classId = role;
             var sources = GetComponentsInChildren<SkinnedMeshRenderer>(true);
             if (sources.Length == 0) return;
-            authoredOutfit = DeadAirBodyFit.FindLandmark(transform, "IndieCast") != null;
+            authoredOutfit = DeadAirBodyFit.FindLandmark(transform, "IndieCast") != null ||
+                DeadAirBodyFit.FindLandmark(transform, "RestoredCast") != null;
             if (authoredOutfit)
             {
                 foreach (var source in sources)
                     if (source.sharedMesh != null)
                         for (int submesh = 0; submesh < source.sharedMesh.subMeshCount; submesh++)
                             authoredTriangleCount += (int)source.sharedMesh.GetIndexCount(submesh) / 3;
+                // Restored characters carry explicitly weighted deform chains. Never
+                // classify their face/clothing by colour or replace their bind poses.
+                secondary = gameObject.GetComponent<DeadAirSecondaryMotion>() ?? gameObject.AddComponent<DeadAirSecondaryMotion>();
+                secondary.ConfigureAuthoredRig(role);
                 return;
             }
             var found = new Dictionary<string, Transform>();

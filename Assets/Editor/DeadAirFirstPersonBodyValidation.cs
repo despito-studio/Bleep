@@ -28,9 +28,11 @@ namespace DeadAir.Editor
             var prefab = Resources.Load<GameObject>("World/character_" + role);
             Require(prefab != null, role + " has no imported source prefab.");
             var authored = prefab.GetComponentsInChildren<SkinnedMeshRenderer>(true);
-            Require(authored.Length == 1 && authored[0].sharedMesh != null, role + " needs exactly one supplied skinned source.");
-            var atlas = authored[0].sharedMaterial != null ? authored[0].sharedMaterial.mainTexture : null;
-            Require(atlas != null, role + " has no source texture atlas.");
+            Require(authored.Length > 0 && authored.All(s => s.sharedMesh != null), role + " needs supplied skinned source surfaces.");
+            var authoredTextures = authored.ToDictionary(s => s,
+                s => s.sharedMaterials.Select(m => m != null ? m.mainTexture : null).ToArray());
+            Require(authoredTextures.Values.All(textures => textures.Length > 0 && textures.All(t => t != null)),
+                role + " has a source part without its own material texture.");
             var owner = new GameObject("First person body validation / " + role);
             try
             {
@@ -51,42 +53,57 @@ namespace DeadAir.Editor
 
                 var visible = ActiveSkins(body.Avatar).Where(s => s.shadowCastingMode != ShadowCastingMode.ShadowsOnly).ToArray();
                 var shadows = ActiveSkins(body.Avatar).Where(s => s.shadowCastingMode == ShadowCastingMode.ShadowsOnly).ToArray();
-                Require(visible.Length == 1 && shadows.Length == 1,
-                    role + " must draw one authored torso/leg surface and one complete shadow surface.");
-                var surface = visible[0]; var shadow = shadows[0];
-                Require(surface.shadowCastingMode == ShadowCastingMode.Off && !shadow.receiveShadows,
-                    role + " clipped body/shadow modes would double-cast or draw the original head.");
-                Require(shadow.sharedMesh != surface.sharedMesh && shadow.transform.parent == surface.transform,
-                    role + " full shadow must share the source rig and renderer frame, not the clipped mesh.");
-                Require(shadow.bones.SequenceEqual(surface.bones) && shadow.rootBone == surface.rootBone,
-                    role + " complete shadow lost the source's actual animated bones.");
-                Require(TriangleCount(surface.sharedMesh) == body.VisibleTriangles &&
-                    TriangleCount(shadow.sharedMesh) == body.VisibleTriangles + body.HiddenTriangles &&
-                    TriangleCount(shadow.sharedMesh) == TriangleCount(authored[0].sharedMesh),
-                    role + " clipping counts or the full authored shadow topology are incomplete.");
-                Require(surface.sharedMesh.vertexCount == authored[0].sharedMesh.vertexCount &&
-                    shadow.sharedMesh.vertexCount == authored[0].sharedMesh.vertexCount &&
-                    surface.sharedMesh.uv.SequenceEqual(authored[0].sharedMesh.uv),
-                    role + " torso/legs lost their authored vertices or atlas UVs.");
-                ValidateMaterials(role, surface, authored[0], atlas);
-                ValidateMaterials(role, shadow, authored[0], atlas);
-                Require(ForbiddenTriangleCount(surface, body.Avatar.transform) == 0,
-                    role + " visible owner mesh retains triangles weighted to head, neck or source arms.");
-                Require(ForbiddenTriangleCount(shadow, body.Avatar.transform) == body.HiddenTriangles,
-                    role + " full shadow must preserve precisely the triangles clipped from the camera body.");
-                var cameraBlock = new MaterialPropertyBlock(); surface.GetPropertyBlock(cameraBlock);
-                Require(cameraBlock.GetVector("_DeadAirOwnerBodyEye").w == 1,
-                    role + " camera body has no lens/clothing clearance.");
-                shadow.GetPropertyBlock(cameraBlock);
-                Require(cameraBlock.GetVector("_DeadAirOwnerBodyEye").w == 0,
-                    role + " camera clearance leaked onto the full world shadow.");
+                Require(visible.Length == authored.Length && shadows.Length == authored.Length,
+                    role + " must retain one clipped surface and one complete shadow per authored renderer.");
+                foreach (var source in authored)
+                {
+                    string path = AnimationUtility.CalculateTransformPath(source.transform, prefab.transform);
+                    var matches = visible.Where(s => AnimationUtility.CalculateTransformPath(s.transform, body.Avatar.transform) == path).ToArray();
+                    Require(matches.Length == 1, role + " lost or duplicated owner source part " + path);
+                    var surface = matches[0];
+                    var partShadows = shadows.Where(s => s.transform.parent == surface.transform).ToArray();
+                    Require(partShadows.Length == 1, role + " needs one complete shadow for " + path);
+                    var shadow = partShadows[0]; string label = role + " / " + path;
+                    Require(surface.shadowCastingMode == ShadowCastingMode.Off && !shadow.receiveShadows,
+                        label + " clipped body/shadow modes would double-cast or draw the original head.");
+                    Require(shadow.sharedMesh == source.sharedMesh && shadow.sharedMesh != surface.sharedMesh,
+                        label + " full shadow must retain the original mesh, not the clipped mesh.");
+                    Require(shadow.bones.SequenceEqual(surface.bones) && shadow.rootBone == surface.rootBone,
+                        label + " complete shadow lost the source's actual animated bones.");
+                    int retained = TriangleCount(surface.sharedMesh), complete = TriangleCount(source.sharedMesh);
+                    Require(TriangleCount(shadow.sharedMesh) == complete && retained <= complete &&
+                        ForbiddenTriangleCount(shadow, body.Avatar.transform) == complete - retained,
+                        label + " clipping counts or full authored shadow topology are incomplete.");
+                    Require(surface.sharedMesh.subMeshCount == source.sharedMesh.subMeshCount &&
+                        surface.sharedMesh.vertices.SequenceEqual(source.sharedMesh.vertices) &&
+                        surface.sharedMesh.boneWeights.SequenceEqual(source.sharedMesh.boneWeights) &&
+                        surface.sharedMesh.bindposes.SequenceEqual(source.sharedMesh.bindposes),
+                        label + " clipping changed authored geometry, material partitions or skin bindings.");
+                    ValidateUvs(label, surface.sharedMesh, source.sharedMesh);
+                    ValidateMaterials(label, surface, source, authoredTextures[source]);
+                    ValidateMaterials(label, shadow, source, authoredTextures[source]);
+                    Require(ForbiddenTriangleCount(surface, body.Avatar.transform) == 0,
+                        label + " visible owner mesh retains triangles weighted to head, neck or source arms.");
+                    var cameraBlock = new MaterialPropertyBlock(); surface.GetPropertyBlock(cameraBlock);
+                    Require(cameraBlock.GetVector("_DeadAirOwnerBodyEye").w == 1,
+                        label + " camera body has no lens/clothing clearance.");
+                    cameraBlock.Clear(); shadow.GetPropertyBlock(cameraBlock);
+                    Require(cameraBlock.GetVector("_DeadAirOwnerBodyEye").w == 0,
+                        label + " camera clearance leaked onto the full world shadow.");
+                }
+                Require(visible.Sum(s => TriangleCount(s.sharedMesh)) == body.VisibleTriangles &&
+                    shadows.Sum(s => TriangleCount(s.sharedMesh)) == body.VisibleTriangles + body.HiddenTriangles &&
+                    authored.Sum(s => TriangleCount(s.sharedMesh)) == body.VisibleTriangles + body.HiddenTriangles,
+                    role + " aggregate clipped body/shadow counts differ from the authored parts.");
 
                 Transform leftFoot = Find(body.Avatar, "foot.L"), rightFoot = Find(body.Avatar, "foot.R");
                 Require(leftFoot != null && rightFoot != null, role + " lost source foot bones.");
                 Vector3 standingLeft = Vector3.zero, standingRight = Vector3.zero;
                 int poseIndex = 0;
+                var animation = body.Avatar.GetComponentInChildren<Animation>(true);
+                string crouchedClip = animation != null && animation.GetClip("CrouchIdle") != null ? "CrouchIdle" : "Idle";
                 foreach (var fixture in new[] { new PoseFixture("standing", "Idle", false, false, 0),
-                    new PoseFixture("crouched", "Idle", true, false, 0),
+                    new PoseFixture("crouched", crouchedClip, true, false, 0),
                     new PoseFixture("walk", "Walk", false, false, DeadAirLocomotion.WalkSpeed),
                     new PoseFixture("run", "Run", false, true, DeadAirLocomotion.RunSpeed) })
                 {
@@ -100,11 +117,12 @@ namespace DeadAir.Editor
                     body.Motion.SetEquipmentPreview(player, fixture.clip, .35f);
                     Require(body.Avatar.GetComponent<DeadAirAppearance>().CurrentMask == DeadAirClothing.DefaultMask(role),
                         role + " " + fixture.name + " changed the supplied outfit.");
-                    Require(TriangleCount(surface.sharedMesh) == body.VisibleTriangles && ForbiddenTriangleCount(surface, body.Avatar.transform) == 0,
+                    Require(visible.Sum(s => TriangleCount(s.sharedMesh)) == body.VisibleTriangles &&
+                        visible.All(s => ForbiddenTriangleCount(s, body.Avatar.transform) == 0),
                         role + " " + fixture.name + " resurrected the owner's head or source arms.");
                     ValidateSuppressedEquipment(role, body.Avatar);
-                    var bounds = BakeBounds(surface, owner.transform, role + " " + fixture.name);
-                    var fullBounds = BakeBounds(shadow, owner.transform, role + " " + fixture.name + " full shadow");
+                    var bounds = BakeBounds(visible, owner.transform, role + " " + fixture.name);
+                    var fullBounds = BakeBounds(shadows, owner.transform, role + " " + fixture.name + " full shadow");
                     Require(bounds.size.y > .6f && bounds.size.y < 2.7f && bounds.size.x < 2.2f && bounds.size.z < 2.3f &&
                         fullBounds.size.y > .8f && fullBounds.size.y < 3.1f,
                         role + " " + fixture.name + " produced an implausible detached skin: " + bounds);
@@ -135,12 +153,12 @@ namespace DeadAir.Editor
                 Require(body.Avatar.GetComponent<DeadAirAppearance>().CurrentMask == DeadAirClothing.DefaultMask(role),
                     role + " old outfit data replaced its authored camera body.");
                 ValidateSuppressedEquipment(role, body.Avatar);
-                Require(TriangleCount(surface.sharedMesh) == body.VisibleTriangles, role + " item switch changed the clipped body topology.");
+                Require(visible.Sum(s => TriangleCount(s.sharedMesh)) == body.VisibleTriangles, role + " item switch changed the clipped body topology.");
                 player.down = true; body.Present(player, state, owner.transform, 0, 0, false, false);
                 Require(!body.Avatar.activeSelf, role + " downed owner still drew its standing camera body.");
                 player.down = false; player.hiding = "locker"; body.Present(player, state, owner.transform, 0, 0, false, false);
                 Require(!body.Avatar.activeSelf, role + " hidden owner still drew its camera body.");
-                Debug.Log("OWNER BODY VALIDATED: " + role + " retained=" + body.VisibleTriangles + " hidden=" + body.HiddenTriangles + " full-shadow=" + TriangleCount(shadow.sharedMesh) + " poses=standing,crouched,walk,run.");
+                Debug.Log("OWNER BODY VALIDATED: " + role + " parts=" + authored.Length + " retained=" + body.VisibleTriangles + " hidden=" + body.HiddenTriangles + " full-shadow=" + shadows.Sum(s => TriangleCount(s.sharedMesh)) + " poses=standing,crouched,walk,run.");
             }
             finally { UnityEngine.Object.DestroyImmediate(owner); }
         }
@@ -163,12 +181,27 @@ namespace DeadAir.Editor
             for (int s = 0; s < mesh.subMeshCount; s++) count += (int)mesh.GetIndexCount(s) / 3;
             return count;
         }
-        static void ValidateMaterials(string role, SkinnedMeshRenderer actual, SkinnedMeshRenderer source, Texture atlas)
+        static void ValidateUvs(string label, Mesh actual, Mesh source)
+        {
+            var actualUvs = new List<Vector4>(); var sourceUvs = new List<Vector4>();
+            for (int channel = 0; channel < 8; channel++)
+            {
+                actualUvs.Clear(); sourceUvs.Clear();
+                actual.GetUVs(channel, actualUvs); source.GetUVs(channel, sourceUvs);
+                Require(actualUvs.SequenceEqual(sourceUvs), label + " lost authored UV channel " + channel);
+            }
+        }
+        static void ValidateMaterials(string role, SkinnedMeshRenderer actual, SkinnedMeshRenderer source, Texture[] textures)
         {
             Require(actual.sharedMaterials.SequenceEqual(source.sharedMaterials), role + " cloned or replaced the original body materials.");
-            foreach (var material in actual.sharedMaterials)
-                Require(material != null && material.mainTexture == atlas && material.shader != null && material.shader.name == "Dead Air/Source Surface",
+            var materials = actual.sharedMaterials;
+            Require(materials.Length == textures.Length, role + " changed its source material slots.");
+            for (int slot = 0; slot < materials.Length; slot++)
+            {
+                var material = materials[slot];
+                Require(material != null && material.mainTexture == textures[slot] && material.shader != null && material.shader.name == "Dead Air/Source Surface",
                     role + " body material lost its original source atlas/surface shader.");
+            }
         }
         static int ForbiddenTriangleCount(SkinnedMeshRenderer renderer, Transform root)
         {
@@ -202,19 +235,28 @@ namespace DeadAir.Editor
             Require(weight == 0 || index >= 0 && index < hidden.Length, "A source vertex references a missing bone.");
             return index >= 0 && index < hidden.Length && hidden[index] ? weight : 0;
         }
-        static Bounds BakeBounds(SkinnedMeshRenderer renderer, Transform owner, string label)
+        static Bounds BakeBounds(IEnumerable<SkinnedMeshRenderer> renderers, Transform owner, string label)
         {
             var baked = new Mesh(); var bounds = new Bounds(); bool initialized = false;
             try
             {
-                renderer.BakeMesh(baked); var vertices = baked.vertices;
-                // Clipping keeps unused vertices. Inspect referenced indices, not mesh.bounds.
-                foreach (int index in baked.triangles)
+                foreach (var renderer in renderers)
                 {
-                    var point = owner.InverseTransformPoint(renderer.transform.TransformPoint(vertices[index]));
-                    Require(Finite(point), label + " baked a non-finite visible vertex.");
-                    if (!initialized) { bounds = new Bounds(point, Vector3.zero); initialized = true; }
-                    else bounds.Encapsulate(point);
+                    // Entire hair/head parts remain enabled but have no kept
+                    // triangles. They retain materials/UVs and their full shadow.
+                    if (TriangleCount(renderer.sharedMesh) == 0) continue;
+                    // Explicit scale handling keeps the subsequent TransformPoint
+                    // from counting the owner avatar's fitting scale twice.
+                    baked.Clear(); renderer.BakeMesh(baked, true); var vertices = baked.vertices;
+                    // Clipping keeps unused vertices. Bounds use referenced
+                    // indices across every part, never the unclipped mesh.bounds.
+                    foreach (int index in baked.triangles)
+                    {
+                        var point = owner.InverseTransformPoint(renderer.transform.TransformPoint(vertices[index]));
+                        Require(Finite(point), label + " / " + renderer.name + " baked a non-finite visible vertex.");
+                        if (!initialized) { bounds = new Bounds(point, Vector3.zero); initialized = true; }
+                        else bounds.Encapsulate(point);
+                    }
                 }
                 Require(initialized, label + " has no referenced baked triangles.");
                 return bounds;

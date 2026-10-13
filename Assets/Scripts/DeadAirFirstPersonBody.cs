@@ -80,6 +80,11 @@ namespace DeadAir
             if (prefab == null) return;
             avatar = Instantiate(prefab, transform);
             avatar.name = "First person body / " + role;
+            // Eye-based fitting must use standing landmarks even if an older
+            // prefab was serialized while another animation take was sampled.
+            var sourceAnimation = avatar.GetComponentInChildren<Animation>(true);
+            var standingClip = sourceAnimation != null ? sourceAnimation.GetClip("Idle") : null;
+            if (standingClip != null) standingClip.SampleAnimation(sourceAnimation.gameObject, 0);
             foreach (var collider in avatar.GetComponentsInChildren<Collider>(true)) Release(collider);
             motion = avatar.GetComponent<DeadAirCharacterMotion>() ?? avatar.AddComponent<DeadAirCharacterMotion>();
             motion.ClassId = role;

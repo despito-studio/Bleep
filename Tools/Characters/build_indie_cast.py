@@ -1,8 +1,9 @@
-"""Original Dead Air cast: clean palette geometry and grounded, editable FK clips.
+"""Dead Air cast: restore the recognizable authored models and their rig.
 
 Blender 4.5: --background --factory-startup --python Tools/Characters/build_indie_cast.py
 Optional arguments after --: --role operator --skip-render
-Nothing from the supplied source meshes or atlases is modified or sampled.
+The immutable imported references are the default model source. The old
+procedural prototype is available only through the explicit --procedural flag.
 """
 import bpy, bmesh, math, json, sys, shutil, hashlib
 from pathlib import Path
@@ -579,7 +580,19 @@ def main():
     roles=[args[args.index('--role')+1]] if '--role' in args else list(CAST)
     if '--roles' in args:roles=args[args.index('--roles')+1].split(',')
     for directory in [ART,ART/'Previews',MODELS,TEXTURES]:directory.mkdir(parents=True,exist_ok=True)
-    for role in roles:build(role,'--skip-render' in args,'--no-export' in args,'--front-only' in args)
+    if '--procedural' not in args:
+        import runpy
+        restore=runpy.run_path(str(ROOT/'Tools/Characters/restore_authored_cast.py'))
+        for role in roles:restore['build'](globals(),role,'--skip-render' in args,'--no-export' in args,'--front-only' in args,'--preview-rest' in args)
+        static='--preview-rest' in args
+        folder=restore['ART'];suffix='_model.json' if static else '_manifest.json'
+        characters=[json.loads((folder/(role+suffix)).read_text(encoding='utf-8')) for role in CAST if (folder/(role+suffix)).exists()]
+        manifest=dict(formatVersion=2,stage='static models' if static else 'animated runtime cast',
+            coordinateSystem='Blender metres Z up / -Y face; Unity X right Y up +Z face',characters=characters)
+        (folder/('static_manifest.json' if static else 'cast_manifest.json')).write_text(json.dumps(manifest,indent=2),encoding='utf-8')
+        return
+    else:
+        for role in roles:build(role,'--skip-render' in args,'--no-export' in args,'--front-only' in args)
     characters=[json.loads((ART/(role+'_manifest.json')).read_text()) for role in CAST if (ART/(role+'_manifest.json')).exists()]
     manifest=dict(formatVersion=1,coordinateSystem='source Blender metres Z up / -Y face; Unity X right Y up +Z face',characters=characters)
     (ART/'cast_manifest.json').write_text(json.dumps(manifest,indent=2),encoding='utf-8')
