@@ -1735,7 +1735,7 @@ namespace DeadAir.Editor
                     Block(root,"Broadcast terminal",new Vector3(0,0,0),new Vector3(.7f,.15f,.45f),metal,false);
                     Block(root,"state:broadcastBulb",new Vector3(.22f,.105f,0),new Vector3(.07f,.07f,.07f),lightSurface,false);
                     foreach(float x in new[]{-.25f,.25f})Block(root,"Terminal sign bracket",new Vector3(x,.16f,.21f),new Vector3(.025f,.18f,.025f),metal,false);
-                    Sign(root,"96.4 MHz / TRANSMIT",new Vector3(0,.19f,.235f),Quaternion.identity,.75f,.12f);break;
+                    Sign(root,"RX / ПЕРЕХОПЛЕННЯ",new Vector3(0,.19f,.235f),Quaternion.identity,.75f,.12f);break;
                 case "exit":
                     Block(root,"state:exitLamp",new Vector3(0,.25f,0),new Vector3(.12f,.08f,.03f),lightSurface,false);break;
                 case "van-map":

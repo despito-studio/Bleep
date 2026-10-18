@@ -375,7 +375,7 @@ namespace DeadAir
             if(id=="cigarette-pack"||id=="wrench"||id=="recorder"||id=="compass"||id=="ladder"||id=="camera"||id=="pills"||id=="emf-detector")return id;
             return id=="flashlight"?"flashlight":id.StartsWith("fuel-canister")?"fuel":"chapter";
         }
-        static string ItemDescription(string id)
+        string ItemDescription(string id)
         {
             if(string.IsNullOrEmpty(id))return "";
             if(id=="flashlight")return "F — увімкнути / вимкнути. R — замінити батарейку. Однієї вистачає на 3 хвилини світла.";
@@ -386,13 +386,15 @@ namespace DeadAir
             if(id=="recorder")return "Диктофон. R — увімкнути.";
             if(id=="compass")return "Компас. R — оглянути.";
             if(id=="ladder")return "Складна драбина для проникнення всередину.";
-            if(id=="camera")return "Репортерська камера. ЛКМ — зробити фото / спалах світла для відлякування примар.";
+            if(id=="camera")return "Репортерська камера. V — підняти камеру. ЛКМ — зберегти фотографію команди й знахідок.";
             if(id=="emf-detector")return "Детектор електромагнітних аномалій. Реагує на наближення Тек-Тек.";
             if(id=="pills"||id.StartsWith("pill-"))return "Заспокійливі таблетки. Відновлюють розсудок (+50%).";
-            if(id.StartsWith("tape"))return "Касета з аудіодоказами про шкільний інцидент. Зберіть 5 шт для розслідування!";
+            if(id.StartsWith("tape"))return session.State != null && !DeadAirChapters.IsChapter2(session.State.chapterId)
+                ? DeadAirBlackpine.EvidenceTitle(id)+"\n"+DeadAirBlackpine.EvidenceText(id,session.State)+"\nR — прослухати запис повторно."
+                : "Касета з аудіодоказами про шкільний інцидент. Зберіть 5 записів для розслідування.";
             if(id.StartsWith("keycard") || id.StartsWith("key-"))return "Картка доступу до замкнених приміщень.";
             if(id.StartsWith("fuse"))return "Запобіжник 380В для рубильника освітлення в підвалі.";
-            if(id.StartsWith("fuel-canister"))return "Дизельне пальне для генератора на задньому дворі (потрібно 3 шт).";
+            if(id.StartsWith("fuel-canister"))return "Дизельне пальне для генератора на задньому дворі. Для запуску вистачить однієї каністри.";
             return "Особистий предмет оператора.";
         }
 

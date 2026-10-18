@@ -150,8 +150,8 @@ namespace DeadAir.Editor
                 player.uniqueActionSequence = 1; player.uniqueActionAt = state.elapsed - 2.5f;
                 player.clothingMask = 0;
                 body.Present(player, state, owner.transform, 0, 0, false, false);
-                Require(body.Avatar.GetComponent<DeadAirAppearance>().CurrentMask == DeadAirClothing.DefaultMask(role),
-                    role + " old outfit data replaced its authored camera body.");
+                Require(body.Avatar.GetComponent<DeadAirAppearance>().CurrentMask == 0,
+                    role + " owner adapter discarded the received clothing mask.");
                 ValidateSuppressedEquipment(role, body.Avatar);
                 Require(visible.Sum(s => TriangleCount(s.sharedMesh)) == body.VisibleTriangles, role + " item switch changed the clipped body topology.");
                 player.down = true; body.Present(player, state, owner.transform, 0, 0, false, false);

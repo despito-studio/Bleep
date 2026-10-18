@@ -26,6 +26,9 @@ namespace DeadAir
             var devConsole = new GameObject("Developer console").AddComponent<DeadAirConsole>();
             devConsole.Initialize(session, actor, data);
             new GameObject("VHS atmosphere").AddComponent<DeadAirAtmosphere>().Initialize(session, actor);
+            new GameObject("Blackpine farmyard").AddComponent<DeadAirFarmyard>().Initialize(data, session);
+            new GameObject("Blackpine interception").AddComponent<DeadAirBlackpinePresentation>().Initialize(data, session);
+            new GameObject("Blackpine winter").AddComponent<DeadAirWinterWorld>().Initialize(data, session);
             if(Application.isPlaying && DeadAirVisualCapture.IsRequested)
                 new GameObject("Visual capture").AddComponent<DeadAirVisualCapture>().Initialize(session, actor);
         }

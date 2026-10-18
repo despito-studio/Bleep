@@ -1,0 +1,95 @@
+{
+  "publisher": "Gobkit / Alsomind Tech Co., Ltd.",
+  "source": "https://gobkit.com/api/free",
+  "downloaded": "2026-10-18",
+  "packs": [
+    {
+      "id": "gobkit-animalB-pack",
+      "name": "Gobkit Free Animal Pack Vol. 2",
+      "zip": "https://gobkit.com/freebies/animalB/gobkit-animalB-pack.zip",
+      "license": "CC0 1.0 (public domain) — free for any use, commercial or personal, no attribution required.",
+      "models": [
+        {
+          "id": "goat",
+          "name": "Goat",
+          "format": "glb",
+          "url": "https://gobkit.com/freebies/animalB/Goat.glb",
+          "rigged": true,
+          "lowPoly": true,
+          "fps": 24,
+          "animations": [
+            {
+              "name": "idle",
+              "from": 0,
+              "to": 29,
+              "loop": true
+            },
+            {
+              "name": "attack",
+              "from": 30,
+              "to": 59,
+              "loop": true
+            },
+            {
+              "name": "dead",
+              "from": 60,
+              "to": 89,
+              "loop": false
+            },
+            {
+              "name": "walk",
+              "from": 90,
+              "to": 119,
+              "loop": true
+            }
+          ],
+          "license": "CC0 1.0 (public domain) — free for any use, commercial or personal, no attribution required."
+        }
+      ]
+    },
+    {
+      "id": "gobkit-birds-pack",
+      "name": "Gobkit Free Bird Pack",
+      "zip": "https://gobkit.com/freebies/birds/gobkit-birds-pack.zip",
+      "license": "CC0 1.0 (public domain) — free for any use, commercial or personal, no attribution required.",
+      "models": [
+        {
+          "id": "rooster",
+          "name": "Rooster",
+          "format": "glb",
+          "url": "https://gobkit.com/freebies/birds/Rooster.glb",
+          "rigged": true,
+          "lowPoly": true,
+          "fps": 24,
+          "animations": [
+            {
+              "name": "idle",
+              "from": 0,
+              "to": 29,
+              "loop": true
+            },
+            {
+              "name": "attack",
+              "from": 30,
+              "to": 59,
+              "loop": true
+            },
+            {
+              "name": "dead",
+              "from": 60,
+              "to": 89,
+              "loop": false
+            },
+            {
+              "name": "walk",
+              "from": 90,
+              "to": 119,
+              "loop": true
+            }
+          ],
+          "license": "CC0 1.0 (public domain) — free for any use, commercial or personal, no attribution required."
+        }
+      ]
+    }
+  ]
+}

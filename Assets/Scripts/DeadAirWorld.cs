@@ -17,6 +17,8 @@ namespace DeadAir
         readonly HashSet<string> currentOccupiedLockers = new HashSet<string>();
         readonly Dictionary<string, Transform> stateViews = new Dictionary<string, Transform>();
         readonly Dictionary<string, Quaternion> interactionRotations = new Dictionary<string, Quaternion>();
+        readonly Dictionary<string, Vector3> interactionOrigins = new Dictionary<string, Vector3>();
+        string evidenceLayoutCode,evidenceLayoutChapter;
         readonly Dictionary<string, Renderer> doorLeds = new Dictionary<string, Renderer>();
         readonly Dictionary<string, Light> doorLights = new Dictionary<string, Light>();
         readonly Dictionary<string, byte> doorTintStates = new Dictionary<string, byte>();
@@ -28,7 +30,7 @@ namespace DeadAir
         readonly Dictionary<string, GameObject> droppedViews = new Dictionary<string, GameObject>();
         readonly HashSet<string> activeDropped = new HashSet<string>();
         readonly List<string> droppedToRemove = new List<string>();
-        bool lastPower, lastBroadcast, lastBreaker;
+        bool lastPower, lastBroadcast, lastBreaker, lastIntercepted;
         GameObject windowDirectorGlass;
         readonly DeadAirWindowBreak directorWindow;
         readonly DeadAirDrawerPresentation drawerPresentation;
@@ -117,7 +119,7 @@ namespace DeadAir
             {
                 if(t.name.StartsWith("interactive:"))
                 {
-                    string id=t.name.Substring(12);interactables[id]=t;interactionRotations[id]=t.localRotation;dynamicRoots.Add(t);
+                    string id=t.name.Substring(12);interactables[id]=t;interactionRotations[id]=t.localRotation;interactionOrigins[id]=t.position;dynamicRoots.Add(t);
                 }
                 else if(t.name.StartsWith("door:"))
                 {
@@ -579,18 +581,32 @@ namespace DeadAir
                 }
                 entry.Value.Advance(animationDelta);
             }
+            if(evidenceLayoutCode!=state.code || evidenceLayoutChapter!=state.chapterId)
+            {
+                evidenceLayoutCode=state.code;evidenceLayoutChapter=state.chapterId;
+                foreach(var authored in data.objects)
+                {
+                    if(!authored.id.StartsWith("tape-",StringComparison.Ordinal)||!interactables.TryGetValue(authored.id,out var tapeView)||!interactionOrigins.TryGetValue(authored.id,out var origin))continue;
+                    var placement=DeadAirBlackpine.Active(state)?DeadAirBlackpine.EvidenceObjective(data,state,authored):authored;
+                    tapeView.position=origin+new Vector3(authored.x-placement.x,placement.y-authored.y,placement.z-authored.z);
+                }
+            }
             foreach(var obj in data.objects)
             {
                 if(!interactables.TryGetValue(obj.id,out var view))continue;
+                if(!DeadAirChapters.IsChapter2(state.chapterId) && (obj.id=="fuel-canister-2"||obj.id=="fuel-canister-3"||obj.id=="pressure-valve"))
+                { view.gameObject.SetActive(false); continue; }
                 if(obj.type=="tape"||obj.type=="fuse"||obj.type=="keycard"||obj.type=="key"||obj.type=="ladder"||obj.type=="canister")view.gameObject.SetActive(!state.Collected(obj.id));
                 if(obj.id=="pressure-valve")view.localRotation=interactionRotations[obj.id]*Quaternion.Euler(0,0,state.valveOpened?180:0);
             }
             bool flicker=DeadAirSettings.Flicker;
+            bool intercepted = !DeadAirChapters.IsChapter2(state.chapterId) && state.blackpine != null && state.blackpine.intercepted;
+            bool disturbed = intercepted && !state.broadcast;
             bool interiorPowered=state.power && state.breakerOn;
             for(int i=0;i<lamps.Count;i++)
             {
                 var lamp=lamps[i];
-                Color color=state.broadcast&&lamp.interior?new Color(1,.36f,.19f):lamp.color;
+                Color color=disturbed&&lamp.interior?new Color(1,.36f,.19f):lamp.color;
                 if(float.IsNaN(lamp.appliedIntensity)||lamp.appliedColor!=color)
                 { lamp.light.color=color;lamp.appliedColor=color; }
                 if(lamp.interior&&!interiorPowered)
@@ -603,7 +619,7 @@ namespace DeadAir
                 float time=Time.time+i*3.77f;
                 float wave=flicker&&lamp.light.enabled?Mathf.Sin(time*1.7f)*Mathf.Sin(time*13.6f):0;
                 float flutter=wave>.94f?.72f:1f;
-                if(state.broadcast&&lamp.interior)flutter*=flicker?.86f+Mathf.Sin(Time.time*3)*.08f:.9f;
+                if(disturbed&&lamp.interior)flutter*=flicker?.86f+Mathf.Sin(Time.time*3)*.08f:.9f;
                 float intensity=lamp.intensity*flutter;
                 if(lamp.appliedIntensity!=intensity)
                 { lamp.light.intensity=intensity;lamp.appliedIntensity=intensity; }
@@ -615,7 +631,7 @@ namespace DeadAir
             drawerPresentation.Apply(state, animationDelta);
             if(stateViews.TryGetValue("placedLadder",out var ladderView))ladderView.gameObject.SetActive(state.ladderPlaced);
             directorWindow.Apply(state.windowBroken, animationDelta);
-            if(lastPower!=state.power||lastBroadcast!=state.broadcast||lastBreaker!=state.breakerOn)
+            if(lastPower!=state.power||lastBroadcast!=state.broadcast||lastBreaker!=state.breakerOn||lastIntercepted!=intercepted)
             {
                 TintState("powerLamp",state.power?new Color(.53f,.78f,.53f):new Color(.88f,.32f,.17f));
                 TintState("breakerLamp",(state.power&&state.breakerOn)?new Color(.53f,.78f,.53f):state.power?new Color(.88f,.62f,.22f):new Color(.15f,.15f,.15f));
@@ -625,12 +641,12 @@ namespace DeadAir
                 bool lit = state.power && state.breakerOn;
                 if(interiorLampMaterial!=null)
                 {
-                    Color emission = lit ? (state.broadcast ? new Color(1.5f, .42f, .18f) : new Color(1.8f, 1.27f, .64f)) : Color.black;
-                    Color albedo = lit ? (state.broadcast ? new Color(1f, .55f, .45f, 1f) : new Color(.92f, .83f, .65f, 1f)) : new Color(.20f, .22f, .18f, 1f);
+                    Color emission = lit ? (disturbed ? new Color(1.5f, .42f, .18f) : new Color(1.8f, 1.27f, .64f)) : Color.black;
+                    Color albedo = lit ? (disturbed ? new Color(1f, .55f, .45f, 1f) : new Color(.92f, .83f, .65f, 1f)) : new Color(.20f, .22f, .18f, 1f);
                     interiorLampMaterial.SetColor("_EmissionColor", emission);
                     interiorLampMaterial.SetColor("_Color", albedo);
                 }
-                lastPower=state.power;lastBroadcast=state.broadcast;lastBreaker=state.breakerOn;
+                lastPower=state.power;lastBroadcast=state.broadcast;lastBreaker=state.breakerOn;lastIntercepted=intercepted;
             }
             bool isCh2 = DeadAirChapters.IsChapter2(state.chapterId);
             if (isCh2 != lastIsChapter2 || (isCh2 && schoolWorld == null))

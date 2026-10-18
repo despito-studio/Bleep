@@ -509,7 +509,7 @@ namespace DeadAir.Editor
                 c.Box("Diagram vertical trunk",new Vector3(x,1.94f,.077f),new Vector3(.012f,1.2f,.007f),c.paper);
                 for(int row=0;row<4;row++)c.Box("Diagram relay node",new Vector3(x,1.45f+row*.29f,.087f),new Vector3(.07f,.045f,.012f),c.paper);
             }
-            c.Sign("СХЕМА ПЕРЕДАЧІ / ЧАСТОТА 96,4 МГЦ",new Vector3(0,2.60f,.083f),w-.3f,.16f);
+            c.Sign("СХЕМА ПРИЙОМУ / АВАРІЙНА НЕСУЧА",new Vector3(0,2.60f,.083f),w-.3f,.16f);
         }
 
         static void Radiator(Context c,PropData p)

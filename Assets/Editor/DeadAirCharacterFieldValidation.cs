@@ -55,8 +55,8 @@ namespace DeadAir.Editor
                 Require(fullTriangles > 0, role + " has no visible authored source geometry.");
                 state.clothingMask = 0;
                 motion.SetEquipmentPreview(state);
-                Require(appearance.CurrentMask == DeadAirClothing.DefaultMask(role) && appearance.VisibleSourceTriangleCount == fullTriangles,
-                    role + " a legacy serialized outfit edit changed authored clothes.");
+                Require(appearance.CurrentMask == 0 && appearance.VisibleSourceTriangleCount == fullTriangles,
+                    role + " did not receive mask zero or changed the legacy authored mesh without explicit garment bindings.");
                 state.clothingMask = -1; motion.SetEquipmentPreview(state);
                 Transform head = Find(avatar, "head"), leftFoot = Find(avatar, "foot.L");
                 float headY = head.position.y; Vector3 foot = leftFoot.position;

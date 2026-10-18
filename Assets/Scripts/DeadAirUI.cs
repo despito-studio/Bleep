@@ -68,6 +68,7 @@ namespace DeadAir
             BuildMenu();BuildLobby();BuildHud();BuildRadio();BuildPause();BuildMap();BuildCalibration();BuildEnding();BuildSettings();BuildDossier();BuildJoin();
             BuildSupplies();
             BuildCharacterGallery();
+            BuildBlackpineHud();
             toastText=Text(designRoot,"Notification","",20,510,210,900,64,TextAnchor.MiddleCenter);toastText.color=Ink;toastText.gameObject.SetActive(false);
             session.Error+=Toast;session.StateChanged+=RefreshPhase;DeadAirSettings.Changed+=RefreshGraphicsSettings;
             SelectClass(selectedClass);RefreshPhase();FocusPanel(menuPanel);
@@ -186,15 +187,15 @@ namespace DeadAir
         }
         void BuildCalibration()
         {
-            calibrationPanel=Modal("Frequency calibration","ЧАСТОТА",840,640,out var p);
-            Text(p,"Frequency hint","Потрібна частота: 96.4 МГц",21,38,151,764,50).color=Muted;
+            calibrationPanel=Modal("Frequency calibration","ПЕРЕХОПЛЕННЯ ЕФІРУ",840,640,out var p);
+            frequencyHint=Text(p,"Frequency hint","Частота в останньому записі. Знайдіть чистий сигнал.",19,38,151,764,70);frequencyHint.color=Muted;
             frequencyText=Text(p,"Frequency","94.2 МГц",70,40,255,760,98,TextAnchor.MiddleCenter,true);frequencyText.color=Gold;
-            frequency=Slider(p,"Frequency dial",40,397,760,87.5f,108,94.2f,v=>{frequencyText.text=v.ToString("F1",System.Globalization.CultureInfo.InvariantCulture)+" МГц";});
+            frequency=Slider(p,"Frequency dial",40,397,760,87.5f,108,94.2f,v=>{frequencyText.text=v.ToString("F1",System.Globalization.CultureInfo.InvariantCulture)+" МГц";UpdateBlackpineTuning(v);});
+            signalText=Text(p,"Carrier strength","ШУМ",17,40,353,760,32,TextAnchor.MiddleCenter);signalText.color=Muted;
             Text(p,"Band labels","87.5                                                     108.0",15,40,438,760,30).color=Muted;
             Button(p,"Tune down","− 0.1",40,483,177,53,()=>frequency.value=Mathf.Round((frequency.value-.1f)*10)/10);
             Button(p,"Tune up","+ 0.1",232,483,177,53,()=>frequency.value=Mathf.Round((frequency.value+.1f)*10)/10);
-            Button(p,"Confirm frequency","ЗАФІКСУВАТИ СИГНАЛ",424,483,376,53,()=>{
-                if(Mathf.Abs(frequency.value-96.4f)>.16f){Toast("Сигнал нестійкий. Спробуйте 96.4 МГц.");DeadAirAudio.Play("error");return;}
+            Button(p,"Confirm frequency","ПЕРЕХОПИТИ СИГНАЛ",424,483,376,53,()=>{
                 session.Command(new NetPacket{type="calibrate",frequency=frequency.value});if(session.State!=null&&session.State.calibrated)Close(calibrationPanel);
             },true);
         }
@@ -384,6 +385,7 @@ namespace DeadAir
             string room=world.RoomAt(me.x,me.z,me.y);
             if(room!=hudRoom){hudRoom=room;mapLocation.text="ВИ ЗАРАЗ: "+room.ToUpperInvariant();}
             RefreshSupplies(state,me);
+            RefreshBlackpineHud(state,me);
             compassText.gameObject.SetActive(intel||me.characterClass=="dispatcher"&&me.uniqueItemEquipped);
             int page=me.selectedSlot/5*5;
             for(int i=0;i<5;i++)
@@ -454,7 +456,7 @@ namespace DeadAir
             if(Active(inventoryPanel))Close(inventoryPanel);
             player.SetMapPresentation(true);Open(mapPanel);
         }
-        public void ShowCalibration(){Open(calibrationPanel);}
+        public void ShowCalibration(){frequencyHint.text="Частота в останньому записі. Знайдіть чистий сигнал.";Open(calibrationPanel);UpdateBlackpineTuning(frequency.value);}
         public void ShowSettings(){RefreshGraphicsSettings();Open(settingsPanel);}
         public void ShowDossier(){Open(dossierPanel);}
         public void Toast(string message){if(toastText==null)return;toastText.text=message;toastText.gameObject.SetActive(true);toastText.transform.SetAsLastSibling();toastUntil=Time.unscaledTime+5;}

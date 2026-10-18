@@ -77,7 +77,7 @@ namespace DeadAir
     public sealed class DeadAirSession : MonoBehaviour
     {
         public const int Port = 32004;
-        public const int NetworkProtocol = 4;
+        public const int NetworkProtocol = 5;
         readonly ConcurrentQueue<Action> mainQueue = new ConcurrentQueue<Action>();
         readonly List<LanPeer> guests = new List<LanPeer>();
         TcpListener listener;
@@ -101,13 +101,14 @@ namespace DeadAir
                 PlayerPrefs.DeleteKey("DeadAir.ClothingMask");
                 PlayerPrefs.Save();
             }
-            RestoreAuthoredClothing(State);
+            SanitizeClothingState(State);
         }
 
-        static void RestoreAuthoredClothing(RoomState state)
+        static void SanitizeClothingState(RoomState state)
         {
-            if (state == null) return;
-            foreach (var actor in state.players) actor.clothingMask = -1;
+            if (state == null || state.players == null) return;
+            foreach (var actor in state.players)
+                if (actor != null) actor.clothingMask = actor.clothingMask < 0 ? -1 : DeadAirClothing.Sanitize(actor.clothingMask);
         }
 
         public void Host(string name, string classId, bool solo, bool creative, string chapterId = DeadAirChapters.DefaultId)
@@ -218,7 +219,7 @@ namespace DeadAir
                 try
                 {
                     State = JsonUtility.FromJson<RoomState>(packet.stateJson);
-                    RestoreAuthoredClothing(State);
+                    SanitizeClothingState(State);
                     // Older room snapshots predate chapters; retain the playable original office.
                     if (State != null && string.IsNullOrEmpty(State.chapterId))
                         State.chapterId = string.IsNullOrEmpty(packet.chapterId) ? DeadAirChapters.DefaultId : packet.chapterId;

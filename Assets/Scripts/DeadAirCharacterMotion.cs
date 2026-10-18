@@ -12,26 +12,31 @@ namespace DeadAir
         const float SmokingDuration = 7f, PersonalActionDuration = 2.5f;
         [SerializeField] string classId = "engineer";
         public string ClassId { get => classId; set => classId = value; }
+        public bool UsesV2 => GetComponent<DeadAirCharacterRigBindings>() != null;
+        DeadAirCharacterV2Presentation v2Presentation;
+        DeadAirCharacterV2Presentation V2 => v2Presentation != null ? v2Presentation :
+            v2Presentation = GetComponent<DeadAirCharacterV2Presentation>();
         public float GripContactError { get; private set; }
-        public Light FlashlightEmitter => flashlightEmitter;
-        public Quaternion BodyRotation => gaze.BodyRotation;
-        public float BodyYawDegrees => gaze.BodyYawDegrees;
-        public float HeadYawDegrees => gaze.HeadYawDegrees;
-        public float HeadPitchDegrees => gaze.HeadPitchDegrees;
-        public bool TurningInPlace => gaze.TurningInPlace;
-        public float FirstPersonHeadHeight => head == null ? 0 : Vector3.Dot(head.position - transform.position, transform.up);
-        public float FirstPersonChestHeight => chest == null ? 0 : Vector3.Dot(chest.position - transform.position, transform.up);
-        public Vector3 FirstPersonEyePosition => head == null ? transform.position : head.TransformPoint(headLocalEye);
+        public Light FlashlightEmitter => UsesV2 ? V2?.FlashlightEmitter : flashlightEmitter;
+        public Quaternion BodyRotation => UsesV2 ? transform.rotation : gaze.BodyRotation;
+        public float BodyYawDegrees => UsesV2 ? transform.eulerAngles.y : gaze.BodyYawDegrees;
+        public float HeadYawDegrees => UsesV2 ? 0 : gaze.HeadYawDegrees;
+        public float HeadPitchDegrees => UsesV2 ? V2?.AppliedHeadPitch ?? 0 : gaze.HeadPitchDegrees;
+        public bool TurningInPlace => !UsesV2 && gaze.TurningInPlace;
+        public float FirstPersonHeadHeight => UsesV2 ? V2Height(DeadAirCharacterRigBindings.Joint.Head) : head == null ? 0 : Vector3.Dot(head.position - transform.position, transform.up);
+        public float FirstPersonChestHeight => UsesV2 ? V2Height(DeadAirCharacterRigBindings.Joint.Chest) : chest == null ? 0 : Vector3.Dot(chest.position - transform.position, transform.up);
+        public Vector3 FirstPersonEyePosition => UsesV2 ? V2?.Landmark(DeadAirCharacterRigBindings.Joint.EyeReference) ?? transform.position : head == null ? transform.position : head.TransformPoint(headLocalEye);
         public float FirstPersonEyeHeight => Vector3.Dot(FirstPersonEyePosition - transform.position, transform.up);
-        public float FirstPersonChestForward => chest == null ? 0 : Vector3.Dot(chest.position - transform.position, transform.forward);
+        public float FirstPersonChestForward => UsesV2 ? Vector3.Dot((V2?.Landmark(DeadAirCharacterRigBindings.Joint.Chest) ?? transform.position) - transform.position, transform.forward) : chest == null ? 0 : Vector3.Dot(chest.position - transform.position, transform.forward);
         public float FirstPersonCrouchLeanDegrees { get; private set; }
-        public float LocomotionPhase => locomotion == null ? 0 : locomotion.Phase;
-        public float LocomotionCadence => locomotion == null ? 0 : locomotion.Cadence;
-        public float FootContactError => locomotion == null ? 0 : locomotion.ContactError;
-        public float PlantedFootSlip => locomotion == null ? 0 : locomotion.PlantedSlip;
-        public Vector3 LeftFootContact => locomotion == null ? transform.position : locomotion.LeftContact;
-        public Vector3 RightFootContact => locomotion == null ? transform.position : locomotion.RightContact;
-        public Vector3 LocomotionVelocity => locomotion == null ? Vector3.zero : locomotion.Velocity;
+        public float LocomotionPhase => UsesV2 ? V2?.Phase ?? 0 : locomotion == null ? 0 : locomotion.Phase;
+        public float LocomotionCadence => UsesV2 ? V2?.Cadence ?? 0 : locomotion == null ? 0 : locomotion.Cadence;
+        public float FootContactError => UsesV2 ? float.NaN : locomotion == null ? 0 : locomotion.ContactError;
+        public float PlantedFootSlip => UsesV2 ? float.NaN : locomotion == null ? 0 : locomotion.PlantedSlip;
+        public Vector3 LeftFootContact => UsesV2 ? V2?.Landmark(DeadAirCharacterRigBindings.Joint.SoleHeelLeft) ?? transform.position : locomotion == null ? transform.position : locomotion.LeftContact;
+        public Vector3 RightFootContact => UsesV2 ? V2?.Landmark(DeadAirCharacterRigBindings.Joint.SoleHeelRight) ?? transform.position : locomotion == null ? transform.position : locomotion.RightContact;
+        public Vector3 LocomotionVelocity => UsesV2 ? V2?.Velocity ?? Vector3.zero : locomotion == null ? Vector3.zero : locomotion.Velocity;
+        float V2Height(DeadAirCharacterRigBindings.Joint semantic) => Vector3.Dot((V2?.Landmark(semantic) ?? transform.position) - transform.position, transform.up);
 
         readonly List<UnityEngine.Object> owned = new List<UnityEngine.Object>();
         readonly Dictionary<string, Transform> props = new Dictionary<string, Transform>();
@@ -48,6 +53,29 @@ namespace DeadAir
         Transform ownerTieEnd, ownerTieTip;
         bool ladderClimbing, ladderUp, crouching, motionPaused;
         DeadAirAppearance appearance;
+        DeadAirSecondaryMotion secondaryMotion;
+        DeadAirSecondaryMotion SecondaryMotion
+        {
+            get
+            {
+                // Explicit wardrobes do not create DeadAirAppearance. Use an already configured
+                // component, without generating proxy bones or assuming a V2 skeleton layout.
+                if (secondaryMotion == null) secondaryMotion = GetComponent<DeadAirSecondaryMotion>();
+                if (secondaryMotion != null) return secondaryMotion;
+                if (appearance == null) appearance = GetComponent<DeadAirAppearance>();
+                return appearance?.SecondaryMotion;
+            }
+        }
+        bool ClothedForSecondaryMotion
+        {
+            get
+            {
+                var wardrobe = GetComponent<DeadAirCharacterWardrobe>();
+                int mask = wardrobe != null ? wardrobe.CurrentMask : appearance != null ? appearance.CurrentMask : -1;
+                if (mask < 0) mask = DeadAirClothing.DefaultMask(classId);
+                return (mask & (DeadAirClothing.Shirt | DeadAirClothing.Jacket)) != 0;
+            }
+        }
         int secondaryFrame = -1;
         float currentYaw, seatedWeight;
         float lastHeight;
@@ -87,6 +115,7 @@ namespace DeadAir
 
         void LateUpdate()
         {
+            if (UsesV2) return; // The explicit graph owns this skeleton; never run the legacy post-pose writers.
             if (preview) return;
             if (hasSnapshot)
             {
@@ -110,12 +139,14 @@ namespace DeadAir
 
         public void SetLocomotionPose(bool isCrouching, float horizontalSpeed)
         {
+            if (UsesV2) { V2?.SetVelocity(isCrouching, transform.forward * horizontalSpeed); return; }
             externalCrouching = isCrouching; externalSpeed = Mathf.Clamp(horizontalSpeed, 0, 8); hasLocomotionOverride = true;
             crouching = isCrouching && !ladderClimbing; moveSpeed = externalSpeed;
         }
 
         public void SetLocomotionPose(bool isCrouching, float horizontalSpeed, Vector3 worldVelocity)
         {
+            if (UsesV2) { V2?.SetVelocity(isCrouching, worldVelocity); return; }
             SetLocomotionPose(isCrouching, horizontalSpeed);
             externalVelocity = Vector3.ClampMagnitude(worldVelocity, 8); externalVelocity.y = 0;
             hasDirectionalOverride = true;
@@ -123,24 +154,27 @@ namespace DeadAir
 
         public void ResetLocomotionContacts()
         {
+            if (UsesV2) { V2?.ResetPresentation(); return; }
             locomotion?.ResetContacts();
-            appearance?.SecondaryMotion?.ResetMotion();
+            SecondaryMotion?.ResetMotion();
         }
 
         /// <summary>Final contact pass when an owner adapter has adjusted the avatar root after Present.</summary>
         public void ReapplyGroundContacts()
         {
+            if (UsesV2) return; // V2 contact authoring/solving is not the legacy fixed-axis solver.
             SamplePose();
             if (ladderClimbing) PoseLadder(); else PoseEquipment();
-            appearance?.SecondaryMotion?.ReapplyPose();
+            SecondaryMotion?.ReapplyPose();
             UpdateFlashlightPose();
         }
 
-        public void SetTransitPose(float weight) { seatedWeight = Mathf.Clamp01(weight); }
+        public void SetTransitPose(float weight) { seatedWeight = Mathf.Clamp01(weight); if (UsesV2 && V2 != null) V2.SeatedWeight = seatedWeight; }
 
         /// <summary>The owner's imported full body uses the existing FPS overlay for hands/items.</summary>
         public void SetFirstPersonPresentation(bool enabled)
         {
+            if (UsesV2) { firstPersonPresentation = enabled; if (V2 != null) V2.OwnerView = enabled; return; }
             Initialize(); firstPersonPresentation = enabled;
             if (!enabled) { propMode = null; if (flashlightEmitter != null) flashlightEmitter.gameObject.SetActive(true); return; }
             foreach (var prop in props) prop.Value.gameObject.SetActive(false);
@@ -152,12 +186,14 @@ namespace DeadAir
 
         public void ResetGaze(float yaw, float pitch = 0)
         {
+            if (UsesV2) { V2?.ResetPresentation(); transform.rotation = Quaternion.Euler(0, DeadAirGaze.UnityYaw(yaw), 0); return; }
             currentYaw = yaw; aimPitch = Mathf.Clamp(pitch, DeadAirLocomotion.MaximumDownwardPitch, 1.35f);
             gaze.Step(yaw, pitch, 0, 0, true); previousGazeMode = -1;
         }
 
         public void ConfigureFlashlight(ClassBonuses bonuses)
         {
+            if (UsesV2) { V2?.ConfigureFlashlight(bonuses); return; }
             if (bonuses == null) return;
             flashlightRange = bonuses.flashlightDist;
             flashlightAngle = bonuses.flashlightAngle * Mathf.Rad2Deg * 2;
@@ -166,10 +202,16 @@ namespace DeadAir
         public void Present(PlayerState player, float elapsed, bool paused, bool playing = true)
         {
             if (player == null) return;
+            if (UsesV2)
+            {
+                if (V2 == null) Debug.LogError("A V2 character requires its explicit presentation profile.", this);
+                else V2.Present(player, elapsed, paused, playing);
+                return;
+            }
             Initialize();
             preview = false;
             locomotionPreview = false;
-            DeadAirClothing.Apply(gameObject, -1, classId);
+            DeadAirClothing.Apply(gameObject, player.clothingMask, classId);
             appearance = GetComponent<DeadAirAppearance>();
             crouching = player.crouching && !player.down && !player.ladderClimbing;
             motionPaused = paused || player.down;
@@ -249,6 +291,7 @@ namespace DeadAir
         /// <summary>Samples the exact imported clip for editor captures without starting gameplay.</summary>
         public void SetPreview(string name, float normalizedTime = 0)
         {
+            if (UsesV2) { V2?.Preview(name, normalizedTime); return; }
             Initialize();
             preview = true;
             locomotionPreview = false;
@@ -272,6 +315,12 @@ namespace DeadAir
         /// <summary>Explicit deterministic gaze fixture, using the same model as Present.</summary>
         public void SetGazePreview(float yaw, float pitch, float dt, float horizontalSpeed = 0, bool reset = false)
         {
+            if (UsesV2)
+            {
+                ResetGaze(yaw, pitch);
+                V2?.Present(new PlayerState { characterClass = classId, yaw = yaw, pitch = pitch }, 0, true, false);
+                return;
+            }
             Initialize(); preview = true; locomotionPreview = false; gazeEnabled = true; currentYaw = yaw;
             aimPitch = Mathf.Clamp(pitch, DeadAirLocomotion.MaximumDownwardPitch, 1.35f);
             gaze.Step(yaw, pitch, horizontalSpeed, dt, reset);
@@ -282,8 +331,9 @@ namespace DeadAir
         public void SetEquipmentPreview(PlayerState equipment, string name = "Idle", float normalizedTime = 0)
         {
             if (equipment == null) return;
+            if (UsesV2) { V2?.Preview(name, normalizedTime, equipment.clothingMask); return; }
             SetPreview(name, normalizedTime);
-            DeadAirClothing.Apply(gameObject, -1, classId);
+            DeadAirClothing.Apply(gameObject, equipment.clothingMask, classId);
             appearance = GetComponent<DeadAirAppearance>();
             crouching = equipment.crouching;
             aimPitch = Mathf.Clamp(equipment.pitch, DeadAirLocomotion.MaximumDownwardPitch, 1.35f);
@@ -295,6 +345,14 @@ namespace DeadAir
         /// <summary>Deterministic locomotion fixture; caller moves/turns the root between samples as in gameplay.</summary>
         public void SetLocomotionPreview(Vector3 worldVelocity, bool isCrouching, bool running, float dt, bool reset = false)
         {
+            if (UsesV2)
+            {
+                if (reset) V2?.ResetPresentation();
+                V2?.SetVelocity(isCrouching, worldVelocity);
+                V2?.Present(new PlayerState { characterClass = classId, crouching = isCrouching, sprinting = running,
+                    yaw = (180 - transform.eulerAngles.y) * Mathf.Deg2Rad }, Time.time, dt <= 0, true);
+                return;
+            }
             Initialize(); preview = true; locomotionPreview = true; gazeEnabled = false; ladderClimbing = false; seatedWeight = 0;
             crouching = isCrouching; movementVelocity = worldVelocity; movementVelocity.y = 0;
             moveSpeed = movementVelocity.magnitude; actionTime = -1; motionPaused = dt <= 0;
@@ -303,12 +361,13 @@ namespace DeadAir
             ShowEquipment(new PlayerState { characterClass = classId, inventory = new List<string>() });
             SamplePose(); PoseEquipment(); UpdateFlashlightPose();
             appearance = GetComponent<DeadAirAppearance>();
-            appearance?.SecondaryMotion?.Step(Mathf.Clamp(dt, 0, .1f), transform.eulerAngles.y * Mathf.Deg2Rad,
-                moveSpeed, true, reset);
+            SecondaryMotion?.Step(Mathf.Clamp(dt, 0, .1f), transform.eulerAngles.y * Mathf.Deg2Rad,
+                moveSpeed, ClothedForSecondaryMotion, reset);
         }
 
         void Initialize()
         {
+            if (UsesV2) return;
             if (initialized) return;
             animationPlayer = GetComponentInChildren<Animation>(true);
             if (animationPlayer == null) return;
@@ -564,7 +623,7 @@ namespace DeadAir
             // Secondary offsets are relative to this clean animation/body pose,
             // including authored clothing corrections such as the crouched tie.
             if (appearance == null) appearance = GetComponent<DeadAirAppearance>();
-            appearance?.SecondaryMotion?.CaptureAnimatedPose();
+            SecondaryMotion?.CaptureAnimatedPose();
         }
 
         void PoseOwnerTie()
@@ -739,18 +798,18 @@ namespace DeadAir
 
         void UpdateSecondaryMotion(bool reset = false)
         {
-            if (appearance == null || appearance.SecondaryMotion == null) return;
+            var secondary = SecondaryMotion;
+            if (secondary == null) return;
             // SamplePose restores all local transforms before every evaluation.
             // A second pass still needs the cached spring pose even though it
             // must not integrate the spring simulation a second time.
             if (secondaryFrame == Time.frameCount && !reset)
             {
-                appearance.SecondaryMotion.ReapplyPose();
+                secondary.ReapplyPose();
                 return;
             }
             secondaryFrame = Time.frameCount;
-            bool clothed = (appearance.CurrentMask & (DeadAirClothing.Shirt | DeadAirClothing.Jacket)) != 0;
-            appearance.SecondaryMotion.Step(motionPaused ? 0 : Time.deltaTime, currentYaw, moveSpeed, clothed, reset);
+            secondary.Step(motionPaused ? 0 : Time.deltaTime, currentYaw, moveSpeed, ClothedForSecondaryMotion, reset);
         }
 
         void ShowEquipment(PlayerState player)

@@ -89,6 +89,8 @@ namespace DeadAir
             surface = onStairs ? "metal" : outside ? "gravel" : "tile";
         }
 
+        public void SetSnowSurface(bool snow) { if (snow) surface = "snow"; }
+
         public static void ApplySettings()
         {
             if (instance == null) return;

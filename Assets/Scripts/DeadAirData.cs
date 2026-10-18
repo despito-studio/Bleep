@@ -232,6 +232,23 @@ namespace DeadAir
         public bool ladderPlaced, breakerOn, directorDrawerOpen;
         public bool windowBroken = true;
     }
+    // Host-authored chapter one events and resumable operations travel in every LAN snapshot.
+    [Serializable] public class BlackpineState
+    {
+        public bool intercepted, antennaDisconnected, resonatorStopped;
+        public float interceptProgress, antennaProgress, resonatorProgress;
+        public string operationId, operationPlayerId;
+        public int echoSerial, echoPhrase, lastRadioPhrase;
+        public float echoAt;
+        public string echoPlayerId, lastRadioPlayerId;
+        public int evidenceSerial;
+        public string evidenceId;
+        public float evidenceAt;
+        public string chickenCarrierId;
+        public bool chickenRescued, chickenDropped;
+        public float chickenX, chickenY, chickenZ, chickenDroppedAt, goatFriendlyUntil, goatPetAt, chickenSquawkAt;
+        public int goatPetSerial, chickenSquawkSerial;
+    }
     [Serializable] public class RoomState
     {
         public string code, hostId, phase = "lobby", message, radioSenderId;
@@ -251,6 +268,7 @@ namespace DeadAir
         public List<DrawerState> drawers = new List<DrawerState>();
         public QuestState quest = new QuestState();
         public EnemyState enemy = new EnemyState();
+        public BlackpineState blackpine = new BlackpineState();
 
         public PlayerState Player(string id)
         {

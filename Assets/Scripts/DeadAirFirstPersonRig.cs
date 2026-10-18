@@ -49,6 +49,9 @@ namespace DeadAir
         WorldData world;
         Mesh boxMesh, tubeMesh, palmMesh;
         string currentMode, currentClass;
+        [SerializeField, Tooltip("Explicit per-role sleeve/skin catalogs for independently authored FP surfaces. Empty keeps existing imported hands intact.")]
+        DeadAirCharacterWardrobe[] firstPersonWardrobes = Array.Empty<DeadAirCharacterWardrobe>();
+        string wardrobeBindingError;
         int currentClothing = int.MinValue;
         float clock, bob, equip, actionTime = -1, synchronizedAge = -1, mapMinX, mapMinZ, mapMaxX, mapMaxZ;
         bool visible, hadEquipmentLayer, synchronized;
@@ -145,8 +148,15 @@ namespace DeadAir
             SetVisible(false);
         }
 
+        bool UsingV2Body()
+        {
+            if (ownerBody == null) ownerBody = GetComponent<DeadAirFirstPersonBody>();
+            return ownerBody != null && ownerBody.UsesV2;
+        }
+
         public void SetVisible(bool value)
         {
+            if (UsingV2Body()) value = false;
             visible = value;
             if (rig != null) rig.gameObject.SetActive(value);
             if (equipmentCamera != null)
@@ -193,6 +203,7 @@ namespace DeadAir
 
         public void Present(PlayerState me, bool cameraUp, bool mapOpen, bool flashlightOn, float movementAmount, bool paused, float elapsed = 0)
         {
+            if (UsingV2Body()) { SetVisible(false); return; }
             if (rig == null || me == null) return;
             if (me.down || !string.IsNullOrEmpty(me.hiding)) { SetVisible(false); return; }
             if (!visible) SetVisible(true);
@@ -302,6 +313,7 @@ namespace DeadAir
 
         public void PresentTransit(float progress, bool departing)
         {
+            if (UsingV2Body()) { SetVisible(false); return; }
             if (rig == null || !visible) return;
             currentMode = null; actionTime = -1;
             foreach (var item in items) item.Value.gameObject.SetActive(false);
@@ -317,6 +329,7 @@ namespace DeadAir
 
         public void PresentLadder(float age, bool up, bool intactWindow)
         {
+            if (UsingV2Body()) { SetVisible(false); return; }
             if (rig == null || !visible) return;
             currentMode = null;
             actionTime = -1;
@@ -407,10 +420,39 @@ namespace DeadAir
 
         void ApplySleeves(PlayerState player)
         {
-            int mask = DeadAirClothing.DefaultMask(player.characterClass);
-            if (currentClothing == mask) return;
+            int mask = DeadAirClothing.Resolve(player);
+            if (firstPersonWardrobes != null && firstPersonWardrobes.Length > 0)
+            {
+                // Reapply even when the numeric mask is unchanged: a role switch can
+                // select another catalog, and equipment presentation can restore renderers.
+                DeadAirCharacterWardrobe selected = null;
+                string error = null;
+                foreach (var wardrobe in firstPersonWardrobes)
+                {
+                    if (wardrobe == null) { error = "The FP wardrobe catalog contains an unassigned entry."; break; }
+                    if (wardrobe.CharacterClass != player.characterClass) continue;
+                    if (selected != null) { error = "The FP wardrobe catalog contains duplicate entries for " + player.characterClass + "."; break; }
+                    selected = wardrobe;
+                }
+                if (error == null && selected == null) error = "The FP wardrobe catalog has no entry for " + player.characterClass + ".";
+                if (error == null && selected.transform != transform && !selected.transform.IsChildOf(transform) &&
+                    (rig == null || selected.transform != rig && !selected.transform.IsChildOf(rig)))
+                    error = "The selected FP wardrobe does not belong to this owner or its equipment rig.";
+                if (error != null)
+                {
+                    if (wardrobeBindingError != error) Debug.LogWarning(error + " Existing hand geometry was left unchanged.", this);
+                    wardrobeBindingError = error;
+                    return;
+                }
+                wardrobeBindingError = null;
+                if (selected.Apply(mask, player.characterClass)) currentClothing = mask;
+                return;
+            }
+            if (currentClothing == mask && currentClass == player.characterClass) return;
             currentClothing = mask;
-            SetClass(player.characterClass);
+            // The old forearm meshes combine skin and cloth. A mask cannot manufacture
+            // their missing skin; keep them intact until separate FP surfaces are bound.
+            if (currentClass != player.characterClass) SetClass(player.characterClass);
         }
 
         bool ApplyImportedHands(string role)

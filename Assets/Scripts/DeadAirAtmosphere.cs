@@ -107,9 +107,13 @@ namespace DeadAir
             bool stairs = playing && IsOnStairs(me.x, me.y, me.z);
             bool outside = playing && !stairs && IsOutside(me.x, me.y, me.z);
             audioEngine.SetContext(phase, outside, playing && me.down, playing ? state.enemy.behaviour : null, stairs);
+            audioEngine.SetSnowSurface(playing && !DeadAirChapters.IsChapter2(state.chapterId) && outside &&
+                DeadAirWinterWorld.IsSnowGround(audioWorld,player.transform.position.x,me.z,me.y));
             if (playing) audioEngine.SetRoomContext(audioWorld.RoomAt(me.x, me.z, me.y), me.y);
             audioEngine.Tick(paused, moving, playing && player.Sprinting, hiding, player.Stamina, playing ? me.sanity : 100,
-                threat, playing && player.CameraUp, playing && state.power, playing && state.broadcast, enemyPosition, distance, playing && state.breakerOn, player.Crouching);
+                threat, playing && player.CameraUp, playing && state.power,
+                playing && (DeadAirChapters.IsChapter2(state.chapterId) ? state.broadcast : state.blackpine != null && state.blackpine.intercepted && !state.broadcast),
+                enemyPosition, distance, playing && state.breakerOn, player.Crouching);
             if (tape != null)
             {
                 tape.Threat = playing ? Mathf.Lerp(tape.Threat, paused ? 0 : threat, Time.unscaledDeltaTime * 2) : 0;
@@ -141,7 +145,7 @@ namespace DeadAir
             if (state.power && !lastPower) ObjectiveSound("power", "power");
             if (state.valveOpened && !lastValve) ObjectiveSound("pressure-valve", "valve");
             if (state.calibrated && !lastCalibrated) ObjectiveSound("broadcast", "calibrate");
-            if (state.broadcast && !lastBroadcast) ObjectiveSound("broadcast", "broadcast-start");
+            if (state.broadcast && !lastBroadcast && DeadAirChapters.IsChapter2(state.chapterId)) ObjectiveSound("broadcast", "broadcast-start");
             bool spiderTriggered = me.spiderScareSerial > lastSpider && state.elapsed * 1000 - me.spiderScareAt < 1800;
             if (spiderTriggered)
             {

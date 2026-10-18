@@ -48,14 +48,15 @@ namespace DeadAir
             var generator = world.Objective("power");
             if (generator != null && Near(player, generator.x, generator.y, generator.z, 2.8f, 0, generator.id))
             {
-                if (State.canisters.Count < 3)
+                if (State.canisters.Count < RequiredFuel)
                 {
-                    State.message = "КЛЮЧ: механізм справний; потрібні всі три каністри дизелю.";
+                    State.message = IsBlackpine ? "КЛЮЧ: механізм справний; потрібна одна каністра дизелю біля генератора." : "КЛЮЧ: механізм справний; потрібні всі три каністри дизелю.";
                     return false;
                 }
                 State.power = State.quest.power = true;
                 if (!State.collected.Contains(generator.id)) State.collected.Add(generator.id);
                 State.message = "КЛЮЧ: паливний насос прокачано, генератор запущено.";
+                if (IsBlackpine) BeginBlackpineBuildUp();
                 UpdateQuest(); return true;
             }
             var enemy = State.enemy;
@@ -101,8 +102,17 @@ namespace DeadAir
 
         ObjectiveData NextCompassObjective(PlayerState player)
         {
+            if (IsBlackpine)
+            {
+                var chapter = State.blackpine;
+                if (chapter.resonatorStopped) return world.Objective("exit");
+                if (chapter.intercepted) return DeadAirBlackpine.Objective(world, chapter.antennaDisconnected ? DeadAirBlackpine.ResonatorId : DeadAirBlackpine.AntennaId);
+                if (!State.ladderPlaced)
+                    return player.HasItem("ladder") || State.Collected("ladder") ? new ObjectiveData { id = "ladder-spot", label = "Вікно директора · встановити драбину", x = -9, y = 1, z = 7 } : world.Objective("ladder");
+                if (!State.Collected("key-main")) return world.Objective("key-main");
+            }
             if (State.broadcast) return world.Objective("exit");
-            if (State.canisters.Count < 3) return NearestUncollectedObjective(player, "fuel-canister");
+            if (State.canisters.Count < RequiredFuel && !State.power) return NearestUncollectedObjective(player, "fuel-canister");
             if (!State.power) return world.Objective("power");
             if (State.fuses.Count < 2) return NearestUncollectedObjective(player, "fuse-");
             if (!State.breakerOn) return world.Objective("breaker");
@@ -114,8 +124,9 @@ namespace DeadAir
         {
             ObjectiveData result = null; float nearest = float.PositiveInfinity;
             if (world.objects == null) return null;
-            foreach (var obj in world.objects)
+            foreach (var authored in world.objects)
             {
+                var obj = IsBlackpine ? DeadAirBlackpine.EvidenceObjective(world, State, authored) : authored;
                 if (!obj.id.StartsWith(prefix, StringComparison.Ordinal) || State.Collected(obj.id)) continue;
                 float distance = Vector3.SqrMagnitude(new Vector3(obj.x - player.x, (obj.y - player.y) * 2, obj.z - player.z));
                 if (distance < nearest) { nearest = distance; result = obj; }
@@ -137,6 +148,8 @@ namespace DeadAir
         void DownAttackedPlayer(PlayerState player)
         {
             player.down = true; player.sanity = 0; State.scare++;
+            if (CarryingChicken(player)) ReleaseChicken(player);
+            if (IsBlackpine && State.blackpine.operationPlayerId == player.id) ClearBlackpineOperation();
             ClearMushroomTrip(player);
             player.camera = player.flashlight = player.sprinting = player.crouching = player.mapOpen = player.uniqueItemEquipped = false;
             player.uniqueActionCancelled = true;

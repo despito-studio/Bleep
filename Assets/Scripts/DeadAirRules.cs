@@ -45,7 +45,7 @@ namespace DeadAir
             State.hostId = hostId;
             State.solo = solo;
             State.creative = creative;
-            State.spawnCountdown = creative ? 999999 : 35;
+            State.spawnCountdown = creative ? 999999 : DeadAirChapters.IsChapter2(chapterId) ? 35 : -1;
             State.message = "Сигнал установлено. Очікуємо на операторів.";
             foreach (var d in world.doors)
                 State.doors.Add(new DoorState { id = d.id, locked = !string.IsNullOrEmpty(d.requires), requiredKey = d.requires, openSign = 1f });
@@ -81,6 +81,7 @@ namespace DeadAir
 
         public void RemovePlayer(string id)
         {
+            RecoverBlackpineDisconnect(State.Player(id));
             State.players.RemoveAll(p => p.id == id);
             movementBudgets.Remove(id);
             inspectedLockers.RemoveWhere(key => key.StartsWith(id + "\0", StringComparison.Ordinal));
@@ -119,7 +120,7 @@ namespace DeadAir
         bool CanUseRoleItem(PlayerState player)
         {
             return State.phase == "playing" && !State.paused && player != null &&
-                !player.down && !player.ladderClimbing && string.IsNullOrEmpty(player.hiding);
+                !player.down && !player.ladderClimbing && !CarryingChicken(player) && string.IsNullOrEmpty(player.hiding);
         }
 
         public void EquipUnique(string id, bool equipped)
@@ -150,7 +151,7 @@ namespace DeadAir
         bool CanReadVanMap(PlayerState player)
         {
             var board = world.Objective("van-map");
-            return board != null && player != null && !player.down && !player.ladderClimbing &&
+            return board != null && player != null && !player.down && !player.ladderClimbing && !CarryingChicken(player) &&
                 string.IsNullOrEmpty(player.hiding) && DeadAirVanPresentation.IsInside(world, player.x, player.z) &&
                 Near(player, board.x, board.y, board.z, 2.5f, 0, "van-map");
         }
@@ -295,10 +296,10 @@ namespace DeadAir
             State.radioSequence = 0;
             State.radioSenderId = null;
             bool isCh2 = DeadAirChapters.IsChapter2(State.chapterId);
-            State.spawnCountdown = State.creative ? 999999 : isCh2 ? 10 : 35;
+            State.spawnCountdown = State.creative ? 999999 : isCh2 ? 10 : -1;
             State.message = State.creative ? "РЕЖИМ ДОСЛІДЖЕННЯ: загроза пасивна." :
                 isCh2 ? "ЯПОНСЬКА ШКОЛА: Ви — журналісти-розслідувачі. Знайдіть 5 касет-доказів про Тек-Тек у школі та парку! Зберігайте розсудок пігулками." :
-                "Група прибула. До прориву сигналу 35 секунд.";
+                "BLACKPINE: перевірте аварійний сигнал із закритої гірської станції. Візьміть драбину у фургоні та проникніть через вікно директора.";
             if (isCh2)
             {
                 State.enemy = new EnemyState { x = 0, y = 0.1f, z = -10f };
@@ -352,6 +353,7 @@ namespace DeadAir
                 ResetMovementBudget(p);
             }
             nextScare = 35;
+            ResetBlackpine();
             Dirty = true;
         }
 
@@ -520,7 +522,7 @@ namespace DeadAir
             if (Mathf.Abs(input.x) > 100 || Mathf.Abs(input.z) > 100 || input.y < -15f || input.y > 35) return;
             p.noclip = input.noclip;
             p.crouching = input.crouching && string.IsNullOrEmpty(p.hiding);
-            p.sprinting = input.sprinting && !p.crouching && (State.creative || p.stamina > 2) && string.IsNullOrEmpty(p.hiding);
+            p.sprinting = input.sprinting && !p.crouching && !CarryingChicken(p) && (State.creative || p.stamina > 2) && string.IsNullOrEmpty(p.hiding);
             if (string.IsNullOrEmpty(p.hiding))
             {
                 var delta = Vector3.Distance(new Vector3(p.x, p.y, p.z), new Vector3(input.x, input.y, input.z));
@@ -547,12 +549,12 @@ namespace DeadAir
                 p.yaw = centerYaw + Mathf.Clamp(Mathf.DeltaAngle(centerYaw * Mathf.Rad2Deg, input.yaw * Mathf.Rad2Deg), -18, 18) * Mathf.Deg2Rad;
                 p.pitch = Mathf.Clamp(input.pitch, -14 * Mathf.Deg2Rad, 14 * Mathf.Deg2Rad);
             }
-            p.flashlight = input.flashlight && string.IsNullOrEmpty(p.hiding) && DeadAirSupplies.HasCharge(p) &&
+            p.flashlight = input.flashlight && !CarryingChicken(p) && string.IsNullOrEmpty(p.hiding) && DeadAirSupplies.HasCharge(p) &&
                 (p.SelectedItem == "flashlight" || input.camera);
-            p.camera = input.camera && string.IsNullOrEmpty(p.hiding);
+            p.camera = input.camera && !CarryingChicken(p) && string.IsNullOrEmpty(p.hiding);
             p.mapOpen = input.mapOpen && CanReadVanMap(p);
             if (p.mapOpen) p.camera = p.flashlight = false;
-            if (p.mapOpen || p.camera || !string.IsNullOrEmpty(p.hiding))
+            if (p.mapOpen || p.camera || CarryingChicken(p) || !string.IsNullOrEmpty(p.hiding))
             {
                 p.uniqueItemEquipped = false;
                 p.uniqueActionCancelled = true;
@@ -691,6 +693,10 @@ namespace DeadAir
                 return null;
             }
             if (!string.IsNullOrEmpty(p.hiding)) return "Спочатку вийдіть із шафи.";
+            if (IsBlackpine && (objectId == DeadAirBlackpine.AntennaId || objectId == DeadAirBlackpine.ResonatorId || objectId == "broadcast"))
+                return BeginBlackpineOperation(p, objectId);
+            if (IsBlackpine && (objectId == "farm-goat" || objectId == "farm-chicken" || objectId == "farm-chicken-drop"))
+                return InteractFarmyard(p, objectId);
             if (objectId.StartsWith("drawer", StringComparison.Ordinal)) return InteractDrawer(p, objectId);
             if (objectId.StartsWith("van-battery-", StringComparison.Ordinal)) return CollectVanBattery(p, objectId);
             if (objectId.StartsWith("pill-", StringComparison.Ordinal)) return TakePill(p, objectId);
@@ -714,7 +720,7 @@ namespace DeadAir
                 if (actualItem.StartsWith("fuel-canister") && !State.canisters.Contains(actualItem))
                 {
                     State.canisters.Add(actualItem);
-                    State.canister = State.quest.fuelAdded = State.canisters.Count >= 3;
+                    State.canister = State.quest.fuelAdded = State.canisters.Count >= RequiredFuel;
                 }
                 State.message = p.name + " підібрав: " + dropped.label;
                 Dirty = true;
@@ -730,6 +736,7 @@ namespace DeadAir
             var locker = world.Locker(objectId);
             if (locker != null)
             {
+                if (CarryingChicken(p)) return "Поставте курку на землю (G) або передайте другу, перш ніж ховатися.";
                 if (p.hiding == objectId) ExitLocker(p);
                 else if (Near(p, locker.x, locker.y, locker.z, 2.2f, 1, locker.id))
                 {
@@ -828,6 +835,7 @@ namespace DeadAir
                 }
             }
             var obj = world.Objective(objectId);
+            if (IsBlackpine) obj = DeadAirBlackpine.EvidenceObjective(world, State, obj);
             if (obj == null) return "Невідомий предмет.";
             float objRange = obj.id == "ladder" ? 3.5f : 2.5f;
             float objEyeOffset = obj.id == "ladder" ? 0.9f : 0f;
@@ -865,11 +873,13 @@ namespace DeadAir
             if (objectId == "breaker")
             {
                 if (!State.power) return "Немає живлення. Спочатку заправте та увімкніть дизельний генератор у дворі.";
-                if (State.fuses.Count < 2) return "У щитку відсутні запобіжники 380В! Знайдіть 2 запобіжники (" + State.fuses.Count + "/2), щоб увімкнути світло.";
+                if (State.fuses.Count < 2) return "У щитку відсутні запобіжники 380В! Знайдіть 2 запобіжники (" + State.fuses.Count + "/2), щоб живити станцію та приймач.";
                 State.breakerOn = State.quest.breakerOn = !State.breakerOn;
                 if (State.breakerOn) ProtectBreaker();
                 HearNoise(obj.x, obj.y, obj.z, 22, 6);
-                State.message = State.breakerOn ? "Запобіжники встановлено, рубильник увімкнено! Освітлення станції та підвалу працює." : "Рубильник вимкнено. Світло згасло.";
+                State.message = State.breakerOn ? "Запобіжники встановлено, рубильник увімкнено! Приймач, освітлення станції та підвалу працюють." : "Рубильник вимкнено. Світло та приймач згасли.";
+                if (IsBlackpine && State.breakerOn) BeginBlackpineBuildUp();
+                UpdateQuest();
                 Dirty = true; return null;
             }
             if (objectId.StartsWith("keycard-"))
@@ -883,9 +893,10 @@ namespace DeadAir
                 State.tapes.Add(objectId);
                 if (!p.inventory.Contains(objectId)) p.inventory.Add(objectId);
                 State.scare++;
-                if (!State.creative) { State.enemy.active = true; State.spawnCountdown = Mathf.Min(3, State.spawnCountdown); }
+                if (!State.creative && !IsBlackpine) { State.enemy.active = true; State.spawnCountdown = Mathf.Min(3, State.spawnCountdown); }
                 HearNoise(obj.x,p.y,obj.z,50,15);
                 State.message = "КАСЕТУ ЗНАЙДЕНО (" + State.tapes.Count + "/3). Диктор чує ваші голоси.";
+                if (IsBlackpine) RevealBlackpineEvidence(objectId);
             }
             else if (objectId.StartsWith("fuse-"))
             {
@@ -898,15 +909,16 @@ namespace DeadAir
             {
                 if (!State.canisters.Contains(objectId)) State.canisters.Add(objectId);
                 if (!p.inventory.Contains(objectId)) p.inventory.Add(objectId);
-                State.canister = State.quest.fuelAdded = State.canisters.Count >= 3;
-                State.message = "Каністру з дизелем знайдено (" + State.canisters.Count + "/3).";
+                State.canister = State.quest.fuelAdded = State.canisters.Count >= RequiredFuel;
+                State.message = IsBlackpine ? "Дизель знайдено. Однієї каністри достатньо для генератора в задньому дворі." : "Каністру з дизелем знайдено (" + State.canisters.Count + "/3).";
             }
             else if (objectId == "pressure-valve") { State.valveOpened = State.quest.valveOpened = true; State.message = "Вентиль тиску відкрито."; }
             else if (objectId == "power")
             {
-                if (State.canisters.Count < 3) return "Для запуску генератора потрібно 3 каністри дизельного палива (" + State.canisters.Count + "/3).";
+                if (State.canisters.Count < RequiredFuel) return IsBlackpine ? "Візьміть одну каністру дизелю біля генератора." : "Для запуску генератора потрібно 3 каністри дизельного палива (" + State.canisters.Count + "/3).";
                 State.power = State.quest.power = true;
                 State.message = "Генератор заправлено дизелем та успішно запущено!";
+                if (IsBlackpine) BeginBlackpineBuildUp();
             }
             else if (objectId == "broadcast")
             {
@@ -924,10 +936,12 @@ namespace DeadAir
             }
             else if (objectId == "exit")
             {
-                if (!State.broadcast) return "Передайте сигнал перед від’їздом.";
+                if (IsBlackpine && (!State.blackpine.intercepted || !State.blackpine.antennaDisconnected || !State.blackpine.resonatorStopped)) return "Спершу перехопіть сигнал, роз'єднайте антену та зупиніть Резонатор.";
+                if (!State.broadcast) return "Завершіть роботу на станції перед від’їздом.";
                 foreach (var crew in State.players)
                     if (!crew.down && !DeadAirVanPresentation.IsInside(world, crew.x, crew.z, -2.2f))
                         return "Зберіть усіх живих учасників біля фургона перед від’їздом.";
+                RescueChicken();
                 State.phase = "departing"; State.departureStartedAt = State.elapsed; State.enemy.active = false;
                 for (int i = 0; i < State.players.Count; i++)
                 {
@@ -938,7 +952,7 @@ namespace DeadAir
                     if (!crew.down) RecordReturnedLoot(crew);
                 }
                 foreach(var player in State.players)ClearMushroomTrip(player);
-                State.message = "Ви вийшли. На записі чути на один голос більше.";
+                State.message = IsBlackpine && State.blackpine.chickenRescued ? "Ви вирвалися зі станції та врятували курку. У рації чути на один голос більше." : "Ви вийшли. На записі чути на один голос більше.";
             }
             // Rejected objective interactions must remain available for a later retry.
             if (!State.collected.Contains(objectId)) State.collected.Add(objectId);
@@ -989,6 +1003,7 @@ namespace DeadAir
         {
             var p = State.Player(id);
             if (State.phase != "playing" || State.paused || p == null || p.down || !string.IsNullOrEmpty(p.hiding)) return "Не можна викинути зараз.";
+            if (CarryingChicken(p)) return "Спочатку поставте курку на землю (G) або передайте другу.";
             if (string.IsNullOrEmpty(itemId) || !p.HasItem(itemId)) return "Предмет відсутній в інвентарі.";
             if(DeadAirRoleItems.IsRoleItem(itemId))return "Особистий предмет залишається з персонажем.";
             if (itemId == DeadAirSupplies.BatteryItem) return DropBattery(p);
@@ -1000,7 +1015,7 @@ namespace DeadAir
             if(!p.uniqueItemEquipped)p.uniqueActionCancelled=true;
             if (itemId == "flashlight") p.flashlight = false;
             if (itemId.StartsWith("keycard-")) State.keycards.Remove(itemId);
-            if (itemId.StartsWith("fuel-canister")) { State.canisters.Remove(itemId); State.canister = State.quest.fuelAdded = State.canisters.Count >= 3; }
+            if (itemId.StartsWith("fuel-canister")) { State.canisters.Remove(itemId); State.canister = State.quest.fuelAdded = State.canisters.Count >= RequiredFuel; }
             string dropInstanceId = "drop_" + System.Guid.NewGuid().ToString("N").Substring(0, 6);
             string label = GetItemLabel(itemId);
             State.droppedItems.Add(new DroppedItem { id = dropInstanceId, itemId = itemId, label = label, x = p.x, y = p.y, z = p.z,
@@ -1035,11 +1050,11 @@ namespace DeadAir
         public void SelectSlot(string id, int slot)
         {
             var p = State.Player(id);
-            if (State.phase!="playing" || State.paused || p == null || p.down || !string.IsNullOrEmpty(p.hiding)) return;
+            if (State.phase!="playing" || State.paused || p == null || p.down || CarryingChicken(p) || !string.IsNullOrEmpty(p.hiding)) return;
             p.selectedSlot = Mathf.Clamp(slot, 0, Mathf.Max(0, p.inventory.Count - 1));
             p.camera=p.mapOpen=false;
             if (p.SelectedItem != "flashlight") p.flashlight = false;
-            p.uniqueItemEquipped=p.HasSelectedRoleItem;
+            p.uniqueItemEquipped=p.HasSelectedRoleItem&&!CarryingChicken(p);
             if(!p.uniqueItemEquipped)p.uniqueActionCancelled=true;
             Dirty = true;
         }
@@ -1047,10 +1062,19 @@ namespace DeadAir
         public string Calibrate(string id, float frequency)
         {
             var p = State.Player(id);
-            if (State.phase != "playing" || p == null || p.down) return "Ефір не активний.";
+            if (State.phase != "playing" || p == null || p.down || p.ladderClimbing || !string.IsNullOrEmpty(p.hiding)) return "Ефір не активний.";
             var console = world.Objective("broadcast");
             // The solo calibration panel pauses movement while still accepting its tuning controls.
             if (console == null || !Near(p, console.x, console.y, console.z, 2.5f, 0, console.id)) return "Підійдіть до пульта.";
+            if (IsBlackpine)
+            {
+                if (CarryingChicken(p)) return "Перед роботою з приймачем поставте курку на землю (G) або передайте другу.";
+                if (!State.power || !State.breakerOn || State.fuses.Count < 2) return "Відновіть живлення приймача: генератор, два запобіжники та рубильник у підвалі.";
+                if (!DeadAirBlackpine.HasAllEvidence(State)) return "Знайдіть усі три записи останньої зміни. Несуча вказана на касеті «Останній ефір».";
+                if (float.IsNaN(frequency) || float.IsInfinity(frequency) || Mathf.Abs(frequency - DeadAirBlackpine.TargetFrequency(State)) >= .15f) return "На цій частоті лише шум. Звіртеся із записом «Останній ефір» у журналі.";
+                State.calibrated = State.quest.calibrated = true;
+                return BeginBlackpineOperation(p, "broadcast");
+            }
             if (float.IsNaN(frequency) || float.IsInfinity(frequency) || Mathf.Abs(frequency - 96.4f) >= .2f) return "Потрібна несуча 96.4 МГц.";
             State.calibrated = State.quest.calibrated = true;
             State.message = "ЧАСТОТУ НАЛАШТОВАНО (96.4 МГц).";
@@ -1064,6 +1088,7 @@ namespace DeadAir
             var phrases = new[] { "Я тут! До мене!", "ОБЕРЕЖНО! ДИКТОР ПОРУЧ!", "Касету знайдено!", "ПОТРІБНА ДОПОМОГА!" };
             State.radioSequence++;
             State.radioSenderId = id;
+            if (IsBlackpine) { State.blackpine.lastRadioPlayerId = id; State.blackpine.lastRadioPhrase = Mathf.Clamp(phrase, 0, 3); }
             State.message = "РАЦІЯ [" + p.name + "]: " + phrases[Mathf.Clamp(phrase, 0, 3)];
             if (HearNoise(p.x,p.y,p.z,32,9))
             {
@@ -1089,7 +1114,7 @@ namespace DeadAir
             }
             else
             {
-                State.quest.stage = State.broadcast || State.phase == "won" ? 4 : State.power ? 3 :
+                State.quest.stage = State.broadcast || State.phase == "won" ? 4 : State.blackpine.intercepted ? 3 :
                     State.tapes.Count > 0 || State.keycards.Count > 0 ? 2 : 1;
             }
         }
@@ -1139,7 +1164,8 @@ namespace DeadAir
             bool paneWasBroken = State.windowBroken;
             if (DeadAirLadder.Advance(State)) Dirty = true;
             if (!paneWasBroken && State.windowBroken) HearNoise(-9, 4.2f, 6, 35, 10);
-            if (!State.creative && State.spawnCountdown > 0)
+            if (IsBlackpine) TickBlackpine(dt);
+            if (!IsBlackpine && !State.creative && State.spawnCountdown > 0)
             {
                 State.spawnCountdown = Mathf.Max(0, State.spawnCountdown - dt);
                 if (State.spawnCountdown == 0 && !State.enemy.active)

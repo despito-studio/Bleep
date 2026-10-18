@@ -73,8 +73,8 @@ namespace DeadAir.Editor
                 motion.SetFirstPersonPresentation(true);
                 var owner = new PlayerState { characterClass = role, clothingMask = 0, flashlight = true, inventory = new System.Collections.Generic.List<string> { "flashlight" } };
                 motion.SetLocomotionPose(true, 2); motion.Present(owner, 1, false);
-                Require(actor.GetComponent<DeadAirAppearance>().CurrentMask == DeadAirClothing.DefaultMask(role),
-                    role + " owner full body replaced its authored default clothing.");
+                Require(actor.GetComponent<DeadAirAppearance>().CurrentMask == 0,
+                    role + " owner full body discarded the received clothing mask.");
                 foreach (var renderer in actor.GetComponentsInChildren<MeshRenderer>(true))
                     Require(!renderer.gameObject.activeInHierarchy, role + " owner body duplicated visible attached equipment.");
                 foreach (var light in actor.GetComponentsInChildren<Light>(true))

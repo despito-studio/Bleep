@@ -93,6 +93,9 @@ namespace DeadAir
             }
             int signature = state.tapes.Count + state.canisters.Count * 4 + state.fuses.Count * 16 + state.keycards.Count * 64 + state.collected.Count * 256 + state.securedItems.Count * 4096;
             signature = signature * 32 + (state.power ? 1 : 0) + (state.breakerOn ? 2 : 0) + (state.calibrated ? 4 : 0) + (state.broadcast ? 8 : 0);
+            if (state.blackpine != null)
+                signature = signature * 16 + (state.blackpine.intercepted ? 1 : 0) + (state.blackpine.antennaDisconnected ? 2 : 0) +
+                    (state.blackpine.resonatorStopped ? 4 : 0) + (state.blackpine.chickenRescued ? 8 : 0);
             if (signature == journalSignature) return;
             journalSignature = signature;
             bool isCh2 = DeadAirChapters.IsChapter2(state.chapterId);
@@ -113,17 +116,19 @@ namespace DeadAir
             }
             else
             {
-                objectiveText.text = state.broadcast ? "Поверніться до фургона" : state.breakerOn ?
-                    (state.tapes.Count < 3 ? "Знайдіть три касети із записами" : !state.calibrated ? "Налаштуйте приймач на 96.4 МГц" : "Передайте записи на 96.4 МГц") : state.power ?
-                    (state.fuses.Count >= 2 ? "Увімкніть рубильник у підвалі" : "Знайдіть запобіжники для щитка") : state.canisters.Count >= 3 ?
-                    "Увімкніть генератор у дворі" : "Знайдіть дизель для генератора";
-                journalChecklist.text = Check(state.power, "Запустити генератор") + "\n" + Check(state.breakerOn, "Повернути освітлення") + "\n" +
-                    Check(state.tapes.Count >= 3, "Знайти три касети") + "\n" + Check(state.calibrated, "Налаштувати 96.4 МГц") + "\n" + Check(state.broadcast, "Передати записи");
-                evidenceText.text = "Касети                 " + state.tapes.Count + " / 3";
-                fuelEvidenceText.text = "Каністри дизеля        " + state.canisters.Count + " / 3";
+                var chapter = state.blackpine;
+                objectiveText.text = DeadAirBlackpine.ObjectiveText(state);
+                journalChecklist.fontSize = 18;
+                journalChecklist.text = Check(state.Collected("key-main"), "Проникнути через вікно · знайти картку") + "\n" +
+                    Check(state.power, "Запустити генератор · одна каністра") + "\n" + Check(state.breakerOn, "Відновити живлення приймача") + "\n" +
+                    Check(state.tapes.Count >= 3, "Розкрити зміст трьох записів") + "\n" + Check(chapter != null && chapter.intercepted, "Перехопити чужий ефір") + "\n" +
+                    Check(chapter != null && chapter.antennaDisconnected, "Від’єднати антену у дворі") + "\n" + Check(chapter != null && chapter.resonatorStopped, "Зупинити Резонатор-4 у підвалі");
+                evidenceText.text = "Архівні записи        " + state.tapes.Count + " / 3";
+                fuelEvidenceText.text = "Пальне                 " + Mathf.Min(1,state.canisters.Count) + " / 1";
                 fuseEvidenceText.text = "Запобіжники            " + state.fuses.Count + " / 2";
                 journalTotals.text = "Зібрано речей: " + DeadAirLootSummary.CollectedCount(world, state) +
-                    "\nВинесено до фургона: " + state.securedItems.Count + "\nПередано записів: " + (state.broadcast ? "3 / 3" : "0 / 3");
+                    "\nДжерело: " + (state.broadcast ? "вимкнено" : chapter != null && chapter.intercepted ? "виявлено" : "невідоме") +
+                    "\nКурка: " + (chapter != null && chapter.chickenRescued ? "врятована" : "можна забрати з собою");
             }
         }
 

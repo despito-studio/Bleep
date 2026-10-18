@@ -75,7 +75,7 @@ namespace DeadAir.Editor
                 builtAtUtc = DateTime.UtcNow.ToString("o"),
                 sourceCommit = Git("rev-parse HEAD").Trim(),
                 sourceDirty = !string.IsNullOrWhiteSpace(Git("status --porcelain --untracked-files=normal -- Assets Packages ProjectSettings Tools scripts")),
-                sourceRepository = "https://github.com/dorimommy/Dear-air",
+                sourceRepository = "https://github.com/despito-studio/Dear-air",
                 runtimeVerification = "pending",
                 buildResult = report.summary.result.ToString(),
                 files = Directory.GetFiles(directory, "*", SearchOption.AllDirectories)

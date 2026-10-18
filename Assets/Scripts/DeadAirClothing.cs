@@ -16,6 +16,12 @@ namespace DeadAir
         public static void Apply(GameObject avatar, int mask, string classId)
         {
             if (avatar == null) return;
+            var wardrobe = avatar.GetComponent<DeadAirCharacterWardrobe>();
+            if (wardrobe != null)
+            {
+                wardrobe.Apply(mask, classId);
+                return; // An invalid explicit catalog must never fall back to the old colour classifier.
+            }
             var appearance = avatar.GetComponent<DeadAirAppearance>();
             if (appearance == null) appearance = avatar.AddComponent<DeadAirAppearance>();
             appearance.Apply(mask < 0 ? DefaultMask(classId) : Sanitize(mask), classId);

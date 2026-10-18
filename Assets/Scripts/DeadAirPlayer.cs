@@ -134,7 +134,15 @@ namespace DeadAir
             {
                 var eye = view.transform.localPosition; eye.z = .08f; view.transform.localPosition = eye;
             }
-            firstPersonBody.Present(me, state, transform, yaw, pitch, inspectionPose ? me.crouching : Crouching, Sprinting, view);
+            firstPersonBody.Present(me, state, transform, yaw, pitch, inspectionPose ? me.crouching : Crouching, Sprinting, view,
+                new DeadAirFirstPersonBody.OwnerEquipmentState(ui.MapOpen, cameraUp, OwnerFlashlightRequested(me)));
+            if (firstPersonBody.UsesV2)
+            {
+                firstPersonBody.Motion?.ConfigureFlashlight(world.GetClass(me.characterClass).bonuses);
+                var presentation = firstPersonBody.Avatar == null ? null : firstPersonBody.Avatar.GetComponent<DeadAirCharacterV2Presentation>();
+                if (presentation == null || !firstPersonBody.Avatar.activeInHierarchy) flashlight.enabled = false;
+                else presentation.PresentOwnerFlashlight(flashlight);
+            }
         }
 
         void Update()
@@ -209,7 +217,8 @@ namespace DeadAir
             {
                 if (Input.GetKeyDown(KeyCode.F))
                 {
-                    if (hasFlashlight)
+                    if (DeadAirFarmyard.IsCarrying(state, me)) ui.Toast("Руки зайняті куркою. G — поставити її на землю.");
+                    else if (hasFlashlight)
                     {
                         lightOn = DeadAirSupplies.HasCharge(me) && (!HoldingFlashlight(me) || !lightOn);
                         SelectSlot(me.inventory.IndexOf("flashlight"));
@@ -222,16 +231,18 @@ namespace DeadAir
                         DeadAirAudio.Play("error");
                     }
                 }
-                if (Input.GetKeyDown(KeyCode.V)) { cameraUp = !cameraUp; session.Command(new NetPacket { type = "unique-equip", uniqueEquipped = false }); DeadAirAudio.Play("camera-equip"); }
+                if (Input.GetKeyDown(KeyCode.V) && !DeadAirFarmyard.IsCarrying(state, me)) { cameraUp = !cameraUp; session.Command(new NetPacket { type = "unique-equip", uniqueEquipped = false }); DeadAirAudio.Play("camera-equip"); }
                 if (Input.GetMouseButtonDown(0) && (cameraUp || me.SelectedItem == "camera"))
                 {
-                    session.Command(new NetPacket { type = "unique-use" });
+                    if (!DeadAirChapters.IsChapter2(state.chapterId)) StartCoroutine(TakeBlackpinePhoto());
+                    else session.Command(new NetPacket { type = "unique-use" });
                 }
                 if (Input.GetKeyDown(KeyCode.R))
                 {
                     if (HoldingFlashlight(me) || me.SelectedItem == DeadAirSupplies.BatteryItem) session.Command(new NetPacket { type = "reload" });
                     else if (me.inventory != null && me.selectedSlot >= 0 && me.selectedSlot < me.inventory.Count && me.inventory[me.selectedSlot] == "prison-book") ui.ShowBook();
-                    else session.Command(new NetPacket { type = "unique-use" });
+                    else if (!DeadAirChapters.IsChapter2(state.chapterId) && me.SelectedItem != null && me.SelectedItem.StartsWith("tape-", StringComparison.Ordinal)) ui.ShowBlackpineEvidence(me.SelectedItem);
+                    else if (!DeadAirFarmyard.IsCarrying(state, me)) session.Command(new NetPacket { type = "unique-use" });
                 }
                 if (Input.GetKeyDown(KeyCode.Q)) ui.ToggleRadio();
                 if (ui.RadioOpen)
@@ -253,13 +264,18 @@ namespace DeadAir
                     int itemCount = Mathf.Max(1, me.inventory.Count);
                     if (scroll > 0.05f) SelectSlot((me.selectedSlot + itemCount - 1) % itemCount);
                     else if (scroll < -0.05f) SelectSlot((me.selectedSlot + 1) % itemCount);
-                    if (Input.GetKeyDown(KeyCode.G)) DropCurrentItem(me);
+                    if (Input.GetKeyDown(KeyCode.G))
+                    {
+                        if (DeadAirFarmyard.IsCarrying(state, me)) session.Command(new NetPacket { type = "interact", id = "farm-chicken-drop" });
+                        else DropCurrentItem(me);
+                    }
                 }
             }
             else ui.HideRadio();
             bool watchingClimb = climbingLadder && !pausedLocally && !state.paused && !ui.HasModal;
             Cursor.lockState = (controlled || lookingFromLocker || watchingClimb) && !DeadAirConsole.IsOpen ? CursorLockMode.Locked : CursorLockMode.None;
             Cursor.visible = (!controlled && !lookingFromLocker && !watchingClimb) || DeadAirConsole.IsOpen;
+            if (DeadAirFarmyard.IsCarrying(state, me)) cameraUp = false;
             if (controlled) Move(me, state);
             else if (lookingFromLocker) LookFromLocker(me);
             else if (!state.paused && !pausedLocally && string.IsNullOrEmpty(me.hiding) && !climbingLadder && !Noclip) ApplyGravity(Vector3.zero);
@@ -277,7 +293,7 @@ namespace DeadAir
             }
             view.fieldOfView = Mathf.Lerp(view.fieldOfView, cameraUp ? 57 : Sprinting ? 74 : 68, Time.deltaTime * 5);
             var classData = world.GetClass(me.characterClass);
-            flashlight.enabled = lightOn && DeadAirSupplies.HasCharge(me) && HoldingFlashlight(me) && !me.down && string.IsNullOrEmpty(me.hiding) && !climbingLadder;
+            flashlight.enabled = OwnerFlashlightRequested(me);
             flashlight.range = classData.bonuses.flashlightDist;
             flashlight.spotAngle = classData.bonuses.flashlightAngle * Mathf.Rad2Deg * 2;
             flashlight.innerSpotAngle = flashlight.spotAngle * .28f;
@@ -287,7 +303,8 @@ namespace DeadAir
             {
                 if (InteractionId == "van-map")
                     ui.OpenVanMap();
-                else if (InteractionId == "broadcast" && !state.calibrated)
+                else if (InteractionId == "broadcast" && !state.calibrated &&
+                    (DeadAirChapters.IsChapter2(state.chapterId) || state.power && state.breakerOn && state.tapes.Count >= 3))
                     ui.ShowCalibration();
                 else if (InteractionId == "ladder-climb")
                 {
@@ -418,9 +435,12 @@ namespace DeadAir
             SelectSlot(slot);
         }
 
-        bool HoldingFlashlight(PlayerState me) => me != null && !ui.MapOpen && !me.uniqueItemEquipped &&
+        bool HoldingFlashlight(PlayerState me) => me != null && !DeadAirFarmyard.IsCarrying(session?.State,me) && !ui.MapOpen && !me.uniqueItemEquipped &&
             (cameraUp ? me.HasItem("flashlight") : me.inventory != null && me.selectedSlot >= 0 &&
                 me.selectedSlot < me.inventory.Count && me.inventory[me.selectedSlot] == "flashlight");
+
+        bool OwnerFlashlightRequested(PlayerState me) => me != null && lightOn && DeadAirSupplies.HasCharge(me) && HoldingFlashlight(me) &&
+            !me.down && string.IsNullOrEmpty(me.hiding) && !climbingLadder;
 
         void UpdateEquipment(PlayerState me, RoomState state, float movement)
         {
@@ -428,14 +448,16 @@ namespace DeadAir
             firstPerson.SynchronizeUniqueAction(me.uniqueActionSequence > 0 && me.uniqueItemEquipped && !me.uniqueActionCancelled ? state.elapsed - me.uniqueActionAt : -1);
             firstPerson.Present(me, cameraUp, ui.MapOpen, lightOn && DeadAirSupplies.HasCharge(me), movement, state.paused || pausedLocally, state.elapsed);
             if (climbingLadder) firstPerson.PresentLadder(ladderPresentationAge, me.ladderUp, !state.windowBroken);
-            firstPerson.SetVisible(state.phase == "playing" && !me.down && string.IsNullOrEmpty(me.hiding));
-            flashlight.enabled = lightOn && DeadAirSupplies.HasCharge(me) && HoldingFlashlight(me) && !me.down && string.IsNullOrEmpty(me.hiding) && !climbingLadder;
+            firstPerson.SetVisible(state.phase == "playing" && !me.down && string.IsNullOrEmpty(me.hiding) && !DeadAirFarmyard.IsCarrying(state,me));
+            flashlight.enabled = OwnerFlashlightRequested(me);
             if(flashlight.enabled && firstPerson.TryGetFlashlightPose(out var position,out var rotation))
                 flashlight.transform.SetPositionAndRotation(position,rotation);
         }
 
         void CheckWindowCutsceneTrigger(PlayerState me)
         {
+            // The first real appearance now belongs to the intercepted signal.
+            if (session.State != null && !DeadAirChapters.IsChapter2(session.State.chapterId)) return;
             if (windowCutscenePlayed || windowCutsceneActive || me == null || me.down || climbingLadder || !string.IsNullOrEmpty(me.hiding)) return;
             float dx = transform.position.x - 9f;
             float dz = transform.position.z - 7.1f;
@@ -548,7 +570,7 @@ namespace DeadAir
             var sideways = axes.x;
             UpdateCrouch();
             var direction = (transform.forward * forward + transform.right * sideways).normalized;
-            bool sprint = !Crouching && direction.sqrMagnitude > 0 && (verificationMovement?verificationSprint:Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) && (state.creative || stamina > 2);
+            bool sprint = !DeadAirFarmyard.IsCarrying(state, me) && !Crouching && direction.sqrMagnitude > 0 && (verificationMovement?verificationSprint:Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) && (state.creative || stamina > 2);
             Sprinting = sprint;
             var bonuses = world.GetClass(me.characterClass).bonuses;
             stamina = state.creative ? 100 : Mathf.Clamp(stamina + (sprint ? -23 : 14 * bonuses.staminaRecovery) * Time.deltaTime, 0, 100);
@@ -752,8 +774,11 @@ namespace DeadAir
                 string label = open ? (locked ? labels.lockedOpen : labels.open) : (locked ? labels.lockedClosed : labels.closed);
                 ConsiderInteraction(door.id, label, door.x, door.y, door.z, 2.5f, origin, forward, ref nearest);
             }
-            foreach (var obj in world.objects)
+            foreach (var authoredObject in world.objects)
             {
+                var obj = DeadAirBlackpine.Active(state) ? DeadAirBlackpine.EvidenceObjective(world,state,authoredObject) : authoredObject;
+                if (!DeadAirChapters.IsChapter2(state.chapterId) &&
+                    (obj.id == "fuel-canister-2" || obj.id == "fuel-canister-3" || obj.id == "pressure-valve")) continue;
                 float objRange = obj.id == "ladder" ? 3.5f : 2.5f;
                 float objEyeOffset = obj.id == "ladder" ? 0.9f : 0f;
                 if (!InteractionInReach(obj.x, obj.y, obj.z, objRange, origin, forward, nearest, objEyeOffset)) continue;
@@ -762,10 +787,14 @@ namespace DeadAir
                     obj.id == "fuel-canister" && state.canister || obj.id == "pressure-valve" && state.valveOpened) continue;
                 if (obj.id == "key-main" && !state.directorDrawerOpen) continue;
                 string label = obj.label;
+                if (obj.id == "broadcast" && !DeadAirChapters.IsChapter2(state.chapterId))
+                    label = state.blackpine != null && state.blackpine.intercepted ? "Перехоплений ефір · перевірити запис" :
+                        state.calibrated ? "Приймач · почати перехоплення" : "Приймач · знайти чужий сигнал";
                 if (obj.id == "breaker")
                     label = "Рубильник освітлення (" + (state.breakerOn ? "увімкнено — вимкнути" : "вимкнено — увімкнути") + ")";
                 ConsiderInteraction(obj.id, label, obj.x, obj.y, obj.z, objRange, origin, forward, ref nearest, objEyeOffset);
             }
+            FindBlackpineInteractions(me, state, origin, forward, ref nearest);
             if (!state.ladderPlaced)
             {
                 if (me.HasItem("ladder"))
@@ -874,12 +903,13 @@ namespace DeadAir
                     if (remoteMotions[p.id] != null) remoteMotions[p.id].ConfigureFlashlight(world.GetClass(p.characterClass).bonuses);
                     viewObject.transform.position = new Vector3(-p.x, p.y, p.z);
                 }
-                viewObject.transform.position = Vector3.Lerp(viewObject.transform.position, new Vector3(-p.x, p.y + (p.down ? .2f : 0), p.z) + DeadAirVanPresentation.TransitOffset(state), Time.deltaTime * 12);
                 remoteMotions.TryGetValue(p.id, out var motion);
+                bool v2Character = motion != null && motion.UsesV2;
+                viewObject.transform.position = Vector3.Lerp(viewObject.transform.position, new Vector3(-p.x, p.y + (p.down && !v2Character ? .2f : 0), p.z) + DeadAirVanPresentation.TransitOffset(state), Time.deltaTime * 12);
                 if (motion == null || p.down || p.ladderClimbing || DeadAirVanPresentation.SeatedWeight(state) > .001f)
                     viewObject.transform.rotation = p.ladderClimbing && !p.down ?
                         LadderFacingRotation(Mathf.Clamp(state.elapsed - p.ladderStartedAt, 0, DeadAirLadder.Duration), p.ladderUp) :
-                        Quaternion.Euler(0, 180 - p.yaw * Mathf.Rad2Deg, p.down ? -90 : 0);
+                        Quaternion.Euler(0, 180 - p.yaw * Mathf.Rad2Deg, p.down && !v2Character ? -90 : 0);
                 if (motion != null) { motion.SetTransitPose(DeadAirVanPresentation.SeatedWeight(state)); motion.Present(p, state.elapsed, state.paused, state.phase == "playing"); }
                 viewObject.SetActive(string.IsNullOrEmpty(p.hiding));
             }
