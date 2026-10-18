@@ -823,6 +823,26 @@ namespace DeadAir
                         }
                     }
                 }
+                // School generator outside in courtyard
+                if (InteractionInReach(-8.0f, 0.6f, 2.5f, 3.2f, origin, forward, nearest))
+                {
+                    string genLabel = state.power 
+                        ? "Дизельний генератор: Працює (живлення станції подано)" 
+                        : "Дизельний генератор: Запустити живлення школи (E)";
+                    ConsiderInteraction("school-generator", genLabel, -8.0f, 0.6f, 2.5f, 3.2f, origin, forward, ref nearest);
+                }
+
+                // School breaker inside entrance hall (Genkan)
+                if (InteractionInReach(4.75f, 1.6f, -1.8f, 2.8f, origin, forward, nearest))
+                {
+                    string breakerLabel = state.breakerOn
+                        ? "Електрощиток: Увімкнено (Вимкнути світло школи)"
+                        : (state.power 
+                            ? "Електрощиток: Увімкнути освітлення школи (E)" 
+                            : "Електрощиток: Немає напруги (увімкніть генератор у дворі)");
+                    ConsiderInteraction("school-breaker", breakerLabel, 4.75f, 1.6f, -1.8f, 2.8f, origin, forward, ref nearest);
+                }
+
                 if (InteractionInReach(0f, 0.5f, 43f, 4.5f, origin, forward, nearest))
                 {
                     string vanLabel = state.tapes.Count >= 5

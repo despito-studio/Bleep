@@ -481,6 +481,9 @@ namespace DeadAir
             Add("static", b => b.Bed(2), 8);
             Add("dread", b => b.Bed(3), 8);
             Add("tinnitus", b => b.Bed(4), 8);
+            Add("teke-crawl", b => { b.Knock(0, .8f); b.Noise(.02f, .18f, .07f, 1600, .01f); b.Knock(.12f, .6f); }, .35f);
+            Add("teke-scream", b => { b.Tone(0, 1100, 750, .9f, .12f, Wave.Saw, .08f); b.Noise(.05f, .8f, .09f, 3200, .05f); b.HorrorSting(1); }, 1.8f);
+            Add("teke-groan", b => { b.Tone(0, 160, 110, 1.4f, .11f, Wave.Triangle, .08f); b.Noise(.1f, 1.2f, .06f, 540, .09f); }, 1.6f);
             AddProceduralScoreAndFoley();
         }
 

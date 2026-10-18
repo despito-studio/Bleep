@@ -886,6 +886,28 @@ namespace DeadAir
             }
             if (DeadAirChapters.IsChapter2(State.chapterId))
             {
+                if (objectId == "school-generator")
+                {
+                    if (!Near(p, -8.0f, 0.6f, 2.5f, 3.5f, 0f, objectId)) return "Підійдіть ближче до генератора.";
+                    if (State.power) return "Генератор уже працює та подає напругу до електрощитка школи.";
+                    State.power = State.quest.power = true;
+                    DeadAirAudio.Play("power");
+                    State.message = "ГЕНЕРАТОР ЗАПУЩЕНО! Тепер увімкніть рубильник у щитку всередині школи (праворуч біля входу).";
+                    Dirty = true;
+                    return null;
+                }
+                if (objectId == "school-breaker")
+                {
+                    if (!Near(p, 4.75f, 1.6f, -1.8f, 3.2f, 0f, objectId)) return "Підійдіть ближче до електрощитка.";
+                    if (!State.power) return "Немає напруги! Спочатку запустіть дизельний генератор на подвір'ї школи.";
+                    State.breakerOn = State.quest.breakerOn = !State.breakerOn;
+                    DeadAirAudio.Play(State.breakerOn ? "power" : "click");
+                    State.message = State.breakerOn 
+                        ? "ОСВІТЛЕННЯ ВІДНОВЛЕНО! Світло на всіх поверхах школи увімкнено." 
+                        : "Рубильник вимкнено. Школа знову поринула у темряву.";
+                    Dirty = true;
+                    return null;
+                }
                 if (objectId == "van-exit")
                 {
                     if (!Near(p, 0f, .5f, 43f, 4.5f, 0f, objectId)) return "Підійдіть до фургона журналістів.";

@@ -37,6 +37,8 @@ namespace DeadAir
 			public float flickerOffset;
 
 			public bool lastBulbOn = true;
+
+			public bool isInterior;
 		}
 
 		public sealed class PillItem
@@ -124,6 +126,9 @@ namespace DeadAir
 		private float nextLightUpdate;
 
 		private static readonly int LampColorId = Shader.PropertyToID("_Color");
+		private Renderer generatorIndicatorRenderer;
+		private Renderer breakerIndicatorRenderer;
+		private Transform breakerHandleTransform;
 
 		private Material matPlaster;
 
@@ -236,6 +241,7 @@ namespace DeadAir
 			float y = floorY + height * 0.5f;
 			CreateBox(parent, new Vector3(-25f, y, -22f), new Vector3(22f, height, 0.22f), matPlaster, addCollider: true, "Old-to-New West Wall");
 			CreateBox(parent, new Vector3(-8.6f, y, -22f), new Vector3(6.8f, height, 0.22f), matPlaster);
+			CreateBox(parent, new Vector3(0f, y, -22f), new Vector3(10.6f, height, 0.22f), matPlaster, addCollider: true, "Stairwell North Wall");
 			CreateBox(parent, new Vector3(8.6f, y, -22f), new Vector3(6.8f, height, 0.22f), matPlaster);
 			CreateBox(parent, new Vector3(25f, y, -22f), new Vector3(22f, height, 0.22f), matPlaster, addCollider: true, "Old-to-New East Wall");
 			int[] array = new int[2] { -1, 1 };
@@ -333,8 +339,10 @@ namespace DeadAir
 			BuildExitSign(transform, new Vector3(-6f, 10.3f, -13.4f));
 			BuildExitSign(transform, new Vector3(6f, 10.3f, -13.4f));
 			CreateInteriorLamp(transform, new Vector3(0f, 10.7f, -11f));
+			CreateBox(transform, new Vector3(-3f, 7.45f, -13.65f), new Vector3(5.6f, 0.1f, 0.35f), matWoodFloor, addCollider: true, "Third Floor Stair Arrival Threshold");
 			CreateBox(transform, new Vector3(2.7f, 7.95f, -13.55f), new Vector3(6.3f, 1f, 0.08f), matDarkMetal, addCollider: true, "Third Floor South Stair Guardrail");
 			CreateBox(transform, new Vector3(-0.6f, 7.95f, -16f), new Vector3(0.08f, 1f, 4.8f), matDarkMetal, addCollider: true, "Third Floor Inner Stair Guardrail");
+			CreateBox(transform, new Vector3(2.7f, 7.95f, -18.4f), new Vector3(6.3f, 1f, 0.08f), matDarkMetal, addCollider: true, "Third Floor North Stair Guardrail");
 		}
 
 		private void BuildCompactClassroom(Transform parent, float centerX, float floorY, float centerZ, string label, int seed)
@@ -1108,12 +1116,12 @@ namespace DeadAir
 			Color32[] array = new Color32[num * num2];
 			Color32[] array2 = new Color32[6]
 			{
-				new Color32(160, 45, 35, byte.MaxValue),
-				new Color32(35, 75, 140, byte.MaxValue),
-				new Color32(40, 110, 55, byte.MaxValue),
-				new Color32(180, 130, 40, byte.MaxValue),
-				new Color32(110, 50, 120, byte.MaxValue),
-				new Color32(60, 60, 65, byte.MaxValue)
+				new Color32(95, 45, 40, byte.MaxValue),
+				new Color32(35, 50, 75, byte.MaxValue),
+				new Color32(45, 65, 45, byte.MaxValue),
+				new Color32(115, 95, 65, byte.MaxValue),
+				new Color32(75, 55, 40, byte.MaxValue),
+				new Color32(50, 55, 60, byte.MaxValue)
 			};
 			for (int i = 0; i < num; i++)
 			{
@@ -1123,11 +1131,11 @@ namespace DeadAir
 				{
 					if (i % 10 == 0 || j == 0 || j == num2 - 1)
 					{
-						array[j * num + i] = new Color32(25, 25, 25, byte.MaxValue);
+						array[j * num + i] = new Color32(20, 20, 20, byte.MaxValue);
 					}
 					else if (j > 20 && j < 35 && i % 10 > 2 && i % 10 < 8)
 					{
-						array[j * num + i] = new Color32(230, 220, 180, byte.MaxValue);
+						array[j * num + i] = new Color32(210, 200, 175, byte.MaxValue);
 					}
 					else
 					{
@@ -1160,6 +1168,7 @@ namespace DeadAir
 			matChalkboard = CreateTexturedMat("Chalkboard", shader, texture5, Color.white, 0.05f);
 			matPaper = CreateTexturedMat("PaperSheet", shader, texture6, Color.white, 0.1f);
 			matBooks = CreateTexturedMat("BookCovers", shader, texture7, Color.white, 0.2f);
+			matBooks.mainTextureScale = new Vector2(8f, 1f);
 			matGlass = new Material(shader2)
 			{
 				name = "SchoolWindowGlass",
@@ -1531,6 +1540,7 @@ namespace DeadAir
 				CreateBox(transform, new Vector3((float)j * 5.5f, 1.8f, 36f), new Vector3(1f, 3.6f, 1f), matConcrete, addCollider: true, "Gate Pillar");
 				CreateBox(transform, new Vector3((float)j * 5.5f, 3.65f, 36f), new Vector3(1.2f, 0.2f, 1.2f), matDarkMetal, addCollider: false);
 			}
+			BuildSchoolGenerator(transform, new Vector3(-8.0f, 0f, 2.5f));
 		}
 
 		private void CreateRing(Transform parent, Vector3 center, float radius, Material mat)
@@ -1639,9 +1649,8 @@ namespace DeadAir
 				};
 				for (int k = -1; k <= 1; k += 2)
 				{
-					CreateBox(transform, new Vector3((float)k * 34.5f, num2, facadeZ), new Vector3(3f, 2f, 0.35f), matPlaster);
-					CreateBox(transform, new Vector3((float)k * 6.5f, num2, facadeZ), new Vector3(3f, 2f, 0.35f), matPlaster);
-					for (int l = 0; l < 4; l++)
+					CreateBox(transform, new Vector3((float)k * 6.8f, num2, facadeZ), new Vector3(3.6f, 2f, 0.35f), matPlaster);
+					for (int l = 0; l < 5; l++)
 					{
 						float num3 = (float)k * (10.5f + (float)l * 5.4f);
 						CreateBox(transform, new Vector3(num3, num2, facadeZ), new Vector3(3.8f, 1.9f, 0.02f), matGlass, addCollider: true, "Transparent Classroom Window");
@@ -1651,11 +1660,12 @@ namespace DeadAir
 						CreateBox(transform, new Vector3(num3, num2 + 0.95f, facadeZ), new Vector3(4f, 0.12f, 0.14f), matWhite, addCollider: false);
 						CreateBox(transform, new Vector3(num3, num2, facadeZ), new Vector3(0.06f, 1.9f, 0.06f), matDarkMetal, addCollider: false);
 						CreateBox(transform, new Vector3(num3, num2, facadeZ), new Vector3(3.8f, 0.06f, 0.06f), matDarkMetal, addCollider: false);
-						if (l < 3)
+						if (l < 4)
 						{
-							CreateBox(transform, new Vector3((float)k * (13.2f + (float)l * 5.4f), num2, facadeZ), new Vector3(1.4f, 2f, 0.35f), matPlaster);
+							CreateBox(transform, new Vector3((float)k * (13.2f + (float)l * 5.4f), num2, facadeZ), new Vector3(1.6f, 2f, 0.35f), matPlaster);
 						}
 					}
+					CreateBox(transform, new Vector3((float)k * 35.05f, num2, facadeZ), new Vector3(1.9f, 2f, 0.35f), matPlaster);
 				}
 			}
 		}
@@ -1687,6 +1697,7 @@ namespace DeadAir
 			BuildShoeLockers(transform, new Vector3(-4.1f, 0.6f, -5.5f), 90f);
 			BuildShoeLockers(transform, new Vector3(4.1f, 0.6f, -5.5f), -90f);
 			CreateInteriorLamp(transform, new Vector3(0f, 3.65f, -4.5f));
+			BuildSchoolBreaker(transform, new Vector3(4.75f, 1.6f, -1.8f));
 		}
 
 		private void BuildShoeLockers(Transform parent, Vector3 pos, float yaw)
@@ -1725,7 +1736,9 @@ namespace DeadAir
 			transform.SetParent(Root, worldPositionStays: false);
 			float num = 0.6f;
 			float num2 = 3.8f;
-			CreateBox(transform, new Vector3(0f, num * 0.5f, -11f), new Vector3(72f, num, 22f), matWoodFloor, addCollider: true, "Floor 1 Ground");
+			CreateBox(transform, new Vector3(-20.45f, num * 0.5f, -4.25f), new Vector3(31.1f, num, 8.5f), matWoodFloor, addCollider: true, "Floor 1 West Front Slab");
+			CreateBox(transform, new Vector3(20.45f, num * 0.5f, -4.25f), new Vector3(31.1f, num, 8.5f), matWoodFloor, addCollider: true, "Floor 1 East Front Slab");
+			CreateBox(transform, new Vector3(0f, num * 0.5f, -15.25f), new Vector3(72f, num, 13.5f), matWoodFloor, addCollider: true, "Floor 1 Rear Slab");
 			CreateBox(transform, new Vector3(-21f, num2 + 0.05f, -11f), new Vector3(30f, 0.15f, 22f), matConcrete, addCollider: true, "Ceiling Left Wing");
 			CreateBox(transform, new Vector3(21f, num2 + 0.05f, -11f), new Vector3(30f, 0.15f, 22f), matConcrete, addCollider: true, "Ceiling Right Wing");
 			CreateBox(transform, new Vector3(0f, num2 + 0.05f, -6.75f), new Vector3(12f, 0.15f, 13.5f), matConcrete, addCollider: true, "Ceiling Center South");
@@ -1738,8 +1751,8 @@ namespace DeadAir
 			BuildExitSign(transform, new Vector3(-6f, 2.9f, -13.35f));
 			BuildFireHydrant(transform, new Vector3(-18f, 1.4f, -8.65f));
 			BuildFireHydrant(transform, new Vector3(18f, 1.4f, -8.65f));
-			BuildNoticeBoard(transform, new Vector3(-12f, 2f, -8.65f));
-			BuildNoticeBoard(transform, new Vector3(12f, 2f, -8.65f));
+			BuildNoticeBoard(transform, new Vector3(-8.5f, 2f, -8.65f));
+			BuildNoticeBoard(transform, new Vector3(8.5f, 2f, -8.65f));
 			CreateBox(transform, new Vector3(-32.6f, 2.2f, -8.5f), new Vector3(6.8f, 3.2f, 0.25f), matPlaster);
 			CreateBox(transform, new Vector3(-20.75f, 2.2f, -8.5f), new Vector3(14f, 3.2f, 0.25f), matPlaster);
 			CreateBox(transform, new Vector3(-8.5f, 2.2f, -8.5f), new Vector3(7.5f, 3.2f, 0.25f), matPlaster);
@@ -1839,8 +1852,7 @@ namespace DeadAir
 			CreateBox(transform, new Vector3(-6f, num + 1.8f, -17.75f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster);
 			CreateBox(transform, new Vector3(6f, num + 1.8f, -17.75f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster);
 			CreateBox(transform, new Vector3(20.5f, num + 1.8f, -17.75f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster);
-			CreateBox(transform, new Vector3(2.6f, num + 0.5f, -13.6f), new Vector3(6.4f, 1f, 0.08f), matDarkMetal, addCollider: true, "Void Rail South");
-			CreateBox(transform, new Vector3(-0.6f, num + 0.5f, -16f), new Vector3(0.08f, 1f, 4.8f), matDarkMetal, addCollider: true, "Void Rail Center");
+			CreateBox(transform, new Vector3(0f, num + 0.05f, -13.65f), new Vector3(12f, 0.1f, 0.35f), matWoodFloor, addCollider: true, "Floor 2 Stair Threshold");
 			BuildClassroom(transform, -28.25f, num, -4.25f, "2-A", 4);
 			BuildClassroom(transform, -12.75f, num, -4.25f, "2-B", 5);
 			BuildClassroom(transform, 12.75f, num, -4.25f, "2-C", 6);
@@ -1858,8 +1870,12 @@ namespace DeadAir
 			float num = 0.6f;
 			float num2 = 2.2f;
 			float num3 = 3.8f;
-			CreateBox(transform, new Vector3(0f, num2 - 0.09f, -20f), new Vector3(11.2f, 0.18f, 3.6f), matConcrete, addCollider: true, "Midway Landing Platform");
-			CreateBox(transform, new Vector3(0f, 2f, -16f), new Vector3(0.2f, 3.2f, 4.4f), matConcrete, addCollider: true, "Stair Central Spine");
+			float numLanding2 = 5.6f;
+			float numFloor3 = 7.4f;
+
+			// --- Floor 1 to Floor 2 ---
+			CreateBox(transform, new Vector3(0f, num2 - 0.09f, -20f), new Vector3(11.2f, 0.18f, 3.6f), matConcrete, addCollider: true, "Midway Landing Platform 1F-2F");
+			CreateBox(transform, new Vector3(0f, 2f, -16f), new Vector3(0.2f, 3.2f, 4.4f), matConcrete, addCollider: true, "Stair Central Spine Lower");
 			int num4 = 10;
 			float num5 = (num2 - num) / (float)num4;
 			float num6 = 4.4f / (float)num4;
@@ -1872,6 +1888,7 @@ namespace DeadAir
 			CreateRamp(transform, new Vector3(3f, 1.4f, -16f), new Vector3(4.4f, 0.1f, 4.8f), 19.5f, "Flight 1 Smooth Ramp");
 			CreateBox(transform, new Vector3(5.3f, 2.25f, -16f), new Vector3(0.08f, 0.9f, 4.4f), matDarkMetal, addCollider: false, "Handrail F1 Wall");
 			CreateBox(transform, new Vector3(0.7f, 2.25f, -16f), new Vector3(0.08f, 0.9f, 4.4f), matDarkMetal, addCollider: false, "Handrail F1 Inner");
+
 			int num7 = 10;
 			float num8 = (num3 - num2) / (float)num7;
 			float num9 = 4.4f / (float)num7;
@@ -1884,7 +1901,44 @@ namespace DeadAir
 			CreateRamp(transform, new Vector3(-3f, 3f, -16f), new Vector3(4.4f, 0.1f, 4.8f), -19.5f, "Flight 2 Smooth Ramp");
 			CreateBox(transform, new Vector3(-5.3f, 3.85f, -16f), new Vector3(0.08f, 0.9f, 4.4f), matDarkMetal, addCollider: false, "Handrail F2 Wall");
 			CreateBox(transform, new Vector3(-0.7f, 3.85f, -16f), new Vector3(0.08f, 0.9f, 4.4f), matDarkMetal, addCollider: false, "Handrail F2 Inner");
-			CreateBox(transform, new Vector3(0f, num2 + 0.5f, -21.8f), new Vector3(11f, 1f, 0.08f), matDarkMetal, addCollider: false, "Landing Railing");
+			CreateBox(transform, new Vector3(0f, num2 + 0.5f, -21.8f), new Vector3(11f, 1f, 0.08f), matDarkMetal, addCollider: false, "Landing Railing 1");
+
+			// --- Floor 2 to Floor 3 ---
+			CreateBox(transform, new Vector3(0f, numLanding2 - 0.09f, -20f), new Vector3(11.2f, 0.18f, 3.6f), matConcrete, addCollider: true, "Midway Landing Platform 2F-3F");
+			CreateBox(transform, new Vector3(0f, 5.6f, -16f), new Vector3(0.2f, 3.6f, 4.4f), matConcrete, addCollider: true, "Stair Central Spine Upper");
+
+			int numStepsUpper = 10;
+			float stepHeightUpper = (numLanding2 - num3) / (float)numStepsUpper;
+			float stepDepthUpper = 4.4f / (float)numStepsUpper;
+
+			// Flight 3 (Floor 2 up North to Landing 2 at X = +3f)
+			for (int k = 0; k < numStepsUpper; k++)
+			{
+				float y3 = num3 + ((float)k + 0.5f) * stepHeightUpper;
+				float z3 = -13.8f - ((float)k + 0.5f) * stepDepthUpper;
+				CreateBox(transform, new Vector3(3f, y3, z3), new Vector3(4.4f, stepHeightUpper, stepDepthUpper), matConcrete, addCollider: true, "Step F3 " + k);
+			}
+			CreateRamp(transform, new Vector3(3f, 4.7f, -16f), new Vector3(4.4f, 0.1f, 4.8f), 22.25f, "Flight 3 Smooth Ramp");
+			CreateBox(transform, new Vector3(5.3f, 5.55f, -16f), new Vector3(0.08f, 0.9f, 4.4f), matDarkMetal, addCollider: false, "Handrail F3 Wall");
+			CreateBox(transform, new Vector3(0.7f, 5.55f, -16f), new Vector3(0.08f, 0.9f, 4.4f), matDarkMetal, addCollider: false, "Handrail F3 Inner");
+
+			// Flight 4 (Landing 2 up South to Floor 3 at X = -3f)
+			float stepHeightF4 = (numFloor3 - numLanding2) / (float)numStepsUpper;
+			for (int l = 0; l < numStepsUpper; l++)
+			{
+				float y4 = numLanding2 + ((float)l + 0.5f) * stepHeightF4;
+				float z4 = -18.2f + ((float)l + 0.5f) * stepDepthUpper;
+				CreateBox(transform, new Vector3(-3f, y4, z4), new Vector3(4.4f, stepHeightF4, stepDepthUpper), matConcrete, addCollider: true, "Step F4 " + l);
+			}
+			CreateRamp(transform, new Vector3(-3f, 6.5f, -16f), new Vector3(4.4f, 0.1f, 4.8f), -22.25f, "Flight 4 Smooth Ramp");
+			CreateBox(transform, new Vector3(-5.3f, 7.35f, -16f), new Vector3(0.08f, 0.9f, 4.4f), matDarkMetal, addCollider: false, "Handrail F4 Wall");
+			CreateBox(transform, new Vector3(-0.7f, 7.35f, -16f), new Vector3(0.08f, 0.9f, 4.4f), matDarkMetal, addCollider: false, "Handrail F4 Inner");
+			CreateBox(transform, new Vector3(0f, numLanding2 + 0.5f, -21.8f), new Vector3(11f, 1f, 0.08f), matDarkMetal, addCollider: false, "Landing Railing 2");
+
+			// Stairwell Lighting
+			CreateInteriorLamp(transform, new Vector3(0f, 3.4f, -20f));
+			CreateInteriorLamp(transform, new Vector3(0f, 7.0f, -20f));
+			CreateInteriorLamp(transform, new Vector3(0f, 10.6f, -16f));
 		}
 
 		private void BuildClassroomDoor(Transform parent, Vector3 basePos, float yaw, string roomName)
@@ -2099,7 +2153,7 @@ namespace DeadAir
 				GameObject gameObject = CreateBox(transform, new Vector3(centerX - 1.5f, floorY + 1.4f, z), new Vector3(6.5f, 2.6f, 0.7f), matDeskWood, addCollider: true, "Archive Shelf");
 				for (int j = 0; j < 3; j++)
 				{
-					CreateBox(gameObject.transform, new Vector3(0f, -0.8f + (float)j * 0.75f, 0.05f), new Vector3(6.2f, 0.45f, 0.55f), matBooks, addCollider: false);
+					CreateBox(transform, new Vector3(centerX - 1.5f, floorY + 0.6f + (float)j * 0.75f, z + 0.05f), new Vector3(6.1f, 0.42f, 0.5f), matBooks, addCollider: false, "Archive Shelf Books");
 				}
 			}
 			CreateInteriorLamp(transform, new Vector3(centerX, floorY + 3.1f, -17.75f));
@@ -2174,7 +2228,7 @@ namespace DeadAir
 				GameObject gameObject = CreateBox(transform, new Vector3(centerX - 3f, floorY + 1.4f, z), new Vector3(5.5f, 2.8f, 0.65f), matDeskWood, addCollider: true, "Bookshelf");
 				for (int j = 0; j < 4; j++)
 				{
-					CreateBox(gameObject.transform, new Vector3(0f, -1f + (float)j * 0.65f, 0.05f), new Vector3(5.2f, 0.45f, 0.55f), matBooks, addCollider: false);
+					CreateBox(transform, new Vector3(centerX - 3f, floorY + 0.45f + (float)j * 0.62f, z + 0.05f), new Vector3(5.1f, 0.38f, 0.48f), matBooks, addCollider: false, "Library Shelf Books");
 				}
 			}
 			GameObject gameObject2 = CreateBox(transform, new Vector3(centerX + 3.2f, floorY + 0.4f, -17.75f), new Vector3(2.6f, 0.8f, 4.8f), matDeskWood, addCollider: true, "Study Table");
@@ -2224,7 +2278,8 @@ namespace DeadAir
 				bulb = gameObject.GetComponent<Renderer>(),
 				baseIntensity = 1.6f,
 				worksNormally = true,
-				flickerOffset = UnityEngine.Random.value * 20f
+				flickerOffset = UnityEngine.Random.value * 20f,
+				isInterior = true
 			});
 		}
 
@@ -2245,9 +2300,46 @@ namespace DeadAir
 
 		private void BuildNoticeBoard(Transform parent, Vector3 pos)
 		{
-			GameObject gameObject = CreateBox(parent, pos, new Vector3(2.4f, 1.2f, 0.06f), matWoodFloor, addCollider: false, "NoticeBoard");
-			CreateBox(gameObject.transform, new Vector3(-0.6f, 0.15f, 0.04f), new Vector3(0.45f, 0.6f, 0.02f), matPaper, addCollider: false, "Poster 1");
-			CreateBox(gameObject.transform, new Vector3(0.4f, -0.1f, 0.04f), new Vector3(0.55f, 0.45f, 0.02f), matPaper, addCollider: false, "Poster 2");
+			Transform boardRoot = new GameObject("NoticeBoard").transform;
+			boardRoot.SetParent(parent, worldPositionStays: false);
+			boardRoot.localPosition = pos;
+			CreateBox(boardRoot, Vector3.zero, new Vector3(2.4f, 1.2f, 0.05f), matDeskWood, addCollider: false, "Board Frame");
+			CreateBox(boardRoot, new Vector3(0f, 0f, -0.005f), new Vector3(2.28f, 1.08f, 0.05f), matPaper, addCollider: false, "Board Cork");
+			CreateBox(boardRoot, new Vector3(-0.6f, 0.15f, -0.035f), new Vector3(0.55f, 0.7f, 0.02f), matWhite, addCollider: false, "Poster 1");
+			CreateBox(boardRoot, new Vector3(0.45f, -0.1f, -0.035f), new Vector3(0.65f, 0.5f, 0.02f), matPaper, addCollider: false, "Poster 2");
+			CreateBox(boardRoot, new Vector3(-0.05f, -0.2f, -0.035f), new Vector3(0.35f, 0.45f, 0.02f), matWhite, addCollider: false, "Poster 3");
+		}
+
+		private void BuildSchoolGenerator(Transform parent, Vector3 pos)
+		{
+			Transform gen = new GameObject("School Generator").transform;
+			gen.SetParent(parent, worldPositionStays: false);
+			gen.localPosition = pos;
+
+			CreateBox(gen, new Vector3(0f, 0.08f, 0f), new Vector3(1.8f, 0.16f, 1.4f), matConcrete, addCollider: true, "Pad");
+			CreateBox(gen, new Vector3(0f, 0.6f, 0f), new Vector3(1.5f, 0.88f, 1.1f), matDarkMetal, addCollider: true, "Generator Body");
+			CreateBox(gen, new Vector3(0f, 1.12f, 0f), new Vector3(1.2f, 0.22f, 0.8f), matTorii, addCollider: false, "Fuel Tank");
+			CreateCylinder(gen, new Vector3(0.4f, 1.26f, 0f), 0.08f, 0.08f, matDarkMetal, addCollider: false);
+			CreateCylinder(gen, new Vector3(-0.55f, 1.35f, -0.3f), 0.05f, 0.55f, matDarkMetal, addCollider: false);
+			CreateBox(gen, new Vector3(0f, 0.65f, 0.56f), new Vector3(0.7f, 0.45f, 0.05f), matPlaster, addCollider: false, "Control Panel");
+			GameObject ind = CreateBox(gen, new Vector3(-0.2f, 0.75f, 0.6f), new Vector3(0.08f, 0.08f, 0.04f), matWhite, addCollider: false, "Gen Indicator");
+			generatorIndicatorRenderer = ind.GetComponent<Renderer>();
+		}
+
+		private void BuildSchoolBreaker(Transform parent, Vector3 pos)
+		{
+			Transform breaker = new GameObject("School Breaker Box").transform;
+			breaker.SetParent(parent, worldPositionStays: false);
+			breaker.localPosition = pos;
+
+			CreateBox(breaker, Vector3.zero, new Vector3(0.1f, 0.85f, 0.6f), matDarkMetal, addCollider: true, "Panel Body");
+			CreateBox(breaker, new Vector3(-0.045f, 0f, 0f), new Vector3(0.02f, 0.78f, 0.54f), matPlaster, addCollider: false, "Face Plate");
+			CreateBox(breaker, new Vector3(-0.05f, 0.22f, 0f), new Vector3(0.02f, 0.24f, 0.35f), matDarkMetal, addCollider: false, "Meter Window");
+			CreateBox(breaker, new Vector3(-0.062f, 0.22f, 0f), new Vector3(0.01f, 0.2f, 0.3f), matGlass, addCollider: false, "Meter Glass");
+			GameObject ind = CreateBox(breaker, new Vector3(-0.06f, -0.05f, 0.15f), new Vector3(0.03f, 0.06f, 0.06f), matWhite, addCollider: false, "Breaker Light");
+			breakerIndicatorRenderer = ind.GetComponent<Renderer>();
+			GameObject handle = CreateBox(breaker, new Vector3(-0.07f, -0.15f, -0.08f), new Vector3(0.04f, 0.22f, 0.06f), matTorii, addCollider: false, "Breaker Lever");
+			breakerHandleTransform = handle.transform;
 		}
 
 		private void BuildTraditionalPark()
@@ -2446,7 +2538,8 @@ namespace DeadAir
 				bulb = gameObject.GetComponent<Renderer>(),
 				baseIntensity = 3f,
 				worksNormally = worksNormally,
-				flickerOffset = UnityEngine.Random.value * 50f
+				flickerOffset = UnityEngine.Random.value * 50f,
+				isInterior = false
 			});
 		}
 
@@ -2497,11 +2590,26 @@ namespace DeadAir
 					viewCamera = Camera.main;
 				}
 				Vector3 vector = ((viewCamera != null) ? viewCamera.transform.position : Vector3.zero);
+				bool interiorPowered = state != null && state.power && state.breakerOn;
 				for (int i = 0; i < lamps.Count; i++)
 				{
 					FlickeringLamp flickeringLamp = lamps[i];
 					if (flickeringLamp.light == null)
 					{
+						continue;
+					}
+					if (flickeringLamp.isInterior && !interiorPowered)
+					{
+						if (flickeringLamp.light.enabled)
+						{
+							flickeringLamp.light.enabled = false;
+						}
+						if (flickeringLamp.bulb != null && flickeringLamp.lastBulbOn)
+						{
+							lampPropertyBlock.SetColor(LampColorId, new Color(0.1f, 0.1f, 0.1f));
+							flickeringLamp.bulb.SetPropertyBlock(lampPropertyBlock);
+							flickeringLamp.lastBulbOn = false;
+						}
 						continue;
 					}
 					float num = flickeringLamp.light.range + 18f;
@@ -2511,6 +2619,12 @@ namespace DeadAir
 						if (flickeringLamp.light.enabled != flag)
 						{
 							flickeringLamp.light.enabled = flag;
+						}
+						if (flickeringLamp.bulb != null && !flickeringLamp.lastBulbOn && flag)
+						{
+							lampPropertyBlock.SetColor(LampColorId, Color.white);
+							flickeringLamp.bulb.SetPropertyBlock(lampPropertyBlock);
+							flickeringLamp.lastBulbOn = true;
 						}
 						continue;
 					}
@@ -2529,6 +2643,24 @@ namespace DeadAir
 						lampPropertyBlock.SetColor(LampColorId, flag2 ? Color.white : new Color(0.2f, 0.2f, 0.2f));
 						flickeringLamp.bulb.SetPropertyBlock(lampPropertyBlock);
 						flickeringLamp.lastBulbOn = flag2;
+					}
+				}
+				if (state != null)
+				{
+					if (generatorIndicatorRenderer != null)
+					{
+						lampPropertyBlock.SetColor(LampColorId, state.power ? new Color(0.2f, 0.95f, 0.2f) : new Color(0.85f, 0.2f, 0.1f));
+						generatorIndicatorRenderer.SetPropertyBlock(lampPropertyBlock);
+					}
+					if (breakerIndicatorRenderer != null)
+					{
+						Color bColor = (state.power && state.breakerOn) ? new Color(0.2f, 0.95f, 0.2f) : (state.power ? new Color(0.95f, 0.7f, 0.1f) : new Color(0.18f, 0.18f, 0.18f));
+						lampPropertyBlock.SetColor(LampColorId, bColor);
+						breakerIndicatorRenderer.SetPropertyBlock(lampPropertyBlock);
+					}
+					if (breakerHandleTransform != null)
+					{
+						breakerHandleTransform.localRotation = Quaternion.Euler(0f, 0f, state.breakerOn ? 35f : -35f);
 					}
 				}
 			}

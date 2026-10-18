@@ -105,7 +105,9 @@ namespace DeadAir
                 objectiveText.text = state.tapes.Count >= 5
                     ? "ЕВАКУАЦІЯ: Всі 5 касет зібрано! Біжіть до фургона журналістів на дорозі!"
                     : "РОЗСЛІДУВАННЯ: Знайдіть 5 касет-доказів про Тек-Тек (" + state.tapes.Count + " / 5). Пийте пігулки для збереження розсудку!";
-                journalChecklist.text = Check(state.Collected("tape-1"), "Касета 1: Щоденник учня (клас 1-B)") + "\n" +
+                journalChecklist.text = Check(state.power, "Запустити генератор на подвір'ї") + "\n" +
+                    Check(state.breakerOn, "Увімкнути щиток освітлення школи") + "\n" +
+                    Check(state.Collected("tape-1"), "Касета 1: Щоденник учня (клас 1-B)") + "\n" +
                     Check(state.Collected("tape-2"), "Касета 2: Звіт вчительської ради (вчительська)") + "\n" +
                     Check(state.Collected("tape-3"), "Касета 3: Окультний запис (музичний клас, 2 поверх)") + "\n" +
                     Check(state.Collected("tape-4"), "Касета 4: Запис спостереження (клас 2-A)") + "\n" +
