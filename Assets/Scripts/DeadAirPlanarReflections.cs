@@ -25,92 +25,112 @@ namespace DeadAir
 
         void Awake() { source = GetComponent<Camera>(); }
 
-        void OnPreCull()
-        {
-            if (rendering || source == null) return;
-            if (!DeadAirSettings.Reflections)
-            {
-                Shader.SetGlobalFloat("_DeadAirReflectionEnabled", 0);
-                IsRenderingReflection = false;
-                return;
-            }
-            float floor = source.transform.position.y > 4.6f ? 4.2f : source.transform.position.y < -1 ? -4.2f : 0;
-            if(!HasVisibleReceiver(floor))
-            {
-                Shader.SetGlobalFloat("_DeadAirReflectionEnabled",0);
-                IsRenderingReflection=false;
-                return;
-            }
-            int interval = DeadAirSettings.GraphicsQuality == 2 ? 1 : 2;
-            int width = Mathf.Max(256, Mathf.RoundToInt((source.targetTexture != null ? source.targetTexture.width : Screen.width) * .5f));
-            int height = Mathf.Max(144, Mathf.RoundToInt((source.targetTexture != null ? source.targetTexture.height : Screen.height) * .5f));
-            if (IsRenderingReflection && frame != null && frame.width == width && frame.height == height &&
-                lastFloor == floor && lastMask == source.cullingMask &&
-                Time.frameCount - lastFrame < interval) return;
-            if (frame == null || frame.width != width || frame.height != height)
-            {
-                ReleaseFrame();
-                frame = new RenderTexture(width, height, 16, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear)
-                {
-                    name = "Dead Air polished floor reflection", filterMode = FilterMode.Bilinear,
-                    wrapMode = TextureWrapMode.Clamp, hideFlags = HideFlags.DontSave
-                };
-                frame.Create();
-            }
-            if (reflectedCamera == null)
-            {
-                var reflection = new GameObject("Dead Air mirrored floor camera") { hideFlags = HideFlags.DontSave };
-                reflectedCamera = reflection.AddComponent<Camera>();
-            }
-            reflectedCamera.CopyFrom(source);
-            reflectedCamera.enabled = false;
-            reflectedCamera.depthTextureMode = DepthTextureMode.None;
-            reflectedCamera.useOcclusionCulling = false;
-            reflectedCamera.allowMSAA = false;
-            reflectedCamera.targetTexture = frame;
-            reflectedCamera.cullingMask = source.cullingMask & ~(1 << 30);
-            reflectedCamera.clearFlags = CameraClearFlags.SolidColor;
-            reflectedCamera.backgroundColor = new Color(.012f, .019f, .034f);
-            var reflectionMatrix = Matrix4x4.identity;
-            reflectionMatrix.m11 = -1;
-            reflectionMatrix.m13 = 2 * floor;
-            reflectedCamera.transform.position = reflectionMatrix.MultiplyPoint(source.transform.position);
-            reflectedCamera.transform.rotation = Quaternion.Euler(-source.transform.eulerAngles.x, source.transform.eulerAngles.y, source.transform.eulerAngles.z);
-            reflectedCamera.worldToCameraMatrix = source.worldToCameraMatrix * reflectionMatrix;
-            Vector3 position = reflectedCamera.worldToCameraMatrix.MultiplyPoint(new Vector3(0, floor + .025f, 0));
-            Vector3 normal = reflectedCamera.worldToCameraMatrix.MultiplyVector(Vector3.up).normalized;
-            var clip = new Vector4(normal.x, normal.y, normal.z, -Vector3.Dot(position, normal));
-            reflectedCamera.projectionMatrix = source.CalculateObliqueMatrix(clip);
-            bool previousCulling = GL.invertCulling;
-            int previousPixelLights = QualitySettings.pixelLightCount;
-            try
-            {
-                rendering = true;
-                Shader.SetGlobalFloat("_DeadAirReflectionEnabled", 0);
-                GL.invertCulling = !previousCulling;
-                // Avoid a second set of local shadow maps. Keep directional moon
-                // occlusion so reflected indoor walls do not glow through roofs.
-                SuspendLocalShadows(reflectedCamera.cullingMask);
-                QualitySettings.pixelLightCount = Mathf.Min(previousPixelLights, 4);
-                reflectedCamera.Render();
-            }
-            finally
-            {
-                RestoreLocalShadows();
-                QualitySettings.pixelLightCount = previousPixelLights;
-                GL.invertCulling = previousCulling;
-                rendering = false;
-            }
-            Shader.SetGlobalTexture("_DeadAirReflectionTex", frame);
-            Shader.SetGlobalVector("_DeadAirReflectionTex_TexelSize", new Vector4(1f / width, 1f / height, width, height));
-            Shader.SetGlobalMatrix("_DeadAirReflectionVP", GL.GetGPUProjectionMatrix(reflectedCamera.projectionMatrix, true) * reflectedCamera.worldToCameraMatrix);
-            Shader.SetGlobalFloat("_DeadAirReflectionFloor", floor);
-            Shader.SetGlobalFloat("_DeadAirReflectionEnabled", 1);
-            lastFrame = Time.frameCount;
-            lastFloor = floor;
-            lastMask = source.cullingMask;
-            IsRenderingReflection = true;
-        }
+
+		private void OnPreCull()
+		{
+			if (rendering || source == null)
+			{
+				return;
+			}
+			if (!DeadAirSettings.Reflections)
+			{
+				Shader.SetGlobalFloat("_DeadAirReflectionEnabled", 0f);
+				IsRenderingReflection = false;
+				return;
+			}
+			float num = ((source.transform.position.y > 4.6f) ? 4.2f : ((source.transform.position.y < -1f) ? (-4.2f) : 0f));
+			if (!HasVisibleReceiver(num))
+			{
+				Shader.SetGlobalFloat("_DeadAirReflectionEnabled", 0f);
+				IsRenderingReflection = false;
+				return;
+			}
+			int graphicsQuality = DeadAirSettings.GraphicsQuality;
+			int num2 = graphicsQuality switch
+			{
+				1 => 2, 
+				2 => 1, 
+				_ => 3, 
+			};
+			float num3 = graphicsQuality switch
+			{
+				1 => 0.4f, 
+				2 => 0.5f, 
+				_ => 0.33f, 
+			};
+			int num4 = Mathf.Max(192, Mathf.RoundToInt((float)((source.targetTexture != null) ? source.targetTexture.width : Screen.width) * num3));
+			int num5 = Mathf.Max(108, Mathf.RoundToInt((float)((source.targetTexture != null) ? source.targetTexture.height : Screen.height) * num3));
+			if (!IsRenderingReflection || !(frame != null) || frame.width != num4 || frame.height != num5 || lastFloor != num || lastMask != source.cullingMask || Time.frameCount - lastFrame >= num2)
+			{
+				if (frame == null || frame.width != num4 || frame.height != num5)
+				{
+					ReleaseFrame();
+					frame = new RenderTexture(num4, num5, 16, DeadAirFrameRenderer.HdrColorFormat, RenderTextureReadWrite.Linear)
+					{
+						name = "Dead Air polished floor reflection",
+						filterMode = FilterMode.Bilinear,
+						wrapMode = TextureWrapMode.Clamp,
+						hideFlags = HideFlags.DontSave
+					};
+					frame.Create();
+				}
+				if (reflectedCamera == null)
+				{
+					GameObject gameObject = new GameObject("Dead Air mirrored floor camera")
+					{
+						hideFlags = HideFlags.DontSave
+					};
+					reflectedCamera = gameObject.AddComponent<Camera>();
+				}
+				reflectedCamera.CopyFrom(source);
+				reflectedCamera.enabled = false;
+				reflectedCamera.depthTextureMode = DepthTextureMode.None;
+				reflectedCamera.useOcclusionCulling = false;
+				reflectedCamera.allowMSAA = false;
+				reflectedCamera.targetTexture = frame;
+				reflectedCamera.cullingMask = source.cullingMask & -1073741825;
+				reflectedCamera.clearFlags = CameraClearFlags.Color;
+				reflectedCamera.backgroundColor = new Color(0.012f, 0.019f, 0.034f);
+				Matrix4x4 identity = Matrix4x4.identity;
+				identity.m11 = -1f;
+				identity.m13 = 2f * num;
+				reflectedCamera.transform.position = identity.MultiplyPoint(source.transform.position);
+				reflectedCamera.transform.rotation = Quaternion.Euler(0f - source.transform.eulerAngles.x, source.transform.eulerAngles.y, source.transform.eulerAngles.z);
+				reflectedCamera.worldToCameraMatrix = source.worldToCameraMatrix * identity;
+				Vector3 lhs = reflectedCamera.worldToCameraMatrix.MultiplyPoint(new Vector3(0f, num + 0.025f, 0f));
+				Vector3 normalized = reflectedCamera.worldToCameraMatrix.MultiplyVector(Vector3.up).normalized;
+				Vector4 clipPlane = new Vector4(normalized.x, normalized.y, normalized.z, 0f - Vector3.Dot(lhs, normalized));
+				reflectedCamera.projectionMatrix = source.CalculateObliqueMatrix(clipPlane);
+				bool invertCulling = GL.invertCulling;
+				int pixelLightCount = QualitySettings.pixelLightCount;
+				try
+				{
+					rendering = true;
+					Shader.SetGlobalFloat("_DeadAirReflectionEnabled", 0f);
+					GL.invertCulling = !invertCulling;
+					SuspendLocalShadows(reflectedCamera.cullingMask);
+					QualitySettings.pixelLightCount = Mathf.Min(pixelLightCount, 4);
+					reflectedCamera.Render();
+				}
+				finally
+				{
+					RestoreLocalShadows();
+					QualitySettings.pixelLightCount = pixelLightCount;
+					GL.invertCulling = invertCulling;
+					rendering = false;
+				}
+				Shader.SetGlobalTexture("_DeadAirReflectionTex", frame);
+				Shader.SetGlobalVector("_DeadAirReflectionTex_TexelSize", new Vector4(1f / (float)num4, 1f / (float)num5, num4, num5));
+				Shader.SetGlobalMatrix("_DeadAirReflectionVP", GL.GetGPUProjectionMatrix(reflectedCamera.projectionMatrix, renderIntoTexture: true) * reflectedCamera.worldToCameraMatrix);
+				Shader.SetGlobalFloat("_DeadAirReflectionFloor", num);
+				Shader.SetGlobalFloat("_DeadAirReflectionEnabled", 1f);
+				lastFrame = Time.frameCount;
+				lastFloor = num;
+				lastMask = source.cullingMask;
+				IsRenderingReflection = true;
+			}
+		}
+
 
         public bool HasVisibleReceiver(float floor)
         {

@@ -64,72 +64,135 @@ namespace DeadAir
         float windowCutsceneTimer, cutsceneStartYaw, cutsceneStartPitch;
         GameObject cutsceneMonster;
 
-        public void Initialize(WorldData data, DeadAirSession game, DeadAirUI gameUI)
-        {
-            world = data; session = game; ui = gameUI;
-            lockerInteractionLabels = new string[data.lockers.Length];
-            for (int i = 0; i < data.lockers.Length; i++) lockerInteractionLabels[i] = "Сховатися: " + data.lockers[i].label;
-            doorInteractionLabels = new DoorInteractionLabels[data.doors.Length];
-            for (int i = 0; i < data.doors.Length; i++)
-            {
-                string open = data.doors[i].label + " — зачинити", closed = data.doors[i].label + " — відчинити";
-                doorInteractionLabels[i] = new DoorInteractionLabels { open = open, closed = closed,
-                    lockedOpen = open + " (потрібна картка або ключ)", lockedClosed = closed + " (потрібна картка або ключ)" };
-            }
-            mushroomInteractionLabels = new string[data.Mushrooms.Length];
-            for (int i = 0; i < data.Mushrooms.Length; i++) mushroomInteractionLabels[i] = "З’їсти " + data.Mushrooms[i].label + " · дивний ефект";
-            if (data.props != null)
-                foreach (var prop in data.props)
-                    drawerSlideOffsets[prop.id] = DeadAirOfficeLayout.Rotation(prop.rotation) * Vector3.forward * .38f;
-            var office = GameObject.Find("BLACKPINE / original web scene");
-            if (office != null)
-                foreach (var part in office.GetComponentsInChildren<Transform>(true))
-                {
-                    if (!part.name.StartsWith("drawer:", StringComparison.Ordinal)) continue;
-                    var front = part.Find("Drawer front");
-                    if (front != null) drawerAimFronts[part.name.Substring("drawer:".Length)] = front;
-                }
-            foreach(var argument in Environment.GetCommandLineArgs())
-                if(argument=="-deadAirCapture"||argument=="-deadAirOfficeCapture"||argument=="-deadAirMenuCapture"||argument=="-deadAirRepairCapture"||argument=="-deadAirLightingCapture"||argument=="-deadAirHorrorCapture"||argument=="-deadAirMovementVerification"||argument=="-deadAirIndieCapture"||argument=="-deadAirUpdateCapture"||argument=="-deadAirGraphicsCapture")verificationAllowed=true;
-            if(Array.IndexOf(Environment.GetCommandLineArgs(), "-deadAirFieldCapture") >= 0) verificationAllowed = true;
-            if(Array.IndexOf(Environment.GetCommandLineArgs(), "-deadAirBodyCapture") >= 0) verificationAllowed = true;
-            controller = gameObject.AddComponent<CharacterController>();
-            controller.height = 1.7f; controller.radius = .22f; controller.center = new Vector3(0, .85f, 0);
-            controller.stepOffset = .28f; controller.slopeLimit = 48; controller.skinWidth = .035f;
-            transform.position = new Vector3(-data.spawn.x, data.spawn.y, data.spawn.z);
-            view = new GameObject("First person camera").AddComponent<Camera>();
-            view.tag = "MainCamera";
-            view.transform.SetParent(transform, false);
-            view.transform.localPosition = new Vector3(0, 1.65f, 0);
-            view.fieldOfView = 68; view.nearClipPlane = .08f; view.farClipPlane = 250;
-            view.clearFlags = CameraClearFlags.Depth;
-            view.backgroundColor = new Color32(10, 16, 10, 255);
-            view.allowHDR = true;
-            view.gameObject.AddComponent<AudioListener>();
-            view.gameObject.AddComponent<DeadAirAudioLimiter>();
-            flashlight = new GameObject("Flashlight").AddComponent<Light>();
-            flashlight.transform.SetParent(view.transform, false);
-            flashlight.type = LightType.Spot;
-            flashlight.range = 24; flashlight.spotAngle = 62; flashlight.innerSpotAngle = 17;
-            flashlight.color = new Color32(255, 239, 211, 255);
-            flashlight.intensity = 1.45f;
-            flashlight.cullingMask = ~((1 << 28) | (1 << 29) | (1 << 30));
-            flashlight.shadows = LightShadows.Soft;
-            flashlight.shadowStrength = .78f; flashlight.shadowBias = .012f;
-            flashlight.shadowNormalBias = .04f; flashlight.renderMode = LightRenderMode.ForcePixel;
-            flashlight.transform.localPosition = new Vector3(.16f, -.12f, .15f);
-            firstPerson = gameObject.AddComponent<DeadAirFirstPersonRig>();
-            firstPerson.Initialize(view, world);
-            firstPersonBody = gameObject.AddComponent<DeadAirFirstPersonBody>();
-            menuBackdrop = gameObject.AddComponent<DeadAirMenuBackdrop>();
-        }
+
+		public void Initialize(WorldData data, DeadAirSession game, DeadAirUI gameUI)
+		{
+			world = data;
+			session = game;
+			ui = gameUI;
+			chapterBootstrap = UnityEngine.Object.FindAnyObjectByType<DeadAirBootstrap>();
+			lockerInteractionLabels = new string[data.lockers.Length];
+			for (int i = 0; i < data.lockers.Length; i++)
+			{
+				lockerInteractionLabels[i] = "Сховатися: " + data.lockers[i].label;
+			}
+			doorInteractionLabels = new DoorInteractionLabels[data.doors.Length];
+			for (int j = 0; j < data.doors.Length; j++)
+			{
+				string text = data.doors[j].label + " — зачинити";
+				string text2 = data.doors[j].label + " — відчинити";
+				doorInteractionLabels[j] = new DoorInteractionLabels
+				{
+					open = text,
+					closed = text2,
+					lockedOpen = text + " (потрібна картка або ключ)",
+					lockedClosed = text2 + " (потрібна картка або ключ)"
+				};
+			}
+			mushroomInteractionLabels = new string[data.Mushrooms.Length];
+			for (int k = 0; k < data.Mushrooms.Length; k++)
+			{
+				mushroomInteractionLabels[k] = "З’їсти " + data.Mushrooms[k].label + " · дивний ефект";
+			}
+			if (data.props != null)
+			{
+				PropData[] props = data.props;
+				foreach (PropData propData in props)
+				{
+					drawerSlideOffsets[propData.id] = DeadAirOfficeLayout.Rotation(propData.rotation) * Vector3.forward * 0.38f;
+				}
+			}
+			GameObject gameObject = GameObject.Find("BLACKPINE / original web scene");
+			if (gameObject != null)
+			{
+				Transform[] componentsInChildren = gameObject.GetComponentsInChildren<Transform>(includeInactive: true);
+				foreach (Transform transform in componentsInChildren)
+				{
+					if (transform.name.StartsWith("drawer:", StringComparison.Ordinal))
+					{
+						Transform transform2 = transform.Find("Drawer front");
+						if (transform2 != null)
+						{
+							drawerAimFronts[transform.name.Substring("drawer:".Length)] = transform2;
+						}
+					}
+				}
+			}
+			string[] commandLineArgs = Environment.GetCommandLineArgs();
+			for (int l = 0; l < commandLineArgs.Length; l++)
+			{
+				switch (commandLineArgs[l])
+				{
+				case "-deadAirCapture":
+				case "-deadAirOfficeCapture":
+				case "-deadAirMenuCapture":
+				case "-deadAirRepairCapture":
+				case "-deadAirLightingCapture":
+				case "-deadAirHorrorCapture":
+				case "-deadAirMovementVerification":
+				case "-deadAirIndieCapture":
+				case "-deadAirUpdateCapture":
+				case "-deadAirGraphicsCapture":
+					verificationAllowed = true;
+					break;
+				}
+			}
+			if (Array.IndexOf(Environment.GetCommandLineArgs(), "-deadAirFieldCapture") >= 0)
+			{
+				verificationAllowed = true;
+			}
+			if (Array.IndexOf(Environment.GetCommandLineArgs(), "-deadAirBodyCapture") >= 0)
+			{
+				verificationAllowed = true;
+			}
+			controller = base.gameObject.AddComponent<CharacterController>();
+			controller.height = 1.7f;
+			controller.radius = 0.22f;
+			controller.center = new Vector3(0f, 0.85f, 0f);
+			controller.stepOffset = 0.28f;
+			controller.slopeLimit = 48f;
+			controller.skinWidth = 0.035f;
+			base.transform.position = new Vector3(0f - data.spawn.x, data.spawn.y, data.spawn.z);
+			view = new GameObject("First person camera").AddComponent<Camera>();
+			view.tag = "MainCamera";
+			view.transform.SetParent(base.transform, worldPositionStays: false);
+			view.transform.localPosition = new Vector3(0f, 1.65f, 0f);
+			view.fieldOfView = 68f;
+			view.nearClipPlane = 0.08f;
+			view.farClipPlane = 250f;
+			view.clearFlags = CameraClearFlags.Depth;
+			view.backgroundColor = new Color32(10, 16, 10, byte.MaxValue);
+			view.allowHDR = true;
+			view.gameObject.AddComponent<AudioListener>();
+			view.gameObject.AddComponent<DeadAirAudioLimiter>();
+			flashlight = new GameObject("Flashlight").AddComponent<Light>();
+			flashlight.transform.SetParent(view.transform, worldPositionStays: false);
+			flashlight.type = LightType.Spot;
+			flashlight.range = 24f;
+			flashlight.spotAngle = 62f;
+			flashlight.innerSpotAngle = 17f;
+			flashlight.color = new Color32(byte.MaxValue, 239, 211, byte.MaxValue);
+			flashlight.intensity = 1.45f;
+			flashlight.cullingMask = -1879048193;
+			flashlight.shadows = LightShadows.Soft;
+			flashlight.shadowStrength = 0.78f;
+			flashlight.shadowBias = 0.012f;
+			flashlight.shadowNormalBias = 0.04f;
+			flashlight.renderMode = LightRenderMode.ForcePixel;
+			flashlight.transform.localPosition = new Vector3(0.16f, -0.12f, 0.15f);
+			firstPerson = base.gameObject.AddComponent<DeadAirFirstPersonRig>();
+			firstPerson.Initialize(view, world);
+			firstPersonBody = base.gameObject.AddComponent<DeadAirFirstPersonBody>();
+			menuBackdrop = base.gameObject.AddComponent<DeadAirMenuBackdrop>();
+		}
+
 
         void LateUpdate()
         {
             var state = session?.State;
             var me = state?.Player(session.LocalId);
             if (firstPersonBody == null) return;
-            if (me == null || (!IsPlaying && !inspectionPose)) { firstPersonBody.SetVisible(false); return; }
+            if (me == null || schoolWaiting || (!IsPlaying && !inspectionPose)) { firstPersonBody.SetVisible(false); return; }
             if (!climbingLadder && !windowCutsceneActive)
             {
                 var eye = view.transform.localPosition; eye.z = .08f; view.transform.localPosition = eye;
@@ -154,6 +217,19 @@ namespace DeadAir
             IsPlaying = state != null && (state.phase == "playing" || state.phase == "departing");
             if (menuCharacter != null) menuCharacter.SetActive(!IsPlaying && !inspectionPose);
             if (menuBackdrop != null) menuBackdrop.SetVisible(!IsPlaying && !inspectionPose);
+            schoolWaiting = state != null && state.phase == "playing" && DeadAirChapters.IsChapter2(state.chapterId) &&
+                chapterBootstrap != null && chapterBootstrap.World != null && !chapterBootstrap.World.IsSchoolReady;
+            if (schoolWaiting)
+            {
+                InteractionId = InteractionLabel = null;
+                Sprinting = false;
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+                if (flashlight != null) flashlight.enabled = false;
+                if (firstPerson != null) firstPerson.SetVisible(false);
+                if (firstPersonBody != null) firstPersonBody.SetVisible(false);
+                return;
+            }
             if (inspectionPose)
             {
                 Cursor.lockState = CursorLockMode.None; Cursor.visible = false;
@@ -729,8 +805,7 @@ namespace DeadAir
 
             if (DeadAirChapters.IsChapter2(state.chapterId))
             {
-                var bootstrap = UnityEngine.Object.FindAnyObjectByType<DeadAirBootstrap>();
-                var school = bootstrap != null && bootstrap.World != null ? bootstrap.World.SchoolWorld : null;
+                var school = chapterBootstrap != null && chapterBootstrap.World != null ? chapterBootstrap.World.SchoolWorld : null;
                 if (school != null)
                 {
                     foreach (var pill in school.Pills)
@@ -1045,5 +1120,13 @@ namespace DeadAir
             pausedLocally = paused;
             ui.ShowPause(paused);
         }
-    }
+    
+
+		private DeadAirBootstrap chapterBootstrap;
+
+
+
+		private bool schoolWaiting;
+
+}
 }

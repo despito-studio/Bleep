@@ -68,58 +68,61 @@ namespace DeadAir
             if (!DeadAirSettings.Reflections) Shader.SetGlobalFloat("_DeadAirReflectionEnabled", 0);
         }
 
-        public void EnsureTargets()
-        {
-            if (worldCamera == null || OutputCamera == null) return;
-            // Many overlapping practical lights repeatedly redraw room geometry in
-            // Forward. Deferred shades those pixels without one mesh pass per light.
-            // The small menu and Low preset keep the cheaper Forward setup.
-            bool menu=(worldCamera.cullingMask & (1 << 28))!=0;
-            var path=!menu && DeadAirSettings.GraphicsQuality>0 && SystemInfo.supportedRenderTargetCount>=4
-                ? RenderingPath.DeferredShading : RenderingPath.Forward;
-            if(worldCamera.renderingPath!=path)worldCamera.renderingPath=path;
-            int screenWidth = Mathf.Max(1, Screen.width);
-            int screenHeight = Mathf.Max(1, Screen.height);
-            float aspect = screenWidth / (float)screenHeight;
-            int height = Mathf.Max(240, Mathf.RoundToInt(screenHeight * DeadAirSettings.RenderScale));
-            int width = Mathf.Max(1, Mathf.RoundToInt(height * aspect));
 
-            if (SceneFrame == null || SceneFrame.width != width || SceneFrame.height != height)
-            {
-                // Keep lamp and flashlight highlights until the final tone map.
-                // An 8-bit scene target clipped them before exposure was applied.
-                var format = SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.ARGBHalf)
-                    ? RenderTextureFormat.ARGBHalf : RenderTextureFormat.ARGB32;
-                var next = new RenderTexture(width, height, 24, format, RenderTextureReadWrite.Linear)
-                {
-                    name = "DEAD AIR scene frame",
-                    filterMode = FilterMode.Bilinear,
-                    wrapMode = TextureWrapMode.Clamp,
-                    antiAliasing = 1,
-                    useMipMap = false,
-                    autoGenerateMips = false,
-                    hideFlags = HideFlags.DontSave
-                };
-                if (!next.Create())
-                {
-                    DestroyTexture(next);
-                    throw new InvalidOperationException("Unable to allocate the DEAD AIR scene frame.");
-                }
-                var old = SceneFrame;
-                SceneFrame = next;
-                worldCamera.targetTexture = SceneFrame;
-                tape.SourceFrame = SceneFrame;
-                DestroyTexture(old);
-            }
-            else if (!SceneFrame.IsCreated()) SceneFrame.Create();
+		public void EnsureTargets()
+		{
+			if (worldCamera == null || OutputCamera == null)
+			{
+				return;
+			}
+			RenderingPath renderingPath = (((worldCamera.cullingMask & 0x10000000) != 0 || DeadAirSettings.GraphicsQuality <= 0 || SystemInfo.supportedRenderTargetCount < 4) ? RenderingPath.Forward : RenderingPath.DeferredShading);
+			if (worldCamera.renderingPath != renderingPath)
+			{
+				worldCamera.renderingPath = renderingPath;
+			}
+			int num = Mathf.Max(1, Screen.width);
+			int num2 = Mathf.Max(1, Screen.height);
+			float num3 = (float)num / (float)num2;
+			int num4 = Mathf.Max(240, Mathf.RoundToInt((float)num2 * DeadAirSettings.RenderScale));
+			int num5 = Mathf.Max(1, Mathf.RoundToInt((float)num4 * num3));
+			if (SceneFrame == null || SceneFrame.width != num5 || SceneFrame.height != num4)
+			{
+				RenderTexture renderTexture = new RenderTexture(num5, num4, 24, HdrColorFormat, RenderTextureReadWrite.Linear)
+				{
+					name = "DEAD AIR scene frame",
+					filterMode = FilterMode.Bilinear,
+					wrapMode = TextureWrapMode.Clamp,
+					antiAliasing = 1,
+					useMipMap = false,
+					autoGenerateMips = false,
+					hideFlags = HideFlags.DontSave
+				};
+				if (!renderTexture.Create())
+				{
+					DestroyTexture(renderTexture);
+					throw new InvalidOperationException("Unable to allocate the DEAD AIR scene frame.");
+				}
+				RenderTexture sceneFrame = SceneFrame;
+				SceneFrame = renderTexture;
+				worldCamera.targetTexture = SceneFrame;
+				tape.SourceFrame = SceneFrame;
+				DestroyTexture(sceneFrame);
+			}
+			else if (!SceneFrame.IsCreated())
+			{
+				SceneFrame.Create();
+			}
+			worldCamera.targetTexture = SceneFrame;
+			worldCamera.aspect = num3;
+			if (equipment != null)
+			{
+				equipment.ConfigureRenderer(SceneFrame);
+			}
+			OutputCamera.aspect = num3;
+			OutputCamera.depth = worldCamera.depth + 1f;
+			tape.SourceFrame = SceneFrame;
+		}
 
-            worldCamera.targetTexture = SceneFrame;
-            worldCamera.aspect = aspect;
-            if (equipment != null) equipment.ConfigureRenderer(SceneFrame);
-            OutputCamera.aspect = aspect;
-            OutputCamera.depth = worldCamera.depth + 1;
-            tape.SourceFrame = SceneFrame;
-        }
 
         public void RenderEquipment()
         {
@@ -152,5 +155,28 @@ namespace DeadAir
                 if (Application.isPlaying) Destroy(OutputCamera.gameObject); else DestroyImmediate(OutputCamera.gameObject);
             }
         }
-    }
+    
+
+		internal static RenderTextureFormat HdrColorFormat
+		{
+			get
+			{
+				if (!hdrFormatSelected)
+				{
+					hdrFormat = (SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.RGB111110Float) ? RenderTextureFormat.RGB111110Float : (SystemInfo.SupportsRenderTextureFormat(RenderTextureFormat.ARGBHalf) ? RenderTextureFormat.ARGBHalf : RenderTextureFormat.ARGB32));
+					hdrFormatSelected = true;
+				}
+				return hdrFormat;
+			}
+		}
+
+
+
+		private static RenderTextureFormat hdrFormat;
+
+
+
+		private static bool hdrFormatSelected;
+
+}
 }

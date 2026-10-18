@@ -112,7 +112,8 @@ namespace DeadAir.Editor
 
         static string Git(string arguments)
         {
-            var info = new ProcessStartInfo("git", arguments)
+            string project = Path.GetFullPath(".").Replace('\\', '/');
+            var info = new ProcessStartInfo("git", "-c safe.directory=\"" + project + "\" " + arguments)
             {
                 WorkingDirectory = Path.GetFullPath("."), UseShellExecute = false,
                 CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true

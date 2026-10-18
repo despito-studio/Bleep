@@ -90,6 +90,7 @@ namespace DeadAir
                 var chapter = DeadAirChapters.Find(state.chapterId) ?? DeadAirChapters.Find(DeadAirChapters.DefaultId);
                 journalChapter.text = "БЮРО-9 / Глава " + chapter.number + "\n" + chapter.title;
                 journalRenderedChapter = state.chapterId;
+                journalSignature = int.MinValue;
             }
             int signature = state.tapes.Count + state.canisters.Count * 4 + state.fuses.Count * 16 + state.keycards.Count * 64 + state.collected.Count * 256 + state.securedItems.Count * 4096;
             signature = signature * 32 + (state.power ? 1 : 0) + (state.breakerOn ? 2 : 0) + (state.calibrated ? 4 : 0) + (state.broadcast ? 8 : 0);
@@ -104,13 +105,13 @@ namespace DeadAir
                 objectiveText.text = state.tapes.Count >= 5
                     ? "ЕВАКУАЦІЯ: Всі 5 касет зібрано! Біжіть до фургона журналістів на дорозі!"
                     : "РОЗСЛІДУВАННЯ: Знайдіть 5 касет-доказів про Тек-Тек (" + state.tapes.Count + " / 5). Пийте пігулки для збереження розсудку!";
-                journalChecklist.text = Check(state.tapes.Count >= 1, "Касета 1: Щоденник учня (Клас 1-B)") + "\n" +
-                    Check(state.tapes.Count >= 2, "Касета 2: Звіт медсестри (Медпункт)") + "\n" +
-                    Check(state.tapes.Count >= 3, "Касета 3: Окультний запис (Лабораторія 2 пов.)") + "\n" +
-                    Check(state.tapes.Count >= 4, "Касета 4: Архівний запис (Бібліотека 2 пов.)") + "\n" +
-                    Check(state.tapes.Count >= 5, "Касета 5: Останній репортаж (Альтанка в парку)");
+                journalChecklist.text = Check(state.Collected("tape-1"), "Касета 1: Щоденник учня (клас 1-B)") + "\n" +
+                    Check(state.Collected("tape-2"), "Касета 2: Звіт вчительської ради (вчительська)") + "\n" +
+                    Check(state.Collected("tape-3"), "Касета 3: Окультний запис (музичний клас, 2 поверх)") + "\n" +
+                    Check(state.Collected("tape-4"), "Касета 4: Запис спостереження (клас 2-A)") + "\n" +
+                    Check(state.Collected("tape-5"), "Касета 5: Останній репортаж (заднє крило, 3 поверх)");
                 evidenceText.text = "Касети-докази         " + state.tapes.Count + " / 5";
-                fuelEvidenceText.text = "Пігулки розсудку       5 шт на карті";
+                fuelEvidenceText.text = "Пігулки розсудку       " + DeadAirSchoolWorld.PillPickupCount + " шт на карті";
                 fuseEvidenceText.text = "Загроза: Тек-Тек       Полює при низькому розсудку";
                 journalTotals.text = "Зібрано доказів: " + state.tapes.Count + " / 5\nЕвакуація: Фургон журналістів на дорозі";
             }

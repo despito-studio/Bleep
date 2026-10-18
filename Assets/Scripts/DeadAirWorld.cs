@@ -1,3 +1,4 @@
+using System.Collections;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -661,25 +662,26 @@ namespace DeadAir
                     if (schoolWorld == null)
                     {
                         schoolWorld = new DeadAirSchoolWorld(root, data);
-                        schoolWorld.Initialize();
-                        tekeTekeObject = new GameObject("Teke-Teke / Monster Ch2");
-                        tekeTekeObject.transform.SetParent(root, false);
-                        tekeTeke = tekeTekeObject.AddComponent<DeadAirTekeTeke>();
-                        tekeTeke.Initialize();
+                        schoolWorld.SetActive(false);
+                        schoolLoadSteps = schoolWorld.InitializeSteps();
+                        schoolLoadingScreen = new DeadAirSchoolLoadingScreen();
                     }
-                    schoolWorld.SetActive(true);
-                    if (tekeTekeObject != null) tekeTekeObject.SetActive(true);
+                    if (schoolReady) schoolWorld.SetActive(true);
                 }
                 else
                 {
                     if (schoolWorld != null) schoolWorld.SetActive(false);
                     if (tekeTekeObject != null) tekeTekeObject.SetActive(false);
+                    RenderSettings.fogColor = new Color(.0627451f, .08627451f, 11f / 85f);
+                    RenderSettings.fogDensity = .008f;
                 }
             }
+            if (schoolLoadingScreen != null) schoolLoadingScreen.SetVisible(isCh2 && !schoolReady && state.phase == "playing");
+            if (isCh2 && !schoolReady && !schoolLoadFailed) AdvanceSchoolLoading();
 
             if (isCh2)
             {
-                schoolWorld?.Update(state, state.paused ? 0 : Time.deltaTime);
+                if (schoolReady) schoolWorld?.Update(state, state.paused ? 0 : Time.deltaTime);
                 anchor.SetActive(false);
                 bloodyAnchor.SetActive(false);
                 bool enemyVisible = state.enemy.active && state.enemy.behaviour != "vanished";
@@ -713,19 +715,24 @@ namespace DeadAir
             {
                 renderCamera=cam;
                 sky?.UpdatePosition(cam.transform.position);
-                culling?.Update(state,cam);
+                if (!isCh2) culling?.Update(state,cam);
             }
         }
 
-        // Manual GPU captures disable automatic camera rendering. Their lighting
-        // and sky must still use the camera that will actually render the frame.
-        public void PrepareRender(Camera camera)
-        {
-            if(camera==null)return;
-            renderCamera=camera;
-            sky?.UpdatePosition(camera.transform.position);
-            culling?.Update(null,camera,true);
-        }
+
+		public void PrepareRender(Camera camera)
+		{
+			if (!(camera == null))
+			{
+				renderCamera = camera;
+				sky?.UpdatePosition(camera.transform.position);
+				if (!lastIsChapter2)
+				{
+					culling?.Update(null, camera, force: true);
+				}
+			}
+		}
+
 
         void ApplyDropped(RoomState state)
         {
@@ -832,5 +839,78 @@ namespace DeadAir
             sharedBlock.SetColor("_EmissionColor",color);
             renderer.SetPropertyBlock(sharedBlock);
         }
-    }
+    
+
+		private void AdvanceSchoolLoading()
+		{
+			try
+			{
+				if (schoolLoadSteps != null && schoolLoadSteps.MoveNext())
+				{
+					schoolLoadProgress++;
+					if (schoolLoadingScreen != null)
+					{
+						schoolLoadingScreen.SetProgress(schoolLoadProgress, 17);
+					}
+					return;
+				}
+				if (schoolLoadSteps is IDisposable disposable)
+				{
+					disposable.Dispose();
+				}
+				schoolLoadSteps = null;
+				tekeTekeObject = new GameObject("Teke-Teke / Monster Ch2");
+				tekeTekeObject.transform.SetParent(root, worldPositionStays: false);
+				tekeTeke = tekeTekeObject.AddComponent<DeadAirTekeTeke>();
+				tekeTeke.Initialize();
+				tekeTekeObject.SetActive(value: false);
+				schoolWorld.SetActive(active: true);
+				schoolReady = true;
+				if (schoolLoadingScreen != null)
+				{
+					schoolLoadingScreen.Dispose();
+					schoolLoadingScreen = null;
+				}
+			}
+			catch (Exception exception)
+			{
+				schoolLoadFailed = true;
+				if (schoolLoadSteps is IDisposable disposable2)
+				{
+					disposable2.Dispose();
+				}
+				schoolLoadSteps = null;
+				if (schoolLoadingScreen != null)
+				{
+					schoolLoadingScreen.SetFailed();
+				}
+				Debug.LogException(exception);
+			}
+		}
+
+
+
+		public bool IsSchoolReady => schoolReady;
+
+
+
+		private bool schoolLoadFailed;
+
+
+
+		private int schoolLoadProgress;
+
+
+
+		private DeadAirSchoolLoadingScreen schoolLoadingScreen;
+
+
+
+		private IEnumerator schoolLoadSteps;
+
+
+
+		private bool schoolReady;
+
+}
 }

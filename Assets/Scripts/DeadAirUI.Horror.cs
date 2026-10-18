@@ -388,7 +388,8 @@ namespace DeadAir
             if(id=="ladder")return "Складна драбина для проникнення всередину.";
             if(id=="camera")return "Репортерська камера. V — підняти камеру. ЛКМ — зберегти фотографію команди й знахідок.";
             if(id=="emf-detector")return "Детектор електромагнітних аномалій. Реагує на наближення Тек-Тек.";
-            if(id=="pills"||id.StartsWith("pill-"))return "Заспокійливі таблетки. Відновлюють розсудок (+50%).";
+            if(id=="pills")return "Одноразова упаковка заспокійливого. Відновлює до 50% розсудку.";
+            if(id.StartsWith("pill-"))return "Заспокійливе, знайдене на карті. Відновлює до 40% розсудку.";
             if(id.StartsWith("tape"))return session.State != null && !DeadAirChapters.IsChapter2(session.State.chapterId)
                 ? DeadAirBlackpine.EvidenceTitle(id)+"\n"+DeadAirBlackpine.EvidenceText(id,session.State)+"\nR — прослухати запис повторно."
                 : "Касета з аудіодоказами про шкільний інцидент. Зберіть 5 записів для розслідування.";

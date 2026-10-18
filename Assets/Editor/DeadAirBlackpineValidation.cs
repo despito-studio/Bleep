@@ -178,8 +178,16 @@ namespace DeadAir.Editor
         static void ValidateChapterTwo(WorldData world)
         {
             var rules = New(world, true, true, "coming-soon");
-            foreach (string id in new[] { "tape-school-1", "tape-school-2", "tape-school-3", "tape-school-4", "tape-school-5" })
-                Require(rules.Interact("host", id) == null, "School evidence flow is preserved.");
+            var actor = rules.State.Player("host");
+            var positions = new[] { new Vector3(-12.75f,1.55f,-1.45f), new Vector3(-28.25f,1.75f,-16),
+                new Vector3(31.75f,5.17f,-4.25f), new Vector3(-28.25f,4.75f,-1.45f), new Vector3(-12,7.55f,-35.5f) };
+            Require(rules.Interact("host", "tape-5") != null, "School evidence cannot be collected remotely.");
+            for (int i = 0; i < positions.Length; i++)
+            {
+                actor.x = positions[i].x; actor.y = positions[i].y - .8f; actor.z = positions[i].z;
+                Require(rules.Interact("host", "tape-"+(i+1)) == null, "School evidence flow is preserved.");
+            }
+            actor.x = 0; actor.y = .5f; actor.z = 43;
             Require(rules.State.tapes.Count == 5 && !rules.State.blackpine.intercepted && rules.Interact("host", "van-exit") == null && rules.State.phase == "won", "School still exits with five evidence tapes.");
             Require(rules.State.blackpine.evidenceSerial == 0, "Blackpine evidence/operations never enter chapter two.");
         }

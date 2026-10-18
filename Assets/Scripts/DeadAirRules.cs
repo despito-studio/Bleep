@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
@@ -156,86 +157,125 @@ namespace DeadAir
                 Near(player, board.x, board.y, board.z, 2.5f, 0, "van-map");
         }
 
-        public string UseUnique(string id)
-        {
-            var player = State.Player(id);
-            if (!CanUseRoleItem(player)) return "Особистий предмет зараз недоступний.";
-            bool isCh2 = DeadAirChapters.IsChapter2(State.chapterId);
-            if (isCh2)
-            {
-                string sel = player.SelectedItem;
-                if (sel == "pills")
-                {
-                    player.sanity = Mathf.Min(100f, player.sanity + 50f);
-                    DeadAirAudio.Play("pill-consume");
-                    State.message = player.name + " прийняв заспокійливе (+50% розсудку).";
-                    Dirty = true;
-                    return null;
-                }
-                if (sel == "camera" || player.camera)
-                {
-                    DeadAirAudio.Play("camera-snap");
-                    var enemy = State.enemy;
-                    if (enemy.active && enemy.behaviour != "vanished")
-                    {
-                        float dist = Dist(player.x, player.z, enemy.x, enemy.z);
-                        if (dist < 16f && SameFloor(player.y, enemy.y))
-                        {
-                            enemy.stunnedUntil = State.elapsed + 4.0f;
-                            enemy.attackPlayerId = null;
-                            State.message = "СПАЛАХ КАМЕРИ! Тек-Тек приголомшено фотоспалахом!";
-                            Dirty = true;
-                            return null;
-                        }
-                    }
-                    State.message = "Зроблено фотознімок аномальної зони.";
-                    Dirty = true;
-                    return null;
-                }
-                if (sel == "recorder")
-                {
-                    UseRecorder(player);
-                    Dirty = true;
-                    return null;
-                }
-                if (sel == "emf-detector")
-                {
-                    var enemy = State.enemy;
-                    if (enemy.active && enemy.behaviour != "vanished")
-                    {
-                        float dist = Dist(player.x, player.z, enemy.x, enemy.z);
-                        if (dist < 8f) State.message = "ДЕТЕКТОР ЕРС: КРИТИЧНИЙ РІВЕНЬ 5! ТЕК-ТЕК ДУЖЕ БЛИЗЬКО!";
-                        else if (dist < 18f) State.message = "ДЕТЕКТОР ЕРС: Сильні електромагнітні сплески (Рівень 3).";
-                        else State.message = "ДЕТЕКТОР ЕРС: Слабкі коливання вдалині (Рівень 1).";
-                    }
-                    else State.message = "ДЕТЕКТОР ЕРС: Спокійний фон (Рівень 0).";
-                    Dirty = true;
-                    return null;
-                }
-            }
-            if (!player.uniqueItemEquipped || !player.HasSelectedRoleItem || player.camera || player.mapOpen)
-                return "Оберіть особистий предмет в інвентарі.";
-            bool cigarettes = player.characterClass == "operator";
-            if (cigarettes && player.cigarettesRemaining <= 0) return "Пачка сигарет порожня.";
-            float cooldown = DeadAirRoleAbilities.Cooldown(player.characterClass);
-            if (State.elapsed < player.roleReadyAt || State.elapsed - player.uniqueActionAt < cooldown)
-                return "Особистий предмет буде готовий через " + Mathf.CeilToInt(Mathf.Max(player.roleReadyAt - State.elapsed,
-                    cooldown - (State.elapsed - player.uniqueActionAt))) + " с.";
-            if (cigarettes) player.cigarettesRemaining--;
-            player.uniqueActionAt = State.elapsed;
-            player.roleReadyAt = State.elapsed + cooldown;
-            player.uniqueActionSequence++;
-            player.uniqueActionCancelled = false;
-            if (player.characterClass == "engineer")
-            {
-                bool worked = UseEngineerTool(player);
-                HearNoise(player.x, player.y, player.z, worked ? 14 : 4, worked ? 8 : 3);
-            }
-            else if (player.characterClass == "journalist") UseRecorder(player);
-            else if (player.characterClass == "dispatcher") UseCompass(player);
-            Dirty = true;
-            return null;
-        }
+
+		public string UseUnique(string id)
+		{
+			PlayerState playerState = State.Player(id);
+			if (!CanUseRoleItem(playerState))
+			{
+				return "Особистий предмет зараз недоступний.";
+			}
+			if (DeadAirChapters.IsChapter2(State.chapterId))
+			{
+				string selectedItem = playerState.SelectedItem;
+				if (selectedItem == "pills")
+				{
+					if (playerState.sanity >= 100f)
+					{
+						return "Розсудок уже відновлено.";
+					}
+					float num = Mathf.Min(50f, 100f - playerState.sanity);
+					playerState.sanity += num;
+					playerState.inventory.RemoveAt(playerState.selectedSlot);
+					playerState.selectedSlot = Mathf.Clamp(playerState.selectedSlot, 0, Mathf.Max(0, playerState.inventory.Count - 1));
+					playerState.uniqueItemEquipped = playerState.HasSelectedRoleItem && !playerState.camera && !playerState.mapOpen;
+					if (!playerState.uniqueItemEquipped)
+					{
+						playerState.uniqueActionCancelled = true;
+					}
+					DeadAirAudio.Play("pill-consume");
+					State.message = playerState.name + " прийняв заспокійливе (+" + Mathf.CeilToInt(num) + "% розсудку).";
+					Dirty = true;
+					return null;
+				}
+				if (selectedItem == "camera" || playerState.camera)
+				{
+					DeadAirAudio.Play("camera-snap");
+					EnemyState enemy = State.enemy;
+					if (enemy.active && enemy.behaviour != "vanished" && Dist(playerState.x, playerState.z, enemy.x, enemy.z) < 16f && SameFloor(playerState.y, enemy.y))
+					{
+						enemy.stunnedUntil = State.elapsed + 4f;
+						enemy.attackPlayerId = null;
+						State.message = "СПАЛАХ КАМЕРИ! Тек-Тек приголомшено фотоспалахом!";
+						Dirty = true;
+						return null;
+					}
+					State.message = "Зроблено фотознімок аномальної зони.";
+					Dirty = true;
+					return null;
+				}
+				if (selectedItem == "recorder")
+				{
+					UseRecorder(playerState);
+					Dirty = true;
+					return null;
+				}
+				if (selectedItem == "emf-detector")
+				{
+					EnemyState enemy2 = State.enemy;
+					if (enemy2.active && enemy2.behaviour != "vanished")
+					{
+						float num2 = Dist(playerState.x, playerState.z, enemy2.x, enemy2.z);
+						if (num2 < 8f)
+						{
+							State.message = "ДЕТЕКТОР ЕРС: КРИТИЧНИЙ РІВЕНЬ 5! ТЕК-ТЕК ДУЖЕ БЛИЗЬКО!";
+						}
+						else if (num2 < 18f)
+						{
+							State.message = "ДЕТЕКТОР ЕРС: Сильні електромагнітні сплески (Рівень 3).";
+						}
+						else
+						{
+							State.message = "ДЕТЕКТОР ЕРС: Слабкі коливання вдалині (Рівень 1).";
+						}
+					}
+					else
+					{
+						State.message = "ДЕТЕКТОР ЕРС: Спокійний фон (Рівень 0).";
+					}
+					Dirty = true;
+					return null;
+				}
+			}
+			if (!playerState.uniqueItemEquipped || !playerState.HasSelectedRoleItem || playerState.camera || playerState.mapOpen)
+			{
+				return "Оберіть особистий предмет в інвентарі.";
+			}
+			bool flag = playerState.characterClass == "operator";
+			if (flag && playerState.cigarettesRemaining <= 0)
+			{
+				return "Пачка сигарет порожня.";
+			}
+			float num3 = DeadAirRoleAbilities.Cooldown(playerState.characterClass);
+			if (State.elapsed < playerState.roleReadyAt || State.elapsed - playerState.uniqueActionAt < num3)
+			{
+				return "Особистий предмет буде готовий через " + Mathf.CeilToInt(Mathf.Max(playerState.roleReadyAt - State.elapsed, num3 - (State.elapsed - playerState.uniqueActionAt))) + " с.";
+			}
+			if (flag)
+			{
+				playerState.cigarettesRemaining--;
+			}
+			playerState.uniqueActionAt = State.elapsed;
+			playerState.roleReadyAt = State.elapsed + num3;
+			playerState.uniqueActionSequence++;
+			playerState.uniqueActionCancelled = false;
+			if (playerState.characterClass == "engineer")
+			{
+				bool flag2 = UseEngineerTool(playerState);
+				HearNoise(playerState.x, playerState.y, playerState.z, flag2 ? 14 : 4, flag2 ? 8 : 3);
+			}
+			else if (playerState.characterClass == "journalist")
+			{
+				UseRecorder(playerState);
+			}
+			else if (playerState.characterClass == "dispatcher")
+			{
+				UseCompass(playerState);
+			}
+			Dirty = true;
+			return null;
+		}
+
 
         public string SelectChapter(string id, string chapterId)
         {
@@ -298,11 +338,11 @@ namespace DeadAir
             bool isCh2 = DeadAirChapters.IsChapter2(State.chapterId);
             State.spawnCountdown = State.creative ? 999999 : isCh2 ? 10 : -1;
             State.message = State.creative ? "РЕЖИМ ДОСЛІДЖЕННЯ: загроза пасивна." :
-                isCh2 ? "ЯПОНСЬКА ШКОЛА: Ви — журналісти-розслідувачі. Знайдіть 5 касет-доказів про Тек-Тек у школі та парку! Зберігайте розсудок пігулками." :
+                isCh2 ? "ЯПОНСЬКА ШКОЛА: Ви — журналісти-розслідувачі. Знайдіть 5 касет-доказів про Тек-Тек на трьох поверхах школи! Зберігайте розсудок пігулками." :
                 "BLACKPINE: перевірте аварійний сигнал із закритої гірської станції. Візьміть драбину у фургоні та проникніть через вікно директора.";
             if (isCh2)
             {
-                State.enemy = new EnemyState { x = 0, y = 0.1f, z = -10f };
+                State.enemy = new EnemyState { x = 0, y = 0.6f, z = -10f };
                 State.quest.stage = 1;
             }
             for (int i = 0; i < State.players.Count; i++)
@@ -620,33 +660,46 @@ namespace DeadAir
         }
 
         static readonly RaycastHit[] movementHits = new RaycastHit[128];
-        static bool PhysicalSegmentBlocked(Vector3 origin, Vector3 target, bool ignoreDoors=false)
-        {
-            Vector3 offset=target-origin;
-            if(offset.sqrMagnitude<.000001f)return false;
-            int count=Physics.RaycastNonAlloc(origin,offset.normalized,movementHits,offset.magnitude,~0,QueryTriggerInteraction.Ignore);
-            for(int i=0;i<count;i++)
-            {
-                var collider=movementHits[i].collider;
-                // The locally predicted capsule can be at the end of this segment.
-                // It is an actor, never an office wall or a movement blocker for itself.
-                if(collider is CharacterController || collider.GetComponentInParent<DeadAirPlayer>()!=null ||
-                    collider.GetComponentInParent<DeadAirCharacterMotion>()!=null)continue;
-                if(collider.name.StartsWith("Stair tread") || collider.name.StartsWith("Stair riser") || collider.name.StartsWith("Stair side wall") || collider.name.StartsWith("Stair handrail"))continue;
-                if(ignoreDoors)
-                {
-                    bool door=false;
-                    for(var part=collider.transform;part!=null;part=part.parent)
-                        if(part.name.StartsWith("door:") || part.name.StartsWith("Door frame") || part.name == "Door leaf")
-                        {
-                            door=true;break;
-                        }
-                    if(door)continue;
-                }
-                return true;
-            }
-            return count==movementHits.Length;
-        }
+
+
+		private static bool PhysicalSegmentBlocked(Vector3 origin, Vector3 target, bool ignoreDoors = false)
+		{
+			Vector3 vector = target - origin;
+			if (vector.sqrMagnitude < 1E-06f)
+			{
+				return false;
+			}
+			int num = Physics.RaycastNonAlloc(origin, vector.normalized, movementHits, vector.magnitude, -1, QueryTriggerInteraction.Ignore);
+			for (int i = 0; i < num; i++)
+			{
+				Collider collider = movementHits[i].collider;
+				if (collider is CharacterController || collider.GetComponentInParent<DeadAirPlayer>() != null || collider.GetComponentInParent<DeadAirCharacterMotion>() != null || collider.name.StartsWith("Stair tread") || collider.name.StartsWith("Stair riser") || collider.name.StartsWith("Stair side wall") || collider.name.StartsWith("Stair handrail") || collider.name.StartsWith("Step F1") || collider.name.StartsWith("Step F2") || collider.name.StartsWith("Flight 1 Smooth Ramp") || collider.name.StartsWith("Flight 2 Smooth Ramp") || collider.name == "Third Floor Stair Tread" || collider.name == "Third Floor Smooth Stair Collider")
+				{
+					continue;
+				}
+				if (ignoreDoors)
+				{
+					bool flag = false;
+					Transform transform = collider.transform;
+					while (transform != null)
+					{
+						if (transform.name.StartsWith("door:") || transform.name.StartsWith("Door frame") || transform.name == "Door leaf")
+						{
+							flag = true;
+							break;
+						}
+						transform = transform.parent;
+					}
+					if (flag)
+					{
+						continue;
+					}
+				}
+				return true;
+			}
+			return num == movementHits.Length;
+		}
+
 
         static float Dist(float ax, float az, float bx, float bz) => Vector2.Distance(new Vector2(ax, az), new Vector2(bx, bz));
         static bool Near(PlayerState player, float x, float y, float z, float range, float targetEyeOffset = 0, string targetId = null) =>
@@ -655,25 +708,57 @@ namespace DeadAir
         static bool SameFloor(float a, float b) => Mathf.Abs(a - b) < 1;
         static readonly RaycastHit[] sightHits = new RaycastHit[32];
 
-        public static bool HasInteractionSightline(Vector3 origin, Vector3 target, string targetId)
-        {
-            if (targetId == "ladder-climb" || targetId == "ladder-spot" || targetId == "drawer-director" || targetId == "ladder" || targetId == "key-main") return true;
-            var offset = target - origin;
-            if (offset.sqrMagnitude < .0001f) return true;
-            int count = Physics.RaycastNonAlloc(origin, offset.normalized, sightHits, offset.magnitude,
-                ~0, QueryTriggerInteraction.Ignore);
-            for (int i = 0; i < count; i++)
-            {
-                bool barrier = false, isTarget = false;
-                for (var part = sightHits[i].collider.transform; part != null; part = part.parent)
-                {
-                    if (part.name == "shell" || part.name == "Van stationary collision shell" || part.name.StartsWith("door:") || part.name.StartsWith("Door frame ")) barrier = true;
-                    if (!string.IsNullOrEmpty(targetId) && (part.name == "door:" + targetId || part.name == "Door frame " + targetId)) isTarget = true;
-                }
-                if (barrier && !isTarget) return false;
-            }
-            return true;
-        }
+
+		public static bool HasInteractionSightline(Vector3 origin, Vector3 target, string targetId)
+		{
+			switch (targetId)
+			{
+			case "ladder-climb":
+			case "ladder-spot":
+			case "drawer-director":
+			case "ladder":
+			case "key-main":
+				return true;
+			default:
+			{
+				Vector3 vector = target - origin;
+				if (vector.sqrMagnitude < 0.0001f)
+				{
+					return true;
+				}
+				bool flag = !string.IsNullOrEmpty(targetId) && (targetId.StartsWith("pill-", StringComparison.Ordinal) || targetId.StartsWith("tape-", StringComparison.Ordinal));
+				int num = Physics.RaycastNonAlloc(origin, vector.normalized, sightHits, vector.magnitude, -1, QueryTriggerInteraction.Ignore);
+				for (int i = 0; i < num; i++)
+				{
+					bool flag2 = false;
+					bool flag3 = false;
+					Transform transform = sightHits[i].collider.transform;
+					while (transform != null)
+					{
+						if (transform.name == "shell" || transform.name == "Van stationary collision shell" || transform.name.StartsWith("door:") || transform.name.StartsWith("Door frame "))
+						{
+							flag2 = true;
+						}
+						if (!string.IsNullOrEmpty(targetId) && (transform.name == "door:" + targetId || transform.name == "Door frame " + targetId))
+						{
+							flag3 = true;
+						}
+						transform = transform.parent;
+					}
+					if (flag && IsSchoolPickupBarrier(sightHits[i].collider))
+					{
+						flag2 = true;
+					}
+					if (flag2 && !flag3)
+					{
+						return false;
+					}
+				}
+				return num < sightHits.Length;
+			}
+			}
+		}
+
 
         public string Interact(string id, string objectId, float frequency = 0)
         {
@@ -803,6 +888,7 @@ namespace DeadAir
             {
                 if (objectId == "van-exit")
                 {
+                    if (!Near(p, 0f, .5f, 43f, 4.5f, 0f, objectId)) return "Підійдіть до фургона журналістів.";
                     if (State.tapes.Count < 5)
                         return "Потрібно зібрати всі 5 касет з доказами для репортажу! (Зібрано " + State.tapes.Count + "/5).";
                     State.phase = "won";
@@ -812,6 +898,8 @@ namespace DeadAir
                 }
                 if (objectId.StartsWith("tape-", StringComparison.Ordinal))
                 {
+                    if (!DeadAirSchoolWorld.TryGetTapePosition(objectId, out var position)) return "Невідома касета.";
+                    if (!Near(p, position.x, position.y, position.z, 2.5f, 0f, objectId)) return "Підійдіть до касети.";
                     if (State.Collected(objectId)) return "Цю касету вже забрано.";
                     State.tapes.Add(objectId);
                     State.collected.Add(objectId);
@@ -988,16 +1076,38 @@ namespace DeadAir
         static void ClearMushroomTrip(PlayerState player)
         { player.mushroomTripStartedAt = player.mushroomTripUntil = 0; }
 
-        string TakePill(PlayerState player, string pillId)
-        {
-            if (State.Collected(pillId)) return "Ці пігулки вже забрали.";
-            player.sanity = Mathf.Min(100f, player.sanity + 40f);
-            State.collected.Add(pillId);
-            Dirty = true;
-            State.message = "Прийнято заспокійливе. Розсудок відновлено (+40%)!";
-            DeadAirAudio.Play("pill-consume");
-            return null;
-        }
+
+		private string TakePill(PlayerState player, string pillId)
+		{
+			if (!DeadAirChapters.IsChapter2(State.chapterId))
+			{
+				return "Тут немає заспокійливого.";
+			}
+			if (!DeadAirSchoolWorld.TryGetPillPosition(pillId, out var position))
+			{
+				return "Невідоме заспокійливе.";
+			}
+			if (!Near(player, position.x, position.y, position.z, 2.5f, 0f, pillId))
+			{
+				return "Підійдіть до заспокійливого.";
+			}
+			if (State.Collected(pillId))
+			{
+				return "Ці пігулки вже забрали.";
+			}
+			if (player.sanity >= 100f)
+			{
+				return "Розсудок уже відновлено.";
+			}
+			float num = Mathf.Min(40f, 100f - player.sanity);
+			player.sanity += num;
+			State.collected.Add(pillId);
+			Dirty = true;
+			State.message = "Прийнято заспокійливе. Розсудок відновлено (+" + Mathf.CeilToInt(num) + "%)!";
+			DeadAirAudio.Play("pill-consume");
+			return null;
+		}
+
 
         public string Drop(string id, string itemId)
         {
@@ -1161,6 +1271,7 @@ namespace DeadAir
             if (State.phase != "playing" || State.paused) return;
             dt = Mathf.Min(dt, .25f);
             State.elapsed += dt;
+            if (DeadAirChapters.IsChapter2(State.chapterId)) BuildSchoolNavigation();
             bool paneWasBroken = State.windowBroken;
             if (DeadAirLadder.Advance(State)) Dirty = true;
             if (!paneWasBroken && State.windowBroken) HearNoise(-9, 4.2f, 6, 35, 10);
@@ -1169,12 +1280,12 @@ namespace DeadAir
             {
                 State.spawnCountdown = Mathf.Max(0, State.spawnCountdown - dt);
                 if (State.spawnCountdown == 0 && !State.enemy.active)
-                { State.enemy.active = true; State.scare++; State.message = "СИГНАЛ ПРОРВАНО. Диктор у коридорі."; }
+                { State.enemy.active = true; State.scare++; State.message = DeadAirChapters.IsChapter2(State.chapterId) ? "У ШКОЛІ ЧУТИ КРОКИ ТЕК-ТЕК." : "СИГНАЛ ПРОРВАНО. Диктор у коридорі."; }
             }
             if (State.elapsed >= nextScare)
             {
                 nextScare += 60; State.scare++;
-                State.message = "У рації чути ваше дихання. І ще чиєсь.";
+                State.message = DeadAirChapters.IsChapter2(State.chapterId) ? "У порожньому коридорі знову чути кроки Тек-Тек." : "У рації чути ваше дихання. І ще чиєсь.";
             }
             for (int i = 0; i < State.players.Count; i++)
             {
@@ -1215,27 +1326,33 @@ namespace DeadAir
             nextBreakerTrip = State.elapsed + BreakerProtectionSeconds;
         }
 
-        // Sabotage requires the monster to reach the physical switch during patrol.
-        bool TrySabotageBreaker(int roll)
-        {
-            if (State.elapsed < nextBreakerTrip) return false;
-            nextBreakerTrip = State.elapsed + BreakerCheckSeconds;
-            var enemy = State.enemy;
-            var breaker = world.Objective("breaker");
-            if (State.creative || !State.power || !State.breakerOn || State.broadcast ||
-                breakerTrips >= MaximumBreakerTrips || breaker == null || !enemy.active ||
-                State.elapsed < enemy.stunnedUntil || State.elapsed < enemy.heardUntil ||
-                enemy.behaviour == "peek" || enemy.behaviour == "vanished" ||
-                !SameFloor(enemy.y, breaker.y - 1.1f) || Dist(enemy.x, enemy.z, breaker.x, breaker.z) > 3 ||
-                roll >= 10) return false;
-            State.breakerOn = State.quest.breakerOn = false;
-            breakerTrips++;
-            State.scare++;
-            State.message = "ДИКТОР ДІСТАВСЯ РУБИЛЬНИКА У ПІДВАЛІ! Світло згасло.";
-            HearNoise(breaker.x, enemy.y, breaker.z, 30, 8);
-            Dirty = true;
-            return true;
-        }
+
+		private bool TrySabotageBreaker(int roll)
+		{
+			if (DeadAirChapters.IsChapter2(State.chapterId))
+			{
+				return false;
+			}
+			if (State.elapsed < nextBreakerTrip)
+			{
+				return false;
+			}
+			nextBreakerTrip = State.elapsed + 60f;
+			EnemyState enemy = State.enemy;
+			ObjectiveData objectiveData = world.Objective("breaker");
+			if (State.creative || !State.power || !State.breakerOn || State.broadcast || breakerTrips >= 2 || objectiveData == null || !enemy.active || State.elapsed < enemy.stunnedUntil || State.elapsed < enemy.heardUntil || enemy.behaviour == "peek" || enemy.behaviour == "vanished" || !SameFloor(enemy.y, objectiveData.y - 1.1f) || Dist(enemy.x, enemy.z, objectiveData.x, objectiveData.z) > 3f || roll >= 10)
+			{
+				return false;
+			}
+			State.breakerOn = (State.quest.breakerOn = false);
+			breakerTrips++;
+			State.scare++;
+			State.message = "ДИКТОР ДІСТАВСЯ РУБИЛЬНИКА У ПІДВАЛІ! Світло згасло.";
+			HearNoise(objectiveData.x, enemy.y, objectiveData.z, 30f, 8f);
+			Dirty = true;
+			return true;
+		}
+
 
         void UpdateEnemy(float dt)
         {
@@ -1398,23 +1515,40 @@ namespace DeadAir
             return count<enemyOverlaps.Length;
         }
 
-        void SelectPatrolDestination()
-        {
-            var enemy=State.enemy;var origin=new Vector3(enemy.x,enemy.y,enemy.z);
-            patrolDestination=origin;
-            int chosen=-1,candidates=0;
-            if(world.navigationNodes!=null)
-                for(int index=random.Next(7);index<world.navigationNodes.Length;index+=7)
-                {
-                    Vector3 node=NavigationPosition(index);
-                    float distance=(node-origin).sqrMagnitude;
-                    if(!SameFloor(node.y,enemy.y)||distance<9||distance>100||!EnemyPointClear(node))continue;
-                    if(random.Next(++candidates)==0)chosen=index;
-                }
-            if(chosen>=0)patrolDestination=NavigationPosition(chosen);
-            nextPatrol=State.elapsed+random.Next(9,16);
-            enemyRoute.Clear();enemyRouteCursor=0;nextRouteAttempt=0;
-        }
+
+		private void SelectPatrolDestination()
+		{
+			if (DeadAirChapters.IsChapter2(State.chapterId))
+			{
+				SelectSchoolPatrolDestination();
+				return;
+			}
+			EnemyState enemy = State.enemy;
+			Vector3 vector = (patrolDestination = new Vector3(enemy.x, enemy.y, enemy.z));
+			int num = -1;
+			int num2 = 0;
+			if (world.navigationNodes != null)
+			{
+				for (int i = random.Next(7); i < world.navigationNodes.Length; i += 7)
+				{
+					Vector3 vector2 = NavigationPosition(i);
+					float sqrMagnitude = (vector2 - vector).sqrMagnitude;
+					if (SameFloor(vector2.y, enemy.y) && !(sqrMagnitude < 9f) && !(sqrMagnitude > 100f) && EnemyPointClear(vector2) && random.Next(++num2) == 0)
+					{
+						num = i;
+					}
+				}
+			}
+			if (num >= 0)
+			{
+				patrolDestination = NavigationPosition(num);
+			}
+			nextPatrol = State.elapsed + (float)random.Next(9, 16);
+			enemyRoute.Clear();
+			enemyRouteCursor = 0;
+			nextRouteAttempt = 0f;
+		}
+
 
         static bool EnemySightline(PlayerState actor,Vector3 source)
         {
@@ -1422,26 +1556,48 @@ namespace DeadAir
                 new Vector3(-source.x,source.y+1.35f,source.z));
         }
 
-        bool WaitForDoor(EnemyState enemy,Vector2 destination)
-        {
-            Vector3 origin=new Vector3(enemy.x,enemy.y,enemy.z);
-            Vector3 target=new Vector3(destination.x,enemy.y,destination.y);
-            foreach(var data in world.doors)
-            {
-                if(Mathf.Abs(enemy.y+1.4f-data.y)>1||Dist(enemy.x,enemy.z,data.x,data.z)>1.7f)continue;
-                var door=State.Door(data.id);
-                if(door==null||door.locked||!CrossesDoor(origin,target,data,.28f))continue;
-                if(!door.open){door.open=true;door.openedAt=State.elapsed;Dirty=true;}
-                if(State.elapsed-door.openedAt<DoorPassageDelay)
-                {
-                    enemy.behaviour="door";enemy.doorId=door.id;
-                    var toward=new Vector2(data.x-enemy.x,data.z-enemy.z);
-                    if(toward.sqrMagnitude>.0001f)enemy.yaw=Mathf.Atan2(-toward.x,toward.y);
-                    return true;
-                }
-            }
-            return false;
-        }
+
+		private bool WaitForDoor(EnemyState enemy, Vector2 destination)
+		{
+			if (DeadAirChapters.IsChapter2(State.chapterId))
+			{
+				return false;
+			}
+			Vector3 a = new Vector3(enemy.x, enemy.y, enemy.z);
+			Vector3 b = new Vector3(destination.x, enemy.y, destination.y);
+			DoorData[] doors = world.doors;
+			foreach (DoorData doorData in doors)
+			{
+				if (Mathf.Abs(enemy.y + 1.4f - doorData.y) > 1f || Dist(enemy.x, enemy.z, doorData.x, doorData.z) > 1.7f)
+				{
+					continue;
+				}
+				DoorState doorState = State.Door(doorData.id);
+				if (doorState == null || doorState.locked || !CrossesDoor(a, b, doorData, 0.28f))
+				{
+					continue;
+				}
+				if (!doorState.open)
+				{
+					doorState.open = true;
+					doorState.openedAt = State.elapsed;
+					Dirty = true;
+				}
+				if (State.elapsed - doorState.openedAt < 0.6f)
+				{
+					enemy.behaviour = "door";
+					enemy.doorId = doorState.id;
+					Vector2 vector = new Vector2(doorData.x - enemy.x, doorData.z - enemy.z);
+					if (vector.sqrMagnitude > 0.0001f)
+					{
+						enemy.yaw = Mathf.Atan2(0f - vector.x, vector.y);
+					}
+					return true;
+				}
+			}
+			return false;
+		}
+
 
         static bool CrossesDoor(Vector3 a,Vector3 b,DoorData door,float clearance)
         {
@@ -1505,54 +1661,97 @@ namespace DeadAir
             Dirty=true;return false;
         }
 
-        bool TryBeginPeek(PlayerState actor,bool verification)
-        {
-            var enemy=State.enemy;
-            if(enemy.behaviour=="peek"||enemy.behaviour=="vanished")return false;
-            var origin=new Vector3(enemy.x,enemy.y,enemy.z);
-            if(!verification&&Dist(actor.x,actor.z,enemy.x,enemy.z)<12&&EnemySightline(actor,origin))
-            {nextPeek=State.elapsed+4;return false;}
-            Vector3 chosen=Vector3.zero,leanDirection=Vector3.zero;
-            float best=float.PositiveInfinity;
-            foreach(var door in world.doors)
-            {
-                if(!SameFloor(actor.y,door.y-1.4f)||State.Door(door.id)?.locked==true)continue;
-                var normal=new Vector3(Mathf.Cos(door.rotation),0,-Mathf.Sin(door.rotation));
-                var tangent=new Vector3(-normal.z,0,normal.x);
-                var center=new Vector3(door.x,door.y-1.4f,door.z);
-                float behind=Vector3.Dot(new Vector3(actor.x,actor.y,actor.z)-center,normal)>0?-1:1;
-                for(int side=-1;side<=1;side+=2)
-                {
-                    var position=center+tangent*side*(door.w*.5f+.1f)+normal*behind*.52f;
-                    ConsiderPeek(actor,position,-tangent*side,ref chosen,ref leanDirection,ref best);
-                }
-            }
-            // Junctions beside the central archive and side rooms can be used even
-            // when every nearby door is closed. Actual cover and clearance are required.
-            foreach(var room in world.rooms)
-            {
-                if(!SameFloor(room.floorY,actor.y))continue;
-                for(int cornerX=0;cornerX<2;cornerX++)for(int cornerZ=0;cornerZ<2;cornerZ++)
-                for(int sideX=-1;sideX<=1;sideX+=2)for(int sideZ=-1;sideZ<=1;sideZ+=2)
-                {
-                    var corner=new Vector3(cornerX==0?room.minX:room.maxX,room.floorY,cornerZ==0?room.minZ:room.maxZ);
-                    var position=corner+new Vector3(sideX*.52f,0,sideZ*.52f);
-                    ConsiderPeek(actor,position,new Vector3(-sideX,0,0),ref chosen,ref leanDirection,ref best);
-                    ConsiderPeek(actor,position,new Vector3(0,0,-sideZ),ref chosen,ref leanDirection,ref best);
-                }
-            }
-            nextPeek=State.elapsed+(float)(38+random.NextDouble()*17);
-            if(float.IsPositiveInfinity(best))return false;
-            encounterReturnPosition=origin;
-            enemy.x=chosen.x;enemy.y=chosen.y;enemy.z=chosen.z;
-            enemy.yaw=Mathf.Atan2(-(actor.x-chosen.x),actor.z-chosen.z);
-            Vector3 localRight=Quaternion.Euler(0,enemy.yaw*Mathf.Rad2Deg,0)*Vector3.right;
-            enemy.peekLean=Vector3.Dot(new Vector3(-leanDirection.x,0,leanDirection.z),localRight)>=0?1:-1;
-            enemy.behaviour="peek";enemy.watchingPlayerId=actor.id;enemy.doorId=null;enemy.active=true;enemy.stunned=false;
-            enemy.encounterSerial++;enemy.encounterAt=Mathf.RoundToInt(State.elapsed*1000);
-            encounterEnds=State.elapsed+8;
-            enemyRoute.Clear();enemyRouteCursor=0;Dirty=true;return true;
-        }
+
+		private bool TryBeginPeek(PlayerState actor, bool verification)
+		{
+			if (DeadAirChapters.IsChapter2(State.chapterId))
+			{
+				return false;
+			}
+			EnemyState enemy = State.enemy;
+			if (enemy.behaviour == "peek" || enemy.behaviour == "vanished")
+			{
+				return false;
+			}
+			Vector3 source = new Vector3(enemy.x, enemy.y, enemy.z);
+			if (!verification && Dist(actor.x, actor.z, enemy.x, enemy.z) < 12f && EnemySightline(actor, source))
+			{
+				nextPeek = State.elapsed + 4f;
+				return false;
+			}
+			Vector3 chosen = Vector3.zero;
+			Vector3 lean = Vector3.zero;
+			float best = float.PositiveInfinity;
+			DoorData[] doors = world.doors;
+			foreach (DoorData doorData in doors)
+			{
+				if (!SameFloor(actor.y, doorData.y - 1.4f))
+				{
+					continue;
+				}
+				DoorState doorState = State.Door(doorData.id);
+				if (doorState == null || !doorState.locked)
+				{
+					Vector3 vector = new Vector3(Mathf.Cos(doorData.rotation), 0f, 0f - Mathf.Sin(doorData.rotation));
+					Vector3 vector2 = new Vector3(0f - vector.z, 0f, vector.x);
+					Vector3 vector3 = new Vector3(doorData.x, doorData.y - 1.4f, doorData.z);
+					float num = ((!(Vector3.Dot(new Vector3(actor.x, actor.y, actor.z) - vector3, vector) > 0f)) ? 1 : (-1));
+					for (int j = -1; j <= 1; j += 2)
+					{
+						Vector3 position = vector3 + vector2 * j * (doorData.w * 0.5f + 0.1f) + vector * num * 0.52f;
+						ConsiderPeek(actor, position, -vector2 * j, ref chosen, ref lean, ref best);
+					}
+				}
+			}
+			RoomData[] rooms = world.rooms;
+			foreach (RoomData roomData in rooms)
+			{
+				if (!SameFloor(roomData.floorY, actor.y))
+				{
+					continue;
+				}
+				for (int k = 0; k < 2; k++)
+				{
+					for (int l = 0; l < 2; l++)
+					{
+						for (int m = -1; m <= 1; m += 2)
+						{
+							for (int n = -1; n <= 1; n += 2)
+							{
+								Vector3 position2 = new Vector3((k == 0) ? roomData.minX : roomData.maxX, roomData.floorY, (l == 0) ? roomData.minZ : roomData.maxZ) + new Vector3((float)m * 0.52f, 0f, (float)n * 0.52f);
+								ConsiderPeek(actor, position2, new Vector3(-m, 0f, 0f), ref chosen, ref lean, ref best);
+								ConsiderPeek(actor, position2, new Vector3(0f, 0f, -n), ref chosen, ref lean, ref best);
+							}
+						}
+					}
+				}
+			}
+			nextPeek = State.elapsed + (float)(38.0 + random.NextDouble() * 17.0);
+			if (float.IsPositiveInfinity(best))
+			{
+				return false;
+			}
+			encounterReturnPosition = source;
+			enemy.x = chosen.x;
+			enemy.y = chosen.y;
+			enemy.z = chosen.z;
+			enemy.yaw = Mathf.Atan2(0f - (actor.x - chosen.x), actor.z - chosen.z);
+			Vector3 rhs = Quaternion.Euler(0f, enemy.yaw * 57.29578f, 0f) * Vector3.right;
+			enemy.peekLean = ((Vector3.Dot(new Vector3(0f - lean.x, 0f, lean.z), rhs) >= 0f) ? 1 : (-1));
+			enemy.behaviour = "peek";
+			enemy.watchingPlayerId = actor.id;
+			enemy.doorId = null;
+			enemy.active = true;
+			enemy.stunned = false;
+			enemy.encounterSerial++;
+			enemy.encounterAt = Mathf.RoundToInt(State.elapsed * 1000f);
+			encounterEnds = State.elapsed + 8f;
+			enemyRoute.Clear();
+			enemyRouteCursor = 0;
+			Dirty = true;
+			return true;
+		}
+
 
         void ConsiderPeek(PlayerState actor,Vector3 position,Vector3 leanDirection,ref Vector3 chosen,ref Vector3 lean,ref float best)
         {
@@ -1594,74 +1793,119 @@ namespace DeadAir
             return result;
         }
 
-        Vector2 EnemyWaypoint(EnemyState enemy, float targetX, float targetY, float targetZ)
-        {
-            if(world.navigationNodes!=null&&world.navigationNodes.Length>0&&world.navigationLinks!=null)
-                return NavigationWaypoint(enemy,new Vector3(targetX,targetY,targetZ));
-            var sourceRoom = SideRoom(enemy.x, enemy.y, enemy.z);
-            var targetRoom = SideRoom(targetX, targetY, targetZ);
-            if (sourceRoom != null && sourceRoom != targetRoom)
-            {
-                var door = RoomDoor(sourceRoom);
-                if (door != null)
-                {
-                    float corridorX = 0;
-                    if (world.stairs != null)
-                        foreach (var stair in world.stairs)
-                            if (door.z >= stair.minZ && door.z <= stair.maxZ)
-                                corridorX = Mathf.Sign(enemy.x) * (stair.maxX + .6f);
-                    return Mathf.Abs(enemy.z - door.z) > .4f ? new Vector2(Mathf.Sign(enemy.x) * 3.65f, door.z) : new Vector2(corridorX, door.z);
-                }
-            }
-            if (world.stairs != null && world.stairs.Length > 0 &&
-                (Mathf.Abs(enemy.y - targetY) > .5f || world.stairs[0].Contains(enemy.x, enemy.z)))
-            {
-                var stair = world.stairs[0];
-                float centerX = (stair.minX + stair.maxX) * .5f;
-                bool upward = targetY >= stair.upperY - .5f || targetY > enemy.y + .15f;
-                if (stair.Contains(enemy.x, enemy.z))
-                    return new Vector2(centerX, upward ? stair.minZ - .4f : stair.maxZ + .4f);
-                var approach = new Vector2(centerX, upward ? stair.maxZ + .6f : stair.minZ - .6f);
-                // Reach each flight entrance along a side passage first. This also
-                // lets an enemy leave a rear office without cutting across the flight.
-                if (((!upward && enemy.z > stair.minZ) || (upward && enemy.z < stair.maxZ)) && Mathf.Abs(enemy.x) <= 3)
-                {
-                    float bypassX = enemy.x < -.5f ? stair.minX - .6f : stair.maxX + .6f;
-                    return Mathf.Abs(enemy.x - bypassX) > .2f ? new Vector2(bypassX, enemy.z) : new Vector2(bypassX, approach.y);
-                }
-                return Dist(enemy.x, enemy.z, approach.x, approach.y) > .75f ? approach :
-                    new Vector2(centerX, upward ? stair.minZ - .4f : stair.maxZ + .4f);
-            }
-            Vector2? courtyardDoor = null;
-            float nearestFacade = float.MaxValue;
-            if (Mathf.Abs(enemy.y) < .5f && Mathf.Abs(targetY) < .5f)
-                foreach (var door in world.doors)
-                {
-                    if (Mathf.Abs(door.x) > .5f || Mathf.Abs(door.y - 1.4f) > .8f || Mathf.Abs(Mathf.Sin(door.rotation)) < .9f) continue;
-                    float distance = Mathf.Abs(enemy.z - door.z);
-                    if ((enemy.z - door.z) * (targetZ - door.z) < 0 && distance > .6f && distance < nearestFacade)
-                    { courtyardDoor = new Vector2(door.x, door.z + Mathf.Sign(targetZ - door.z) * .4f); nearestFacade = distance; }
-                }
-            if (sourceRoom != null && sourceRoom == targetRoom) return new Vector2(targetX, targetZ);
-            Vector2 destination = courtyardDoor ?? new Vector2(targetX, targetZ);
-            if (targetRoom != null && !courtyardDoor.HasValue)
-            {
-                var door = RoomDoor(targetRoom);
-                if (door != null)
-                    destination = Mathf.Abs(enemy.z - door.z) > .4f ? new Vector2(0, door.z) : new Vector2(targetX, door.z);
-            }
-            // Both levels retain a side passage beside the open stairwell.
-            if (world.stairs != null && SameFloor(enemy.y, targetY))
-                foreach (var stair in world.stairs)
-                    if (Mathf.Min(enemy.z, destination.y) < stair.maxZ && Mathf.Max(enemy.z, destination.y) > stair.minZ &&
-                        Mathf.Abs(enemy.x) <= 3 && Mathf.Abs(destination.x) <= 3)
-                    {
-                        float bypassX = enemy.x < -.5f ? stair.minX - .6f : stair.maxX + .6f;
-                        float bypassZ = Mathf.Clamp(destination.y, stair.minZ - .4f, stair.maxZ + .4f);
-                        return Mathf.Abs(enemy.x - bypassX) > .2f ? new Vector2(bypassX, enemy.z) : new Vector2(bypassX, bypassZ);
-                    }
-            return destination;
-        }
+
+		private Vector2 EnemyWaypoint(EnemyState enemy, float targetX, float targetY, float targetZ)
+		{
+			if (DeadAirChapters.IsChapter2(State.chapterId))
+			{
+				return SchoolWaypoint(enemy, new Vector3(targetX, targetY, targetZ));
+			}
+			if (world.navigationNodes != null && world.navigationNodes.Length != 0 && world.navigationLinks != null)
+			{
+				return NavigationWaypoint(enemy, new Vector3(targetX, targetY, targetZ));
+			}
+			RoomData roomData = SideRoom(enemy.x, enemy.y, enemy.z);
+			RoomData roomData2 = SideRoom(targetX, targetY, targetZ);
+			if (roomData != null && roomData != roomData2)
+			{
+				DoorData doorData = RoomDoor(roomData);
+				if (doorData != null)
+				{
+					float x = 0f;
+					if (world.stairs != null)
+					{
+						StairData[] stairs = world.stairs;
+						foreach (StairData stairData in stairs)
+						{
+							if (doorData.z >= stairData.minZ && doorData.z <= stairData.maxZ)
+							{
+								x = Mathf.Sign(enemy.x) * (stairData.maxX + 0.6f);
+							}
+						}
+					}
+					if (!(Mathf.Abs(enemy.z - doorData.z) > 0.4f))
+					{
+						return new Vector2(x, doorData.z);
+					}
+					return new Vector2(Mathf.Sign(enemy.x) * 3.65f, doorData.z);
+				}
+			}
+			if (world.stairs != null && world.stairs.Length != 0 && (Mathf.Abs(enemy.y - targetY) > 0.5f || world.stairs[0].Contains(enemy.x, enemy.z)))
+			{
+				StairData stairData2 = world.stairs[0];
+				float x2 = (stairData2.minX + stairData2.maxX) * 0.5f;
+				bool flag = targetY >= stairData2.upperY - 0.5f || targetY > enemy.y + 0.15f;
+				if (stairData2.Contains(enemy.x, enemy.z))
+				{
+					return new Vector2(x2, flag ? (stairData2.minZ - 0.4f) : (stairData2.maxZ + 0.4f));
+				}
+				Vector2 result = new Vector2(x2, flag ? (stairData2.maxZ + 0.6f) : (stairData2.minZ - 0.6f));
+				if (((!flag && enemy.z > stairData2.minZ) || (flag && enemy.z < stairData2.maxZ)) && Mathf.Abs(enemy.x) <= 3f)
+				{
+					float num = ((enemy.x < -0.5f) ? (stairData2.minX - 0.6f) : (stairData2.maxX + 0.6f));
+					if (!(Mathf.Abs(enemy.x - num) > 0.2f))
+					{
+						return new Vector2(num, result.y);
+					}
+					return new Vector2(num, enemy.z);
+				}
+				if (!(Dist(enemy.x, enemy.z, result.x, result.y) > 0.75f))
+				{
+					return new Vector2(x2, flag ? (stairData2.minZ - 0.4f) : (stairData2.maxZ + 0.4f));
+				}
+				return result;
+			}
+			Vector2? vector = null;
+			float num2 = float.MaxValue;
+			if (Mathf.Abs(enemy.y) < 0.5f && Mathf.Abs(targetY) < 0.5f)
+			{
+				DoorData[] doors = world.doors;
+				foreach (DoorData doorData2 in doors)
+				{
+					if (!(Mathf.Abs(doorData2.x) > 0.5f) && !(Mathf.Abs(doorData2.y - 1.4f) > 0.8f) && !(Mathf.Abs(Mathf.Sin(doorData2.rotation)) < 0.9f))
+					{
+						float num3 = Mathf.Abs(enemy.z - doorData2.z);
+						if ((enemy.z - doorData2.z) * (targetZ - doorData2.z) < 0f && num3 > 0.6f && num3 < num2)
+						{
+							vector = new Vector2(doorData2.x, doorData2.z + Mathf.Sign(targetZ - doorData2.z) * 0.4f);
+							num2 = num3;
+						}
+					}
+				}
+			}
+			if (roomData != null && roomData == roomData2)
+			{
+				return new Vector2(targetX, targetZ);
+			}
+			Vector2 result2 = vector ?? new Vector2(targetX, targetZ);
+			if (roomData2 != null && !vector.HasValue)
+			{
+				DoorData doorData3 = RoomDoor(roomData2);
+				if (doorData3 != null)
+				{
+					result2 = ((Mathf.Abs(enemy.z - doorData3.z) > 0.4f) ? new Vector2(0f, doorData3.z) : new Vector2(targetX, doorData3.z));
+				}
+			}
+			if (world.stairs != null && SameFloor(enemy.y, targetY))
+			{
+				StairData[] stairs = world.stairs;
+				foreach (StairData stairData3 in stairs)
+				{
+					if (Mathf.Min(enemy.z, result2.y) < stairData3.maxZ && Mathf.Max(enemy.z, result2.y) > stairData3.minZ && Mathf.Abs(enemy.x) <= 3f && Mathf.Abs(result2.x) <= 3f)
+					{
+						float num4 = ((enemy.x < -0.5f) ? (stairData3.minX - 0.6f) : (stairData3.maxX + 0.6f));
+						float y = Mathf.Clamp(result2.y, stairData3.minZ - 0.4f, stairData3.maxZ + 0.4f);
+						if (!(Mathf.Abs(enemy.x - num4) > 0.2f))
+						{
+							return new Vector2(num4, y);
+						}
+						return new Vector2(num4, enemy.z);
+					}
+				}
+			}
+			return result2;
+		}
+
 
         Vector3 NavigationPosition(int index)
         {
@@ -1813,31 +2057,552 @@ namespace DeadAir
             return false;
         }
 
-        float EnemyFloorHeight(float x, float z, float currentY)
-        {
-            if (world.stairs != null)
-            {
-                float height=currentY,nearest=2.5f;
-                bool onFlight=false;
-                foreach (var stair in world.stairs)
-                {
-                    if(!stair.Contains(x,z,.12f))continue;
-                    float candidate=stair.HeightAt(z),distance=Mathf.Abs(currentY-candidate);
-                    if(distance>=nearest)continue;
-                    height=candidate;nearest=distance;onFlight=true;
-                }
-                // Both flights occupy the same X/Z. Resolve the nearby flight before
-                // accepting a landing on a different flight at the actor's old height.
-                if(onFlight)return height;
-                foreach (var stair in world.stairs)
-                {
-                    if (Mathf.Abs(currentY - stair.lowerY) < .4f) return stair.lowerY;
-                    if (Mathf.Abs(currentY - stair.upperY) < .4f) return stair.upperY;
-                }
-            }
-            return currentY;
-        }
+
+		private float EnemyFloorHeight(float x, float z, float currentY)
+		{
+			if (DeadAirChapters.IsChapter2(State.chapterId))
+			{
+				return SchoolFloorHeight(x, z, currentY);
+			}
+			if (world.stairs != null)
+			{
+				float result = currentY;
+				float num = 2.5f;
+				bool flag = false;
+				StairData[] stairs = world.stairs;
+				foreach (StairData stairData in stairs)
+				{
+					if (stairData.Contains(x, z, 0.12f))
+					{
+						float num2 = stairData.HeightAt(z);
+						float num3 = Mathf.Abs(currentY - num2);
+						if (!(num3 >= num))
+						{
+							result = num2;
+							num = num3;
+							flag = true;
+						}
+					}
+				}
+				if (flag)
+				{
+					return result;
+				}
+				stairs = world.stairs;
+				foreach (StairData stairData2 in stairs)
+				{
+					if (Mathf.Abs(currentY - stairData2.lowerY) < 0.4f)
+					{
+						return stairData2.lowerY;
+					}
+					if (Mathf.Abs(currentY - stairData2.upperY) < 0.4f)
+					{
+						return stairData2.upperY;
+					}
+				}
+			}
+			return currentY;
+		}
+
 
         public void ClearDirty() { Dirty = false; }
-    }
+    
+
+		private readonly List<int> schoolPatrolNodes = new List<int>(150);
+
+
+
+		private static bool IsSchoolPickupBarrier(Collider collider)
+		{
+			bool flag = false;
+			Transform transform = collider.transform;
+			while (transform != null)
+			{
+				if (transform.name == "CHAPTER 2 - JAPANESE SCHOOL & NEIGHBORHOOD")
+				{
+					flag = true;
+					break;
+				}
+				transform = transform.parent;
+			}
+			if (!flag)
+			{
+				return false;
+			}
+			Vector3 size = collider.bounds.size;
+			bool num = size.y > 1.6f && Mathf.Min(size.x, size.z) < 0.65f;
+			bool flag2 = size.y < 0.8f && size.x > 3f && size.z > 3f;
+			bool flag3 = size.y > 1.6f && size.x > 1f && size.z > 1f;
+			return num || flag2 || flag3;
+		}
+
+
+
+		private readonly List<int> schoolRoute = new List<int>(80);
+
+
+
+		private bool schoolGraphReady;
+
+
+
+		private void BuildSchoolNavigation()
+		{
+			if (schoolGraphReady)
+			{
+				return;
+			}
+			if (!schoolGraphInitialized)
+			{
+				if (GameObject.Find("CHAPTER 2 - JAPANESE SCHOOL & NEIGHBORHOOD") == null)
+				{
+					return;
+				}
+				Physics.SyncTransforms();
+				float[] array = new float[3] { 0.6f, 3.8f, 7.4f };
+				float[] array2 = new float[19]
+				{
+					-32f, -28.5f, -24f, -20f, -16f, -13f, -10f, -6f, -3f, 0f,
+					3f, 6f, 10f, 13f, 16f, 20f, 24f, 28.5f, 32f
+				};
+				float[] array3 = new float[4] { -28.5f, -13f, 13f, 28.5f };
+				float[] array4 = array;
+				foreach (float y in array4)
+				{
+					float[] array5 = array2;
+					foreach (float x in array5)
+					{
+						AddSchoolNode(x, y, -11f, patrol: true);
+					}
+					array5 = array3;
+					foreach (float x2 in array5)
+					{
+						AddSchoolNode(x2, y, -9.5f);
+						AddSchoolNode(x2, y, -7.5f);
+						AddSchoolNode(x2, y, -5.5f);
+						AddSchoolNode(x2, y, -3.2f);
+						AddSchoolNode(x2, y, -12.5f);
+						AddSchoolNode(x2, y, -14.5f);
+						AddSchoolNode(x2, y, -17f);
+						AddSchoolNode(x2, y, -19.5f);
+					}
+					array5 = new float[2] { -13f, 13f };
+					foreach (float x3 in array5)
+					{
+						AddSchoolNode(x3, y, -21f);
+						AddSchoolNode(x3, y, -22.9f);
+						AddSchoolNode(x3, y, -24.5f);
+						AddSchoolNode(x3, y, -26.5f);
+					}
+					array5 = new float[2] { -26.5f, -36.5f };
+					foreach (float z in array5)
+					{
+						int[] array6 = new int[2] { -1, 1 };
+						foreach (int num in array6)
+						{
+							AddSchoolNode((float)num * 28.5f, y, z);
+							AddSchoolNode((float)num * 24.5f, y, z);
+							AddSchoolNode((float)num * 20.5f, y, z);
+							AddSchoolNode((float)num * 16.5f, y, z);
+							AddSchoolNode((float)num * 13f, y, z);
+							AddSchoolNode((float)num * 10f, y, z);
+							AddSchoolNode((float)num * 7f, y, z);
+							AddSchoolNode((float)num * 4f, y, z);
+						}
+					}
+					array5 = new float[7] { -23.5f, -26.5f, -29.5f, -32.5f, -36.5f, -39.5f, -41f };
+					foreach (float z2 in array5)
+					{
+						AddSchoolNode(-4f, y, z2, patrol: true);
+						AddSchoolNode(0f, y, z2, patrol: true);
+						AddSchoolNode(4f, y, z2, patrol: true);
+					}
+				}
+				for (int l = 0; l <= 6; l++)
+				{
+					float t = (float)l / 6f;
+					AddSchoolNode(3f, Mathf.Lerp(0.6f, 2.2f, t), Mathf.Lerp(-13.8f, -18.2f, t));
+					AddSchoolNode(-3f, Mathf.Lerp(3.8f, 2.2f, t), Mathf.Lerp(-13.8f, -18.2f, t));
+				}
+				array4 = new float[5] { -3f, -1.5f, 0f, 1.5f, 3f };
+				foreach (float x4 in array4)
+				{
+					AddSchoolNode(x4, 2.2f, -20f);
+				}
+				for (int m = 0; m <= 12; m++)
+				{
+					float t2 = (float)m / 12f;
+					AddSchoolNode(0f, Mathf.Lerp(3.8f, 7.4f, t2), Mathf.Lerp(-25f, -37f, t2));
+				}
+				array4 = new float[18]
+				{
+					-2f, 1f, 4f, 8f, 12f, 18f, 24f, 30f, 36f, 43f,
+					49f, 55f, 62f, 69f, 76f, 83f, 90f, 97f
+				};
+				foreach (float num2 in array4)
+				{
+					AddSchoolNode(0f, (num2 < 1f) ? 0.55f : 0.1f, num2, patrol: true);
+				}
+				array4 = new float[5] { -7.5f, -5.5f, -3.2f, -2f, -1f };
+				foreach (float z3 in array4)
+				{
+					AddSchoolNode(1f, 0.6f, z3, patrol: true);
+				}
+				array4 = new float[4] { 0f, 1f, 3f, 4f };
+				foreach (float z4 in array4)
+				{
+					AddSchoolNode(1f, 0.45f, z4, patrol: true);
+				}
+				AddSchoolNode(1f, 0.35f, 4.5f, patrol: true);
+				array4 = new float[11]
+				{
+					5f, 6f, 8f, 12f, 16f, 20f, 24f, 28f, 32f, 36f,
+					40f
+				};
+				foreach (float z5 in array4)
+				{
+					AddSchoolNode(1f, 0.1f, z5, patrol: true);
+				}
+				array4 = new float[4] { 40f, 43f, 46f, 49f };
+				foreach (float z6 in array4)
+				{
+					AddSchoolNode(3f, 0.1f, z6, patrol: true);
+				}
+				array4 = new float[13]
+				{
+					49f, 53f, 57f, 61f, 65f, 69f, 73f, 77f, 81f, 85f,
+					89f, 93f, 97f
+				};
+				foreach (float z7 in array4)
+				{
+					AddSchoolNode(1f, 0.1f, z7, patrol: true);
+				}
+				AddSchoolNode(0f, 0.1f, 95.5f, patrol: true);
+				array4 = new float[7] { -42.7f, -45f, -49f, -53f, -58f, -63f, -67f };
+				foreach (float z8 in array4)
+				{
+					float[] array5 = new float[5] { -6f, -3f, 0f, 3f, 6f };
+					foreach (float x5 in array5)
+					{
+						AddSchoolNode(x5, 0.1f, z8, patrol: true);
+					}
+				}
+				schoolGraphInitialized = true;
+			}
+			if (schoolBuildFrame == Time.frameCount)
+			{
+				return;
+			}
+			schoolBuildFrame = Time.frameCount;
+			int num3 = Mathf.Min(schoolNodes.Count, schoolBuildCursor + 24);
+			for (int n = schoolBuildCursor; n < num3; n++)
+			{
+				Vector3 vector = schoolNodes[n];
+				for (int num4 = n + 1; num4 < schoolNodes.Count; num4++)
+				{
+					Vector3 to = schoolNodes[num4];
+					float sqrMagnitude = new Vector2(vector.x - to.x, vector.z - to.z).sqrMagnitude;
+					float num5 = Mathf.Abs(vector.y - to.y);
+					if (!(sqrMagnitude > 27.1f) && !(num5 > 0.68f) && (!(num5 > 0.3f) || !(sqrMagnitude < 0.25f)) && SchoolSegmentClear(vector, to))
+					{
+						schoolLinks[n].Add(num4);
+						schoolLinks[num4].Add(n);
+					}
+				}
+			}
+			schoolBuildCursor = num3;
+			schoolGraphReady = num3 >= schoolNodes.Count;
+		}
+
+
+
+		private float schoolNextRouteAt;
+
+
+
+		private void PlanSchoolRoute(Vector3 origin, Vector3 target)
+		{
+			schoolRoute.Clear();
+			schoolRouteCursor = 0;
+			int num = NearestSchoolNode(origin);
+			int num2 = NearestSchoolNode(target);
+			if (num < 0 || num2 < 0)
+			{
+				return;
+			}
+			float[] array = new float[schoolNodes.Count];
+			int[] array2 = new int[schoolNodes.Count];
+			bool[] array3 = new bool[schoolNodes.Count];
+			for (int i = 0; i < array.Length; i++)
+			{
+				array[i] = float.PositiveInfinity;
+				array2[i] = -1;
+			}
+			NavigationHeap navigationHeap = new NavigationHeap();
+			array[num] = 0f;
+			navigationHeap.Push(num, 0f);
+			while (navigationHeap.Count > 0)
+			{
+				int num3 = navigationHeap.Pop();
+				if (array3[num3])
+				{
+					continue;
+				}
+				array3[num3] = true;
+				if (num3 == num2)
+				{
+					break;
+				}
+				foreach (int item in schoolLinks[num3])
+				{
+					if (!array3[item])
+					{
+						float num4 = array[num3] + Vector3.Distance(schoolNodes[num3], schoolNodes[item]);
+						if (!(num4 >= array[item]))
+						{
+							array[item] = num4;
+							array2[item] = num3;
+							navigationHeap.Push(item, num4 + Vector3.Distance(schoolNodes[item], schoolNodes[num2]));
+						}
+					}
+				}
+			}
+			if (!array3[num2])
+			{
+				return;
+			}
+			for (int num5 = num2; num5 >= 0; num5 = array2[num5])
+			{
+				schoolRoute.Add(num5);
+				if (num5 == num)
+				{
+					break;
+				}
+			}
+			schoolRoute.Reverse();
+			if (schoolRoute.Count > 1 && SchoolSegmentClear(origin, schoolNodes[schoolRoute[1]]))
+			{
+				schoolRouteCursor = 1;
+			}
+		}
+
+
+
+		private readonly List<Vector3> schoolNodes = new List<Vector3>(400);
+
+
+
+		private static bool SchoolFloorSupported(Vector3 point)
+		{
+			int num = Physics.RaycastNonAlloc(new Vector3(0f - point.x, point.y + 0.65f, point.z), Vector3.down, schoolSupportHits, 1.45f, -1, QueryTriggerInteraction.Ignore);
+			for (int i = 0; i < num; i++)
+			{
+				RaycastHit raycastHit = schoolSupportHits[i];
+				if (!(raycastHit.collider is CharacterController) && !(raycastHit.collider.GetComponentInParent<DeadAirPlayer>() != null) && !(raycastHit.collider.GetComponentInParent<DeadAirCharacterMotion>() != null) && Mathf.Abs(raycastHit.point.y - point.y) <= 0.42f)
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+
+
+
+		private static bool SchoolSegmentClear(Vector3 from, Vector3 to)
+		{
+			if (PhysicalSegmentBlocked(new Vector3(0f - from.x, from.y + 0.8f, from.z), new Vector3(0f - to.x, to.y + 0.8f, to.z), ignoreDoors: true))
+			{
+				return false;
+			}
+			int num = Mathf.CeilToInt(Vector2.Distance(new Vector2(from.x, from.z), new Vector2(to.x, to.z)) / 1.4f);
+			for (int i = 1; i < num; i++)
+			{
+				if (!SchoolFloorSupported(Vector3.Lerp(from, to, (float)i / (float)num)))
+				{
+					return false;
+				}
+			}
+			return true;
+		}
+
+
+
+		private bool schoolGraphInitialized;
+
+
+
+		private int schoolBuildCursor;
+
+
+
+		private Vector2 SchoolWaypoint(EnemyState enemy, Vector3 target)
+		{
+			BuildSchoolNavigation();
+			Vector3 vector = new Vector3(enemy.x, enemy.y, enemy.z);
+			if (Mathf.Abs(vector.y - target.y) < 0.65f && SchoolSegmentClear(vector, target))
+			{
+				return new Vector2(target.x, target.z);
+			}
+			if (!schoolGraphReady)
+			{
+				return new Vector2(enemy.x, enemy.z);
+			}
+			if (State.elapsed >= schoolNextRouteAt && (schoolRoute.Count == 0 || (target - schoolRouteTarget).sqrMagnitude > 4f))
+			{
+				PlanSchoolRoute(vector, target);
+				schoolRouteTarget = target;
+				schoolNextRouteAt = State.elapsed + 0.8f;
+			}
+			while (schoolRouteCursor < schoolRoute.Count && (schoolNodes[schoolRoute[schoolRouteCursor]] - vector).sqrMagnitude < 0.36f)
+			{
+				schoolRouteCursor++;
+			}
+			if (schoolRouteCursor >= schoolRoute.Count)
+			{
+				schoolRoute.Clear();
+				return new Vector2(enemy.x, enemy.z);
+			}
+			Vector3 to = schoolNodes[schoolRoute[schoolRouteCursor]];
+			if (!SchoolSegmentClear(vector, to))
+			{
+				schoolRoute.Clear();
+				return new Vector2(enemy.x, enemy.z);
+			}
+			return new Vector2(to.x, to.z);
+		}
+
+
+
+		private int schoolBuildFrame = -1;
+
+
+
+		private int NearestSchoolNode(Vector3 point)
+		{
+			int result = -1;
+			float num = 144f;
+			for (int i = 0; i < schoolNodes.Count; i++)
+			{
+				Vector3 vector = schoolNodes[i];
+				if (!(Mathf.Abs(vector.y - point.y) > 0.72f))
+				{
+					float sqrMagnitude = (vector - point).sqrMagnitude;
+					if (!(sqrMagnitude >= num) && SchoolSegmentClear(point, vector))
+					{
+						num = sqrMagnitude;
+						result = i;
+					}
+				}
+			}
+			return result;
+		}
+
+
+
+		private readonly List<List<int>> schoolLinks = new List<List<int>>(400);
+
+
+
+		private void SelectSchoolPatrolDestination()
+		{
+			BuildSchoolNavigation();
+			Vector3 vector = (patrolDestination = new Vector3(State.enemy.x, State.enemy.y, State.enemy.z));
+			if (!schoolGraphReady)
+			{
+				nextPatrol = State.elapsed + 0.25f;
+				return;
+			}
+			int num = -1;
+			int num2 = 0;
+			foreach (int schoolPatrolNode in schoolPatrolNodes)
+			{
+				Vector3 vector2 = schoolNodes[schoolPatrolNode];
+				float sqrMagnitude = (vector2 - vector).sqrMagnitude;
+				if (!(Mathf.Abs(vector2.y - vector.y) > 0.65f) && !(sqrMagnitude < 16f) && !(sqrMagnitude > 225f) && SchoolSegmentClear(vector, vector2) && random.Next(++num2) == 0)
+				{
+					num = schoolPatrolNode;
+				}
+			}
+			if (num >= 0)
+			{
+				patrolDestination = schoolNodes[num];
+			}
+			nextPatrol = State.elapsed + (float)random.Next(7, 13);
+			schoolRoute.Clear();
+			schoolRouteCursor = 0;
+			schoolNextRouteAt = 0f;
+		}
+
+
+
+		private static float SchoolFloorHeight(float x, float z, float currentY)
+		{
+			if (x > 0.7f && x < 5.3f && z <= -13.8f && z >= -18.2f && currentY < 2.6f)
+			{
+				return 0.6f + (-13.8f - z) * 0.36363637f;
+			}
+			if (x < -0.7f && x > -5.3f && z <= -13.8f && z >= -18.2f && currentY > 1.7f && currentY < 4.4f)
+			{
+				return 2.2f + (z + 18.2f) * 0.36363637f;
+			}
+			if (Mathf.Abs(x) < 5.5f && z < -18.2f && z > -21.8f && currentY > 1.6f && currentY < 3f)
+			{
+				return 2.2f;
+			}
+			if (Mathf.Abs(x) < 2.65f && z <= -25f && z >= -37f && currentY > 3.1f && currentY < 7.8f)
+			{
+				return 3.8f + (-25f - z) * 0.3f;
+			}
+			if (Mathf.Abs(x) < 36f && z < 0f && z > -42f)
+			{
+				if (currentY < 1.4f)
+				{
+					return 0.6f;
+				}
+				if (currentY > 3f && currentY < 4.5f)
+				{
+					return 3.8f;
+				}
+				if (currentY > 6.8f)
+				{
+					return 7.4f;
+				}
+			}
+			if ((z > 0f || z < -42f) && currentY < 1.4f)
+			{
+				return 0.1f;
+			}
+			return currentY;
+		}
+
+
+
+		private void AddSchoolNode(float x, float y, float z, bool patrol = false)
+		{
+			Vector3 vector = new Vector3(x, y, z);
+			if (EnemyPointClear(vector) && SchoolFloorSupported(vector))
+			{
+				int count = schoolNodes.Count;
+				schoolNodes.Add(vector);
+				schoolLinks.Add(new List<int>(6));
+				if (patrol)
+				{
+					schoolPatrolNodes.Add(count);
+				}
+			}
+		}
+
+
+
+		private Vector3 schoolRouteTarget;
+
+
+
+		private int schoolRouteCursor;
+
+
+
+		private static readonly RaycastHit[] schoolSupportHits = new RaycastHit[16];
+
+}
 }

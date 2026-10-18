@@ -168,6 +168,7 @@ namespace DeadAir
             yield return new WaitForSecondsRealtime(.5f);
             yield return SocketSmoke();
             yield return RenderReview();
+            yield return SchoolReview();
             Finish(errors.Count == 0, errors.Count == 0 ? null : "Unity logged runtime errors; see blackpine-runtime-errors.txt.");
         }
 
@@ -324,6 +325,43 @@ namespace DeadAir
             checks.Add("Review images stage chapter flags and camera locations after the socket smoke. They are visual review fixtures, not a full physical walkthrough.");
             checks.Add("Capture writes no PlayerPrefs and does not alter graphics, audio, display or accessibility preferences.");
             ui.SetBlackpineCaptureHud(true);
+        }
+
+        IEnumerator SchoolReview()
+        {
+            ui.TryCloseTopModal();
+            session.Host("School 1.7.12 merge review", "journalist", true, true, "coming-soon");
+            session.Command(new NetPacket { type = "start" });
+            yield return Until(() => captureWorld.IsSchoolReady, "The school completes its staged loading", 40);
+            var school = captureWorld.SchoolWorld;
+            Require(school != null && school.Pills.Count == 9 && school.EvidenceTapes.Count == 5,
+                "Restored school contains nine pill pickups and all five evidence tapes.");
+            var nodes = school.Root.GetComponentsInChildren<Transform>(true);
+            Require(Array.Exists(nodes, t => t.name == "Third Floor Interiors") &&
+                Array.Exists(nodes, t => t.name == "Rear Teaching Wing (20m Extension)") &&
+                Array.Exists(nodes, t => t.name == "Rear School Playground & Sports Court"),
+                "The actual school builds the third floor, extended rear wing and sports playground.");
+            ui.SetBlackpineCaptureHud(false);
+            Inspect(52, -66, 11, 0, 4, -20);
+            yield return Save("11-restored-school-and-playground");
+            Inspect(0, -29, 7.5f, -12, 8.5f, -35.5f);
+            yield return Save("12-third-floor-rear-wing");
+            Inspect(12, 68, .2f, 0, 2.5f, 86);
+            yield return Save("13-restored-traditional-park");
+            var me = session.State.Player(session.LocalId);
+            foreach (var tape in school.EvidenceTapes)
+            {
+                Inspect(tape.position.x, tape.position.z + .8f, tape.position.y - 1,
+                    tape.position.x, tape.position.y, tape.position.z);
+                Place(me, tape.position.x, tape.position.y - 1, tape.position.z);
+                session.Command(new NetPacket { type = "interact", id = tape.id });
+                Require(session.State.Collected(tape.id), "School tape pickup succeeds at its restored position: " + tape.id);
+            }
+            Inspect(0, 43, .5f, 0, 1, 41);
+            Place(me, 0, .5f, 43);
+            session.Command(new NetPacket { type = "interact", id = "van-exit" });
+            Require(session.State.phase == "won", "The restored school exits with all five tapes at the journalists' van.");
+            checks.Add("School scope: restored geometry, actual staged loading, thirteen rendered review frames overall, and evidence/exit commands at staged positions. No complete physical walkthrough claimed.");
         }
 
         static void PrepareReceiver(RoomState state)

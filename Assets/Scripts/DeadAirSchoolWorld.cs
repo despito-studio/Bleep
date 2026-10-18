@@ -1,1994 +1,2575 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace DeadAir
 {
-    /// <summary>
-    /// Massive, authentic Japanese School, Residential Neighborhood, Two-Floor Interiors,
-    /// Back Sports Yard & Forest, Road, and Traditional Park generator for Chapter 2.
-    /// Features:
-    /// 1. High-resolution procedural textures (Parquet, Plaster, Desk wood, Chalkboard, Paper, Concrete, Books).
-    /// 2. Real transparent windows with the dedicated "Dead Air/Window Glass" shader and actual wall cutouts.
-    /// 3. Grand, completely unobstructed 2-story Switchback Stairwell with double-height ceiling and seamless 2nd floor access.
-    /// 4. Rich authentic Japanese classrooms with detailed student desks, realistic disarray, overturned furniture,
-    ///    scattered examination papers, crumpled trash, wastebaskets, soda cans, and fallen textbooks across all rooms!
-    /// </summary>
-    public sealed class DeadAirSchoolWorld
-    {
-        public readonly Transform Root;
-        readonly WorldData data;
-        readonly List<GameObject> createdObjects = new List<GameObject>();
-        readonly List<FlickeringLamp> lamps = new List<FlickeringLamp>();
-        readonly List<PillItem> pills = new List<PillItem>();
-        readonly List<EvidenceTapeItem> evidenceTapes = new List<EvidenceTapeItem>();
-
-        Material matPlaster, matAsphalt, matRoadZebra, matWoodFloor, matBark, matFoliage;
-        Material matTorii, matStone, matGlass, matDarkMetal, matConcrete, matChalkboard, matWhite;
-        Material matHouseStucco, matKawaraRoof, matBlockWall, matGuardrail, matBooks, matLabCounter;
-        Material matGold, matDoorWood, matShoeLocker, matDeskWood, matPaper, matTrashCan, matCan;
-
-        sealed class FlickeringLamp
-        {
-            public Light light;
-            public Renderer bulb;
-            public float baseIntensity;
-            public bool worksNormally;
-            public float flickerOffset;
-        }
-
-        public sealed class PillItem
-        {
-            public string id;
-            public GameObject go;
-            public Vector3 position;
-            public bool collected;
-        }
-
-        public sealed class EvidenceTapeItem
-        {
-            public string id;
-            public string label;
-            public GameObject go;
-            public Vector3 position;
-            public bool collected;
-        }
-
-        public IReadOnlyList<PillItem> Pills => pills;
-        public IReadOnlyList<EvidenceTapeItem> EvidenceTapes => evidenceTapes;
-
-        public DeadAirSchoolWorld(Transform parent, WorldData data)
-        {
-            this.data = data;
-            var go = new GameObject("CHAPTER 2 / JAPANESE SCHOOL & NEIGHBORHOOD");
-            go.transform.SetParent(parent, false);
-            Root = go.transform;
-
-            InitMaterials();
-        }
-
-        // ====================================================================
-        // PROCEDURAL TEXTURE GENERATION
-        // ====================================================================
-        static Texture2D CreateParquetTexture()
-        {
-            int w = 256, h = 256;
-            var tex = new Texture2D(w, h, TextureFormat.RGBA32, true);
-            var pixels = new Color32[w * h];
-            Color32 plankA = new Color32(152, 110, 68, 255);
-            Color32 plankB = new Color32(138, 96, 56, 255);
-            Color32 plankC = new Color32(166, 124, 78, 255);
-            Color32 seam = new Color32(76, 50, 28, 255);
-
-            for (int y = 0; y < h; y++)
-            {
-                int row = y / 32;
-                for (int x = 0; x < w; x++)
-                {
-                    int xOff = (row % 2) * 64;
-                    int col = (x + xOff) / 64;
-
-                    if (y % 32 == 0 || (x + xOff) % 64 == 0)
-                    {
-                        pixels[y * w + x] = seam;
-                    }
-                    else
-                    {
-                        int grain = (int)(Mathf.Sin(x * 0.4f + y * 0.05f) * 10 + (Mathf.PerlinNoise(x * 0.1f, y * 0.1f) - 0.5f) * 16);
-                        Color32 baseCol = (col + row) % 3 == 0 ? plankA : ((col + row) % 3 == 1 ? plankB : plankC);
-                        byte r = (byte)Mathf.Clamp(baseCol.r + grain, 0, 255);
-                        byte g = (byte)Mathf.Clamp(baseCol.g + grain, 0, 255);
-                        byte b = (byte)Mathf.Clamp(baseCol.b + grain, 0, 255);
-                        pixels[y * w + x] = new Color32(r, g, b, 255);
-                    }
-                }
-            }
-            tex.SetPixels32(pixels);
-            tex.wrapMode = TextureWrapMode.Repeat;
-            tex.filterMode = FilterMode.Bilinear;
-            tex.Apply(true, true);
-            return tex;
-        }
-
-        static Texture2D CreateDeskWoodTexture()
-        {
-            int w = 128, h = 128;
-            var tex = new Texture2D(w, h, TextureFormat.RGBA32, true);
-            var pixels = new Color32[w * h];
-            Color32 baseWood = new Color32(204, 162, 112, 255);
-
-            for (int y = 0; y < h; y++)
-            {
-                for (int x = 0; x < w; x++)
-                {
-                    float grain = Mathf.Sin(x * 0.7f + Mathf.Sin(y * 0.2f) * 2f) * 8f;
-                    float noise = (Mathf.PerlinNoise(x * 0.05f, y * 0.2f) - 0.5f) * 18f;
-                    int val = (int)(grain + noise);
-                    byte r = (byte)Mathf.Clamp(baseWood.r + val, 0, 255);
-                    byte g = (byte)Mathf.Clamp(baseWood.g + val, 0, 255);
-                    byte b = (byte)Mathf.Clamp(baseWood.b + val, 0, 255);
-                    pixels[y * w + x] = new Color32(r, g, b, 255);
-                }
-            }
-            tex.SetPixels32(pixels);
-            tex.wrapMode = TextureWrapMode.Repeat;
-            tex.filterMode = FilterMode.Bilinear;
-            tex.Apply(true, true);
-            return tex;
-        }
-
-        static Texture2D CreatePlasterTexture()
-        {
-            int w = 256, h = 256;
-            var tex = new Texture2D(w, h, TextureFormat.RGBA32, true);
-            var pixels = new Color32[w * h];
-            Color32 basePlaster = new Color32(218, 212, 196, 255);
-            Color32 groove = new Color32(182, 175, 160, 255);
-
-            for (int y = 0; y < h; y++)
-            {
-                for (int x = 0; x < w; x++)
-                {
-                    if (y % 64 == 0)
-                    {
-                        pixels[y * w + x] = groove;
-                    }
-                    else
-                    {
-                        int noise = (int)((Mathf.PerlinNoise(x * 0.15f, y * 0.15f) - 0.5f) * 14f);
-                        byte r = (byte)Mathf.Clamp(basePlaster.r + noise, 0, 255);
-                        byte g = (byte)Mathf.Clamp(basePlaster.g + noise, 0, 255);
-                        byte b = (byte)Mathf.Clamp(basePlaster.b + noise, 0, 255);
-                        pixels[y * w + x] = new Color32(r, g, b, 255);
-                    }
-                }
-            }
-            tex.SetPixels32(pixels);
-            tex.wrapMode = TextureWrapMode.Repeat;
-            tex.filterMode = FilterMode.Bilinear;
-            tex.Apply(true, true);
-            return tex;
-        }
-
-        static Texture2D CreateConcreteTexture()
-        {
-            int w = 128, h = 128;
-            var tex = new Texture2D(w, h, TextureFormat.RGBA32, true);
-            var pixels = new Color32[w * h];
-            Color32 baseConcrete = new Color32(155, 155, 148, 255);
-
-            for (int y = 0; y < h; y++)
-            {
-                for (int x = 0; x < w; x++)
-                {
-                    int noise = (int)((Mathf.PerlinNoise(x * 0.25f, y * 0.25f) - 0.5f) * 20f);
-                    byte c = (byte)Mathf.Clamp(baseConcrete.r + noise, 0, 255);
-                    pixels[y * w + x] = new Color32(c, c, (byte)(c * 0.96f), 255);
-                }
-            }
-            tex.SetPixels32(pixels);
-            tex.wrapMode = TextureWrapMode.Repeat;
-            tex.filterMode = FilterMode.Bilinear;
-            tex.Apply(true, true);
-            return tex;
-        }
-
-        static Texture2D CreateChalkboardTexture()
-        {
-            int w = 256, h = 128;
-            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
-            var green = new Color32(26, 52, 34, 255);
-            var chalk = new Color32(220, 235, 215, 255);
-            var pixels = new Color32[w * h];
-
-            for (int y = 0; y < h; y++)
-            {
-                for (int x = 0; x < w; x++)
-                {
-                    int smear = (int)((Mathf.PerlinNoise(x * 0.04f, y * 0.08f) - 0.5f) * 12f);
-                    byte g = (byte)Mathf.Clamp(green.g + smear, 30, 80);
-                    pixels[y * w + x] = new Color32((byte)(g * 0.5f), g, (byte)(g * 0.65f), 255);
-                }
-            }
-
-            // Japanese chalk notes & equations
-            for (int x = 16; x < 240; x++)
-            {
-                if (x % 3 == 0) { pixels[95 * w + x] = chalk; pixels[65 * w + x] = chalk; pixels[35 * w + x] = chalk; }
-            }
-            for (int y = 45; y < 85; y++)
-            {
-                pixels[y * w + 50] = chalk; pixels[y * w + 110] = chalk; pixels[y * w + 170] = chalk; pixels[y * w + 210] = chalk;
-            }
-            tex.SetPixels32(pixels);
-            tex.wrapMode = TextureWrapMode.Clamp;
-            tex.filterMode = FilterMode.Bilinear;
-            tex.Apply(false, true);
-            return tex;
-        }
-
-        static Texture2D CreatePaperTexture()
-        {
-            int w = 64, h = 64;
-            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
-            var pixels = new Color32[w * h];
-            Color32 white = new Color32(245, 243, 238, 255);
-            Color32 lineCol = new Color32(180, 200, 225, 255);
-            Color32 ink = new Color32(50, 60, 90, 255);
-
-            for (int y = 0; y < h; y++)
-            {
-                for (int x = 0; x < w; x++)
-                {
-                    if (y % 8 == 0) pixels[y * w + x] = lineCol;
-                    else if (y > 10 && y < 54 && (x + y * 3) % 19 == 0) pixels[y * w + x] = ink;
-                    else pixels[y * w + x] = white;
-                }
-            }
-            tex.SetPixels32(pixels);
-            tex.Apply(false, true);
-            return tex;
-        }
-
-        static Texture2D CreateBooksTexture()
-        {
-            int w = 128, h = 64;
-            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
-            var pixels = new Color32[w * h];
-            Color32[] spineColors = {
-                new Color32(160, 45, 35, 255),
-                new Color32(35, 75, 140, 255),
-                new Color32(40, 110, 55, 255),
-                new Color32(180, 130, 40, 255),
-                new Color32(110, 50, 120, 255),
-                new Color32(60, 60, 65, 255)
-            };
-
-            for (int x = 0; x < w; x++)
-            {
-                int spineIdx = (x / 10) % spineColors.Length;
-                Color32 col = spineColors[spineIdx];
-                for (int y = 0; y < h; y++)
-                {
-                    if (x % 10 == 0 || y == 0 || y == h - 1) pixels[y * w + x] = new Color32(25, 25, 25, 255);
-                    else if (y > 20 && y < 35 && x % 10 > 2 && x % 10 < 8) pixels[y * w + x] = new Color32(230, 220, 180, 255);
-                    else pixels[y * w + x] = col;
-                }
-            }
-            tex.SetPixels32(pixels);
-            tex.wrapMode = TextureWrapMode.Repeat;
-            tex.Apply(false, true);
-            return tex;
-        }
-
-        void InitMaterials()
-        {
-            var surfaceShader = Shader.Find("Dead Air/Source Surface") ?? Shader.Find("Standard");
-            var glassShader = Shader.Find("Dead Air/Window Glass") ?? Shader.Find("Standard");
-
-            // Textures
-            var texParquet = CreateParquetTexture();
-            var texPlaster = CreatePlasterTexture();
-            var texDeskWood = CreateDeskWoodTexture();
-            var texConcrete = CreateConcreteTexture();
-            var texChalkboard = CreateChalkboardTexture();
-            var texPaper = CreatePaperTexture();
-            var texBooks = CreateBooksTexture();
-
-            matPlaster = CreateTexturedMat("SchoolPlaster", surfaceShader, texPlaster, Color.white, 0.15f);
-            matWoodFloor = CreateTexturedMat("ParquetWood", surfaceShader, texParquet, Color.white, 0.35f);
-            matWoodFloor.mainTextureScale = new Vector2(8f, 8f);
-
-            matDeskWood = CreateTexturedMat("DeskWood", surfaceShader, texDeskWood, Color.white, 0.25f);
-            matConcrete = CreateTexturedMat("ConcreteLight", surfaceShader, texConcrete, Color.white, 0.20f);
-            matChalkboard = CreateTexturedMat("Chalkboard", surfaceShader, texChalkboard, Color.white, 0.05f);
-            matPaper = CreateTexturedMat("PaperSheet", surfaceShader, texPaper, Color.white, 0.10f);
-            matBooks = CreateTexturedMat("BookCovers", surfaceShader, texBooks, Color.white, 0.20f);
-
-            // Transparent Window Glass using dedicated Dead Air/Window Glass shader
-            matGlass = new Material(glassShader) { name = "SchoolWindowGlass", hideFlags = HideFlags.DontSave };
-            matGlass.SetColor("_Color", new Color(0.25f, 0.45f, 0.55f, 0.18f));
-            matGlass.SetFloat("_Glossiness", 0.95f);
-            matGlass.SetFloat("_ReflectionStrength", 0.35f);
-
-            // Other materials
-            matAsphalt = CreateMat("RoadAsphalt", surfaceShader, new Color(0.18f, 0.19f, 0.20f), 0.35f);
-            matRoadZebra = CreateMat("RoadZebraWhite", surfaceShader, new Color(0.92f, 0.92f, 0.88f), 0.25f);
-            matBark = CreateMat("DarkBark", surfaceShader, new Color(0.24f, 0.19f, 0.14f), 0.05f);
-            matFoliage = CreateMat("DeepFoliage", surfaceShader, new Color(0.12f, 0.22f, 0.14f), 0.08f);
-            matTorii = CreateMat("ShrineVermilion", surfaceShader, new Color(0.85f, 0.20f, 0.12f), 0.4f);
-            matStone = CreateMat("WeatheredStone", surfaceShader, new Color(0.46f, 0.47f, 0.45f), 0.15f);
-            matDarkMetal = CreateMat("MetalDark", surfaceShader, new Color(0.20f, 0.22f, 0.22f), 0.65f);
-            matWhite = CreateMat("TrimWhite", surfaceShader, new Color(0.92f, 0.90f, 0.86f), 0.35f);
-            matHouseStucco = CreateMat("HouseStucco", surfaceShader, new Color(0.78f, 0.76f, 0.70f), 0.1f);
-            matKawaraRoof = CreateMat("KawaraRoof", surfaceShader, new Color(0.22f, 0.25f, 0.28f), 0.35f);
-            matBlockWall = CreateMat("BlockWall", surfaceShader, new Color(0.55f, 0.54f, 0.50f), 0.15f);
-            matGuardrail = CreateMat("GuardrailWhite", surfaceShader, new Color(0.88f, 0.88f, 0.88f), 0.5f);
-            matLabCounter = CreateMat("LabBlackStone", surfaceShader, new Color(0.14f, 0.15f, 0.15f), 0.7f);
-            matGold = CreateMat("SignGold", surfaceShader, new Color(0.88f, 0.75f, 0.25f), 0.6f);
-            matDoorWood = CreateTexturedMat("DoorWood", surfaceShader, texDeskWood, new Color(0.78f, 0.62f, 0.42f), 0.25f);
-            matShoeLocker = CreateMat("GetabakoWood", surfaceShader, new Color(0.58f, 0.42f, 0.26f), 0.2f);
-            matTrashCan = CreateMat("TrashCanBlue", surfaceShader, new Color(0.22f, 0.42f, 0.68f), 0.4f);
-            matCan = CreateMat("CanAluminum", surfaceShader, new Color(0.85f, 0.35f, 0.25f), 0.7f);
-        }
-
-        static Material CreateMat(string name, Shader shader, Color color, float gloss)
-        {
-            var mat = new Material(shader) { name = name, color = color, hideFlags = HideFlags.DontSave };
-            mat.SetFloat("_Glossiness", gloss);
-            return mat;
-        }
-
-        static Material CreateTexturedMat(string name, Shader shader, Texture2D texture, Color color, float gloss)
-        {
-            var mat = new Material(shader) { name = name, mainTexture = texture, color = color, hideFlags = HideFlags.DontSave };
-            mat.SetFloat("_Glossiness", gloss);
-            return mat;
-        }
-
-        public void Initialize()
-        {
-            BuildRoadAndCrosswalk();
-            BuildLeftNeighborhood();
-            BuildRightNeighborhood();
-            BuildBackYardAndForest();
-            BuildSchoolCourtyard();
-            BuildSchoolBuilding();
-            BuildFirstFloorInteriors();
-            BuildSecondFloorInteriors();
-            BuildStairs();
-            BuildTraditionalPark();
-            BuildNewsVan();
-            SpawnSanityPills();
-            SpawnEvidenceTapes();
-            SetupLighting();
-        }
-
-        public void SetActive(bool active)
-        {
-            if (Root != null) Root.gameObject.SetActive(active);
-        }
-
-        GameObject CreateBox(Transform parent, Vector3 localPos, Vector3 size, Material mat, bool addCollider = true, string name = "Cube")
-        {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            go.name = name;
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = localPos;
-            go.transform.localScale = size;
-            var r = go.GetComponent<Renderer>();
-            if (r != null) r.sharedMaterial = mat;
-            if (!addCollider)
-            {
-                var col = go.GetComponent<Collider>();
-                if (col != null) UnityEngine.Object.Destroy(col);
-            }
-            createdObjects.Add(go);
-            return go;
-        }
-
-        GameObject CreateCylinder(Transform parent, Vector3 localPos, float radius, float height, Material mat, bool addCollider = true, string name = "Cylinder")
-        {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            go.name = name;
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = localPos;
-            go.transform.localScale = new Vector3(radius * 2, height * 0.5f, radius * 2);
-            var r = go.GetComponent<Renderer>();
-            if (r != null) r.sharedMaterial = mat;
-            if (!addCollider)
-            {
-                var col = go.GetComponent<Collider>();
-                if (col != null) UnityEngine.Object.Destroy(col);
-            }
-            createdObjects.Add(go);
-            return go;
-        }
-
-        GameObject CreateRamp(Transform parent, Vector3 center, Vector3 size, float tiltAngleX, string name = "StairRamp")
-        {
-            var go = new GameObject(name);
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = center;
-            go.transform.localRotation = Quaternion.Euler(tiltAngleX, 0, 0);
-            var col = go.AddComponent<BoxCollider>();
-            col.size = size;
-            createdObjects.Add(go);
-            return go;
-        }
-
-        void SetupLighting()
-        {
-            var moon = new GameObject("Japanese Night Moonlight");
-            moon.transform.SetParent(Root, false);
-            var light = moon.AddComponent<Light>();
-            light.type = LightType.Directional;
-            light.color = new Color(0.48f, 0.58f, 0.72f);
-            light.intensity = 0.65f;
-            light.shadows = LightShadows.Soft;
-            moon.transform.rotation = Quaternion.Euler(52, -40, 0);
-
-            RenderSettings.fog = true;
-            RenderSettings.fogMode = FogMode.ExponentialSquared;
-            RenderSettings.fogColor = new Color(0.05f, 0.07f, 0.11f);
-            RenderSettings.fogDensity = 0.010f;
-        }
-
-        // ====================================================================
-        // 1. ROAD, SIDEWALKS & ZEBRA CROSSWALK
-        // ====================================================================
-        void BuildRoadAndCrosswalk()
-        {
-            var roadGroup = new GameObject("Street & Sidewalks").transform;
-            roadGroup.SetParent(Root, false);
-
-            CreateBox(roadGroup, new Vector3(0, -0.05f, 43f), new Vector3(120f, 0.1f, 10f), matAsphalt, true, "Main Street Asphalt");
-
-            for (float x = -58f; x <= 58f; x += 4f)
-            {
-                CreateBox(roadGroup, new Vector3(x, 0.01f, 43f), new Vector3(2.4f, 0.01f, 0.18f), matTorii, false, "Yellow Center Line");
-            }
-
-            CreateBox(roadGroup, new Vector3(0, 0.01f, 38.6f), new Vector3(120f, 0.01f, 0.18f), matWhite, false);
-            CreateBox(roadGroup, new Vector3(0, 0.01f, 47.4f), new Vector3(120f, 0.01f, 0.18f), matWhite, false);
-
-            for (float zx = -3.5f; zx <= 3.5f; zx += 1.2f)
-            {
-                CreateBox(roadGroup, new Vector3(zx, 0.015f, 43f), new Vector3(0.65f, 0.01f, 8.8f), matRoadZebra, false, "Zebra Stripe");
-            }
-
-            CreateBox(roadGroup, new Vector3(0, 0.09f, 37f), new Vector3(120f, 0.18f, 2f), matConcrete, true, "School Sidewalk");
-            CreateBox(roadGroup, new Vector3(0, 0.09f, 49f), new Vector3(120f, 0.18f, 2f), matConcrete, true, "Park Sidewalk");
-
-            for (int side = -1; side <= 1; side += 2)
-            {
-                for (float z = 38.2f; z <= 47.8f; z += 9.6f)
-                {
-                    float startX = 4.5f, endX = 55f;
-                    float len = endX - startX;
-                    float midX = side * (startX + len * 0.5f);
-                    CreateBox(roadGroup, new Vector3(midX, 0.75f, z), new Vector3(len, 0.05f, 0.05f), matGuardrail, false, "Guardrail Top");
-                    CreateBox(roadGroup, new Vector3(midX, 0.45f, z), new Vector3(len, 0.05f, 0.05f), matGuardrail, false, "Guardrail Mid");
-                    for (float px = startX; px <= endX; px += 3f)
-                    {
-                        CreateCylinder(roadGroup, new Vector3(side * px, 0.45f, z), 0.035f, 0.9f, matGuardrail, false, "Rail Post");
-                    }
-                }
-            }
-
-            BuildTrafficMirror(roadGroup, new Vector3(-6f, 0, 48.5f));
-            BuildTrafficMirror(roadGroup, new Vector3(6f, 0, 36.5f));
-        }
-
-        void BuildTrafficMirror(Transform parent, Vector3 pos)
-        {
-            var g = new GameObject("Curved Traffic Mirror").transform;
-            g.SetParent(parent, false);
-            g.localPosition = pos;
-            CreateCylinder(g, new Vector3(0, 1.8f, 0), 0.05f, 3.6f, matGuardrail, true);
-            var mirror = CreateCylinder(g, new Vector3(0, 3.3f, 0.2f), 0.45f, 0.08f, matTorii, false);
-            mirror.transform.rotation = Quaternion.Euler(75, 0, 0);
-            CreateCylinder(mirror.transform, new Vector3(0, 0.04f, 0), 0.40f, 0.02f, matGlass, false);
-        }
-
-        // ====================================================================
-        // 2. RESIDENTIAL HOUSES ON LEFT AND RIGHT
-        // ====================================================================
-        void BuildLeftNeighborhood()
-        {
-            var left = new GameObject("Left Neighborhood").transform;
-            left.SetParent(Root, false);
-
-            CreateBox(left, new Vector3(-38f, 1.1f, 3f), new Vector3(0.35f, 2.2f, 94f), matBlockWall, true, "Left Perimeter Wall");
-
-            float[] houseZ = { -28f, -10f, 8f, 26f, 44f };
-            foreach (var hz in houseZ)
-            {
-                BuildJapaneseHouse(left, new Vector3(-48f, 0, hz), 0);
-            }
-
-            BuildUtilityPole(left, new Vector3(-39.5f, 0, 45f));
-            BuildUtilityPole(left, new Vector3(-39.5f, 0, 15f));
-            BuildUtilityPole(left, new Vector3(-39.5f, 0, -15f));
-        }
-
-        void BuildRightNeighborhood()
-        {
-            var right = new GameObject("Right Neighborhood").transform;
-            right.SetParent(Root, false);
-
-            CreateBox(right, new Vector3(38f, 1.1f, 3f), new Vector3(0.35f, 2.2f, 94f), matBlockWall, true, "Right Perimeter Wall");
-
-            float[] houseZ = { -28f, -10f, 8f, 26f, 44f };
-            foreach (var hz in houseZ)
-            {
-                BuildJapaneseHouse(right, new Vector3(48f, 0, hz), 180);
-            }
-
-            BuildUtilityPole(right, new Vector3(39.5f, 0, 45f));
-            BuildUtilityPole(right, new Vector3(39.5f, 0, 15f));
-            BuildUtilityPole(right, new Vector3(39.5f, 0, -15f));
-        }
-
-        void BuildJapaneseHouse(Transform parent, Vector3 pos, float yaw)
-        {
-            var house = new GameObject("Japanese House").transform;
-            house.SetParent(parent, false);
-            house.localPosition = pos;
-            house.localRotation = Quaternion.Euler(0, yaw, 0);
-
-            float w = 12f, h = 6.8f, d = 11f;
-            CreateBox(house, new Vector3(0, 3.4f, 0), new Vector3(w, h, d), matHouseStucco, true, "House Body");
-            CreateBox(house, new Vector3(0, 0.8f, 0), new Vector3(w + 0.1f, 1.6f, d + 0.1f), matBark, false, "House Wood Skirt");
-
-            CreateBox(house, new Vector3(0, 7.2f, 0), new Vector3(w + 1.6f, 0.7f, d + 1.6f), matKawaraRoof, true, "Kawara Roof Base");
-            CreateBox(house, new Vector3(0, 8.0f, 0), new Vector3(w * 0.7f, 1.0f, d * 0.7f), matKawaraRoof, false, "Kawara Roof Mid");
-            CreateBox(house, new Vector3(0, 8.7f, 0), new Vector3(w * 0.4f, 0.6f, d * 0.4f), matKawaraRoof, false, "Kawara Roof Top");
-
-            CreateBox(house, new Vector3(0, 3.8f, d * 0.5f + 0.6f), new Vector3(w * 0.7f, 0.15f, 1.2f), matConcrete, true, "Balcony Floor");
-            CreateBox(house, new Vector3(0, 4.3f, d * 0.5f + 1.15f), new Vector3(w * 0.7f, 0.8f, 0.1f), matDarkMetal, false, "Balcony Rail");
-
-            for (int f = 0; f < 2; f++)
-            {
-                float wy = 1.8f + f * 3.4f;
-                var win = CreateBox(house, new Vector3(2.5f, wy, d * 0.5f + 0.05f), new Vector3(2.2f, 1.4f, 0.1f), matWhite, false, "Window Frame");
-                CreateBox(win.transform, new Vector3(0, 0, 0.02f), new Vector3(2.0f, 1.2f, 0.05f), matPlaster, false, "Lit Window");
-                var l = win.AddComponent<Light>();
-                l.type = LightType.Point;
-                l.color = new Color(1.0f, 0.82f, 0.55f);
-                l.intensity = 0.8f;
-                l.range = 5f;
-            }
-
-            CreateBox(house, new Vector3(-3.5f, 0.5f, d * 0.5f + 0.35f), new Vector3(0.9f, 0.65f, 0.4f), matWhite, false, "AC Unit");
-        }
-
-        void BuildUtilityPole(Transform parent, Vector3 pos)
-        {
-            var pole = new GameObject("Utility Pole (電柱)").transform;
-            pole.SetParent(parent, false);
-            pole.localPosition = pos;
-            CreateCylinder(pole, new Vector3(0, 5.0f, 0), 0.18f, 10.0f, matConcrete, true);
-            CreateBox(pole, new Vector3(0, 8.8f, 0), new Vector3(2.4f, 0.1f, 0.1f), matDarkMetal, false);
-            CreateBox(pole, new Vector3(0, 9.4f, 0), new Vector3(1.8f, 0.1f, 0.1f), matDarkMetal, false);
-            CreateCylinder(pole, new Vector3(0.35f, 8.2f, 0), 0.28f, 0.9f, matDarkMetal, false);
-        }
-
-        // ====================================================================
-        // 3. BACK SCHOOLYARD & DENSE FOREST
-        // ====================================================================
-        void BuildBackYardAndForest()
-        {
-            var back = new GameObject("Back Schoolyard & Forest").transform;
-            back.SetParent(Root, false);
-
-            CreateBox(back, new Vector3(0, -0.05f, -33f), new Vector3(72f, 0.1f, 22f), matConcrete, true, "Backyard Ground");
-
-            var bikeShed = new GameObject("Bicycle Shed").transform;
-            bikeShed.SetParent(back, false);
-            bikeShed.localPosition = new Vector3(-18f, 0, -32f);
-            CreateBox(bikeShed, new Vector3(0, 2.5f, 0), new Vector3(10f, 0.12f, 3.8f), matDarkMetal, true, "Shed Roof");
-            for (float bx = -4.5f; bx <= 4.5f; bx += 4.5f)
-            {
-                CreateCylinder(bikeShed, new Vector3(bx, 1.25f, -1.6f), 0.05f, 2.5f, matDarkMetal, false);
-                CreateCylinder(bikeShed, new Vector3(bx, 1.25f, 1.6f), 0.05f, 2.5f, matDarkMetal, false);
-            }
-            for (float bx = -4.2f; bx <= 4.2f; bx += 0.8f)
-            {
-                CreateBox(bikeShed, new Vector3(bx, 0.25f, 0), new Vector3(0.04f, 0.5f, 1.4f), matDarkMetal, false);
-            }
-
-            CreateBox(back, new Vector3(18f, 1.6f, -32f), new Vector3(5.2f, 3.2f, 3.6f), matDarkMetal, true, "Storage Lockup");
-
-            var inc = CreateBox(back, new Vector3(26f, 1.2f, -35f), new Vector3(1.8f, 2.4f, 1.8f), matConcrete, true, "Incinerator");
-            CreateCylinder(inc.transform, new Vector3(0, 2.0f, 0), 0.22f, 2.2f, matDarkMetal, false, "Chimney");
-
-            CreateBox(back, new Vector3(0, 2.0f, -44f), new Vector3(74f, 4.0f, 0.15f), matDarkMetal, true, "Back Sports Fence");
-
-            CreateBox(back, new Vector3(0, -0.05f, -67f), new Vector3(96f, 0.1f, 46f), matFoliage, true, "Forest Floor");
-
-            var rng = new System.Random(88812);
-            for (int i = 0; i < 32; i++)
-            {
-                float fx = (float)(rng.NextDouble() * 84.0 - 42.0);
-                float fz = (float)(rng.NextDouble() * 38.0 - 83.0);
-                BuildForestTree(back, new Vector3(fx, 0, fz));
-            }
-        }
-
-        void BuildForestTree(Transform parent, Vector3 pos)
-        {
-            var t = new GameObject("Dense Forest Tree").transform;
-            t.SetParent(parent, false);
-            t.localPosition = pos;
-            CreateCylinder(t, new Vector3(0, 4.5f, 0), 0.45f, 9.0f, matBark, true);
-            CreateCylinder(t, new Vector3(0, 9.0f, 0), 2.8f, 4.5f, matFoliage, false);
-            CreateCylinder(t, new Vector3(0, 12.0f, 0), 2.0f, 3.8f, matFoliage, false);
-            CreateCylinder(t, new Vector3(0, 14.5f, 0), 1.2f, 2.8f, matFoliage, false);
-        }
-
-        // ====================================================================
-        // 4. SCHOOL COURTYARD
-        // ====================================================================
-        void BuildSchoolCourtyard()
-        {
-            var yard = new GameObject("School Courtyard").transform;
-            yard.SetParent(Root, false);
-
-            CreateBox(yard, new Vector3(0, -0.05f, 18f), new Vector3(72f, 0.1f, 36f), matAsphalt, true, "Courtyard Asphalt");
-            CreateBox(yard, new Vector3(0, 0.02f, 18f), new Vector3(6.5f, 0.02f, 36f), matConcrete, false, "Approach Path");
-
-            var yellowMat = CreateMat("CircleYellow", matPlaster.shader, new Color(0.92f, 0.78f, 0.20f), 0.2f);
-            var blueMat = CreateMat("CircleBlue", matPlaster.shader, new Color(0.24f, 0.60f, 0.88f), 0.2f);
-            var redMat = CreateMat("CircleRed", matPlaster.shader, new Color(0.88f, 0.26f, 0.22f), 0.2f);
-            var greenMat = CreateMat("CircleGreen", matPlaster.shader, new Color(0.26f, 0.82f, 0.36f), 0.2f);
-
-            CreateRing(yard, new Vector3(8f, 0.015f, 14f), 2.8f, yellowMat);
-            CreateRing(yard, new Vector3(-10f, 0.015f, 18f), 2.0f, blueMat);
-            CreateRing(yard, new Vector3(14f, 0.015f, 22f), 1.6f, redMat);
-            CreateRing(yard, new Vector3(-16f, 0.015f, 12f), 3.4f, yellowMat);
-            CreateRing(yard, new Vector3(20f, 0.015f, 15f), 1.4f, greenMat);
-            CreateRing(yard, new Vector3(-8f, 0.015f, 26f), 2.3f, blueMat);
-
-            var coneMat = CreateMat("ConeOrange", matPlaster.shader, new Color(0.95f, 0.35f, 0.10f), 0.3f);
-            CreateTrafficCone(yard, new Vector3(14f, 0f, 28f), coneMat);
-            CreateTrafficCone(yard, new Vector3(16f, 0f, 26f), coneMat);
-            CreateTrafficCone(yard, new Vector3(-12f, 0f, 32f), coneMat);
-
-            for (int side = -1; side <= 1; side += 2)
-            {
-                float wallWidth = 30f;
-                float midX = side * (5.5f + wallWidth * 0.5f);
-                CreateBox(yard, new Vector3(midX, 1.1f, 36f), new Vector3(wallWidth, 2.2f, 0.35f), matConcrete, true, "Front Wall");
-                for (float fx = 6f; fx < 35f; fx += 1.0f)
-                {
-                    CreateCylinder(yard, new Vector3(side * fx, 2.6f, 36f), 0.025f, 0.8f, matDarkMetal, false);
-                }
-            }
-
-            for (int side = -1; side <= 1; side += 2)
-            {
-                CreateBox(yard, new Vector3(side * 5.5f, 1.8f, 36f), new Vector3(1.0f, 3.6f, 1.0f), matConcrete, true, "Gate Pillar");
-                CreateBox(yard, new Vector3(side * 5.5f, 3.65f, 36f), new Vector3(1.2f, 0.2f, 1.2f), matDarkMetal, false);
-            }
-        }
-
-        void CreateRing(Transform parent, Vector3 center, float radius, Material mat)
-        {
-            var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            go.name = "PaintRing";
-            go.transform.SetParent(parent, false);
-            go.transform.localPosition = center;
-            go.transform.localScale = new Vector3(radius * 2, 0.01f, radius * 2);
-            var col = go.GetComponent<Collider>();
-            if (col != null) UnityEngine.Object.Destroy(col);
-            go.GetComponent<Renderer>().sharedMaterial = mat;
-            createdObjects.Add(go);
-        }
-
-        void CreateTrafficCone(Transform parent, Vector3 pos, Material coneMat)
-        {
-            var g = new GameObject("TrafficCone").transform;
-            g.SetParent(parent, false);
-            g.localPosition = pos;
-            CreateBox(g, new Vector3(0, 0.02f, 0), new Vector3(0.4f, 0.04f, 0.4f), matDarkMetal, true);
-            var cone = CreateCylinder(g, new Vector3(0, 0.38f, 0), 0.13f, 0.76f, coneMat, true);
-            CreateCylinder(cone.transform, Vector3.zero, 0.135f, 0.22f, matWhite, false);
-        }
-
-        // ====================================================================
-        // 5. SCHOOL EXTERIOR STRUCTURE & TRANSPARENT WINDOWS
-        // ====================================================================
-        void BuildSchoolBuilding()
-        {
-            var bldg = new GameObject("School Outer Structure").transform;
-            bldg.SetParent(Root, false);
-
-            float width = 72f, height = 7.6f, depth = 22f;
-
-            // Roof Parapet and Slab
-            CreateBox(bldg, new Vector3(0, 7.55f, -depth * 0.5f), new Vector3(width, 0.25f, depth), matConcrete, true, "Roof Slab");
-            CreateBox(bldg, new Vector3(0, 7.95f, 0.1f), new Vector3(width + 0.6f, 0.6f, 0.35f), matConcrete, true, "Roof Parapet South");
-            CreateBox(bldg, new Vector3(0, 7.95f, -depth - 0.1f), new Vector3(width + 0.6f, 0.6f, 0.35f), matConcrete, true, "Roof Parapet North");
-            CreateBox(bldg, new Vector3(-width * 0.5f - 0.1f, 7.95f, -depth * 0.5f), new Vector3(0.35f, 0.6f, depth + 0.6f), matConcrete, true, "Roof Parapet West");
-            CreateBox(bldg, new Vector3(width * 0.5f + 0.1f, 7.95f, -depth * 0.5f), new Vector3(0.35f, 0.6f, depth + 0.6f), matConcrete, true, "Roof Parapet East");
-
-            // West & East Solid Exterior Walls
-            CreateBox(bldg, new Vector3(-36f, height * 0.5f, -depth * 0.5f), new Vector3(0.4f, height, depth), matPlaster, true, "Exterior Wall West");
-            CreateBox(bldg, new Vector3(36f, height * 0.5f, -depth * 0.5f), new Vector3(0.4f, height, depth), matPlaster, true, "Exterior Wall East");
-
-            // SOUTH FACADE (Z = 0): Built with REAL window openings (No z-fighting, true transparency!)
-            BuildFacadeWallWithWindows(bldg, 0f, false);
-
-            // NORTH FACADE (Z = -22): Built with REAL window openings
-            BuildFacadeWallWithWindows(bldg, -22f, true);
-
-            // Center Facade 2nd floor wall (Y: 3.8 to 7.6 at X: -5 to +5)
-            CreateBox(bldg, new Vector3(0, 5.7f, 0f), new Vector3(10f, 3.8f, 0.35f), matPlaster, true, "South Facade Center 2F");
-            // Round Clock on Center Facade 2F
-            var clock = CreateCylinder(bldg, new Vector3(0, 6.2f, 0.22f), 0.85f, 0.12f, matDarkMetal, false, "Clock");
-            clock.transform.rotation = Quaternion.Euler(90, 0, 0);
-            CreateCylinder(clock.transform, new Vector3(0, 0.07f, 0), 0.76f, 0.03f, matWhite, false);
-
-            // Planter boxes with shrubs along South facade
-            for (int side = -1; side <= 1; side += 2)
-            {
-                for (int i = 0; i < 5; i++)
-                {
-                    float px = side * (8.5f + i * 5.6f);
-                    CreateBox(bldg, new Vector3(px, 0.35f, 1.4f), new Vector3(4.2f, 0.7f, 1.0f), matConcrete, true, "Planter");
-                    CreateBox(bldg, new Vector3(px, 0.9f, 1.4f), new Vector3(3.8f, 0.8f, 0.8f), matFoliage, false, "Shrub");
-                    if (i == 1 || i == 3)
-                    {
-                        CreateCylinder(bldg, new Vector3(px + 1.2f, 2.0f, 1.4f), 0.22f, 2.8f, matBark, true);
-                        CreateBox(bldg, new Vector3(px + 1.2f, 3.5f, 1.4f), new Vector3(2.4f, 0.8f, 2.4f), matFoliage, false);
-                    }
-                }
-            }
-
-            BuildSchoolEntrance(bldg);
-        }
-
-        void BuildFacadeWallWithWindows(Transform parent, float facadeZ, bool isNorth)
-        {
-            var fac = new GameObject((isNorth ? "North" : "South") + " Facade Wall").transform;
-            fac.SetParent(parent, false);
-
-            // Lower wall band under 1F windows (Y: 0 to 1.1m)
-            CreateBox(fac, new Vector3(-20.5f, 0.55f, facadeZ), new Vector3(31f, 1.1f, 0.35f), matPlaster, true);
-            CreateBox(fac, new Vector3(20.5f, 0.55f, facadeZ), new Vector3(31f, 1.1f, 0.35f), matPlaster, true);
-
-            // Middle spandrel wall band between 1F & 2F (Y: 3.1m to 4.3m)
-            CreateBox(fac, new Vector3(-20.5f, 3.70f, facadeZ), new Vector3(31f, 1.2f, 0.35f), matPlaster, true);
-            CreateBox(fac, new Vector3(20.5f, 3.70f, facadeZ), new Vector3(31f, 1.2f, 0.35f), matPlaster, true);
-
-            // Upper wall band above 2F windows (Y: 6.3m to 7.6m)
-            CreateBox(fac, new Vector3(-20.5f, 6.95f, facadeZ), new Vector3(31f, 1.3f, 0.35f), matPlaster, true);
-            CreateBox(fac, new Vector3(20.5f, 6.95f, facadeZ), new Vector3(31f, 1.3f, 0.35f), matPlaster, true);
-
-            // If North, build center 2-story glass window for the stairwell!
-            if (isNorth)
-            {
-                CreateBox(fac, new Vector3(0, 0.55f, facadeZ), new Vector3(10f, 1.1f, 0.35f), matPlaster, true);
-                CreateBox(fac, new Vector3(0, 7.0f, facadeZ), new Vector3(10f, 1.2f, 0.35f), matPlaster, true);
-
-                // Grand 2-story frosted stairwell window frame & glass
-                CreateBox(fac, new Vector3(0, 4.05f, facadeZ), new Vector3(9.2f, 4.7f, 0.12f), matWhite, false, "Stairwell Grand Window Frame");
-                CreateBox(fac, new Vector3(0, 4.05f, facadeZ), new Vector3(8.8f, 4.5f, 0.04f), matGlass, false, "Stairwell Transparent Glass");
-                for (float mx = -3.3f; mx <= 3.3f; mx += 1.65f)
-                {
-                    CreateBox(fac, new Vector3(mx, 4.05f, facadeZ), new Vector3(0.08f, 4.5f, 0.08f), matDarkMetal, false);
-                }
-            }
-
-            // Pillars and transparent classroom windows
-            for (int floor = 0; floor < 2; floor++)
-            {
-                float wy = 2.10f + floor * 3.20f; // Window center height: 1F = 2.1m, 2F = 5.3m
-                for (int side = -1; side <= 1; side += 2)
-                {
-                    // Outer edge wall pillar
-                    CreateBox(fac, new Vector3(side * 34.5f, wy, facadeZ), new Vector3(3.0f, 2.0f, 0.35f), matPlaster, true);
-                    // Inner edge wall pillar
-                    CreateBox(fac, new Vector3(side * 6.5f, wy, facadeZ), new Vector3(3.0f, 2.0f, 0.35f), matPlaster, true);
-
-                    for (int w = 0; w < 4; w++)
-                    {
-                        float wx = side * (10.5f + w * 5.4f);
-
-                        // Transparent glass pane (in an actual opening!)
-                        CreateBox(fac, new Vector3(wx, wy, facadeZ), new Vector3(3.8f, 1.9f, 0.02f), matGlass, false, "Transparent Classroom Window");
-
-                        // Outer white window frame
-                        CreateBox(fac, new Vector3(wx - 1.95f, wy, facadeZ), new Vector3(0.12f, 2.0f, 0.14f), matWhite, false);
-                        CreateBox(fac, new Vector3(wx + 1.95f, wy, facadeZ), new Vector3(0.12f, 2.0f, 0.14f), matWhite, false);
-                        CreateBox(fac, new Vector3(wx, wy - 0.95f, facadeZ), new Vector3(4.0f, 0.12f, 0.14f), matWhite, false);
-                        CreateBox(fac, new Vector3(wx, wy + 0.95f, facadeZ), new Vector3(4.0f, 0.12f, 0.14f), matWhite, false);
-
-                        // Center mullion cross
-                        CreateBox(fac, new Vector3(wx, wy, facadeZ), new Vector3(0.06f, 1.9f, 0.06f), matDarkMetal, false);
-                        CreateBox(fac, new Vector3(wx, wy, facadeZ), new Vector3(3.8f, 0.06f, 0.06f), matDarkMetal, false);
-
-                        // Wall pillar between this window and next
-                        if (w < 3)
-                        {
-                            CreateBox(fac, new Vector3(side * (13.2f + w * 5.4f), wy, facadeZ), new Vector3(1.4f, 2.0f, 0.35f), matPlaster, true);
-                        }
-                    }
-                }
-            }
-        }
-
-        // ====================================================================
-        // GRAND SCHOOL ENTRANCE (GENKAN)
-        // ====================================================================
-        void BuildSchoolEntrance(Transform parent)
-        {
-            var ent = new GameObject("School Entrance (玄関)").transform;
-            ent.SetParent(parent, false);
-
-            CreateBox(ent, new Vector3(0, 0.225f, 2.1f), new Vector3(10.5f, 0.45f, 4.2f), matConcrete, true, "Porch Landing");
-            CreateBox(ent, new Vector3(0, 0.12f, 4.8f), new Vector3(10.5f, 0.15f, 0.6f), matConcrete, true, "Porch Step 1");
-            CreateBox(ent, new Vector3(0, 0.27f, 4.5f), new Vector3(10.5f, 0.15f, 0.6f), matConcrete, true, "Porch Step 2");
-
-            CreateBox(ent, new Vector3(0, 3.95f, 2.4f), new Vector3(11.2f, 0.35f, 4.8f), matConcrete, true, "Canopy Roof");
-            CreateBox(ent, new Vector3(-4.8f, 1.9f, 4.2f), new Vector3(0.7f, 3.8f, 0.7f), matConcrete, true, "Canopy Pillar L");
-            CreateBox(ent, new Vector3(4.8f, 1.9f, 4.2f), new Vector3(0.7f, 3.8f, 0.7f), matConcrete, true, "Canopy Pillar R");
-
-            var plaque = CreateBox(ent, new Vector3(0, 3.25f, 0.22f), new Vector3(4.8f, 0.65f, 0.08f), matDarkMetal, false, "School Plaque");
-            CreateBox(plaque.transform, new Vector3(0, 0, 0.05f), new Vector3(4.5f, 0.48f, 0.04f), matGold, false, "Gold Lettering Plate");
-
-            // Entrance Glass Group
-            CreateBox(ent, new Vector3(-4.8f, 1.7f, 0.08f), new Vector3(0.4f, 3.4f, 0.18f), matDarkMetal, true);
-            CreateBox(ent, new Vector3(4.8f, 1.7f, 0.08f), new Vector3(0.4f, 3.4f, 0.18f), matDarkMetal, true);
-            CreateBox(ent, new Vector3(0, 3.25f, 0.08f), new Vector3(9.6f, 0.35f, 0.18f), matDarkMetal, false);
-
-            CreateBox(ent, new Vector3(-3.3f, 1.6f, 0.08f), new Vector3(2.6f, 2.9f, 0.04f), matGlass, true, "Entrance Glass Fixed L");
-            CreateBox(ent, new Vector3(3.3f, 1.6f, 0.08f), new Vector3(2.6f, 2.9f, 0.04f), matGlass, true, "Entrance Glass Fixed R");
-
-            // Sliding entrance leaves (Center door open 1.8m for free entry!)
-            CreateBox(ent, new Vector3(-1.1f, 1.6f, 0.14f), new Vector3(1.8f, 2.9f, 0.04f), matGlass, true, "Entrance Sliding Door Closed");
-            CreateBox(ent, new Vector3(2.2f, 1.6f, 0.14f), new Vector3(1.4f, 2.9f, 0.04f), matGlass, false, "Entrance Door Slid Open");
-
-            // Genkan Vestibule Interior
-            CreateBox(ent, new Vector3(0, 0.225f, -1.5f), new Vector3(9.6f, 0.45f, 3.0f), matConcrete, true, "Genkan Doma Floor");
-            CreateBox(ent, new Vector3(0, 0.525f, -3.15f), new Vector3(9.6f, 0.15f, 0.35f), matWoodFloor, true, "Shikidai Threshold Step");
-            CreateBox(ent, new Vector3(0, 0.30f, -5.9f), new Vector3(9.6f, 0.60f, 5.2f), matWoodFloor, true, "Genkan Hall Floor");
-
-            CreateBox(ent, new Vector3(-4.9f, 2.2f, -4.25f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true, "Genkan Wall L");
-            CreateBox(ent, new Vector3(4.9f, 2.2f, -4.25f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true, "Genkan Wall R");
-
-            BuildShoeLockers(ent, new Vector3(-4.1f, 0.60f, -5.5f), 90);
-            BuildShoeLockers(ent, new Vector3(4.1f, 0.60f, -5.5f), -90);
-
-            CreateInteriorLamp(ent, new Vector3(0, 3.65f, -4.5f));
-        }
-
-        void BuildShoeLockers(Transform parent, Vector3 pos, float yaw)
-        {
-            var g = new GameObject("Getabako Shoe Lockers").transform;
-            g.SetParent(parent, false);
-            g.localPosition = pos;
-            g.localRotation = Quaternion.Euler(0, yaw, 0);
-
-            float w = 5.2f, h = 1.9f, d = 0.65f;
-            CreateBox(g, new Vector3(0, h * 0.5f, 0), new Vector3(w, h, d), matShoeLocker, true, "Locker Main Body");
-
-            int rows = 4, cols = 10;
-            float cellW = (w - 0.2f) / cols;
-            float cellH = (h - 0.2f) / rows;
-            for (int r = 0; r < rows; r++)
-            {
-                for (int c = 0; c < cols; c++)
-                {
-                    float cx = -w * 0.5f + 0.15f + c * cellW + cellW * 0.5f;
-                    float cy = 0.15f + r * cellH + cellH * 0.5f;
-                    CreateBox(g, new Vector3(cx, cy, 0.05f), new Vector3(cellW * 0.85f, cellH * 0.85f, d * 0.7f), matDarkMetal, false);
-                    if ((r + c) % 2 == 0)
-                    {
-                        CreateBox(g, new Vector3(cx - 0.08f, cy - 0.08f, 0.10f), new Vector3(0.09f, 0.05f, 0.22f), matWhite, false);
-                        CreateBox(g, new Vector3(cx + 0.08f, cy - 0.08f, 0.10f), new Vector3(0.09f, 0.05f, 0.22f), matWhite, false);
-                    }
-                }
-            }
-        }
-
-        // ====================================================================
-        // 6. FIRST FLOOR INTERIORS: Wide 5m Corridor & 2 Classrooms Each Side
-        // ====================================================================
-        void BuildFirstFloorInteriors()
-        {
-            var floor1 = new GameObject("First Floor Interiors").transform;
-            floor1.SetParent(Root, false);
-
-            float floorY = 0.60f;
-            float ceilY = 3.80f;
-
-            // 1st Floor Parquet Floor Slab (X: -36 to +36, Z: 0 to -22)
-            CreateBox(floor1, new Vector3(0, floorY * 0.5f, -11f), new Vector3(72f, floorY, 22f), matWoodFloor, true, "Floor 1 Ground");
-
-            // 1st Floor Ceiling: Split so there is a 100% OPEN ATRIUM over the Stairwell Bay!
-            // Left Wing Ceiling (X: -36 to -6)
-            CreateBox(floor1, new Vector3(-21f, ceilY + 0.05f, -11f), new Vector3(30f, 0.15f, 22f), matConcrete, true, "Ceiling Left Wing");
-            // Right Wing Ceiling (X: +6 to +36)
-            CreateBox(floor1, new Vector3(21f, ceilY + 0.05f, -11f), new Vector3(30f, 0.15f, 22f), matConcrete, true, "Ceiling Right Wing");
-            // Center South & Corridor Ceiling (X: -6 to +6, Z: 0 to -13.5)
-            CreateBox(floor1, new Vector3(0, ceilY + 0.05f, -6.75f), new Vector3(12f, 0.15f, 13.5f), matConcrete, true, "Ceiling Center South");
-            // NOTE: X: -6 to +6, Z: -13.5 to -22 is 100% OPEN for the grand 2-story stairwell!
-
-            // 5m Central Corridor Lamps
-            for (float hx = -30f; hx <= 30f; hx += 10f)
-            {
-                CreateInteriorLamp(floor1, new Vector3(hx, ceilY - 0.15f, -11f));
-            }
-
-            BuildExitSign(floor1, new Vector3(-20.5f, 2.9f, -8.65f));
-            BuildExitSign(floor1, new Vector3(20.5f, 2.9f, -8.65f));
-            BuildExitSign(floor1, new Vector3(-6.0f, 2.9f, -13.35f));
-
-            BuildFireHydrant(floor1, new Vector3(-18f, 1.4f, -8.65f));
-            BuildFireHydrant(floor1, new Vector3(18f, 1.4f, -8.65f));
-
-            BuildNoticeBoard(floor1, new Vector3(-12f, 2.0f, -8.65f));
-            BuildNoticeBoard(floor1, new Vector3(12f, 2.0f, -8.65f));
-
-            // SOUTH CORRIDOR WALL (at Z = -8.5)
-            CreateBox(floor1, new Vector3(-32.6f, 2.2f, -8.5f), new Vector3(6.8f, 3.2f, 0.25f), matPlaster, true);
-            CreateBox(floor1, new Vector3(-20.75f, 2.2f, -8.5f), new Vector3(14.0f, 3.2f, 0.25f), matPlaster, true);
-            CreateBox(floor1, new Vector3(-8.5f, 2.2f, -8.5f), new Vector3(7.5f, 3.2f, 0.25f), matPlaster, true);
-            CreateBox(floor1, new Vector3(8.5f, 2.2f, -8.5f), new Vector3(7.5f, 3.2f, 0.25f), matPlaster, true);
-            CreateBox(floor1, new Vector3(20.75f, 2.2f, -8.5f), new Vector3(14.0f, 3.2f, 0.25f), matPlaster, true);
-            CreateBox(floor1, new Vector3(32.6f, 2.2f, -8.5f), new Vector3(6.8f, 3.2f, 0.25f), matPlaster, true);
-
-            CreateBox(floor1, new Vector3(-28.5f, 3.3f, -8.5f), new Vector3(1.5f, 1.0f, 0.25f), matPlaster, true);
-            CreateBox(floor1, new Vector3(-13.0f, 3.3f, -8.5f), new Vector3(1.5f, 1.0f, 0.25f), matPlaster, true);
-            CreateBox(floor1, new Vector3(13.0f, 3.3f, -8.5f), new Vector3(1.5f, 1.0f, 0.25f), matPlaster, true);
-            CreateBox(floor1, new Vector3(28.5f, 3.3f, -8.5f), new Vector3(1.5f, 1.0f, 0.25f), matPlaster, true);
-
-            BuildClassroomDoor(floor1, new Vector3(-28.5f, floorY, -8.5f), 0, "1-A");
-            BuildClassroomDoor(floor1, new Vector3(-13.0f, floorY, -8.5f), 0, "1-B");
-            BuildClassroomDoor(floor1, new Vector3(13.0f, floorY, -8.5f), 0, "1-C");
-            BuildClassroomDoor(floor1, new Vector3(28.5f, floorY, -8.5f), 0, "保健室");
-
-            // NORTH CORRIDOR WALL (at Z = -13.5): X: -5.5 to +5.5 is completely wide open to the grand stairwell!
-            CreateBox(floor1, new Vector3(-32.6f, 2.2f, -13.5f), new Vector3(6.8f, 3.2f, 0.25f), matPlaster, true);
-            CreateBox(floor1, new Vector3(-20.75f, 2.2f, -13.5f), new Vector3(14.0f, 3.2f, 0.25f), matPlaster, true);
-            CreateBox(floor1, new Vector3(-9.25f, 2.2f, -13.5f), new Vector3(6.5f, 3.2f, 0.25f), matPlaster, true);
-            // X: -6.0 to +6.0 is the 12m wide entrance to the grand stairwell!
-            CreateBox(floor1, new Vector3(9.25f, 2.2f, -13.5f), new Vector3(6.5f, 3.2f, 0.25f), matPlaster, true);
-            CreateBox(floor1, new Vector3(20.75f, 2.2f, -13.5f), new Vector3(14.0f, 3.2f, 0.25f), matPlaster, true);
-            CreateBox(floor1, new Vector3(32.6f, 2.2f, -13.5f), new Vector3(6.8f, 3.2f, 0.25f), matPlaster, true);
-
-            CreateBox(floor1, new Vector3(-28.5f, 3.3f, -13.5f), new Vector3(1.5f, 1.0f, 0.25f), matPlaster, true);
-            CreateBox(floor1, new Vector3(-13.0f, 3.3f, -13.5f), new Vector3(1.5f, 1.0f, 0.25f), matPlaster, true);
-            CreateBox(floor1, new Vector3(13.0f, 3.3f, -13.5f), new Vector3(1.5f, 1.0f, 0.25f), matPlaster, true);
-            CreateBox(floor1, new Vector3(28.5f, 3.3f, -13.5f), new Vector3(1.5f, 1.0f, 0.25f), matPlaster, true);
-
-            BuildClassroomDoor(floor1, new Vector3(-28.5f, floorY, -13.5f), 180, "職員室");
-            BuildClassroomDoor(floor1, new Vector3(-13.0f, floorY, -13.5f), 180, "校長室");
-            BuildClassroomDoor(floor1, new Vector3(13.0f, floorY, -13.5f), 180, "PC室");
-            BuildClassroomDoor(floor1, new Vector3(28.5f, floorY, -13.5f), 180, "資料室");
-
-            // Room dividers along X
-            CreateBox(floor1, new Vector3(-20.5f, 2.2f, -4.25f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true);
-            CreateBox(floor1, new Vector3(-5.0f, 2.2f, -4.25f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true);
-            CreateBox(floor1, new Vector3(5.0f, 2.2f, -4.25f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true);
-            CreateBox(floor1, new Vector3(20.5f, 2.2f, -4.25f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true);
-
-            CreateBox(floor1, new Vector3(-20.5f, 2.2f, -17.75f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true);
-            CreateBox(floor1, new Vector3(-6.0f, 2.2f, -17.75f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true);
-            CreateBox(floor1, new Vector3(6.0f, 2.2f, -17.75f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true);
-            CreateBox(floor1, new Vector3(20.5f, 2.2f, -17.75f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, true);
-
-            // 1st Floor Classrooms with authentic mapping, desks & trash
-            BuildClassroom(floor1, -28.25f, floorY, -4.25f, "1-A", 1);
-            BuildClassroom(floor1, -12.75f, floorY, -4.25f, "1-B", 2);
-            BuildClassroom(floor1, 12.75f, floorY, -4.25f, "1-C", 3);
-            BuildNurseOffice(floor1, 28.25f, floorY);
-
-            BuildStaffRoom(floor1, -28.25f, floorY);
-            BuildPrincipalOffice(floor1, -12.75f, floorY);
-            BuildComputerLab(floor1, 12.75f, floorY);
-            BuildArchiveRoom(floor1, 28.25f, floorY);
-        }
-
-        // ====================================================================
-        // 7. SECOND FLOOR INTERIORS: Wide 5m Corridor & 2 Rooms Each Side
-        // ====================================================================
-        void BuildSecondFloorInteriors()
-        {
-            var floor2 = new GameObject("Second Floor Interiors").transform;
-            floor2.SetParent(Root, false);
-
-            float floorY = 3.80f;
-            float ceilY = 7.40f;
-
-            // 2nd Floor Parquet Floor Slab: Split with OPEN VOID over the Stairwell Bay!
-            CreateBox(floor2, new Vector3(-21f, floorY + 0.05f, -11f), new Vector3(30f, 0.1f, 22f), matWoodFloor, true, "Floor 2 Parquet Left");
-            CreateBox(floor2, new Vector3(21f, floorY + 0.05f, -11f), new Vector3(30f, 0.1f, 22f), matWoodFloor, true, "Floor 2 Parquet Right");
-            CreateBox(floor2, new Vector3(0, floorY + 0.05f, -4.25f), new Vector3(12f, 0.1f, 8.5f), matWoodFloor, true, "Floor 2 Parquet South Center");
-            CreateBox(floor2, new Vector3(0, floorY + 0.05f, -11.0f), new Vector3(12f, 0.1f, 5.0f), matWoodFloor, true, "Floor 2 Parquet Corridor Center");
-            // NOTE: X: -6 to +6, Z: -13.5 to -22 is 100% open void for the stairs!
-
-            // Ceiling Concrete Slab
-            CreateBox(floor2, new Vector3(0, ceilY + 0.05f, -11f), new Vector3(72f, 0.15f, 22f), matConcrete, true, "Floor 2 Ceiling");
-
-            for (float hx = -30f; hx <= 30f; hx += 10f)
-            {
-                CreateInteriorLamp(floor2, new Vector3(hx, ceilY - 0.15f, -11f));
-            }
-
-            BuildExitSign(floor2, new Vector3(-20.5f, floorY + 2.9f, -8.65f));
-            BuildExitSign(floor2, new Vector3(20.5f, floorY + 2.9f, -8.65f));
-
-            // 2ND FLOOR SOUTH CORRIDOR WALL (Z = -8.5)
-            CreateBox(floor2, new Vector3(-32.6f, floorY + 1.8f, -8.5f), new Vector3(6.8f, 3.6f, 0.25f), matPlaster, true);
-            CreateBox(floor2, new Vector3(-20.75f, floorY + 1.8f, -8.5f), new Vector3(14.0f, 3.6f, 0.25f), matPlaster, true);
-            CreateBox(floor2, new Vector3(-8.5f, floorY + 1.8f, -8.5f), new Vector3(7.5f, 3.6f, 0.25f), matPlaster, true);
-            CreateBox(floor2, new Vector3(0, floorY + 1.8f, -8.5f), new Vector3(10.0f, 3.6f, 0.25f), matPlaster, true);
-            CreateBox(floor2, new Vector3(8.5f, floorY + 1.8f, -8.5f), new Vector3(7.5f, 3.6f, 0.25f), matPlaster, true);
-            CreateBox(floor2, new Vector3(20.75f, floorY + 1.8f, -8.5f), new Vector3(14.0f, 3.6f, 0.25f), matPlaster, true);
-            CreateBox(floor2, new Vector3(32.6f, floorY + 1.8f, -8.5f), new Vector3(6.8f, 3.6f, 0.25f), matPlaster, true);
-
-            CreateBox(floor2, new Vector3(-28.5f, floorY + 3.3f, -8.5f), new Vector3(1.5f, 1.0f, 0.25f), matPlaster, true);
-            CreateBox(floor2, new Vector3(-13.0f, floorY + 3.3f, -8.5f), new Vector3(1.5f, 1.0f, 0.25f), matPlaster, true);
-            CreateBox(floor2, new Vector3(13.0f, floorY + 3.3f, -8.5f), new Vector3(1.5f, 1.0f, 0.25f), matPlaster, true);
-            CreateBox(floor2, new Vector3(28.5f, floorY + 3.3f, -8.5f), new Vector3(1.5f, 1.0f, 0.25f), matPlaster, true);
-
-            BuildClassroomDoor(floor2, new Vector3(-28.5f, floorY, -8.5f), 0, "2-A");
-            BuildClassroomDoor(floor2, new Vector3(-13.0f, floorY, -8.5f), 0, "2-B");
-            BuildClassroomDoor(floor2, new Vector3(13.0f, floorY, -8.5f), 0, "2-C");
-            BuildClassroomDoor(floor2, new Vector3(28.5f, floorY, -8.5f), 0, "音楽室");
-
-            // 2ND FLOOR NORTH CORRIDOR WALL (Z = -13.5)
-            // Left flight exit (X: -5.5 to -0.8) is 100% UNIMPEDED AND OPEN!
-            CreateBox(floor2, new Vector3(-32.6f, floorY + 1.8f, -13.5f), new Vector3(6.8f, 3.6f, 0.25f), matPlaster, true);
-            CreateBox(floor2, new Vector3(-20.75f, floorY + 1.8f, -13.5f), new Vector3(14.0f, 3.6f, 0.25f), matPlaster, true);
-            CreateBox(floor2, new Vector3(-9.25f, floorY + 1.8f, -13.5f), new Vector3(6.5f, 3.6f, 0.25f), matPlaster, true);
-            CreateBox(floor2, new Vector3(9.25f, floorY + 1.8f, -13.5f), new Vector3(6.5f, 3.6f, 0.25f), matPlaster, true);
-            CreateBox(floor2, new Vector3(20.75f, floorY + 1.8f, -13.5f), new Vector3(14.0f, 3.6f, 0.25f), matPlaster, true);
-            CreateBox(floor2, new Vector3(32.6f, floorY + 1.8f, -13.5f), new Vector3(6.8f, 3.6f, 0.25f), matPlaster, true);
-
-            CreateBox(floor2, new Vector3(-28.5f, floorY + 3.3f, -13.5f), new Vector3(1.5f, 1.0f, 0.25f), matPlaster, true);
-            CreateBox(floor2, new Vector3(-13.0f, floorY + 3.3f, -13.5f), new Vector3(1.5f, 1.0f, 0.25f), matPlaster, true);
-            CreateBox(floor2, new Vector3(13.0f, floorY + 3.3f, -13.5f), new Vector3(1.5f, 1.0f, 0.25f), matPlaster, true);
-            CreateBox(floor2, new Vector3(28.5f, floorY + 3.3f, -13.5f), new Vector3(1.5f, 1.0f, 0.25f), matPlaster, true);
-
-            BuildClassroomDoor(floor2, new Vector3(-28.5f, floorY, -13.5f), 180, "理科室");
-            BuildClassroomDoor(floor2, new Vector3(-13.0f, floorY, -13.5f), 180, "準備室");
-            BuildClassroomDoor(floor2, new Vector3(13.0f, floorY, -13.5f), 180, "図書室");
-            BuildClassroomDoor(floor2, new Vector3(28.5f, floorY, -13.5f), 180, "放送室");
-
-            // 2nd Floor Room dividers
-            CreateBox(floor2, new Vector3(-20.5f, floorY + 1.8f, -4.25f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster, true);
-            CreateBox(floor2, new Vector3(-5.0f, floorY + 1.8f, -4.25f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster, true);
-            CreateBox(floor2, new Vector3(5.0f, floorY + 1.8f, -4.25f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster, true);
-            CreateBox(floor2, new Vector3(20.5f, floorY + 1.8f, -4.25f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster, true);
-
-            CreateBox(floor2, new Vector3(-20.5f, floorY + 1.8f, -17.75f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster, true);
-            CreateBox(floor2, new Vector3(-6.0f, floorY + 1.8f, -17.75f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster, true);
-            CreateBox(floor2, new Vector3(6.0f, floorY + 1.8f, -17.75f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster, true);
-            CreateBox(floor2, new Vector3(20.5f, floorY + 1.8f, -17.75f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster, true);
-
-            // Safety Balustrade Railings around the 2nd Floor Open Void (Only where needed!)
-            // Protects the void edge overlooking Flight 1 from the corridor (X: -0.6 to +5.8)
-            CreateBox(floor2, new Vector3(2.6f, floorY + 0.5f, -13.6f), new Vector3(6.4f, 1.0f, 0.08f), matDarkMetal, true, "Void Rail South");
-            // Inner guardrail between flights
-            CreateBox(floor2, new Vector3(-0.6f, floorY + 0.5f, -16.0f), new Vector3(0.08f, 1.0f, 4.8f), matDarkMetal, true, "Void Rail Center");
-
-            // 2nd Floor Classrooms with authentic mapping, desks & trash
-            BuildClassroom(floor2, -28.25f, floorY, -4.25f, "2-A", 4);
-            BuildClassroom(floor2, -12.75f, floorY, -4.25f, "2-B", 5);
-            BuildClassroom(floor2, 12.75f, floorY, -4.25f, "2-C", 6);
-            BuildMusicRoom(floor2, 28.25f, floorY);
-
-            BuildScienceLab(floor2, -28.25f, floorY);
-            BuildSciencePrepRoom(floor2, -12.75f, floorY);
-            BuildLibrary(floor2, 12.75f, floorY);
-            BuildBroadcastRoom(floor2, 28.25f, floorY);
-        }
-
-        // ====================================================================
-        // 8. GRAND SWITCHBACK U-TURN STAIRWELL (Unobstructed, Double-Height Atrium)
-        // ====================================================================
-        void BuildStairs()
-        {
-            var stairs = new GameObject("Grand Switchback Stairwell").transform;
-            stairs.SetParent(Root, false);
-
-            float startY = 0.60f;
-            float midY = 2.20f;
-            float endY = 3.80f;
-
-            // Stairwell Bay: X: -6.0 to +6.0, Z: -13.5 to -22.0
-            // Midway Landing Platform at Y = 2.20m (Z: -18.2 to -21.8, X: -5.6 to +5.6)
-            CreateBox(stairs, new Vector3(0, midY - 0.09f, -20.0f), new Vector3(11.2f, 0.18f, 3.6f), matConcrete, true, "Midway Landing Platform");
-
-            // Slender Central Divider Wall between the two flights
-            CreateBox(stairs, new Vector3(0, 2.0f, -16.0f), new Vector3(0.20f, 3.2f, 4.4f), matConcrete, true, "Stair Central Spine");
-
-            // FLIGHT 1 (Right flight: X: +0.6 to +5.4, width 4.4m)
-            // Starts at 1F corridor level (Z = -13.8, Y = 0.60m) and climbs North to Landing (Z = -18.2, Y = 2.20m)
-            int steps1 = 10;
-            float rise1 = (midY - startY) / steps1; // 0.16m
-            float run1 = 4.4f / steps1;            // 0.44m
-            for (int i = 0; i < steps1; i++)
-            {
-                float sy = startY + (i + 0.5f) * rise1;
-                float sz = -13.8f - (i + 0.5f) * run1;
-                CreateBox(stairs, new Vector3(3.0f, sy, sz), new Vector3(4.4f, rise1, run1), matConcrete, true, "Step F1 " + i);
-            }
-            CreateRamp(stairs, new Vector3(3.0f, 1.40f, -16.0f), new Vector3(4.4f, 0.10f, 4.8f), 19.5f, "Flight 1 Smooth Ramp");
-
-            // Handrails for Flight 1
-            CreateBox(stairs, new Vector3(5.3f, 2.25f, -16.0f), new Vector3(0.08f, 0.9f, 4.4f), matDarkMetal, false, "Handrail F1 Wall");
-            CreateBox(stairs, new Vector3(0.7f, 2.25f, -16.0f), new Vector3(0.08f, 0.9f, 4.4f), matDarkMetal, false, "Handrail F1 Inner");
-
-            // FLIGHT 2 (Left flight: X: -5.4 to -0.6, width 4.4m)
-            // Turns 180°! Starts at Landing (Z = -18.2, Y = 2.20m) and climbs South to 2F corridor (Z = -13.8, Y = 3.80m)
-            int steps2 = 10;
-            float rise2 = (endY - midY) / steps2; // 0.16m
-            float run2 = 4.4f / steps2;            // 0.44m
-            for (int i = 0; i < steps2; i++)
-            {
-                float sy = midY + (i + 0.5f) * rise2;
-                float sz = -18.2f + (i + 0.5f) * run2;
-                CreateBox(stairs, new Vector3(-3.0f, sy, sz), new Vector3(4.4f, rise2, run2), matConcrete, true, "Step F2 " + i);
-            }
-            CreateRamp(stairs, new Vector3(-3.0f, 3.00f, -16.0f), new Vector3(4.4f, 0.10f, 4.8f), -19.5f, "Flight 2 Smooth Ramp");
-
-            // Handrails for Flight 2
-            CreateBox(stairs, new Vector3(-5.3f, 3.85f, -16.0f), new Vector3(0.08f, 0.9f, 4.4f), matDarkMetal, false, "Handrail F2 Wall");
-            CreateBox(stairs, new Vector3(-0.7f, 3.85f, -16.0f), new Vector3(0.08f, 0.9f, 4.4f), matDarkMetal, false, "Handrail F2 Inner");
-
-            // Midway Landing Railing under the big forest window
-            CreateBox(stairs, new Vector3(0, midY + 0.5f, -21.8f), new Vector3(11.0f, 1.0f, 0.08f), matDarkMetal, false, "Landing Railing");
-        }
-
-        // ====================================================================
-        // AUTHENTIC JAPANESE SLIDING CLASSROOM DOOR (引き戸 - Hikido)
-        // ====================================================================
-        void BuildClassroomDoor(Transform parent, Vector3 basePos, float yaw, string roomName)
-        {
-            var doorGroup = new GameObject("Sliding Door " + roomName).transform;
-            doorGroup.SetParent(parent, false);
-            doorGroup.localPosition = basePos;
-            doorGroup.localRotation = Quaternion.Euler(0, yaw, 0);
-
-            CreateBox(doorGroup, new Vector3(-0.75f, 1.15f, 0), new Vector3(0.12f, 2.3f, 0.28f), matDarkMetal, true);
-            CreateBox(doorGroup, new Vector3(0.75f, 1.15f, 0), new Vector3(0.12f, 2.3f, 0.28f), matDarkMetal, true);
-            CreateBox(doorGroup, new Vector3(0, 2.36f, 0), new Vector3(1.62f, 0.12f, 0.28f), matDarkMetal, false);
-
-            var plate = CreateBox(doorGroup, new Vector3(0, 2.58f, 0.15f), new Vector3(0.75f, 0.28f, 0.06f), matWoodFloor, false, "Nameplate");
-            CreateBox(plate.transform, new Vector3(0, 0, 0.04f), new Vector3(0.68f, 0.22f, 0.02f), matWhite, false, "Label Base");
-
-            var leaf = CreateBox(doorGroup, new Vector3(0.85f, 1.12f, 0.08f), new Vector3(0.95f, 2.20f, 0.05f), matDoorWood, true, "Sliding Leaf");
-            CreateBox(leaf.transform, new Vector3(0, 0.45f, 0), new Vector3(0.75f, 0.75f, 0.03f), matGlass, false, "Door Window Glass");
-            CreateBox(leaf.transform, new Vector3(0, 0.45f, 0.02f), new Vector3(0.04f, 0.75f, 0.04f), matDoorWood, false);
-            CreateBox(leaf.transform, new Vector3(0, 0.45f, 0.02f), new Vector3(0.75f, 0.04f, 0.04f), matDoorWood, false);
-            CreateBox(leaf.transform, new Vector3(-0.38f, 0, 0.03f), new Vector3(0.04f, 0.18f, 0.02f), matDarkMetal, false);
-        }
-
-        // ====================================================================
-        // CLASSROOM BUILDER: Authentic Desks, Disarray, Trash & Abandoned Clutter!
-        // ====================================================================
-        void BuildClassroom(Transform parent, float centerX, float floorY, float centerZ, string roomName, int classroomIndex)
-        {
-            var room = new GameObject("Classroom " + roomName).transform;
-            room.SetParent(parent, false);
-
-            // Front Baked Chalkboard with wood frame & chalk tray
-            CreateBox(room, new Vector3(centerX, floorY + 1.85f, centerZ + 4.05f), new Vector3(6.2f, 1.6f, 0.08f), matChalkboard, true, "Chalkboard");
-            CreateBox(room, new Vector3(centerX, floorY + 1.0f, centerZ + 4.0f), new Vector3(6.2f, 0.08f, 0.14f), matWoodFloor, false, "Chalk Tray");
-
-            // Broken chalk pieces and dropped eraser on the floor under the chalkboard!
-            CreateBox(room, new Vector3(centerX - 0.8f, floorY + 0.015f, centerZ + 3.8f), new Vector3(0.08f, 0.03f, 0.03f), matWhite, false, "Chalk Stick");
-            CreateBox(room, new Vector3(centerX + 0.5f, floorY + 0.015f, centerZ + 3.7f), new Vector3(0.06f, 0.03f, 0.03f), matTorii, false, "Red Chalk");
-            CreateBox(room, new Vector3(centerX + 1.2f, floorY + 0.025f, centerZ + 3.65f), new Vector3(0.18f, 0.05f, 0.09f), matDarkMetal, false, "Felt Eraser");
-
-            // Teacher Podium & Desk
-            CreateBox(room, new Vector3(centerX, floorY + 0.08f, centerZ + 2.8f), new Vector3(2.8f, 0.16f, 1.4f), matWoodFloor, true, "Podium Stage");
-            CreateBox(room, new Vector3(centerX, floorY + 0.55f, centerZ + 2.8f), new Vector3(1.6f, 0.75f, 0.85f), matDeskWood, true, "Teacher Desk");
-            CreateBox(room, new Vector3(centerX + 0.4f, floorY + 0.95f, centerZ + 2.8f), new Vector3(0.35f, 0.04f, 0.25f), matPaper, false, "Grade Binder");
-
-            // 12 Authentic Student Desks (3 rows x 4 columns)
-            int deskIndex = 0;
-            for (int r = 0; r < 3; r++)
-            {
-                for (int c = 0; c < 4; c++)
-                {
-                    deskIndex++;
-                    float dx = centerX - 4.2f + c * 2.8f;
-                    float dz = centerZ + 0.9f - r * 2.2f;
-
-                    // Abandoned horror school touches:
-                    // In each classroom, some desks are pushed askew, one is overturned, chairs tipped!
-                    bool isOverturned = (classroomIndex + deskIndex) % 11 == 0;
-                    bool isAskew = (classroomIndex * 3 + deskIndex) % 5 == 0;
-                    bool isTippedChair = (classroomIndex * 2 + deskIndex) % 7 == 0;
-
-                    float yawOffset = isAskew ? ((deskIndex % 2 == 0) ? 22f : -28f) : UnityEngine.Random.Range(-3f, 3f);
-                    BuildAuthenticDesk(room, new Vector3(dx, floorY, dz), yawOffset, isOverturned, isTippedChair);
-                }
-            }
-
-            // Rear Wall Low Storage Shelf Unit (Clean, authentic Japanese school furniture!)
-            CreateBox(room, new Vector3(centerX, floorY + 0.50f, centerZ - 3.95f), new Vector3(8.4f, 1.0f, 0.40f), matDeskWood, true, "Cubby Unit");
-            for (int c = 0; c < 8; c++)
-            {
-                float cx = centerX - 3.7f + c * 1.05f;
-                // Internal shelf cubby dividing walls
-                CreateBox(room, new Vector3(cx, floorY + 0.50f, centerZ - 3.95f), new Vector3(0.04f, 0.95f, 0.38f), matDeskWood, false);
-                // Textbooks & bags tucked in some cubbies
-                if ((c + classroomIndex) % 2 == 0)
-                {
-                    CreateBox(room, new Vector3(cx + 0.45f, floorY + 0.25f, centerZ - 3.95f), new Vector3(0.35f, 0.22f, 0.25f), matBooks, false);
-                }
-            }
-
-            // CLASSROOM TRASH & ABANDONED CLUTTER (Мусор та безлад)
-            BuildClassroomTrashAndClutter(room, centerX, floorY, centerZ, classroomIndex);
-
-            // Wall Clock above blackboard
-            var clk = CreateCylinder(room, new Vector3(centerX, floorY + 3.0f, centerZ + 4.05f), 0.35f, 0.06f, matWhite, false);
-            clk.transform.rotation = Quaternion.Euler(90, 0, 0);
-
-            // Ceiling Fluorescent Tube Fixtures
-            CreateInteriorLamp(room, new Vector3(centerX - 2.8f, floorY + 3.1f, centerZ));
-            CreateInteriorLamp(room, new Vector3(centerX + 2.8f, floorY + 3.1f, centerZ));
-        }
-
-        void BuildAuthenticDesk(Transform parent, Vector3 pos, float yaw, bool isOverturned, bool isTippedChair)
-        {
-            var g = new GameObject("Authentic School Desk").transform;
-            g.SetParent(parent, false);
-            g.localPosition = pos;
-            g.localRotation = Quaternion.Euler(0, yaw, isOverturned ? 85f : 0);
-
-            // Desktop (Warm light birch wood grain texture!)
-            CreateBox(g, new Vector3(0, 0.72f, 0), new Vector3(0.68f, 0.03f, 0.48f), matDeskWood, true, "Desktop");
-
-            // Under-desk metal book storage shelf
-            CreateBox(g, new Vector3(0, 0.62f, 0), new Vector3(0.56f, 0.06f, 0.38f), matDarkMetal, false, "Book Shelf");
-
-            // 4 Slender Tubular Steel Legs with rubber glides
-            for (int sx = -1; sx <= 1; sx += 2)
-            {
-                for (int sz = -1; sz <= 1; sz += 2)
-                {
-                    CreateCylinder(g, new Vector3(sx * 0.30f, 0.36f, sz * 0.20f), 0.016f, 0.72f, matDarkMetal, false);
-                }
-            }
-
-            // Attached Student Chair
-            var chair = new GameObject("Student Chair").transform;
-            chair.SetParent(g, false);
-            chair.localPosition = isTippedChair ? new Vector3(0, 0.2f, 0.8f) : Vector3.zero;
-            chair.localRotation = isTippedChair ? Quaternion.Euler(-75f, 15f, 0) : Quaternion.identity;
-
-            // Wooden Seat & Backrest
-            CreateBox(chair, new Vector3(0, 0.42f, 0.45f), new Vector3(0.40f, 0.025f, 0.38f), matDeskWood, true, "Seat");
-            CreateBox(chair, new Vector3(0, 0.78f, 0.62f), new Vector3(0.40f, 0.18f, 0.025f), matDeskWood, false, "Backrest");
-
-            // Chair tubular metal legs & uprights
-            for (int sx = -1; sx <= 1; sx += 2)
-            {
-                CreateCylinder(chair, new Vector3(sx * 0.16f, 0.21f, 0.45f), 0.014f, 0.42f, matDarkMetal, false);
-                CreateCylinder(chair, new Vector3(sx * 0.16f, 0.60f, 0.61f), 0.014f, 0.40f, matDarkMetal, false);
-            }
-
-            // School bag hanging on desk side hook
-            CreateBox(g, new Vector3(-0.36f, 0.45f, 0), new Vector3(0.10f, 0.32f, 0.22f), matDarkMetal, false, "School Bag");
-
-            // Open notebook or exam paper on some desks
-            if (!isOverturned && (int)(pos.x + pos.z) % 2 == 0)
-            {
-                CreateBox(g, new Vector3(UnityEngine.Random.Range(-0.1f, 0.1f), 0.74f, 0), new Vector3(0.24f, 0.005f, 0.32f), matPaper, false, "Desk Paper");
-            }
-        }
-
-        void BuildClassroomTrashAndClutter(Transform parent, float centerX, float floorY, float centerZ, int seed)
-        {
-            var clutter = new GameObject("Classroom Debris & Trash").transform;
-            clutter.SetParent(parent, false);
-
-            var rng = new System.Random(seed * 777 + 123);
-
-            // 1. Scattered Examination Papers & Notebook Pages on the floor!
-            int numPapers = 12;
-            for (int i = 0; i < numPapers; i++)
-            {
-                float px = centerX + (float)(rng.NextDouble() * 10.0 - 5.0);
-                float pz = centerZ + (float)(rng.NextDouble() * 6.5 - 3.2);
-                float yaw = (float)(rng.NextDouble() * 360.0);
-                var paper = CreateBox(clutter, new Vector3(px, floorY + 0.01f, pz), new Vector3(0.28f, 0.005f, 0.20f), matPaper, false, "Loose Exam Paper");
-                paper.transform.rotation = Quaternion.Euler(0, yaw, 0);
-            }
-
-            // 2. Crumpled Paper Balls on the floor
-            for (int i = 0; i < 6; i++)
-            {
-                float px = centerX + (float)(rng.NextDouble() * 8.0 - 4.0);
-                float pz = centerZ + (float)(rng.NextDouble() * 6.0 - 3.0);
-                CreateBox(clutter, new Vector3(px, floorY + 0.04f, pz), new Vector3(0.08f, 0.08f, 0.08f), matPaper, false, "Crumpled Paper Ball");
-            }
-
-            // 3. Classroom Wastebasket / Trash Bin (in front corner)
-            var bin = CreateCylinder(clutter, new Vector3(centerX + 5.8f, floorY + 0.30f, centerZ + 3.2f), 0.18f, 0.60f, matTrashCan, true, "Trash Bin");
-            // Overflowing crumpled paper inside bin
-            CreateBox(bin.transform, new Vector3(0, 0.32f, 0), new Vector3(0.22f, 0.14f, 0.22f), matPaper, false, "Trash Overflow");
-
-            // 4. Aluminum Beverage Cans on the floor
-            CreateCylinder(clutter, new Vector3(centerX - 2.5f, floorY + 0.035f, centerZ - 1.8f), 0.035f, 0.12f, matCan, false, "Soda Can").transform.rotation = Quaternion.Euler(90, 45, 0);
-            CreateCylinder(clutter, new Vector3(centerX + 3.2f, floorY + 0.035f, centerZ + 0.5f), 0.035f, 0.12f, matCan, false, "Tea Can").transform.rotation = Quaternion.Euler(90, -30, 0);
-
-            // 5. Fallen Textbooks dropped on the floor
-            for (int i = 0; i < 3; i++)
-            {
-                float bx = centerX + (float)(rng.NextDouble() * 8.0 - 4.0);
-                float bz = centerZ + (float)(rng.NextDouble() * 5.0 - 2.5);
-                float byaw = (float)(rng.NextDouble() * 180.0);
-                var book = CreateBox(clutter, new Vector3(bx, floorY + 0.02f, bz), new Vector3(0.22f, 0.035f, 0.30f), matBooks, false, "Dropped Textbook");
-                book.transform.rotation = Quaternion.Euler(0, byaw, 0);
-            }
-        }
-
-        // ====================================================================
-        // SPECIALIZED FIRST FLOOR ROOMS
-        // ====================================================================
-        void BuildNurseOffice(Transform parent, float centerX, float floorY)
-        {
-            var room = new GameObject("Nurse Office (保健室)").transform;
-            room.SetParent(parent, false);
-
-            for (int b = 0; b < 2; b++)
-            {
-                float bz = -3.2f - b * 2.8f;
-                CreateBox(room, new Vector3(centerX + 4.2f, floorY + 0.45f, bz), new Vector3(1.3f, 0.4f, 2.3f), matWhite, true, "Bed");
-                CreateBox(room, new Vector3(centerX + 4.2f, floorY + 0.70f, bz + 0.9f), new Vector3(0.9f, 0.15f, 0.5f), matPlaster, false, "Pillow");
-                CreateBox(room, new Vector3(centerX + 3.0f, floorY + 1.2f, bz), new Vector3(0.05f, 1.8f, 2.2f), matWhite, false, "Privacy Curtain");
-            }
-            CreateBox(room, new Vector3(centerX - 3.5f, floorY + 1.5f, -6.5f), new Vector3(2.4f, 2.8f, 0.6f), matDarkMetal, true, "Medicine Cabinet");
-            CreateBox(room, new Vector3(centerX - 3.5f, floorY + 0.75f, -2.5f), new Vector3(1.8f, 0.75f, 1.0f), matDeskWood, true, "Nurse Desk");
-            CreateBox(room, new Vector3(centerX + 1.0f, floorY + 1.0f, -7.5f), new Vector3(0.35f, 2.0f, 0.35f), matWhite, true, "Height Scale");
-
-            // Dropped medical bandages & pill box on floor
-            CreateBox(room, new Vector3(centerX - 1.5f, floorY + 0.03f, -4.5f), new Vector3(0.14f, 0.06f, 0.14f), matWhite, false, "Bandage Roll");
-            CreateBox(room, new Vector3(centerX - 1.8f, floorY + 0.02f, -4.2f), new Vector3(0.12f, 0.04f, 0.08f), matPaper, false, "Medicine Box");
-
-            CreateInteriorLamp(room, new Vector3(centerX, floorY + 3.1f, -4.25f));
-        }
-
-        void BuildStaffRoom(Transform parent, float centerX, float floorY)
-        {
-            var room = new GameObject("Staff Room (職員室)").transform;
-            room.SetParent(parent, false);
-
-            for (int pod = 0; pod < 2; pod++)
-            {
-                float pz = -16.0f - pod * 3.4f;
-                var podDesk = CreateBox(room, new Vector3(centerX, floorY + 0.75f, pz), new Vector3(7.2f, 0.75f, 1.8f), matDeskWood, true, "Staff Pod Desk");
-                for (float dx = -2.4f; dx <= 2.4f; dx += 2.4f)
-                {
-                    CreateBox(podDesk.transform, new Vector3(dx, 0.45f, 0.3f), new Vector3(0.4f, 0.25f, 0.3f), matPaper, false, "Paper Stack");
-                    CreateBox(podDesk.transform, new Vector3(dx, 0.45f, -0.3f), new Vector3(0.4f, 0.25f, 0.3f), matPaper, false, "Paper Stack");
-                }
-            }
-            CreateBox(room, new Vector3(centerX - 5.5f, floorY + 1.6f, -17.75f), new Vector3(0.8f, 2.8f, 6.0f), matDarkMetal, true, "Filing Cabinets");
-
-            // Scattered documents across the floor
-            for (int i = 0; i < 8; i++)
-            {
-                float px = centerX + UnityEngine.Random.Range(-4.5f, 4.5f);
-                float pz = -17.75f + UnityEngine.Random.Range(-2.5f, 2.5f);
-                CreateBox(room, new Vector3(px, floorY + 0.01f, pz), new Vector3(0.28f, 0.005f, 0.22f), matPaper, false, "Printout Document");
-            }
-
-            CreateInteriorLamp(room, new Vector3(centerX, floorY + 3.1f, -17.75f));
-        }
-
-        void BuildPrincipalOffice(Transform parent, float centerX, float floorY)
-        {
-            var room = new GameObject("Principal Office (校長室)").transform;
-            room.SetParent(parent, false);
-
-            CreateBox(room, new Vector3(centerX, floorY + 0.75f, -20.0f), new Vector3(2.8f, 0.75f, 1.4f), matDeskWood, true, "Executive Desk");
-            CreateBox(room, new Vector3(centerX, floorY + 0.65f, -20.9f), new Vector3(0.8f, 1.1f, 0.8f), matDarkMetal, true, "Leather Chair");
-            CreateBox(room, new Vector3(centerX - 2.5f, floorY + 0.45f, -16.5f), new Vector3(1.8f, 0.65f, 0.8f), matDarkMetal, true, "Sofa L");
-            CreateBox(room, new Vector3(centerX + 2.5f, floorY + 0.45f, -16.5f), new Vector3(1.8f, 0.65f, 0.8f), matDarkMetal, true, "Sofa R");
-            CreateBox(room, new Vector3(centerX, floorY + 0.35f, -16.5f), new Vector3(1.6f, 0.45f, 0.8f), matDeskWood, true, "Coffee Table");
-
-            CreateInteriorLamp(room, new Vector3(centerX, floorY + 3.1f, -17.75f));
-        }
-
-        void BuildComputerLab(Transform parent, float centerX, float floorY)
-        {
-            var room = new GameObject("Computer Lab (PC室)").transform;
-            room.SetParent(parent, false);
-
-            for (int r = 0; r < 2; r++)
-            {
-                float rz = -16.0f - r * 3.2f;
-                var table = CreateBox(room, new Vector3(centerX, floorY + 0.72f, rz), new Vector3(8.0f, 0.72f, 1.4f), matLabCounter, true, "Computer Bench");
-                for (float mx = -2.8f; mx <= 2.8f; mx += 1.8f)
-                {
-                    CreateBox(table.transform, new Vector3(mx, 0.55f, 0), new Vector3(0.55f, 0.42f, 0.12f), matDarkMetal, false, "Monitor");
-                    CreateBox(table.transform, new Vector3(mx, 0.38f, 0.35f), new Vector3(0.45f, 0.03f, 0.18f), matWhite, false, "Keyboard");
-                }
-            }
-            CreateInteriorLamp(room, new Vector3(centerX, floorY + 3.1f, -17.75f));
-        }
-
-        void BuildArchiveRoom(Transform parent, float centerX, float floorY)
-        {
-            var room = new GameObject("Archive Room (資料室)").transform;
-            room.SetParent(parent, false);
-
-            for (int r = 0; r < 3; r++)
-            {
-                float rz = -15.5f - r * 2.2f;
-                var shelf = CreateBox(room, new Vector3(centerX - 1.5f, floorY + 1.4f, rz), new Vector3(6.5f, 2.6f, 0.7f), matDeskWood, true, "Archive Shelf");
-                for (int lvl = 0; lvl < 3; lvl++)
-                {
-                    CreateBox(shelf.transform, new Vector3(0, -0.8f + lvl * 0.75f, 0.05f), new Vector3(6.2f, 0.45f, 0.55f), matBooks, false);
-                }
-            }
-            CreateInteriorLamp(room, new Vector3(centerX, floorY + 3.1f, -17.75f));
-        }
-
-        // ====================================================================
-        // SPECIALIZED SECOND FLOOR ROOMS
-        // ====================================================================
-        void BuildMusicRoom(Transform parent, float centerX, float floorY)
-        {
-            var room = new GameObject("Music Room (音楽室)").transform;
-            room.SetParent(parent, false);
-
-            var piano = CreateBox(room, new Vector3(centerX + 3.5f, floorY + 0.7f, -4.25f), new Vector3(1.8f, 1.3f, 1.4f), matDarkMetal, true, "Upright Piano");
-            CreateBox(piano.transform, new Vector3(0, -0.1f, 0.65f), new Vector3(1.6f, 0.18f, 0.35f), matWhite, false, "Keyboard");
-            CreateBox(room, new Vector3(centerX + 3.5f, floorY + 0.45f, -3.2f), new Vector3(0.6f, 0.45f, 0.4f), matDeskWood, true, "Piano Stool");
-
-            // Scattered sheet music pages across the floor!
-            for (int i = 0; i < 9; i++)
-            {
-                float px = centerX + UnityEngine.Random.Range(-3.5f, 3.5f);
-                float pz = -4.25f + UnityEngine.Random.Range(-2.5f, 2.5f);
-                CreateBox(room, new Vector3(px, floorY + 0.01f, pz), new Vector3(0.24f, 0.005f, 0.32f), matPaper, false, "Sheet Music Page");
-            }
-
-            for (int row = 0; row < 3; row++)
-            {
-                float rz = -2.5f - row * 1.8f;
-                for (int c = 0; c < 4; c++)
-                {
-                    float cx = centerX - 3.8f + c * 1.8f;
-                    CreateBox(room, new Vector3(cx, floorY + 0.45f, rz), new Vector3(0.45f, 0.45f, 0.45f), matDeskWood, true, "Chair");
-                    CreateCylinder(room, new Vector3(cx, floorY + 0.9f, rz + 0.6f), 0.02f, 0.9f, matDarkMetal, false, "Music Stand");
-                    CreateBox(room, new Vector3(cx, floorY + 1.2f, rz + 0.6f), new Vector3(0.4f, 0.3f, 0.03f), matDarkMetal, false);
-                }
-            }
-            CreateInteriorLamp(room, new Vector3(centerX, floorY + 3.1f, -4.25f));
-        }
-
-        void BuildScienceLab(Transform parent, float centerX, float floorY)
-        {
-            var lab = new GameObject("Science Lab (理科室)").transform;
-            lab.SetParent(parent, false);
-
-            for (int r = 0; r < 2; r++)
-            {
-                float lz = -16.2f - r * 3.4f;
-                var bench = CreateBox(lab, new Vector3(centerX, floorY + 0.45f, lz), new Vector3(7.5f, 0.9f, 1.6f), matLabCounter, true, "Lab Bench");
-                CreateBox(bench.transform, new Vector3(2.8f, 0.45f, 0), new Vector3(0.9f, 0.2f, 0.7f), matDarkMetal, false, "Sink");
-                CreateCylinder(bench.transform, new Vector3(2.8f, 0.7f, 0), 0.02f, 0.4f, matWhite, false, "Faucet");
-                CreateCylinder(bench.transform, new Vector3(-2.2f, 0.55f, 0.2f), 0.06f, 0.22f, matGlass, false, "Beaker");
-                CreateCylinder(bench.transform, new Vector3(-1.6f, 0.55f, 0.2f), 0.08f, 0.25f, matGlass, false, "Beaker 2");
-                CreateBox(bench.transform, new Vector3(0, 0.55f, -0.3f), new Vector3(0.45f, 0.18f, 0.15f), matDeskWood, false, "Test Tubes");
-            }
-
-            var skel = new GameObject("Skeleton Stand").transform;
-            skel.SetParent(lab, false);
-            skel.localPosition = new Vector3(centerX + 5.5f, floorY, -20.5f);
-            CreateCylinder(skel, new Vector3(0, 0.9f, 0), 0.025f, 1.8f, matDarkMetal, false, "Stand");
-            CreateBox(skel, new Vector3(0, 1.6f, 0), new Vector3(0.24f, 0.28f, 0.24f), matWhite, false, "Skull");
-            CreateBox(skel, new Vector3(0, 1.15f, 0), new Vector3(0.35f, 0.55f, 0.22f), matWhite, false, "Ribcage");
-
-            CreateInteriorLamp(lab, new Vector3(centerX, floorY + 3.1f, -17.75f));
-        }
-
-        void BuildSciencePrepRoom(Transform parent, float centerX, float floorY)
-        {
-            var prep = new GameObject("Science Prep (準備室)").transform;
-            prep.SetParent(parent, false);
-
-            CreateBox(prep, new Vector3(centerX - 3.5f, floorY + 1.5f, -17.75f), new Vector3(2.0f, 2.8f, 6.0f), matDarkMetal, true, "Reagent Cabinets");
-            CreateBox(prep, new Vector3(centerX + 2.0f, floorY + 0.45f, -17.75f), new Vector3(4.5f, 0.9f, 1.6f), matLabCounter, true, "Prep Desk");
-
-            CreateInteriorLamp(prep, new Vector3(centerX, floorY + 3.1f, -17.75f));
-        }
-
-        void BuildLibrary(Transform parent, float centerX, float floorY)
-        {
-            var lib = new GameObject("Library (図書室)").transform;
-            lib.SetParent(parent, false);
-
-            for (int r = 0; r < 3; r++)
-            {
-                float bz = -15.5f - r * 2.6f;
-                var shelf = CreateBox(lib, new Vector3(centerX - 3.0f, floorY + 1.4f, bz), new Vector3(5.5f, 2.8f, 0.65f), matDeskWood, true, "Bookshelf");
-                for (int level = 0; level < 4; level++)
-                {
-                    CreateBox(shelf.transform, new Vector3(0, -1.0f + level * 0.65f, 0.05f), new Vector3(5.2f, 0.45f, 0.55f), matBooks, false);
-                }
-            }
-
-            var table = CreateBox(lib, new Vector3(centerX + 3.2f, floorY + 0.4f, -17.75f), new Vector3(2.6f, 0.8f, 4.8f), matDeskWood, true, "Study Table");
-            for (float tz = -1.5f; tz <= 1.5f; tz += 1.5f)
-            {
-                var lamp = CreateBox(table.transform, new Vector3(0, 0.55f, tz), new Vector3(0.22f, 0.35f, 0.22f), matTorii, false, "Desk Lamp");
-                var l = lamp.AddComponent<Light>();
-                l.type = LightType.Point;
-                l.color = new Color(0.9f, 1.0f, 0.7f);
-                l.intensity = 0.9f;
-                l.range = 3.2f;
-            }
-
-            // Fallen books between shelves on library floor!
-            for (int i = 0; i < 6; i++)
-            {
-                float bx = centerX + UnityEngine.Random.Range(-4f, 4f);
-                float bz = -17.75f + UnityEngine.Random.Range(-3f, 3f);
-                CreateBox(lib, new Vector3(bx, floorY + 0.02f, bz), new Vector3(0.22f, 0.04f, 0.32f), matBooks, false, "Fallen Library Book");
-            }
-
-            CreateInteriorLamp(lib, new Vector3(centerX, floorY + 3.1f, -17.75f));
-        }
-
-        void BuildBroadcastRoom(Transform parent, float centerX, float floorY)
-        {
-            var av = new GameObject("AV Room (放送室)").transform;
-            av.SetParent(parent, false);
-
-            CreateBox(av, new Vector3(centerX, floorY + 0.45f, -17.75f), new Vector3(4.2f, 0.9f, 1.6f), matDarkMetal, true, "Console Desk");
-            CreateBox(av, new Vector3(centerX, floorY + 1.25f, -17.75f), new Vector3(3.2f, 0.55f, 0.35f), matLabCounter, false, "Rack Equipment");
-            CreateBox(av, new Vector3(centerX - 2.2f, floorY + 1.2f, -17.75f), new Vector3(0.4f, 0.6f, 0.4f), matDarkMetal, false, "Speaker L");
-            CreateBox(av, new Vector3(centerX + 2.2f, floorY + 1.2f, -17.75f), new Vector3(0.4f, 0.6f, 0.4f), matDarkMetal, false, "Speaker R");
-
-            CreateInteriorLamp(av, new Vector3(centerX, floorY + 3.1f, -17.75f));
-        }
-
-        // ====================================================================
-        // INTERIOR HELPERS: Lamps, Exit Signs, Hydrants, Notice Boards
-        // ====================================================================
-        void CreateInteriorLamp(Transform parent, Vector3 pos)
-        {
-            var go = new GameObject("Hallway Lamp").transform;
-            go.SetParent(parent, false);
-            go.localPosition = pos;
-            CreateBox(go, Vector3.zero, new Vector3(1.6f, 0.08f, 0.35f), matWhite, false);
-            var bulb = CreateBox(go, new Vector3(0, -0.04f, 0), new Vector3(1.4f, 0.04f, 0.25f), matPlaster, false);
-
-            var l = go.gameObject.AddComponent<Light>();
-            l.type = LightType.Point;
-            l.color = new Color(1.0f, 0.95f, 0.84f);
-            l.intensity = 1.6f;
-            l.range = 8.5f;
-
-            lamps.Add(new FlickeringLamp
-            {
-                light = l,
-                bulb = bulb.GetComponent<Renderer>(),
-                baseIntensity = 1.6f,
-                worksNormally = true,
-                flickerOffset = UnityEngine.Random.value * 20f
-            });
-        }
-
-        void BuildExitSign(Transform parent, Vector3 pos)
-        {
-            var sign = CreateBox(parent, pos, new Vector3(0.6f, 0.3f, 0.08f), matTorii, false, "ExitSign");
-            var l = sign.AddComponent<Light>();
-            l.type = LightType.Point;
-            l.color = new Color(0.1f, 1.0f, 0.4f);
-            l.intensity = 1.1f;
-            l.range = 2.8f;
-        }
-
-        void BuildFireHydrant(Transform parent, Vector3 pos)
-        {
-            var hyd = CreateBox(parent, pos, new Vector3(0.7f, 1.2f, 0.15f), matTorii, true, "FireHydrant");
-            CreateBox(hyd.transform, new Vector3(0, 0.25f, 0.08f), new Vector3(0.3f, 0.3f, 0.04f), matWhite, false);
-        }
-
-        void BuildNoticeBoard(Transform parent, Vector3 pos)
-        {
-            var cork = CreateBox(parent, pos, new Vector3(2.4f, 1.2f, 0.06f), matWoodFloor, false, "NoticeBoard");
-            CreateBox(cork.transform, new Vector3(-0.6f, 0.15f, 0.04f), new Vector3(0.45f, 0.6f, 0.02f), matPaper, false, "Poster 1");
-            CreateBox(cork.transform, new Vector3(0.4f, -0.1f, 0.04f), new Vector3(0.55f, 0.45f, 0.02f), matPaper, false, "Poster 2");
-        }
-
-        // ====================================================================
-        // 9. TRADITIONAL JAPANESE PARK ACROSS THE ROAD
-        // ====================================================================
-        void BuildTraditionalPark()
-        {
-            var park = new GameObject("Traditional Japanese Park").transform;
-            park.SetParent(Root, false);
-
-            CreateBox(park, new Vector3(0, -0.05f, 80f), new Vector3(90f, 0.1f, 60f), matFoliage, true, "Park Moss Ground");
-
-            for (int side = -1; side <= 1; side += 2)
-            {
-                float wallW = 38f;
-                float midX = side * (5.5f + wallW * 0.5f);
-                CreateBox(park, new Vector3(midX, 0.65f, 50f), new Vector3(wallW, 1.3f, 0.45f), matStone, true, "Park Stone Wall");
-                CreateBox(park, new Vector3(side * 5.5f, 1.2f, 50f), new Vector3(0.9f, 2.4f, 0.9f), matStone, true, "Park Gate Post");
-            }
-
-            CreateBox(park, new Vector3(0, 0.02f, 68f), new Vector3(4.8f, 0.02f, 36f), matStone, false, "Stone Path Main");
-            CreateBox(park, new Vector3(-14f, 0.02f, 80f), new Vector3(20f, 0.02f, 3.4f), matStone, false, "Stone Path Left");
-            CreateBox(park, new Vector3(14f, 0.02f, 80f), new Vector3(20f, 0.02f, 3.4f), matStone, false, "Stone Path Right");
-            CreateBox(park, new Vector3(0, 0.02f, 96f), new Vector3(5.2f, 0.02f, 24f), matStone, false, "Shrine Approach Path");
-
-            Vector2[] treeCoords = {
-                new Vector2(-16, 56), new Vector2(16, 56),
-                new Vector2(-26, 68), new Vector2(26, 68),
-                new Vector2(-12, 78), new Vector2(12, 78),
-                new Vector2(-24, 88), new Vector2(24, 88),
-                new Vector2(-8, 98), new Vector2(8, 98),
-                new Vector2(-30, 82), new Vector2(30, 82),
-                new Vector2(-20, 62), new Vector2(20, 62),
-                new Vector2(-34, 98), new Vector2(34, 98)
-            };
-            foreach (var tc in treeCoords)
-            {
-                BuildAncientTree(park, new Vector3(tc.x, 0, tc.y));
-            }
-
-            Vector2[] toroCoords = {
-                new Vector2(-3.4f, 54), new Vector2(3.4f, 54),
-                new Vector2(-3.6f, 68), new Vector2(3.6f, 68),
-                new Vector2(-3.6f, 82), new Vector2(3.6f, 82),
-                new Vector2(-3.6f, 94), new Vector2(3.6f, 94)
-            };
-            foreach (var loc in toroCoords)
-            {
-                BuildStoneLantern(park, new Vector3(loc.x, 0, loc.y));
-            }
-
-            BuildToriiGate(park, new Vector3(0, 0, 86f));
-            BuildShintoShrine(park, new Vector3(0, 0, 100f));
-            BuildAzumayaGazebo(park, new Vector3(16f, 0, 72f));
-
-            BuildParkBench(park, new Vector3(-14f, 0, 64f), 45);
-            BuildParkBench(park, new Vector3(-16f, 0, 84f), 90);
-            BuildParkBench(park, new Vector3(18f, 0, 86f), -90);
-
-            Vector3[] lampPositions = {
-                new Vector3(-12f, 0, 48.5f),
-                new Vector3(12f, 0, 48.5f),
-                new Vector3(-6f, 0, 60f),
-                new Vector3(6f, 0, 60f),
-                new Vector3(-7f, 0, 75f),
-                new Vector3(7f, 0, 75f),
-                new Vector3(-5f, 0, 90f),
-                new Vector3(5f, 0, 90f)
-            };
-            for (int i = 0; i < lampPositions.Length; i++)
-            {
-                bool flaky = (i % 2 == 1);
-                BuildStreetLamp(park, lampPositions[i], !flaky);
-            }
-        }
-
-        void BuildAncientTree(Transform parent, Vector3 pos)
-        {
-            var tree = new GameObject("Ancient Tree").transform;
-            tree.SetParent(parent, false);
-            tree.localPosition = pos;
-
-            CreateCylinder(tree, new Vector3(0, 3.2f, 0), 0.85f, 6.4f, matBark, true, "Trunk");
-            for (int i = 0; i < 4; i++)
-            {
-                float angle = i * Mathf.PI * 0.5f;
-                CreateBox(tree, new Vector3(Mathf.Sin(angle) * 0.95f, 0.6f, Mathf.Cos(angle) * 0.95f), new Vector3(0.9f, 1.2f, 0.9f), matBark, true);
-            }
-
-            for (int i = 0; i < 5; i++)
-            {
-                float ang = (i / 5f) * Mathf.PI * 2f + 0.35f;
-                Vector3 branchPos = new Vector3(Mathf.Sin(ang) * 2.2f, 6.0f + (i % 2) * 0.9f, Mathf.Cos(ang) * 2.2f);
-                CreateCylinder(tree, branchPos, 0.38f, 4.4f, matBark, false);
-                Vector3 crownPos = new Vector3(Mathf.Sin(ang) * 3.6f, 7.8f + (i % 2) * 1.0f, Mathf.Cos(ang) * 3.6f);
-                CreateBox(tree, crownPos, new Vector3(4.8f, 3.2f, 4.8f), matFoliage, false);
-            }
-            CreateBox(tree, new Vector3(0, 9.6f, 0), new Vector3(7.0f, 4.2f, 7.0f), matFoliage, false);
-        }
-
-        void BuildStoneLantern(Transform parent, Vector3 pos)
-        {
-            var toro = new GameObject("Stone Toro").transform;
-            toro.SetParent(parent, false);
-            toro.localPosition = pos;
-
-            CreateBox(toro, new Vector3(0, 0.15f, 0), new Vector3(0.95f, 0.3f, 0.95f), matStone, true);
-            CreateCylinder(toro, new Vector3(0, 0.85f, 0), 0.26f, 1.1f, matStone, true);
-            CreateBox(toro, new Vector3(0, 1.45f, 0), new Vector3(0.88f, 0.18f, 0.88f), matStone, true);
-            CreateBox(toro, new Vector3(0, 1.8f, 0), new Vector3(0.58f, 0.55f, 0.58f), matDarkMetal, true);
-            CreateBox(toro, new Vector3(0, 2.2f, 0), new Vector3(1.1f, 0.22f, 1.1f), matStone, true);
-            CreateBox(toro, new Vector3(0, 2.4f, 0), new Vector3(0.65f, 0.18f, 0.65f), matStone, false);
-
-            var l = toro.gameObject.AddComponent<Light>();
-            l.type = LightType.Point;
-            l.color = new Color(1.0f, 0.68f, 0.28f);
-            l.intensity = 1.5f;
-            l.range = 5.2f;
-        }
-
-        void BuildToriiGate(Transform parent, Vector3 pos)
-        {
-            var torii = new GameObject("Grand Torii Gate").transform;
-            torii.SetParent(parent, false);
-            torii.localPosition = pos;
-
-            for (int side = -1; side <= 1; side += 2)
-            {
-                CreateCylinder(torii, new Vector3(side * 3.8f, 0.4f, 0), 0.52f, 0.8f, matDarkMetal, true);
-                CreateCylinder(torii, new Vector3(side * 3.8f, 4.2f, 0), 0.40f, 6.8f, matTorii, true);
-            }
-            CreateBox(torii, new Vector3(0, 5.6f, 0), new Vector3(8.8f, 0.45f, 0.45f), matTorii, true);
-            CreateBox(torii, new Vector3(0, 7.2f, 0), new Vector3(10.8f, 0.6f, 0.6f), matTorii, true);
-            CreateBox(torii, new Vector3(0, 7.6f, 0), new Vector3(11.2f, 0.2f, 0.7f), matDarkMetal, false);
-        }
-
-        void BuildShintoShrine(Transform parent, Vector3 pos)
-        {
-            var shrine = new GameObject("Shinto Shrine").transform;
-            shrine.SetParent(parent, false);
-            shrine.localPosition = pos;
-
-            CreateBox(shrine, new Vector3(0, 2.2f, 0), new Vector3(5.6f, 4.4f, 5.0f), matWoodFloor, true, "Shrine Hall");
-            CreateBox(shrine, new Vector3(0, 4.7f, 0), new Vector3(7.2f, 0.6f, 6.2f), matKawaraRoof, true);
-            CreateBox(shrine, new Vector3(0, 5.3f, 0), new Vector3(5.8f, 0.7f, 5.0f), matKawaraRoof, false);
-            CreateBox(shrine, new Vector3(0, 0.8f, -2.8f), new Vector3(1.6f, 0.9f, 1.0f), matWoodFloor, true, "Offering Box");
-        }
-
-        void BuildAzumayaGazebo(Transform parent, Vector3 pos)
-        {
-            var gaz = new GameObject("Azumaya Gazebo (四阿)").transform;
-            gaz.SetParent(parent, false);
-            gaz.localPosition = pos;
-
-            CreateBox(gaz, new Vector3(0, 0.25f, 0), new Vector3(4.8f, 0.5f, 4.8f), matWoodFloor, true);
-            for (int sx = -1; sx <= 1; sx += 2)
-            {
-                for (int sz = -1; sz <= 1; sz += 2)
-                {
-                    CreateCylinder(gaz, new Vector3(sx * 2.0f, 1.8f, sz * 2.0f), 0.12f, 3.2f, matWoodFloor, false);
-                }
-            }
-            CreateBox(gaz, new Vector3(0, 3.6f, 0), new Vector3(5.8f, 0.5f, 5.8f), matKawaraRoof, true);
-            CreateBox(gaz, new Vector3(0, 4.2f, 0), new Vector3(4.2f, 0.7f, 4.2f), matKawaraRoof, false);
-        }
-
-        void BuildParkBench(Transform parent, Vector3 pos, float yaw)
-        {
-            var bench = new GameObject("Park Bench").transform;
-            bench.SetParent(parent, false);
-            bench.localPosition = pos;
-            bench.localRotation = Quaternion.Euler(0, yaw, 0);
-
-            CreateBox(bench, new Vector3(0, 0.45f, 0), new Vector3(2.2f, 0.08f, 0.6f), matWoodFloor, true);
-            CreateBox(bench, new Vector3(0, 0.88f, 0.26f), new Vector3(2.2f, 0.45f, 0.06f), matWoodFloor, false);
-            CreateCylinder(bench, new Vector3(-0.9f, 0.22f, 0), 0.035f, 0.45f, matDarkMetal, false);
-            CreateCylinder(bench, new Vector3(0.9f, 0.22f, 0), 0.035f, 0.45f, matDarkMetal, false);
-        }
-
-        void BuildStreetLamp(Transform parent, Vector3 pos, bool worksNormally)
-        {
-            var pole = new GameObject("Street Lamp").transform;
-            pole.SetParent(parent, false);
-            pole.localPosition = pos;
-
-            CreateCylinder(pole, new Vector3(0, 3.0f, 0), 0.09f, 6.0f, matDarkMetal, true);
-            CreateBox(pole, new Vector3(0.42f, 5.8f, 0), new Vector3(0.9f, 0.08f, 0.08f), matDarkMetal, false);
-            CreateBox(pole, new Vector3(0.85f, 5.65f, 0), new Vector3(0.45f, 0.25f, 0.45f), matDarkMetal, false);
-            var bulb = CreateBox(pole, new Vector3(0.85f, 5.48f, 0), new Vector3(0.35f, 0.06f, 0.35f), matWhite, false);
-
-            var l = pole.gameObject.AddComponent<Light>();
-            l.type = LightType.Point;
-            l.color = new Color(1.0f, 0.90f, 0.68f);
-            l.intensity = worksNormally ? 3.0f : 1.4f;
-            l.range = 15f;
-            l.shadows = LightShadows.Soft;
-
-            lamps.Add(new FlickeringLamp
-            {
-                light = l,
-                bulb = bulb.GetComponent<Renderer>(),
-                baseIntensity = 3.0f,
-                worksNormally = worksNormally,
-                flickerOffset = UnityEngine.Random.value * 50f
-            });
-        }
-
-        // ====================================================================
-        // 10. JOURNALIST NEWS VAN
-        // ====================================================================
-        void BuildNewsVan()
-        {
-            var van = new GameObject("Journalist News Van").transform;
-            van.SetParent(Root, false);
-            van.localPosition = new Vector3(0, 0, 43f);
-            van.localRotation = Quaternion.Euler(0, 180, 0);
-
-            CreateBox(van, new Vector3(0, 1.05f, 0), new Vector3(2.4f, 1.4f, 5.2f), matWhite, true, "Van Body");
-            CreateBox(van, new Vector3(0, 1.85f, -0.4f), new Vector3(2.35f, 1.2f, 3.6f), matWhite, true, "Van Cabin");
-            CreateBox(van, new Vector3(0, 1.75f, 1.75f), new Vector3(2.25f, 0.95f, 0.95f), matGlass, false, "Windshield");
-
-            for (int sx = -1; sx <= 1; sx += 2)
-            {
-                for (int sz = -1; sz <= 1; sz += 2)
-                {
-                    var w = CreateCylinder(van, new Vector3(sx * 1.25f, 0.4f, sz * 1.5f), 0.4f, 0.28f, matDarkMetal, true);
-                    w.transform.rotation = Quaternion.Euler(0, 0, 90);
-                }
-            }
-            CreateCylinder(van, new Vector3(0, 2.65f, -0.9f), 0.05f, 0.7f, matDarkMetal, false);
-            var dish = CreateCylinder(van, new Vector3(0, 3.0f, -0.9f), 0.65f, 0.14f, matWhite, false);
-            dish.transform.rotation = Quaternion.Euler(25, 0, 0);
-
-            for (int sx = -1; sx <= 1; sx += 2)
-            {
-                var hl = new GameObject("Headlight").transform;
-                hl.SetParent(van, false);
-                hl.localPosition = new Vector3(sx * 0.85f, 0.85f, 2.65f);
-                var spot = hl.gameObject.AddComponent<Light>();
-                spot.type = LightType.Spot;
-                spot.color = new Color(1.0f, 0.96f, 0.85f);
-                spot.intensity = 5.0f;
-                spot.range = 24f;
-                spot.spotAngle = 48f;
-            }
-        }
-
-        // ====================================================================
-        // 11. 5 SANITY PILLS & 5 JOURNALIST EVIDENCE TAPES
-        // ====================================================================
-        void SpawnSanityPills()
-        {
-            Vector3[] pillPositions = {
-                new Vector3(-28.25f, 1.45f, -1.45f), // Class 1-A teacher desk
-                new Vector3(28.25f, 1.45f, -4.25f),  // Nurse's office table
-                new Vector3(-28.25f, 4.65f, -16.2f), // 2nd Floor Science Lab counter
-                new Vector3(12.75f, 4.65f, -17.75f), // 2nd Floor Library table
-                new Vector3(0f, 0.90f, 98.0f)        // Shinto Shrine altar in Park
-            };
-
-            for (int i = 0; i < pillPositions.Length; i++)
-            {
-                var pos = pillPositions[i];
-                var pillGo = new GameObject("SanityPill_0" + (i + 1));
-                pillGo.transform.SetParent(Root, false);
-                pillGo.transform.localPosition = pos;
-
-                var amberMat = CreateMat("PillAmber", matPlaster.shader, new Color(0.95f, 0.65f, 0.20f), 0.5f);
-                CreateCylinder(pillGo.transform, new Vector3(0, 0.09f, 0), 0.07f, 0.18f, amberMat, true, "Bottle");
-                CreateCylinder(pillGo.transform, new Vector3(0, 0.19f, 0), 0.06f, 0.05f, matWhite, false, "Cap");
-
-                CreateBox(pillGo.transform, new Vector3(0, 0.1f, 0), new Vector3(0.18f, 0.25f, 0.18f), matPlaster, false, "Aura");
-                var l = pillGo.AddComponent<Light>();
-                l.type = LightType.Point;
-                l.color = new Color(0.4f, 0.88f, 1.0f);
-                l.intensity = 1.8f;
-                l.range = 3.5f;
-
-                pills.Add(new PillItem
-                {
-                    id = "pill-" + (i + 1),
-                    go = pillGo,
-                    position = pos,
-                    collected = false
-                });
-            }
-        }
-
-        void SpawnEvidenceTapes()
-        {
-            var tapeDefs = new[] {
-                new { id = "tape-1", label = "Касета 1: Щоденник чергового учня", pos = new Vector3(-12.75f, 1.45f, -3.25f) }, // Class 1-B
-                new { id = "tape-2", label = "Касета 2: Звіт вчительської ради", pos = new Vector3(-28.25f, 1.45f, -16.0f) },    // Staff Room
-                new { id = "tape-3", label = "Касета 3: Запис гуртка окультизму", pos = new Vector3(28.25f, 4.65f, -4.25f) },   // Music Room
-                new { id = "tape-4", label = "Касета 4: Запис спостереження 2-A", pos = new Vector3(-28.25f, 4.65f, -3.25f) },  // Class 2-A
-                new { id = "tape-5", label = "Касета 5: Останній репортаж журналіста", pos = new Vector3(16f, 0.75f, 72f) }     // Park Gazebo
-            };
-
-            foreach (var def in tapeDefs)
-            {
-                var tapeGo = new GameObject("EvidenceTape_" + def.id);
-                tapeGo.transform.SetParent(Root, false);
-                tapeGo.transform.localPosition = def.pos;
-
-                CreateBox(tapeGo.transform, new Vector3(0, 0.03f, 0), new Vector3(0.25f, 0.05f, 0.16f), matDarkMetal, true, "Cassette Body");
-                CreateBox(tapeGo.transform, new Vector3(0, 0.06f, 0), new Vector3(0.20f, 0.015f, 0.09f), matWhite, false, "Cassette Label");
-
-                var l = tapeGo.AddComponent<Light>();
-                l.type = LightType.Point;
-                l.color = new Color(1.0f, 0.85f, 0.35f);
-                l.intensity = 1.6f;
-                l.range = 3.2f;
-
-                evidenceTapes.Add(new EvidenceTapeItem
-                {
-                    id = def.id,
-                    label = def.label,
-                    go = tapeGo,
-                    position = def.pos,
-                    collected = false
-                });
-            }
-        }
-
-        // ====================================================================
-        // UPDATE TICK
-        // ====================================================================
-        public void Update(RoomState state, float dt)
-        {
-            if (state == null) return;
-            float time = Time.time;
-
-            for (int i = 0; i < lamps.Count; i++)
-            {
-                var lamp = lamps[i];
-                if (lamp.light == null) continue;
-
-                if (lamp.worksNormally)
-                {
-                    lamp.light.intensity = lamp.baseIntensity * (0.95f + Mathf.Sin((time + lamp.flickerOffset) * 2.5f) * 0.05f);
-                }
-                else
-                {
-                    float wave = Mathf.Sin((time + lamp.flickerOffset) * 12.3f) * Mathf.Cos((time + lamp.flickerOffset) * 3.7f);
-                    bool on = wave > -0.2f && (Mathf.Sin((time + lamp.flickerOffset) * 1.8f) > -0.6f);
-                    lamp.light.intensity = on ? lamp.baseIntensity * UnityEngine.Random.Range(0.6f, 1.1f) : 0f;
-                    if (lamp.bulb != null) lamp.bulb.material.color = on ? Color.white : new Color(0.2f, 0.2f, 0.2f);
-                }
-            }
-
-            for (int i = 0; i < pills.Count; i++)
-            {
-                var pill = pills[i];
-                if (pill.go == null) continue;
-                bool isCollected = state.Collected(pill.id);
-                if (isCollected != pill.collected)
-                {
-                    pill.collected = isCollected;
-                    pill.go.SetActive(!isCollected);
-                }
-                if (!pill.collected)
-                {
-                    float bob = Mathf.Sin(time * 3f + i) * 0.04f;
-                    pill.go.transform.localPosition = pill.position + new Vector3(0, bob, 0);
-                    pill.go.transform.Rotate(0, 45f * dt, 0);
-                }
-            }
-
-            for (int i = 0; i < evidenceTapes.Count; i++)
-            {
-                var tape = evidenceTapes[i];
-                if (tape.go == null) continue;
-                bool isCollected = state.Collected(tape.id);
-                if (isCollected != tape.collected)
-                {
-                    tape.collected = isCollected;
-                    tape.go.SetActive(!isCollected);
-                }
-                if (!tape.collected)
-                {
-                    float bob = Mathf.Sin(time * 2.5f + i) * 0.03f;
-                    tape.go.transform.localPosition = tape.position + new Vector3(0, bob, 0);
-                }
-            }
-        }
-    }
+	public sealed class DeadAirSchoolWorld
+	{
+		private struct PickupPlacement
+		{
+			public readonly string id;
+
+			public readonly string label;
+
+			public readonly Vector3 position;
+
+			public PickupPlacement(string id, string label, float x, float y, float z)
+			{
+				this.id = id;
+				this.label = label;
+				position = new Vector3(x, y, z);
+			}
+		}
+
+		private sealed class FlickeringLamp
+		{
+			public Light light;
+
+			public Renderer bulb;
+
+			public float baseIntensity;
+
+			public bool worksNormally;
+
+			public float flickerOffset;
+
+			public bool lastBulbOn = true;
+		}
+
+		public sealed class PillItem
+		{
+			public string id;
+
+			public GameObject go;
+
+			public Vector3 position;
+
+			public bool collected;
+		}
+
+		public sealed class EvidenceTapeItem
+		{
+			public string id;
+
+			public string label;
+
+			public GameObject go;
+
+			public Vector3 position;
+
+			public bool collected;
+		}
+
+		public const int LoadingStepCount = 17;
+
+		private static readonly PickupPlacement[] TapePlacements = new PickupPlacement[5]
+		{
+			new PickupPlacement("tape-1", "Касета 1: Щоденник чергового учня", -12.75f, 1.55f, -1.45f),
+			new PickupPlacement("tape-2", "Касета 2: Звіт вчительської ради", -28.25f, 1.75f, -16f),
+			new PickupPlacement("tape-3", "Касета 3: Запис гуртка окультизму", 31.75f, 5.17f, -4.25f),
+			new PickupPlacement("tape-4", "Касета 4: Запис спостереження 2-A", -28.25f, 4.75f, -1.45f),
+			new PickupPlacement("tape-5", "Касета 5: Останній репортаж журналіста", -12f, 7.55f, -35.5f)
+		};
+
+		private static readonly PickupPlacement[] PillPlacements = new PickupPlacement[9]
+		{
+			new PickupPlacement("pill-1", null, -28.25f, 1.55f, -1.45f),
+			new PickupPlacement("pill-2", null, 24.75f, 1.73f, -2.5f),
+			new PickupPlacement("pill-3", null, -27f, 4.73f, -16.2f),
+			new PickupPlacement("pill-4", null, 15.95f, 4.63f, -17.75f),
+			new PickupPlacement("pill-5", null, 0f, 7.55f, -11f),
+			new PickupPlacement("pill-6", null, 12f, 7.55f, -29.4f),
+			new PickupPlacement("pill-7", null, 18f, 0.54f, -51f),
+			new PickupPlacement("pill-8", null, -14f, 0.5f, 64f),
+			new PickupPlacement("pill-9", null, 0f, 1.27f, 97f)
+		};
+
+		private Material matCassetteShell;
+
+		private Material matCassetteFace;
+
+		private Material matCassetteWindow;
+
+		private Material matCassetteReel;
+
+		private Material matCassetteLabel;
+
+		private Material matCassetteAccent;
+
+		private Material matPillAmber;
+
+		private Material matPillLabel;
+
+		public readonly Transform Root;
+
+		private readonly WorldData data;
+
+		private static Mesh boxMesh;
+
+		private static Mesh cylinderMesh;
+
+		private readonly List<FlickeringLamp> lamps = new List<FlickeringLamp>();
+
+		private readonly List<PillItem> pills = new List<PillItem>();
+
+		private readonly List<EvidenceTapeItem> evidenceTapes = new List<EvidenceTapeItem>();
+
+		private readonly MaterialPropertyBlock lampPropertyBlock = new MaterialPropertyBlock();
+
+		private Camera viewCamera;
+
+		private float nextLightUpdate;
+
+		private static readonly int LampColorId = Shader.PropertyToID("_Color");
+
+		private Material matPlaster;
+
+		private Material matAsphalt;
+
+		private Material matRoadZebra;
+
+		private Material matWoodFloor;
+
+		private Material matBark;
+
+		private Material matFoliage;
+
+		private Material matTorii;
+
+		private Material matStone;
+
+		private Material matGlass;
+
+		private Material matDarkMetal;
+
+		private Material matConcrete;
+
+		private Material matChalkboard;
+
+		private Material matWhite;
+
+		private Material matHouseStucco;
+
+		private Material matKawaraRoof;
+
+		private Material matBlockWall;
+
+		private Material matGuardrail;
+
+		private Material matBooks;
+
+		private Material matLabCounter;
+
+		private Material matGold;
+
+		private Material matDoorWood;
+
+		private Material matShoeLocker;
+
+		private Material matDeskWood;
+
+		private Material matPaper;
+
+		private Material matTrashCan;
+
+		private Material matCan;
+
+		internal static int PillPickupCount => PillPlacements.Length;
+
+		public IReadOnlyList<PillItem> Pills => pills;
+
+		public IReadOnlyList<EvidenceTapeItem> EvidenceTapes => evidenceTapes;
+
+		private void BuildRearSchoolExtension()
+		{
+			Transform transform = new GameObject("Rear Teaching Wing (20m Extension)").transform;
+			transform.SetParent(Root, worldPositionStays: false);
+			for (int i = 0; i < 3; i++)
+			{
+				float num = i switch
+				{
+					1 => 3.8f, 
+					0 => 0.6f, 
+					_ => 7.4f, 
+				};
+				float num2 = ((i == 0) ? 3.2f : 3.6f);
+				Transform transform2 = new GameObject("Rear Wing Floor " + (i + 1)).transform;
+				transform2.SetParent(transform, worldPositionStays: false);
+				switch (i)
+				{
+				case 0:
+					CreateBox(transform2, new Vector3(0f, 0.3f, -32f), new Vector3(72f, 0.6f, 20f), matWoodFloor, addCollider: true, "Ground Slab");
+					break;
+				case 1:
+					CreateBox(transform2, new Vector3(0f, num + 0.05f, -32f), new Vector3(72f, 0.1f, 20f), matWoodFloor, addCollider: true, "Second Floor Deck");
+					break;
+				default:
+					CreateBox(transform2, new Vector3(-19.4f, num + 0.05f, -32f), new Vector3(33.2f, 0.1f, 20f), matWoodFloor, addCollider: true, "Third Floor West Deck");
+					CreateBox(transform2, new Vector3(19.4f, num + 0.05f, -32f), new Vector3(33.2f, 0.1f, 20f), matWoodFloor, addCollider: true, "Third Floor East Deck");
+					CreateBox(transform2, new Vector3(0f, num + 0.05f, -23.5f), new Vector3(5.6f, 0.1f, 3f), matWoodFloor, addCollider: true, "Third Floor South Landing");
+					CreateBox(transform2, new Vector3(0f, num + 0.05f, -39.5f), new Vector3(5.6f, 0.1f, 5f), matWoodFloor, addCollider: true, "Third Floor North Landing");
+					break;
+				}
+				BuildRearTransitionWall(transform2, num, num2);
+				for (int j = -1; j <= 1; j += 2)
+				{
+					BuildRearCorridorSide(transform2, (float)j * 5.2f, num, num2, i);
+					CreateBox(transform2, new Vector3((float)j * 20.6f, num + num2 * 0.5f, -32f), new Vector3(30.8f, num2, 0.22f), matPlaster, addCollider: true, "Rear Classroom Divider");
+					float centerX = (float)j * 20.5f;
+					BuildCompactClassroom(transform2, centerX, num, -27f, i + 1 + ((j < 0) ? "-D" : "-E"), i * 4 + ((j < 0) ? 1 : 2));
+					BuildCompactClassroom(transform2, centerX, num, -37f, i + 1 + ((j < 0) ? "-F" : "-G"), i * 4 + ((j < 0) ? 3 : 4));
+				}
+				CreateBox(transform2, new Vector3(-4.85f, num + 1.1f, -31.5f), new Vector3(0.12f, 1.8f, 2.6f), matWoodFloor, addCollider: false, "Campus Map Board");
+				CreateBox(transform2, new Vector3(-4.76f, num + 1.1f, -31.5f), new Vector3(0.03f, 1.45f, 2.25f), matPaper, addCollider: false, "Campus Map Paper");
+				CreateBox(transform2, new Vector3(4.8f, num + 0.75f, -31.5f), new Vector3(0.55f, 1.5f, 2.4f), matShoeLocker, addCollider: true, "Cleaning Supply Cabinet");
+				CreateInteriorLamp(transform2, new Vector3(0f, num + 3.05f, -24.5f));
+				CreateInteriorLamp(transform2, new Vector3(0f, num + 3.05f, -39f));
+			}
+			BuildRearUpperStairs(transform);
+		}
+
+		private void BuildRearTransitionWall(Transform parent, float floorY, float height)
+		{
+			float y = floorY + height * 0.5f;
+			CreateBox(parent, new Vector3(-25f, y, -22f), new Vector3(22f, height, 0.22f), matPlaster, addCollider: true, "Old-to-New West Wall");
+			CreateBox(parent, new Vector3(-8.6f, y, -22f), new Vector3(6.8f, height, 0.22f), matPlaster);
+			CreateBox(parent, new Vector3(8.6f, y, -22f), new Vector3(6.8f, height, 0.22f), matPlaster);
+			CreateBox(parent, new Vector3(25f, y, -22f), new Vector3(22f, height, 0.22f), matPlaster, addCollider: true, "Old-to-New East Wall");
+			int[] array = new int[2] { -1, 1 };
+			foreach (int num in array)
+			{
+				CreateBox(parent, new Vector3((float)num * 13f, floorY + 2.4f + (height - 2.4f) * 0.5f, -22f), new Vector3(2f, height - 2.4f, 0.22f), matPlaster, addCollider: true, "Passage Lintel");
+				BuildClassroomDoor(parent, new Vector3((float)num * 13f, floorY, -22f), 0f, "Rear Wing Passage");
+			}
+		}
+
+		private void BuildRearCorridorSide(Transform parent, float x, float floorY, float height, int level)
+		{
+			float y = floorY + height * 0.5f;
+			float[] array = new float[3] { -23.75f, -31.5f, -39.75f };
+			float[] array2 = new float[3] { 3.5f, 8f, 4.5f };
+			for (int i = 0; i < array.Length; i++)
+			{
+				CreateBox(parent, new Vector3(x, y, array[i]), new Vector3(0.22f, height, array2[i]), matPlaster, addCollider: true, "Rear Hall Partition");
+			}
+			float[] array3 = new float[2] { -26.5f, -36.5f };
+			foreach (float num in array3)
+			{
+				CreateBox(parent, new Vector3(x, floorY + 2.4f + (height - 2.4f) * 0.5f, num), new Vector3(0.22f, height - 2.4f, 2f), matPlaster, addCollider: true, "Classroom Door Lintel");
+				BuildClassroomDoor(parent, new Vector3(x, floorY, num), 90f, level + 1 + " / Rear " + ((num > -30f) ? "Front" : "Back"));
+			}
+		}
+
+		private void BuildRearUpperStairs(Transform parent)
+		{
+			Transform transform = new GameObject("Rear Wing Stair 2F to 3F").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			for (int i = 0; i < 20; i++)
+			{
+				float y = 3.8f + ((float)i + 0.5f) * 0.17999999f;
+				float z = -25f - ((float)i + 0.5f) * 0.6f;
+				CreateBox(transform, new Vector3(0f, y, z), new Vector3(5.3f, 0.17999999f, 0.6f), matConcrete, addCollider: true, "Third Floor Stair Tread");
+			}
+			CreateRamp(transform, new Vector3(0f, 5.6f, -31f), new Vector3(5.3f, 0.1f, 12f), 16.7f, "Third Floor Smooth Stair Collider");
+			for (int j = -1; j <= 1; j += 2)
+			{
+				CreateBox(transform, new Vector3((float)j * 2.7f, 6.1f, -31f), new Vector3(0.08f, 0.08f, 12f), matDarkMetal, addCollider: false, "Sloped Stair Handrail").transform.localRotation = Quaternion.Euler(16.7f, 0f, 0f);
+				CreateBox(transform, new Vector3((float)j * 2.8f, 7.95f, -31f), new Vector3(0.08f, 1f, 11.5f), matDarkMetal, addCollider: true, "Third Floor Void Guardrail");
+			}
+		}
+
+		private void BuildThirdFloorInteriors()
+		{
+			Transform transform = new GameObject("Third Floor Interiors").transform;
+			transform.SetParent(Root, worldPositionStays: false);
+			CreateBox(transform, new Vector3(-21f, 7.45f, -11f), new Vector3(30f, 0.1f, 22f), matWoodFloor, addCollider: true, "Third Floor West Deck");
+			CreateBox(transform, new Vector3(21f, 7.45f, -11f), new Vector3(30f, 0.1f, 22f), matWoodFloor, addCollider: true, "Third Floor East Deck");
+			CreateBox(transform, new Vector3(0f, 7.45f, -4.25f), new Vector3(12f, 0.1f, 8.5f), matWoodFloor, addCollider: true, "Third Floor South Deck");
+			CreateBox(transform, new Vector3(0f, 7.45f, -11f), new Vector3(12f, 0.1f, 5f), matWoodFloor, addCollider: true, "Third Floor Hall Deck");
+			float[] array = new float[2] { -8.5f, -13.5f };
+			foreach (float num in array)
+			{
+				int[] array2 = new int[2] { -1, 1 };
+				foreach (int num2 in array2)
+				{
+					CreateBox(transform, new Vector3((float)num2 * 32.6f, 9.2f, num), new Vector3(6.8f, 3.6f, 0.22f), matPlaster);
+					CreateBox(transform, new Vector3((float)num2 * 20.75f, 9.2f, num), new Vector3(14f, 3.6f, 0.22f), matPlaster);
+					CreateBox(transform, new Vector3((float)num2 * 8.5f, 9.2f, num), new Vector3(7.5f, 3.6f, 0.22f), matPlaster);
+					float[] array3 = new float[2] { 13f, 28.5f };
+					foreach (float num3 in array3)
+					{
+						CreateBox(transform, new Vector3((float)num2 * num3, 10.45f, num), new Vector3(1.5f, 1.1f, 0.22f), matPlaster);
+						BuildClassroomDoor(transform, new Vector3((float)num2 * num3, 7.4f, num), (num < -10f) ? 180f : 0f, "3F " + ((num2 < 0) ? "West" : "East"));
+					}
+				}
+			}
+			CreateBox(transform, new Vector3(-3f, 9.2f, -8.5f), new Vector3(4f, 3.6f, 0.22f), matPlaster);
+			CreateBox(transform, new Vector3(3f, 9.2f, -8.5f), new Vector3(4f, 3.6f, 0.22f), matPlaster);
+			CreateBox(transform, new Vector3(0f, 10.45f, -8.5f), new Vector3(2f, 1.1f, 0.22f), matPlaster);
+			BuildClassroomDoor(transform, new Vector3(0f, 7.4f, -8.5f), 0f, "3F Media Club");
+			array = new float[4] { -20.5f, -5f, 5f, 20.5f };
+			foreach (float x in array)
+			{
+				CreateBox(transform, new Vector3(x, 9.2f, -4.25f), new Vector3(0.22f, 3.6f, 8.5f), matPlaster);
+			}
+			array = new float[4] { -20.5f, -6f, 6f, 20.5f };
+			foreach (float x2 in array)
+			{
+				CreateBox(transform, new Vector3(x2, 9.2f, -17.75f), new Vector3(0.22f, 3.6f, 8.5f), matPlaster);
+			}
+			BuildCompactClassroom(transform, -28.25f, 7.4f, -4.25f, "3-A", 31);
+			BuildCompactClassroom(transform, -12.75f, 7.4f, -4.25f, "3-B", 32);
+			BuildCompactClassroom(transform, 12.75f, 7.4f, -4.25f, "3-C", 33);
+			BuildCompactClassroom(transform, 28.25f, 7.4f, -4.25f, "3-D", 34);
+			BuildCompactClassroom(transform, -28.25f, 7.4f, -17.75f, "3-E", 35);
+			BuildCompactClassroom(transform, -12.75f, 7.4f, -17.75f, "3-F", 36);
+			BuildCompactClassroom(transform, 12.75f, 7.4f, -17.75f, "3-G", 37);
+			BuildCompactClassroom(transform, 28.25f, 7.4f, -17.75f, "3-H", 38);
+			CreateBox(transform, new Vector3(0f, 8.4f, -4.5f), new Vector3(5.5f, 1.5f, 0.55f), matShoeLocker, addCollider: true, "Media Archive Cabinets");
+			CreateBox(transform, new Vector3(0f, 9.4f, -0.3f), new Vector3(5.5f, 1.7f, 0.08f), matChalkboard, addCollider: false, "Media Club Planning Board");
+			BuildExitSign(transform, new Vector3(-6f, 10.3f, -13.4f));
+			BuildExitSign(transform, new Vector3(6f, 10.3f, -13.4f));
+			CreateInteriorLamp(transform, new Vector3(0f, 10.7f, -11f));
+			CreateBox(transform, new Vector3(2.7f, 7.95f, -13.55f), new Vector3(6.3f, 1f, 0.08f), matDarkMetal, addCollider: true, "Third Floor South Stair Guardrail");
+			CreateBox(transform, new Vector3(-0.6f, 7.95f, -16f), new Vector3(0.08f, 1f, 4.8f), matDarkMetal, addCollider: true, "Third Floor Inner Stair Guardrail");
+		}
+
+		private void BuildCompactClassroom(Transform parent, float centerX, float floorY, float centerZ, string label, int seed)
+		{
+			Transform transform = new GameObject("Mapped Classroom " + label).transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			CreateBox(transform, new Vector3(centerX, floorY + 2f, centerZ + 4f), new Vector3(6f, 1.45f, 0.08f), matChalkboard, addCollider: false, "Lesson Board");
+			CreateBox(transform, new Vector3(centerX, floorY + 0.9f, centerZ + 2.7f), new Vector3(1.7f, 0.7f, 0.8f), matDeskWood, addCollider: true, "Teacher Desk");
+			if (centerZ != -17.75f)
+			{
+				int[] array = new int[2] { -1, 1 };
+				foreach (int num in array)
+				{
+					float x = centerX + (float)num * 2.85f;
+					CreateBox(transform, new Vector3(x, floorY + 1.1f, centerZ - 4.05f), new Vector3(2.8f, 2f, 0.45f), matShoeLocker, addCollider: true, "Classroom Storage");
+					CreateBox(transform, new Vector3(x, floorY + 1.65f, centerZ - 4.32f), new Vector3(2.6f, 0.06f, 0.04f), matPaper, addCollider: false, "Storage Labels");
+				}
+			}
+			for (int j = 0; j < 2; j++)
+			{
+				for (int k = 0; k < 3; k++)
+				{
+					float x2 = centerX + (float)(k - 1) * 2.25f;
+					float z = centerZ + 0.6f - (float)j * 2.1f;
+					Transform transform2 = new GameObject("Student Desk").transform;
+					transform2.SetParent(transform, worldPositionStays: false);
+					transform2.localPosition = new Vector3(x2, floorY, z);
+					transform2.localRotation = Quaternion.Euler(0f, ((seed + j + k) % 5 == 0) ? 9f : 0f, 0f);
+					CreateBox(transform2, new Vector3(0f, 0.52f, 0f), new Vector3(0.85f, 1.04f, 0.48f), matDarkMetal, addCollider: true, "Desk Base");
+					CreateBox(transform2, new Vector3(0f, 1.05f, 0f), new Vector3(0.98f, 0.08f, 0.62f), matDeskWood, addCollider: false, "Desk Top");
+					CreateBox(transform2, new Vector3(0f, 0.46f, -0.78f), new Vector3(0.6f, 0.9f, 0.45f), matDeskWood, addCollider: true, "Chair");
+					if ((seed + j + k) % 3 == 0)
+					{
+						CreateBox(transform2, new Vector3(0.1f, 1.1f, 0f), new Vector3(0.35f, 0.02f, 0.27f), matPaper, addCollider: false, "Notebook");
+					}
+				}
+			}
+			CreateBox(transform, new Vector3(centerX - 3.5f, floorY + 1.7f, centerZ - 4.38f), new Vector3(0.7f, 0.9f, 0.05f), matPaper, addCollider: false, "Class Timetable");
+			CreateInteriorLamp(transform, new Vector3(centerX, floorY + 3.1f, centerZ));
+		}
+
+		private void BuildRearPlayground(Transform parent)
+		{
+			Transform transform = new GameObject("Rear School Playground & Sports Court").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			Material mat = CreateMat("CourtLinePaint", matWhite.shader, new Color(0.91f, 0.91f, 0.82f), 0.12f);
+			Material mat2 = CreateMat("CourtWeatheredBlue", matAsphalt.shader, new Color(0.19f, 0.3f, 0.37f), 0.18f);
+			Material mat3 = CreateMat("PlaygroundRubber", matAsphalt.shader, new Color(0.28f, 0.22f, 0.18f), 0.08f);
+			CreateBox(transform, new Vector3(0f, 0.03f, -43.8f), new Vector3(5.2f, 0.06f, 3.6f), matStone, addCollider: false, "Rear Exit Walkway");
+			CreateBox(transform, new Vector3(0f, 0.32f, -43.15f), new Vector3(2.25f, 0.12f, 3f), matConcrete, addCollider: true, "Rear Exit Accessible Ramp").transform.localRotation = Quaternion.Euler(9.5f, 0f, 0f);
+			CreateBox(transform, new Vector3(0f, 0.015f, -55f), new Vector3(28f, 0.03f, 19f), mat2, addCollider: false, "Basketball Court Surface");
+			for (int i = -1; i <= 1; i += 2)
+			{
+				CreateBox(transform, new Vector3((float)i * 13.5f, 0.037f, -55f), new Vector3(0.11f, 0.012f, 18f), mat, addCollider: false, "Court Sideline");
+				CreateBox(transform, new Vector3(0f, 0.037f, -55f + (float)i * 9f), new Vector3(27f, 0.012f, 0.11f), mat, addCollider: false, "Court Baseline");
+			}
+			CreateBox(transform, new Vector3(0f, 0.038f, -55f), new Vector3(27f, 0.012f, 0.11f), mat, addCollider: false, "Half Court Line");
+			for (int j = 0; j < 12; j++)
+			{
+				float f = (float)j * MathF.PI / 6f;
+				CreateBox(transform, new Vector3(Mathf.Cos(f) * 2.1f, 0.039f, -55f + Mathf.Sin(f) * 2.1f), new Vector3(0.11f, 0.012f, 1.08f), mat, addCollider: false, "Center Circle Mark").transform.localRotation = Quaternion.Euler(0f, (float)(-j) * 30f, 0f);
+			}
+			BuildBasketballHoop(transform, -47.5f, 1);
+			BuildBasketballHoop(transform, -62.5f, -1);
+			CreateBox(transform, new Vector3(-23f, 0.022f, -56f), new Vector3(13f, 0.04f, 18f), mat3, addCollider: false, "Swing Safety Surface");
+			CreateBox(transform, new Vector3(23f, 0.022f, -58f), new Vector3(12f, 0.04f, 17f), mat3, addCollider: false, "Slide Safety Surface");
+			BuildPlaygroundSwings(transform);
+			BuildPlaygroundSlide(transform);
+			for (int k = -1; k <= 1; k += 2)
+			{
+				float x = (float)k * 35.7f;
+				CreateRamp(transform, new Vector3(x, 1.25f, -56f), new Vector3(0.15f, 2.5f, 28f), 0f, "Playground Side Fence Collision");
+				for (float num = -44f; num >= -68f; num -= 4f)
+				{
+					CreateCylinder(transform, new Vector3(x, 1.25f, num), 0.045f, 2.5f, matDarkMetal, addCollider: true, "Fence Post");
+				}
+				for (int l = 1; l <= 4; l++)
+				{
+					CreateBox(transform, new Vector3(x, (float)l * 0.5f, -56f), new Vector3(0.045f, 0.035f, 26f), matDarkMetal, addCollider: false, "Fence Wire");
+				}
+			}
+			CreateBox(transform, new Vector3(0f, 2.55f, -70f), new Vector3(74f, 0.07f, 0.07f), matDarkMetal, addCollider: false, "Rear Fence Top Rail");
+			BuildPlaygroundBench(transform, new Vector3(18f, 0f, -51f), 90f);
+			BuildPlaygroundBench(transform, new Vector3(-19f, 0f, -66f), -90f);
+			CreateBox(transform, new Vector3(30f, 0.3f, -65f), new Vector3(2.4f, 0.6f, 0.8f), matConcrete, addCollider: true, "Low Planter");
+			CreateBox(transform, new Vector3(30f, 0.7f, -65f), new Vector3(2f, 0.35f, 0.6f), matFoliage, addCollider: false, "Planter Shrubs");
+		}
+
+		private void BuildRearFence(Transform parent)
+		{
+			Transform transform = new GameObject("Rear Sports Fence").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			CreateRamp(transform, new Vector3(0f, 1.3f, -70f), new Vector3(74f, 2.6f, 0.15f), 0f, "Rear Fence Collision");
+			CreateBox(transform, new Vector3(0f, 0.22f, -70f), new Vector3(74f, 0.44f, 0.24f), matConcrete, addCollider: false, "Concrete Fence Curb");
+			for (float num = -36f; num <= 36f; num += 4f)
+			{
+				CreateCylinder(transform, new Vector3(num, 1.35f, -70f), 0.045f, 2.7f, matDarkMetal, addCollider: false, "Mesh Fence Post");
+			}
+			for (int i = 1; i <= 5; i++)
+			{
+				CreateBox(transform, new Vector3(0f, (float)i * 0.48f, -70f), new Vector3(74f, 0.025f, 0.035f), matDarkMetal, addCollider: false, "Mesh Fence Wire");
+			}
+		}
+
+		private void BuildBasketballHoop(Transform parent, float z, int direction)
+		{
+			Transform transform = new GameObject("Basketball Goal").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			transform.localPosition = new Vector3(0f, 0f, z);
+			CreateCylinder(transform, new Vector3(0f, 1.8f, (float)direction * 0.9f), 0.12f, 3.6f, matDarkMetal, addCollider: true, "Goal Pole");
+			CreateBox(transform, new Vector3(0f, 3.55f, (float)direction * 0.55f), new Vector3(0.09f, 0.09f, 0.8f), matDarkMetal, addCollider: false, "Goal Arm");
+			CreateBox(transform, new Vector3(0f, 3.45f, (float)direction * 0.1f), new Vector3(1.8f, 1.05f, 0.08f), matWhite, addCollider: false, "Backboard");
+			CreateBox(transform, new Vector3(0f, 3.45f, (float)direction * 0.03f), new Vector3(0.65f, 0.47f, 0.02f), matDarkMetal, addCollider: false, "Backboard Target");
+			for (int i = 0; i < 8; i++)
+			{
+				float f = (float)i * MathF.PI * 0.25f;
+				CreateBox(transform, new Vector3(Mathf.Cos(f) * 0.36f, 3.07f, (float)(-direction) * 0.5f + Mathf.Sin(f) * 0.36f), new Vector3(0.045f, 0.045f, 0.28f), matTorii, addCollider: false, "Basketball Rim Segment").transform.localRotation = Quaternion.Euler(0f, (float)(-i) * 45f, 0f);
+			}
+		}
+
+		private void BuildPlaygroundSwings(Transform parent)
+		{
+			Transform transform = new GameObject("Two Seat Swing Set").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			transform.localPosition = new Vector3(-23f, 0f, -56f);
+			CreateBox(transform, new Vector3(0f, 2.95f, 0f), new Vector3(6f, 0.15f, 0.15f), matDarkMetal, addCollider: false, "Swing Crossbeam");
+			float[] array = new float[2] { -2.8f, 2.8f };
+			foreach (float x in array)
+			{
+				CreateCylinder(transform, new Vector3(x, 1.48f, -0.8f), 0.075f, 2.96f, matDarkMetal, addCollider: true, "Swing Frame Post");
+				CreateCylinder(transform, new Vector3(x, 1.48f, 0.8f), 0.075f, 2.96f, matDarkMetal, addCollider: true, "Swing Frame Post");
+			}
+			array = new float[2] { -1.5f, 1.5f };
+			foreach (float num in array)
+			{
+				CreateBox(transform, new Vector3(num, 0.58f, 0f), new Vector3(1.05f, 0.09f, 0.4f), matWoodFloor, addCollider: true, "Swing Seat");
+				float[] array2 = new float[2] { -0.43f, 0.43f };
+				foreach (float num2 in array2)
+				{
+					CreateCylinder(transform, new Vector3(num + num2, 1.77f, 0f), 0.024f, 2.35f, matDarkMetal, addCollider: false, "Swing Chain");
+				}
+			}
+		}
+
+		private void BuildPlaygroundSlide(Transform parent)
+		{
+			Transform transform = new GameObject("Playground Slide").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			transform.localPosition = new Vector3(23f, 0f, -58f);
+			CreateBox(transform, new Vector3(0f, 2.15f, 0f), new Vector3(1.65f, 0.16f, 1.65f), matWoodFloor, addCollider: true, "Slide Platform");
+			int[] array = new int[2] { -1, 1 };
+			foreach (int num in array)
+			{
+				CreateCylinder(transform, new Vector3((float)num * 0.72f, 1.05f, 0.72f), 0.065f, 2.1f, matDarkMetal, addCollider: true, "Platform Leg");
+				CreateCylinder(transform, new Vector3((float)num * 0.72f, 1.05f, -0.72f), 0.065f, 2.1f, matDarkMetal, addCollider: true, "Platform Leg");
+				CreateBox(transform, new Vector3((float)num * 0.77f, 2.55f, 0f), new Vector3(0.08f, 0.78f, 1.6f), matTorii, addCollider: false, "Safety Rail");
+			}
+			CreateBox(transform, new Vector3(0f, 1.2f, -2.1f), new Vector3(1.28f, 0.11f, 4f), matDarkMetal, addCollider: true, "Slide Chute").transform.localRotation = Quaternion.Euler(-29f, 0f, 0f);
+			for (int j = 0; j < 5; j++)
+			{
+				CreateBox(transform, new Vector3(0f, 0.45f + (float)j * 0.34f, 1.72f - (float)j * 0.34f), new Vector3(1.3f, 0.1f, 0.22f), matWoodFloor, addCollider: true, "Ladder Rung");
+			}
+		}
+
+		private void BuildPlaygroundBench(Transform parent, Vector3 pos, float yaw)
+		{
+			Transform transform = new GameObject("Schoolyard Bench").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			transform.localPosition = pos;
+			transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+			CreateBox(transform, new Vector3(0f, 0.48f, 0f), new Vector3(2.5f, 0.12f, 0.58f), matWoodFloor, addCollider: true, "Bench Seat");
+			CreateBox(transform, new Vector3(0f, 0.87f, 0.25f), new Vector3(2.5f, 0.65f, 0.11f), matWoodFloor, addCollider: false, "Bench Back");
+			CreateBox(transform, new Vector3(-0.95f, 0.23f, 0f), new Vector3(0.08f, 0.46f, 0.58f), matDarkMetal, addCollider: false, "Bench Leg");
+			CreateBox(transform, new Vector3(0.95f, 0.23f, 0f), new Vector3(0.08f, 0.46f, 0.58f), matDarkMetal, addCollider: false, "Bench Leg");
+		}
+
+		public IEnumerator InitializeSteps()
+		{
+			BuildRoadAndCrosswalk();
+			yield return null;
+			BuildLeftNeighborhood();
+			yield return null;
+			BuildRightNeighborhood();
+			yield return null;
+			BuildBackYardAndForest();
+			yield return null;
+			BuildSchoolCourtyard();
+			yield return null;
+			BuildSchoolBuilding();
+			yield return null;
+			BuildFirstFloorInteriors();
+			yield return null;
+			BuildSecondFloorInteriors();
+			yield return null;
+			BuildThirdFloorInteriors();
+			yield return null;
+			BuildStairs();
+			yield return null;
+			BuildRearSchoolExtension();
+			yield return null;
+			BuildTraditionalPark();
+			yield return null;
+			UpgradePark();
+			yield return null;
+			BuildNewsVan();
+			yield return null;
+			SpawnSanityPills();
+			yield return null;
+			SpawnEvidenceTapes();
+			yield return null;
+			SetupLighting();
+			yield return null;
+		}
+
+		private void UpgradePark()
+		{
+			Transform transform = Root.Find("Traditional Japanese Park");
+			if (transform == null)
+			{
+				return;
+			}
+			Shader shader = ((matStone != null) ? matStone.shader : Shader.Find("Standard"));
+			Material material = CreateTexturedMat("Park grass and soil", shader, CreateParkTexture(new Color(0.22f, 0.28f, 0.16f), new Color(0.31f, 0.29f, 0.2f), 0.055f), Color.white, 0.05f);
+			material.mainTextureScale = new Vector2(8f, 6f);
+			Material material2 = CreateTexturedMat("Compacted park gravel", shader, CreateParkTexture(new Color(0.37f, 0.36f, 0.31f), new Color(0.49f, 0.47f, 0.4f), 0.19f), Color.white, 0.08f);
+			material2.mainTextureScale = new Vector2(1.5f, 3f);
+			Material material3 = CreateMat("Mixed park foliage", shader, new Color(0.16f, 0.27f, 0.14f), 0.04f);
+			Material material4 = CreateMat("Park understory", shader, new Color(0.2f, 0.3f, 0.16f), 0.03f);
+			Material water = CreateMat("Shallow rain garden", shader, new Color(0.19f, 0.27f, 0.26f), 0.62f);
+			Transform transform2 = transform.Find("Park Moss Ground");
+			if (transform2 != null)
+			{
+				Renderer component = transform2.GetComponent<Renderer>();
+				if (component != null)
+				{
+					component.sharedMaterial = material;
+					component.shadowCastingMode = ShadowCastingMode.Off;
+				}
+			}
+			for (int i = 0; i < transform.childCount; i++)
+			{
+				Transform child = transform.GetChild(i);
+				if (child.name.StartsWith("Stone Path", StringComparison.Ordinal) || child.name == "Shrine Approach Path")
+				{
+					child.gameObject.SetActive(value: false);
+				}
+			}
+			AddParkPath(transform, "Winding entrance path", material2, 2.35f, new Vector2(0f, 50f), new Vector2(0.6f, 57f), new Vector2(-0.4f, 64f), new Vector2(0.5f, 72f), new Vector2(0f, 80f), new Vector2(0f, 86f), new Vector2(0.2f, 93f), new Vector2(0f, 98f));
+			AddParkPath(transform, "West garden walk", material2, 1.35f, new Vector2(0f, 79f), new Vector2(-7f, 80.4f), new Vector2(-15f, 79.6f), new Vector2(-21f, 81f));
+			AddParkPath(transform, "Gazebo walk", material2, 1.35f, new Vector2(0.5f, 72f), new Vector2(7f, 73.3f), new Vector2(12f, 72f), new Vector2(16f, 72f));
+			AddParkPath(transform, "East garden walk", material2, 1.25f, new Vector2(0f, 87f), new Vector2(8f, 86f), new Vector2(16f, 86.7f), new Vector2(21f, 88f));
+			int num = 0;
+			for (int j = 0; j < transform.childCount; j++)
+			{
+				Transform child2 = transform.GetChild(j);
+				if (child2.name != "Ancient Tree")
+				{
+					continue;
+				}
+				for (int k = 0; k < child2.childCount; k++)
+				{
+					Transform child3 = child2.GetChild(k);
+					if (!(child3.localPosition.y < 4.8f))
+					{
+						Renderer component2 = child3.GetComponent<Renderer>();
+						if (component2 != null)
+						{
+							component2.enabled = false;
+						}
+					}
+				}
+				List<Vector3> vertices = new List<Vector3>(180);
+				List<int> triangles = new List<int>(900);
+				float num2 = 0.86f + (float)(num % 5) * 0.055f;
+				AddCanopyLobe(vertices, triangles, new Vector3(0f, 7.3f, 0f), new Vector3(3.3f, 2.15f, 3.1f) * num2);
+				AddCanopyLobe(vertices, triangles, new Vector3(-2.1f, 7.8f, 0.7f), new Vector3(2.3f, 1.7f, 2f) * num2);
+				AddCanopyLobe(vertices, triangles, new Vector3(2.1f, 7.2f, -0.7f), new Vector3(2.35f, 1.85f, 2.1f) * num2);
+				AddCanopyLobe(vertices, triangles, new Vector3(0.1f, 9f, -0.2f), new Vector3(2.2f, 1.55f, 2.1f) * num2);
+				AddParkMesh(child2, "Irregular tree canopy", vertices, triangles, material3, castShadows: true);
+				num++;
+			}
+			List<Vector3> vertices2 = new List<Vector3>(2000);
+			List<int> triangles2 = new List<int>(9000);
+			List<Vector3> vertices3 = new List<Vector3>(1200);
+			List<int> triangles3 = new List<int>(5400);
+			System.Random random = new System.Random(41219);
+			for (int l = 0; l < 54; l++)
+			{
+				float num3 = -40f + (float)random.NextDouble() * 80f;
+				float num4 = 54f + (float)random.NextDouble() * 52f;
+				if (!(Mathf.Abs(num3) < 6f) && (!(num3 > 10f) || !(num3 < 21f) || !(num4 > 68f) || !(num4 < 77f)) && (!(Mathf.Abs(num3) < 7f) || !(num4 > 95f)) && (!(num3 < -19f) || !(num4 > 96f)))
+				{
+					float num5 = 0.55f + (float)random.NextDouble() * 0.65f;
+					AddCanopyLobe(vertices2, triangles2, new Vector3(num3, 0.35f, num4), new Vector3(num5, 0.38f + num5 * 0.35f, num5 * 0.8f), 7, 3);
+				}
+			}
+			for (int m = 0; m < 30; m++)
+			{
+				float num6 = -39f + (float)random.NextDouble() * 78f;
+				float num7 = 53f + (float)random.NextDouble() * 55f;
+				if (!(Mathf.Abs(num6) < 4.3f) && (!(num6 > 12f) || !(num6 < 20f) || !(num7 > 68f) || !(num7 < 76f)))
+				{
+					float num8 = 0.18f + (float)random.NextDouble() * 0.32f;
+					AddCanopyLobe(vertices3, triangles3, new Vector3(num6, 0.08f, num7), new Vector3(num8, num8 * 0.38f, num8 * 0.8f), 6, 2);
+				}
+			}
+			AddParkMesh(transform, "Batched native shrubs", vertices2, triangles2, material4, castShadows: false);
+			AddParkMesh(transform, "Batched weathered stones", vertices3, triangles3, matStone, castShadows: false);
+			AddRainGarden(transform, water);
+			int num9 = 0;
+			for (int n = 0; n < transform.childCount; n++)
+			{
+				Transform child4 = transform.GetChild(n);
+				if (!(child4.name != "Street Lamp"))
+				{
+					Light component3 = child4.GetComponent<Light>();
+					if (component3 != null)
+					{
+						component3.shadows = ((num9 == 1 || num9 == 6) ? LightShadows.Hard : LightShadows.None);
+						component3.range = 12f;
+					}
+					num9++;
+				}
+			}
+		}
+
+		private static Texture2D CreateParkTexture(Color baseColor, Color accent, float frequency)
+		{
+			Color32[] array = new Color32[16384];
+			for (int i = 0; i < 128; i++)
+			{
+				for (int j = 0; j < 128; j++)
+				{
+					float num = Mathf.PerlinNoise((float)j * frequency, (float)i * frequency);
+					float num2 = Mathf.PerlinNoise((float)j * 0.43f + 17f, (float)i * 0.43f + 37f) * 0.12f;
+					array[i * 128 + j] = Color.Lerp(baseColor, accent, Mathf.Clamp01(num * 0.85f + num2));
+				}
+			}
+			Texture2D texture2D = new Texture2D(128, 128, TextureFormat.RGBA32, mipChain: true);
+			texture2D.name = "Park ground variation";
+			texture2D.SetPixels32(array);
+			texture2D.wrapMode = TextureWrapMode.Repeat;
+			texture2D.filterMode = FilterMode.Trilinear;
+			texture2D.Apply(updateMipmaps: true, makeNoLongerReadable: true);
+			return texture2D;
+		}
+
+		private void AddParkPath(Transform parent, string name, Material material, float halfWidth, params Vector2[] points)
+		{
+			List<Vector3> list = new List<Vector3>(points.Length * 2);
+			List<int> list2 = new List<int>((points.Length - 1) * 6);
+			List<Vector2> list3 = new List<Vector2>(points.Length * 2);
+			float num = 0f;
+			for (int i = 0; i < points.Length; i++)
+			{
+				Vector2 normalized = (points[Mathf.Min(i + 1, points.Length - 1)] - points[Mathf.Max(i - 1, 0)]).normalized;
+				Vector2 vector = new Vector2(0f - normalized.y, normalized.x);
+				if (i > 0)
+				{
+					num += Vector2.Distance(points[i - 1], points[i]);
+				}
+				Vector2 vector2 = points[i] + vector * halfWidth;
+				Vector2 vector3 = points[i] - vector * halfWidth;
+				list.Add(new Vector3(vector2.x, 0.034f, vector2.y));
+				list.Add(new Vector3(vector3.x, 0.034f, vector3.y));
+				list3.Add(new Vector2(0f, num * 0.22f));
+				list3.Add(new Vector2(1f, num * 0.22f));
+				if (i != 0)
+				{
+					int num2 = (i - 1) * 2;
+					list2.Add(num2);
+					list2.Add(num2 + 2);
+					list2.Add(num2 + 1);
+					list2.Add(num2 + 1);
+					list2.Add(num2 + 2);
+					list2.Add(num2 + 3);
+				}
+			}
+			AddParkMesh(parent, name, list, list2, material, castShadows: false, list3);
+		}
+
+		private static void AddCanopyLobe(List<Vector3> vertices, List<int> triangles, Vector3 center, Vector3 radius, int sides = 9, int rings = 5)
+		{
+			int count = vertices.Count;
+			for (int i = 0; i <= rings; i++)
+			{
+				float f = Mathf.Lerp(-1.48f, 1.48f, (float)i / (float)rings);
+				float num = Mathf.Cos(f);
+				for (int j = 0; j < sides; j++)
+				{
+					float f2 = (float)j * MathF.PI * 2f / (float)sides;
+					float num2 = 0.9f + 0.1f * Mathf.Sin((float)j * 2.9f + center.x * 0.35f);
+					vertices.Add(center + new Vector3(Mathf.Cos(f2) * radius.x * num * num2, Mathf.Sin(f) * radius.y, Mathf.Sin(f2) * radius.z * num * num2));
+				}
+			}
+			for (int k = 0; k < rings; k++)
+			{
+				for (int l = 0; l < sides; l++)
+				{
+					int num3 = (l + 1) % sides;
+					int item = count + k * sides + l;
+					int item2 = count + k * sides + num3;
+					int item3 = count + (k + 1) * sides + l;
+					int item4 = count + (k + 1) * sides + num3;
+					triangles.Add(item);
+					triangles.Add(item3);
+					triangles.Add(item2);
+					triangles.Add(item2);
+					triangles.Add(item3);
+					triangles.Add(item4);
+				}
+			}
+		}
+
+		private static GameObject AddParkMesh(Transform parent, string name, List<Vector3> vertices, List<int> triangles, Material material, bool castShadows, List<Vector2> uv = null)
+		{
+			if (vertices.Count == 0)
+			{
+				return null;
+			}
+			Mesh mesh = new Mesh
+			{
+				name = name
+			};
+			mesh.SetVertices(vertices);
+			mesh.SetTriangles(triangles, 0);
+			if (uv != null)
+			{
+				mesh.SetUVs(0, uv);
+			}
+			mesh.RecalculateNormals();
+			mesh.RecalculateBounds();
+			GameObject gameObject = new GameObject(name);
+			gameObject.transform.SetParent(parent, worldPositionStays: false);
+			gameObject.AddComponent<MeshFilter>().sharedMesh = mesh;
+			MeshRenderer meshRenderer = gameObject.AddComponent<MeshRenderer>();
+			meshRenderer.sharedMaterial = material;
+			meshRenderer.shadowCastingMode = (castShadows ? ShadowCastingMode.On : ShadowCastingMode.Off);
+			return gameObject;
+		}
+
+		private void AddRainGarden(Transform park, Material water)
+		{
+			List<Vector3> list = new List<Vector3>(15)
+			{
+				new Vector3(-27f, 0.042f, 101f)
+			};
+			List<int> list2 = new List<int>(39);
+			for (int i = 0; i <= 13; i++)
+			{
+				float num = (float)i * MathF.PI * 2f / 13f;
+				float num2 = 3.9f + Mathf.Sin(num * 3f) * 0.25f;
+				list.Add(new Vector3(-27f + Mathf.Cos(num) * num2, 0.042f, 101f + Mathf.Sin(num) * num2 * 0.7f));
+				if (i > 0)
+				{
+					list2.Add(0);
+					list2.Add(i + 1);
+					list2.Add(i);
+				}
+			}
+			AddParkMesh(park, "Shallow rain garden water", list, list2, water, castShadows: false);
+			List<Vector3> vertices = new List<Vector3>(250);
+			List<int> triangles = new List<int>(1000);
+			for (int j = 0; j < 18; j++)
+			{
+				float num3 = (float)j * MathF.PI * 2f / 18f;
+				float num4 = 4.2f + Mathf.Sin(num3 * 3f) * 0.25f;
+				AddCanopyLobe(vertices, triangles, new Vector3(-27f + Mathf.Cos(num3) * num4, 0.1f, 101f + Mathf.Sin(num3) * num4 * 0.7f), new Vector3(0.48f, 0.17f, 0.4f), 6, 2);
+			}
+			AddParkMesh(park, "Batched rain garden stones", vertices, triangles, matStone, castShadows: false);
+		}
+
+		internal static bool TryGetPillPosition(string id, out Vector3 position)
+		{
+			return TryGetPosition(PillPlacements, id, out position);
+		}
+
+		internal static bool TryGetTapePosition(string id, out Vector3 position)
+		{
+			return TryGetPosition(TapePlacements, id, out position);
+		}
+
+		private static bool TryGetPosition(PickupPlacement[] placements, string id, out Vector3 position)
+		{
+			for (int i = 0; i < placements.Length; i++)
+			{
+				if (string.Equals(placements[i].id, id, StringComparison.Ordinal))
+				{
+					position = placements[i].position;
+					return true;
+				}
+			}
+			position = default(Vector3);
+			return false;
+		}
+
+		private void EnsurePickupMaterials()
+		{
+			if (!(matCassetteShell != null))
+			{
+				Shader shader = matDarkMetal.shader;
+				matCassetteShell = CreateMat("CassetteShell", shader, new Color(0.07f, 0.08f, 0.09f), 0.25f);
+				matCassetteFace = CreateMat("CassetteFace", shader, new Color(0.15f, 0.17f, 0.18f), 0.36f);
+				matCassetteWindow = CreateMat("CassetteWindow", shader, new Color(0.025f, 0.03f, 0.035f), 0.56f);
+				matCassetteReel = CreateMat("CassetteReel", shader, new Color(0.68f, 0.65f, 0.56f), 0.52f);
+				matCassetteLabel = CreateMat("CassettePaperLabel", shader, new Color(0.82f, 0.79f, 0.67f), 0.08f);
+				matCassetteAccent = CreateMat("CassetteAccent", shader, new Color(0.72f, 0.33f, 0.16f), 0.18f);
+				matCassetteAccent.SetColor("_EmissionColor", new Color(0.13f, 0.045f, 0.015f));
+				matPillAmber = CreateMat("MedicineAmberGlass", shader, new Color(0.49f, 0.22f, 0.06f), 0.68f);
+				matPillLabel = CreateMat("MedicineLabel", shader, new Color(0.83f, 0.87f, 0.78f), 0.12f);
+				matPillLabel.SetColor("_EmissionColor", new Color(0.09f, 0.11f, 0.08f));
+			}
+		}
+
+		private void SpawnSanityPills()
+		{
+			EnsurePickupMaterials();
+			for (int i = 0; i < PillPlacements.Length; i++)
+			{
+				PickupPlacement pickupPlacement = PillPlacements[i];
+				GameObject gameObject = new GameObject("SanityPill_" + pickupPlacement.id);
+				gameObject.transform.SetParent(Root, worldPositionStays: false);
+				gameObject.transform.localPosition = pickupPlacement.position;
+				CreateCylinder(gameObject.transform, new Vector3(0f, 0.12f, 0f), 0.085f, 0.24f, matPillAmber, addCollider: false, "Amber Bottle");
+				CreateCylinder(gameObject.transform, new Vector3(0f, 0.25f, 0f), 0.085f, 0.045f, matWhite, addCollider: false, "Safety Cap");
+				CreateBox(gameObject.transform, new Vector3(0f, 0.125f, -0.085f), new Vector3(0.145f, 0.09f, 0.009f), matPillLabel, addCollider: false, "Medicine Label");
+				CreateBox(gameObject.transform, new Vector3(0f, 0.165f, -0.091f), new Vector3(0.13f, 0.009f, 0.004f), matCassetteAccent, addCollider: false, "Label Stripe");
+				pills.Add(new PillItem
+				{
+					id = pickupPlacement.id,
+					go = gameObject,
+					position = pickupPlacement.position
+				});
+			}
+		}
+
+		private void SpawnEvidenceTapes()
+		{
+			EnsurePickupMaterials();
+			for (int i = 0; i < TapePlacements.Length; i++)
+			{
+				PickupPlacement pickupPlacement = TapePlacements[i];
+				GameObject gameObject = new GameObject("EvidenceTape_" + pickupPlacement.id);
+				gameObject.transform.SetParent(Root, worldPositionStays: false);
+				gameObject.transform.localPosition = pickupPlacement.position;
+				CreateBox(gameObject.transform, new Vector3(0f, 0.026f, 0f), new Vector3(0.31f, 0.05f, 0.195f), matCassetteShell, addCollider: false, "Cassette Chassis");
+				CreateBox(gameObject.transform, new Vector3(0f, 0.052f, 0f), new Vector3(0.295f, 0.008f, 0.18f), matCassetteFace, addCollider: false, "Cassette Face");
+				CreateBox(gameObject.transform, new Vector3(0f, 0.058f, 0.047f), new Vector3(0.19f, 0.005f, 0.075f), matCassetteWindow, addCollider: false, "Tape Window");
+				CreateBox(gameObject.transform, new Vector3(0f, 0.058f, -0.048f), new Vector3(0.23f, 0.005f, 0.056f), matCassetteLabel, addCollider: false, "Paper Label");
+				CreateBox(gameObject.transform, new Vector3(0f, 0.062f, -0.064f), new Vector3(0.21f, 0.003f, 0.008f), matCassetteAccent, addCollider: false, "Recording Stripe");
+				for (int j = -1; j <= 1; j += 2)
+				{
+					CreateCylinder(gameObject.transform, new Vector3((float)j * 0.058f, 0.063f, 0.047f), 0.028f, 0.006f, matCassetteReel, addCollider: false, "Tape Reel");
+					CreateCylinder(gameObject.transform, new Vector3((float)j * 0.058f, 0.067f, 0.047f), 0.01f, 0.004f, matCassetteWindow, addCollider: false, "Reel Hub");
+				}
+				evidenceTapes.Add(new EvidenceTapeItem
+				{
+					id = pickupPlacement.id,
+					label = pickupPlacement.label,
+					go = gameObject,
+					position = pickupPlacement.position
+				});
+			}
+		}
+
+		public DeadAirSchoolWorld(Transform parent, WorldData data)
+		{
+			this.data = data;
+			GameObject gameObject = new GameObject("CHAPTER 2 - JAPANESE SCHOOL & NEIGHBORHOOD");
+			gameObject.transform.SetParent(parent, worldPositionStays: false);
+			Root = gameObject.transform;
+			Root.localScale = new Vector3(-1f, 1f, 1f);
+			InitMaterials();
+		}
+
+		private static Texture2D CreateParquetTexture()
+		{
+			int num = 256;
+			int num2 = 256;
+			Texture2D texture2D = new Texture2D(num, num2, TextureFormat.RGBA32, mipChain: true);
+			Color32[] array = new Color32[num * num2];
+			Color32 color = new Color32(152, 110, 68, byte.MaxValue);
+			Color32 color2 = new Color32(138, 96, 56, byte.MaxValue);
+			Color32 color3 = new Color32(166, 124, 78, byte.MaxValue);
+			Color32 color4 = new Color32(76, 50, 28, byte.MaxValue);
+			for (int i = 0; i < num2; i++)
+			{
+				int num3 = i / 32;
+				for (int j = 0; j < num; j++)
+				{
+					int num4 = num3 % 2 * 64;
+					int num5 = (j + num4) / 64;
+					if (i % 32 == 0 || (j + num4) % 64 == 0)
+					{
+						array[i * num + j] = color4;
+						continue;
+					}
+					int num6 = (int)(Mathf.Sin((float)j * 0.4f + (float)i * 0.05f) * 10f + (Mathf.PerlinNoise((float)j * 0.1f, (float)i * 0.1f) - 0.5f) * 16f);
+					Color32 obj = (((num5 + num3) % 3 == 0) ? color : (((num5 + num3) % 3 == 1) ? color2 : color3));
+					byte r = (byte)Mathf.Clamp(obj.r + num6, 0, 255);
+					byte g = (byte)Mathf.Clamp(obj.g + num6, 0, 255);
+					byte b = (byte)Mathf.Clamp(obj.b + num6, 0, 255);
+					array[i * num + j] = new Color32(r, g, b, byte.MaxValue);
+				}
+			}
+			texture2D.SetPixels32(array);
+			texture2D.wrapMode = TextureWrapMode.Repeat;
+			texture2D.filterMode = FilterMode.Bilinear;
+			texture2D.Apply(updateMipmaps: true, makeNoLongerReadable: true);
+			return texture2D;
+		}
+
+		private static Texture2D CreateDeskWoodTexture()
+		{
+			int num = 128;
+			int num2 = 128;
+			Texture2D texture2D = new Texture2D(num, num2, TextureFormat.RGBA32, mipChain: true);
+			Color32[] array = new Color32[num * num2];
+			Color32 color = new Color32(204, 162, 112, byte.MaxValue);
+			for (int i = 0; i < num2; i++)
+			{
+				for (int j = 0; j < num; j++)
+				{
+					float num3 = Mathf.Sin((float)j * 0.7f + Mathf.Sin((float)i * 0.2f) * 2f) * 8f;
+					float num4 = (Mathf.PerlinNoise((float)j * 0.05f, (float)i * 0.2f) - 0.5f) * 18f;
+					int num5 = (int)(num3 + num4);
+					byte r = (byte)Mathf.Clamp(color.r + num5, 0, 255);
+					byte g = (byte)Mathf.Clamp(color.g + num5, 0, 255);
+					byte b = (byte)Mathf.Clamp(color.b + num5, 0, 255);
+					array[i * num + j] = new Color32(r, g, b, byte.MaxValue);
+				}
+			}
+			texture2D.SetPixels32(array);
+			texture2D.wrapMode = TextureWrapMode.Repeat;
+			texture2D.filterMode = FilterMode.Bilinear;
+			texture2D.Apply(updateMipmaps: true, makeNoLongerReadable: true);
+			return texture2D;
+		}
+
+		private static Texture2D CreatePlasterTexture()
+		{
+			int num = 256;
+			int num2 = 256;
+			Texture2D texture2D = new Texture2D(num, num2, TextureFormat.RGBA32, mipChain: true);
+			Color32[] array = new Color32[num * num2];
+			Color32 color = new Color32(218, 212, 196, byte.MaxValue);
+			Color32 color2 = new Color32(182, 175, 160, byte.MaxValue);
+			for (int i = 0; i < num2; i++)
+			{
+				for (int j = 0; j < num; j++)
+				{
+					if (i % 64 == 0)
+					{
+						array[i * num + j] = color2;
+						continue;
+					}
+					int num3 = (int)((Mathf.PerlinNoise((float)j * 0.15f, (float)i * 0.15f) - 0.5f) * 14f);
+					byte r = (byte)Mathf.Clamp(color.r + num3, 0, 255);
+					byte g = (byte)Mathf.Clamp(color.g + num3, 0, 255);
+					byte b = (byte)Mathf.Clamp(color.b + num3, 0, 255);
+					array[i * num + j] = new Color32(r, g, b, byte.MaxValue);
+				}
+			}
+			texture2D.SetPixels32(array);
+			texture2D.wrapMode = TextureWrapMode.Repeat;
+			texture2D.filterMode = FilterMode.Bilinear;
+			texture2D.Apply(updateMipmaps: true, makeNoLongerReadable: true);
+			return texture2D;
+		}
+
+		private static Texture2D CreateConcreteTexture()
+		{
+			int num = 128;
+			int num2 = 128;
+			Texture2D texture2D = new Texture2D(num, num2, TextureFormat.RGBA32, mipChain: true);
+			Color32[] array = new Color32[num * num2];
+			Color32 color = new Color32(155, 155, 148, byte.MaxValue);
+			for (int i = 0; i < num2; i++)
+			{
+				for (int j = 0; j < num; j++)
+				{
+					int num3 = (int)((Mathf.PerlinNoise((float)j * 0.25f, (float)i * 0.25f) - 0.5f) * 20f);
+					byte b = (byte)Mathf.Clamp(color.r + num3, 0, 255);
+					array[i * num + j] = new Color32(b, b, (byte)((float)(int)b * 0.96f), byte.MaxValue);
+				}
+			}
+			texture2D.SetPixels32(array);
+			texture2D.wrapMode = TextureWrapMode.Repeat;
+			texture2D.filterMode = FilterMode.Bilinear;
+			texture2D.Apply(updateMipmaps: true, makeNoLongerReadable: true);
+			return texture2D;
+		}
+
+		private static Texture2D CreateChalkboardTexture()
+		{
+			int num = 256;
+			int num2 = 128;
+			Texture2D texture2D = new Texture2D(num, num2, TextureFormat.RGBA32, mipChain: false);
+			Color32 color = new Color32(26, 52, 34, byte.MaxValue);
+			Color32 color2 = new Color32(220, 235, 215, byte.MaxValue);
+			Color32[] array = new Color32[num * num2];
+			for (int i = 0; i < num2; i++)
+			{
+				for (int j = 0; j < num; j++)
+				{
+					int num3 = (int)((Mathf.PerlinNoise((float)j * 0.04f, (float)i * 0.08f) - 0.5f) * 12f);
+					byte b = (byte)Mathf.Clamp(color.g + num3, 30, 80);
+					array[i * num + j] = new Color32((byte)((float)(int)b * 0.5f), b, (byte)((float)(int)b * 0.65f), byte.MaxValue);
+				}
+			}
+			for (int k = 16; k < 240; k++)
+			{
+				if (k % 3 == 0)
+				{
+					array[95 * num + k] = color2;
+					array[65 * num + k] = color2;
+					array[35 * num + k] = color2;
+				}
+			}
+			for (int l = 45; l < 85; l++)
+			{
+				array[l * num + 50] = color2;
+				array[l * num + 110] = color2;
+				array[l * num + 170] = color2;
+				array[l * num + 210] = color2;
+			}
+			texture2D.SetPixels32(array);
+			texture2D.wrapMode = TextureWrapMode.Clamp;
+			texture2D.filterMode = FilterMode.Bilinear;
+			texture2D.Apply(updateMipmaps: false, makeNoLongerReadable: true);
+			return texture2D;
+		}
+
+		private static Texture2D CreatePaperTexture()
+		{
+			int num = 64;
+			int num2 = 64;
+			Texture2D texture2D = new Texture2D(num, num2, TextureFormat.RGBA32, mipChain: false);
+			Color32[] array = new Color32[num * num2];
+			Color32 color = new Color32(245, 243, 238, byte.MaxValue);
+			Color32 color2 = new Color32(180, 200, 225, byte.MaxValue);
+			Color32 color3 = new Color32(50, 60, 90, byte.MaxValue);
+			for (int i = 0; i < num2; i++)
+			{
+				for (int j = 0; j < num; j++)
+				{
+					if (i % 8 == 0)
+					{
+						array[i * num + j] = color2;
+					}
+					else if (i > 10 && i < 54 && (j + i * 3) % 19 == 0)
+					{
+						array[i * num + j] = color3;
+					}
+					else
+					{
+						array[i * num + j] = color;
+					}
+				}
+			}
+			texture2D.SetPixels32(array);
+			texture2D.Apply(updateMipmaps: false, makeNoLongerReadable: true);
+			return texture2D;
+		}
+
+		private static Texture2D CreateBooksTexture()
+		{
+			int num = 128;
+			int num2 = 64;
+			Texture2D texture2D = new Texture2D(num, num2, TextureFormat.RGBA32, mipChain: false);
+			Color32[] array = new Color32[num * num2];
+			Color32[] array2 = new Color32[6]
+			{
+				new Color32(160, 45, 35, byte.MaxValue),
+				new Color32(35, 75, 140, byte.MaxValue),
+				new Color32(40, 110, 55, byte.MaxValue),
+				new Color32(180, 130, 40, byte.MaxValue),
+				new Color32(110, 50, 120, byte.MaxValue),
+				new Color32(60, 60, 65, byte.MaxValue)
+			};
+			for (int i = 0; i < num; i++)
+			{
+				int num3 = i / 10 % array2.Length;
+				Color32 color = array2[num3];
+				for (int j = 0; j < num2; j++)
+				{
+					if (i % 10 == 0 || j == 0 || j == num2 - 1)
+					{
+						array[j * num + i] = new Color32(25, 25, 25, byte.MaxValue);
+					}
+					else if (j > 20 && j < 35 && i % 10 > 2 && i % 10 < 8)
+					{
+						array[j * num + i] = new Color32(230, 220, 180, byte.MaxValue);
+					}
+					else
+					{
+						array[j * num + i] = color;
+					}
+				}
+			}
+			texture2D.SetPixels32(array);
+			texture2D.wrapMode = TextureWrapMode.Repeat;
+			texture2D.Apply(updateMipmaps: false, makeNoLongerReadable: true);
+			return texture2D;
+		}
+
+		private void InitMaterials()
+		{
+			Shader shader = Shader.Find("Dead Air/Source Surface") ?? Shader.Find("Standard");
+			Shader shader2 = Shader.Find("Dead Air/Window Glass") ?? Shader.Find("Standard");
+			Texture2D texture = CreateParquetTexture();
+			Texture2D texture2 = CreatePlasterTexture();
+			Texture2D texture3 = CreateDeskWoodTexture();
+			Texture2D texture4 = CreateConcreteTexture();
+			Texture2D texture5 = CreateChalkboardTexture();
+			Texture2D texture6 = CreatePaperTexture();
+			Texture2D texture7 = CreateBooksTexture();
+			matPlaster = CreateTexturedMat("SchoolPlaster", shader, texture2, Color.white, 0.15f);
+			matWoodFloor = CreateTexturedMat("ParquetWood", shader, texture, Color.white, 0.35f);
+			matWoodFloor.mainTextureScale = new Vector2(8f, 8f);
+			matDeskWood = CreateTexturedMat("DeskWood", shader, texture3, Color.white, 0.25f);
+			matConcrete = CreateTexturedMat("ConcreteLight", shader, texture4, Color.white, 0.2f);
+			matChalkboard = CreateTexturedMat("Chalkboard", shader, texture5, Color.white, 0.05f);
+			matPaper = CreateTexturedMat("PaperSheet", shader, texture6, Color.white, 0.1f);
+			matBooks = CreateTexturedMat("BookCovers", shader, texture7, Color.white, 0.2f);
+			matGlass = new Material(shader2)
+			{
+				name = "SchoolWindowGlass",
+				hideFlags = HideFlags.DontSave
+			};
+			matGlass.SetColor("_Color", new Color(0.25f, 0.45f, 0.55f, 0.18f));
+			matGlass.SetFloat("_Glossiness", 0.95f);
+			matGlass.SetFloat("_ReflectionStrength", 0.35f);
+			matAsphalt = CreateMat("RoadAsphalt", shader, new Color(0.18f, 0.19f, 0.2f), 0.35f);
+			matRoadZebra = CreateMat("RoadZebraWhite", shader, new Color(0.92f, 0.92f, 0.88f), 0.25f);
+			matBark = CreateMat("DarkBark", shader, new Color(0.24f, 0.19f, 0.14f), 0.05f);
+			matFoliage = CreateMat("DeepFoliage", shader, new Color(0.12f, 0.22f, 0.14f), 0.08f);
+			matTorii = CreateMat("ShrineVermilion", shader, new Color(0.85f, 0.2f, 0.12f), 0.4f);
+			matStone = CreateMat("WeatheredStone", shader, new Color(0.46f, 0.47f, 0.45f), 0.15f);
+			matDarkMetal = CreateMat("MetalDark", shader, new Color(0.2f, 0.22f, 0.22f), 0.65f);
+			matWhite = CreateMat("TrimWhite", shader, new Color(0.92f, 0.9f, 0.86f), 0.35f);
+			matHouseStucco = CreateMat("HouseStucco", shader, new Color(0.78f, 0.76f, 0.7f), 0.1f);
+			matKawaraRoof = CreateMat("KawaraRoof", shader, new Color(0.22f, 0.25f, 0.28f), 0.35f);
+			matBlockWall = CreateMat("BlockWall", shader, new Color(0.55f, 0.54f, 0.5f), 0.15f);
+			matGuardrail = CreateMat("GuardrailWhite", shader, new Color(0.88f, 0.88f, 0.88f), 0.5f);
+			matLabCounter = CreateMat("LabBlackStone", shader, new Color(0.14f, 0.15f, 0.15f), 0.7f);
+			matGold = CreateMat("SignGold", shader, new Color(0.88f, 0.75f, 0.25f), 0.6f);
+			matDoorWood = CreateTexturedMat("DoorWood", shader, texture3, new Color(0.78f, 0.62f, 0.42f), 0.25f);
+			matShoeLocker = CreateMat("GetabakoWood", shader, new Color(0.58f, 0.42f, 0.26f), 0.2f);
+			matTrashCan = CreateMat("TrashCanBlue", shader, new Color(0.22f, 0.42f, 0.68f), 0.4f);
+			matCan = CreateMat("CanAluminum", shader, new Color(0.85f, 0.35f, 0.25f), 0.7f);
+		}
+
+		private static Material CreateMat(string name, Shader shader, Color color, float gloss)
+		{
+			Material material = new Material(shader);
+			material.name = name;
+			material.color = color;
+			material.hideFlags = HideFlags.DontSave;
+			material.SetFloat("_Glossiness", gloss);
+			material.enableInstancing = true;
+			return material;
+		}
+
+		private static Material CreateTexturedMat(string name, Shader shader, Texture2D texture, Color color, float gloss)
+		{
+			Material material = new Material(shader);
+			material.name = name;
+			material.mainTexture = texture;
+			material.color = color;
+			material.hideFlags = HideFlags.DontSave;
+			material.SetFloat("_Glossiness", gloss);
+			material.enableInstancing = true;
+			return material;
+		}
+
+		public void Initialize()
+		{
+			BuildRoadAndCrosswalk();
+			BuildLeftNeighborhood();
+			BuildRightNeighborhood();
+			BuildBackYardAndForest();
+			BuildSchoolCourtyard();
+			BuildSchoolBuilding();
+			BuildFirstFloorInteriors();
+			BuildSecondFloorInteriors();
+			BuildThirdFloorInteriors();
+			BuildStairs();
+			BuildRearSchoolExtension();
+			BuildTraditionalPark();
+			UpgradePark();
+			BuildNewsVan();
+			SpawnSanityPills();
+			SpawnEvidenceTapes();
+			SetupLighting();
+		}
+
+		public void SetActive(bool active)
+		{
+			if (Root != null)
+			{
+				Root.gameObject.SetActive(active);
+			}
+		}
+
+		private GameObject CreateBox(Transform parent, Vector3 localPos, Vector3 size, Material mat, bool addCollider = true, string name = "Cube")
+		{
+			if (boxMesh == null)
+			{
+				boxMesh = PrimitiveMesh(PrimitiveType.Cube);
+			}
+			GameObject gameObject = new GameObject(name);
+			gameObject.transform.SetParent(parent, worldPositionStays: false);
+			gameObject.transform.localPosition = localPos;
+			gameObject.transform.localScale = size;
+			gameObject.AddComponent<MeshFilter>().sharedMesh = boxMesh;
+			MeshRenderer meshRenderer = gameObject.AddComponent<MeshRenderer>();
+			meshRenderer.sharedMaterial = mat;
+			if (addCollider)
+			{
+				gameObject.AddComponent<BoxCollider>();
+			}
+			else
+			{
+				meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
+				meshRenderer.receiveShadows = false;
+			}
+			return gameObject;
+		}
+
+		private GameObject CreateCylinder(Transform parent, Vector3 localPos, float radius, float height, Material mat, bool addCollider = true, string name = "Cylinder")
+		{
+			if (cylinderMesh == null)
+			{
+				cylinderMesh = PrimitiveMesh(PrimitiveType.Cylinder);
+			}
+			GameObject gameObject = new GameObject(name);
+			gameObject.transform.SetParent(parent, worldPositionStays: false);
+			gameObject.transform.localPosition = localPos;
+			gameObject.transform.localScale = new Vector3(radius * 2f, height * 0.5f, radius * 2f);
+			gameObject.AddComponent<MeshFilter>().sharedMesh = cylinderMesh;
+			MeshRenderer meshRenderer = gameObject.AddComponent<MeshRenderer>();
+			meshRenderer.sharedMaterial = mat;
+			if (addCollider)
+			{
+				gameObject.AddComponent<CapsuleCollider>();
+			}
+			else
+			{
+				meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
+				meshRenderer.receiveShadows = false;
+			}
+			return gameObject;
+		}
+
+		private static Mesh PrimitiveMesh(PrimitiveType type)
+		{
+			GameObject gameObject = GameObject.CreatePrimitive(type);
+			gameObject.SetActive(value: false);
+			Mesh sharedMesh = gameObject.GetComponent<MeshFilter>().sharedMesh;
+			if (Application.isPlaying)
+			{
+				UnityEngine.Object.Destroy(gameObject);
+				return sharedMesh;
+			}
+			UnityEngine.Object.DestroyImmediate(gameObject);
+			return sharedMesh;
+		}
+
+		private GameObject CreateRamp(Transform parent, Vector3 center, Vector3 size, float tiltAngleX, string name = "StairRamp")
+		{
+			GameObject gameObject = new GameObject(name);
+			gameObject.transform.SetParent(parent, worldPositionStays: false);
+			gameObject.transform.localPosition = center;
+			gameObject.transform.localRotation = Quaternion.Euler(tiltAngleX, 0f, 0f);
+			gameObject.AddComponent<BoxCollider>().size = size;
+			return gameObject;
+		}
+
+		private void SetupLighting()
+		{
+			GameObject gameObject = new GameObject("Japanese Night Moonlight");
+			gameObject.transform.SetParent(Root, worldPositionStays: false);
+			Light light = gameObject.AddComponent<Light>();
+			light.type = LightType.Directional;
+			light.color = new Color(0.48f, 0.58f, 0.72f);
+			light.intensity = 0.65f;
+			light.shadows = LightShadows.Soft;
+			gameObject.transform.rotation = Quaternion.Euler(52f, -40f, 0f);
+			RenderSettings.fog = true;
+			RenderSettings.fogMode = FogMode.ExponentialSquared;
+			RenderSettings.fogColor = new Color(0.05f, 0.07f, 0.11f);
+			RenderSettings.fogDensity = 0.01f;
+		}
+
+		private void BuildRoadAndCrosswalk()
+		{
+			Transform transform = new GameObject("Street & Sidewalks").transform;
+			transform.SetParent(Root, worldPositionStays: false);
+			CreateBox(transform, new Vector3(0f, -0.05f, 43f), new Vector3(120f, 0.1f, 10f), matAsphalt, addCollider: true, "Main Street Asphalt");
+			for (float num = -58f; num <= 58f; num += 4f)
+			{
+				CreateBox(transform, new Vector3(num, 0.01f, 43f), new Vector3(2.4f, 0.01f, 0.18f), matTorii, addCollider: false, "Yellow Center Line");
+			}
+			CreateBox(transform, new Vector3(0f, 0.01f, 38.6f), new Vector3(120f, 0.01f, 0.18f), matWhite, addCollider: false);
+			CreateBox(transform, new Vector3(0f, 0.01f, 47.4f), new Vector3(120f, 0.01f, 0.18f), matWhite, addCollider: false);
+			for (float num2 = -3.5f; num2 <= 3.5f; num2 += 1.2f)
+			{
+				CreateBox(transform, new Vector3(num2, 0.015f, 43f), new Vector3(0.65f, 0.01f, 8.8f), matRoadZebra, addCollider: false, "Zebra Stripe");
+			}
+			CreateBox(transform, new Vector3(0f, 0.09f, 37f), new Vector3(120f, 0.18f, 2f), matConcrete, addCollider: true, "School Sidewalk");
+			CreateBox(transform, new Vector3(0f, 0.09f, 49f), new Vector3(120f, 0.18f, 2f), matConcrete, addCollider: true, "Park Sidewalk");
+			for (int i = -1; i <= 1; i += 2)
+			{
+				for (float num3 = 38.2f; num3 <= 47.8f; num3 += 9.6f)
+				{
+					float num4 = 4.5f;
+					float num5 = 55f;
+					float num6 = num5 - num4;
+					float x = (float)i * (num4 + num6 * 0.5f);
+					CreateBox(transform, new Vector3(x, 0.75f, num3), new Vector3(num6, 0.05f, 0.05f), matGuardrail, addCollider: false, "Guardrail Top");
+					CreateBox(transform, new Vector3(x, 0.45f, num3), new Vector3(num6, 0.05f, 0.05f), matGuardrail, addCollider: false, "Guardrail Mid");
+					for (float num7 = num4; num7 <= num5; num7 += 3f)
+					{
+						CreateCylinder(transform, new Vector3((float)i * num7, 0.45f, num3), 0.035f, 0.9f, matGuardrail, addCollider: false, "Rail Post");
+					}
+				}
+			}
+			BuildTrafficMirror(transform, new Vector3(-6f, 0f, 48.5f));
+			BuildTrafficMirror(transform, new Vector3(6f, 0f, 36.5f));
+		}
+
+		private void BuildTrafficMirror(Transform parent, Vector3 pos)
+		{
+			Transform transform = new GameObject("Curved Traffic Mirror").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			transform.localPosition = pos;
+			CreateCylinder(transform, new Vector3(0f, 1.8f, 0f), 0.05f, 3.6f, matGuardrail);
+			GameObject gameObject = CreateCylinder(transform, new Vector3(0f, 3.3f, 0.2f), 0.45f, 0.08f, matTorii, addCollider: false);
+			gameObject.transform.rotation = Quaternion.Euler(75f, 0f, 0f);
+			CreateCylinder(gameObject.transform, new Vector3(0f, 0.04f, 0f), 0.4f, 0.02f, matGlass, addCollider: false);
+		}
+
+		private void BuildLeftNeighborhood()
+		{
+			Transform transform = new GameObject("Left Neighborhood").transform;
+			transform.SetParent(Root, worldPositionStays: false);
+			CreateBox(transform, new Vector3(-38f, 1.1f, 3f), new Vector3(0.35f, 2.2f, 94f), matBlockWall, addCollider: true, "Left Perimeter Wall");
+			float[] array = new float[5] { -28f, -10f, 8f, 26f, 44f };
+			foreach (float z in array)
+			{
+				BuildJapaneseHouse(transform, new Vector3(-48f, 0f, z), 0f);
+			}
+			BuildUtilityPole(transform, new Vector3(-39.5f, 0f, 45f));
+			BuildUtilityPole(transform, new Vector3(-39.5f, 0f, 15f));
+			BuildUtilityPole(transform, new Vector3(-39.5f, 0f, -15f));
+		}
+
+		private void BuildRightNeighborhood()
+		{
+			Transform transform = new GameObject("Right Neighborhood").transform;
+			transform.SetParent(Root, worldPositionStays: false);
+			CreateBox(transform, new Vector3(38f, 1.1f, 3f), new Vector3(0.35f, 2.2f, 94f), matBlockWall, addCollider: true, "Right Perimeter Wall");
+			float[] array = new float[5] { -28f, -10f, 8f, 26f, 44f };
+			foreach (float z in array)
+			{
+				BuildJapaneseHouse(transform, new Vector3(48f, 0f, z), 180f);
+			}
+			BuildUtilityPole(transform, new Vector3(39.5f, 0f, 45f));
+			BuildUtilityPole(transform, new Vector3(39.5f, 0f, 15f));
+			BuildUtilityPole(transform, new Vector3(39.5f, 0f, -15f));
+		}
+
+		private void BuildJapaneseHouse(Transform parent, Vector3 pos, float yaw)
+		{
+			Transform transform = new GameObject("Japanese House").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			transform.localPosition = pos;
+			transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+			float num = 12f;
+			float y = 6.8f;
+			float num2 = 11f;
+			CreateBox(transform, new Vector3(0f, 3.4f, 0f), new Vector3(num, y, num2), matHouseStucco, addCollider: true, "House Body");
+			CreateBox(transform, new Vector3(0f, 0.8f, 0f), new Vector3(num + 0.1f, 1.6f, num2 + 0.1f), matBark, addCollider: false, "House Wood Skirt");
+			CreateBox(transform, new Vector3(0f, 7.2f, 0f), new Vector3(num + 1.6f, 0.7f, num2 + 1.6f), matKawaraRoof, addCollider: true, "Kawara Roof Base");
+			CreateBox(transform, new Vector3(0f, 8f, 0f), new Vector3(num * 0.7f, 1f, num2 * 0.7f), matKawaraRoof, addCollider: false, "Kawara Roof Mid");
+			CreateBox(transform, new Vector3(0f, 8.7f, 0f), new Vector3(num * 0.4f, 0.6f, num2 * 0.4f), matKawaraRoof, addCollider: false, "Kawara Roof Top");
+			CreateBox(transform, new Vector3(0f, 3.8f, num2 * 0.5f + 0.6f), new Vector3(num * 0.7f, 0.15f, 1.2f), matConcrete, addCollider: true, "Balcony Floor");
+			CreateBox(transform, new Vector3(0f, 4.3f, num2 * 0.5f + 1.15f), new Vector3(num * 0.7f, 0.8f, 0.1f), matDarkMetal, addCollider: false, "Balcony Rail");
+			for (int i = 0; i < 2; i++)
+			{
+				float y2 = 1.8f + (float)i * 3.4f;
+				GameObject gameObject = CreateBox(transform, new Vector3(2.5f, y2, num2 * 0.5f + 0.05f), new Vector3(2.2f, 1.4f, 0.1f), matWhite, addCollider: false, "Window Frame");
+				CreateBox(gameObject.transform, new Vector3(0f, 0f, 0.02f), new Vector3(2f, 1.2f, 0.05f), matPlaster, addCollider: false, "Lit Window");
+				if (i == 1)
+				{
+					Light light = gameObject.AddComponent<Light>();
+					light.type = LightType.Point;
+					light.color = new Color(1f, 0.82f, 0.55f);
+					light.intensity = 0.8f;
+					light.range = 5f;
+				}
+			}
+			CreateBox(transform, new Vector3(-3.5f, 0.5f, num2 * 0.5f + 0.35f), new Vector3(0.9f, 0.65f, 0.4f), matWhite, addCollider: false, "AC Unit");
+		}
+
+		private void BuildUtilityPole(Transform parent, Vector3 pos)
+		{
+			Transform transform = new GameObject("Utility Pole (電柱)").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			transform.localPosition = pos;
+			CreateCylinder(transform, new Vector3(0f, 5f, 0f), 0.18f, 10f, matConcrete);
+			CreateBox(transform, new Vector3(0f, 8.8f, 0f), new Vector3(2.4f, 0.1f, 0.1f), matDarkMetal, addCollider: false);
+			CreateBox(transform, new Vector3(0f, 9.4f, 0f), new Vector3(1.8f, 0.1f, 0.1f), matDarkMetal, addCollider: false);
+			CreateCylinder(transform, new Vector3(0.35f, 8.2f, 0f), 0.28f, 0.9f, matDarkMetal, addCollider: false);
+		}
+
+		private void BuildBackYardAndForest()
+		{
+			Transform transform = new GameObject("Back Schoolyard & Forest").transform;
+			transform.SetParent(Root, worldPositionStays: false);
+			CreateBox(transform, new Vector3(0f, -0.05f, -56f), new Vector3(72f, 0.1f, 28f), matConcrete, addCollider: true, "Backyard Ground");
+			Transform transform2 = new GameObject("Bicycle Shed").transform;
+			transform2.SetParent(transform, worldPositionStays: false);
+			transform2.localPosition = new Vector3(-29f, 0f, -52f);
+			CreateBox(transform2, new Vector3(0f, 2.5f, 0f), new Vector3(10f, 0.12f, 3.8f), matDarkMetal, addCollider: true, "Shed Roof");
+			for (float num = -4.5f; num <= 4.5f; num += 4.5f)
+			{
+				CreateCylinder(transform2, new Vector3(num, 1.25f, -1.6f), 0.05f, 2.5f, matDarkMetal, addCollider: false);
+				CreateCylinder(transform2, new Vector3(num, 1.25f, 1.6f), 0.05f, 2.5f, matDarkMetal, addCollider: false);
+			}
+			for (float num2 = -4.2f; num2 <= 4.2f; num2 += 0.8f)
+			{
+				CreateBox(transform2, new Vector3(num2, 0.25f, 0f), new Vector3(0.04f, 0.5f, 1.4f), matDarkMetal, addCollider: false);
+			}
+			CreateBox(transform, new Vector3(30f, 1.6f, -52f), new Vector3(5.2f, 3.2f, 3.6f), matDarkMetal, addCollider: true, "Storage Lockup");
+			GameObject gameObject = CreateBox(transform, new Vector3(31f, 1.2f, -64f), new Vector3(1.8f, 2.4f, 1.8f), matConcrete, addCollider: true, "Incinerator");
+			CreateCylinder(gameObject.transform, new Vector3(0f, 2f, 0f), 0.22f, 2.2f, matDarkMetal, addCollider: false, "Chimney");
+			BuildRearPlayground(transform);
+			BuildRearFence(transform);
+			CreateBox(transform, new Vector3(0f, -0.05f, -93f), new Vector3(96f, 0.1f, 46f), matFoliage, addCollider: true, "Forest Floor");
+			System.Random random = new System.Random(88812);
+			for (int i = 0; i < 32; i++)
+			{
+				float x = (float)(random.NextDouble() * 84.0 - 42.0);
+				float z = (float)(random.NextDouble() * 42.0 - 114.0);
+				BuildForestTree(transform, new Vector3(x, 0f, z));
+			}
+		}
+
+		private void BuildForestTree(Transform parent, Vector3 pos)
+		{
+			Transform transform = new GameObject("Dense Forest Tree").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			transform.localPosition = pos;
+			CreateCylinder(transform, new Vector3(0f, 4.5f, 0f), 0.45f, 9f, matBark);
+			CreateCylinder(transform, new Vector3(0f, 9f, 0f), 2.8f, 4.5f, matFoliage, addCollider: false);
+			CreateCylinder(transform, new Vector3(0f, 12f, 0f), 2f, 3.8f, matFoliage, addCollider: false);
+			CreateCylinder(transform, new Vector3(0f, 14.5f, 0f), 1.2f, 2.8f, matFoliage, addCollider: false);
+		}
+
+		private void BuildSchoolCourtyard()
+		{
+			Transform transform = new GameObject("School Courtyard").transform;
+			transform.SetParent(Root, worldPositionStays: false);
+			CreateBox(transform, new Vector3(0f, -0.05f, 18f), new Vector3(72f, 0.1f, 36f), matAsphalt, addCollider: true, "Courtyard Asphalt");
+			CreateBox(transform, new Vector3(0f, 0.02f, 18f), new Vector3(6.5f, 0.02f, 36f), matConcrete, addCollider: false, "Approach Path");
+			Material mat = CreateMat("CircleYellow", matPlaster.shader, new Color(0.92f, 0.78f, 0.2f), 0.2f);
+			Material mat2 = CreateMat("CircleBlue", matPlaster.shader, new Color(0.24f, 0.6f, 0.88f), 0.2f);
+			Material mat3 = CreateMat("CircleRed", matPlaster.shader, new Color(0.88f, 0.26f, 0.22f), 0.2f);
+			Material mat4 = CreateMat("CircleGreen", matPlaster.shader, new Color(0.26f, 0.82f, 0.36f), 0.2f);
+			CreateRing(transform, new Vector3(8f, 0.015f, 14f), 2.8f, mat);
+			CreateRing(transform, new Vector3(-10f, 0.015f, 18f), 2f, mat2);
+			CreateRing(transform, new Vector3(14f, 0.015f, 22f), 1.6f, mat3);
+			CreateRing(transform, new Vector3(-16f, 0.015f, 12f), 3.4f, mat);
+			CreateRing(transform, new Vector3(20f, 0.015f, 15f), 1.4f, mat4);
+			CreateRing(transform, new Vector3(-8f, 0.015f, 26f), 2.3f, mat2);
+			Material coneMat = CreateMat("ConeOrange", matPlaster.shader, new Color(0.95f, 0.35f, 0.1f), 0.3f);
+			CreateTrafficCone(transform, new Vector3(14f, 0f, 28f), coneMat);
+			CreateTrafficCone(transform, new Vector3(16f, 0f, 26f), coneMat);
+			CreateTrafficCone(transform, new Vector3(-12f, 0f, 32f), coneMat);
+			for (int i = -1; i <= 1; i += 2)
+			{
+				float num = 30f;
+				float x = (float)i * (5.5f + num * 0.5f);
+				CreateBox(transform, new Vector3(x, 1.1f, 36f), new Vector3(num, 2.2f, 0.35f), matConcrete, addCollider: true, "Front Wall");
+				for (float num2 = 6f; num2 < 35f; num2 += 1f)
+				{
+					CreateCylinder(transform, new Vector3((float)i * num2, 2.6f, 36f), 0.025f, 0.8f, matDarkMetal, addCollider: false);
+				}
+			}
+			for (int j = -1; j <= 1; j += 2)
+			{
+				CreateBox(transform, new Vector3((float)j * 5.5f, 1.8f, 36f), new Vector3(1f, 3.6f, 1f), matConcrete, addCollider: true, "Gate Pillar");
+				CreateBox(transform, new Vector3((float)j * 5.5f, 3.65f, 36f), new Vector3(1.2f, 0.2f, 1.2f), matDarkMetal, addCollider: false);
+			}
+		}
+
+		private void CreateRing(Transform parent, Vector3 center, float radius, Material mat)
+		{
+			CreateCylinder(parent, center, radius, 0.02f, mat, addCollider: false, "PaintRing");
+		}
+
+		private void CreateTrafficCone(Transform parent, Vector3 pos, Material coneMat)
+		{
+			Transform transform = new GameObject("TrafficCone").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			transform.localPosition = pos;
+			CreateBox(transform, new Vector3(0f, 0.02f, 0f), new Vector3(0.4f, 0.04f, 0.4f), matDarkMetal);
+			GameObject gameObject = CreateCylinder(transform, new Vector3(0f, 0.38f, 0f), 0.13f, 0.76f, coneMat);
+			CreateCylinder(gameObject.transform, Vector3.zero, 0.135f, 0.22f, matWhite, addCollider: false);
+		}
+
+		private void BuildSchoolBuilding()
+		{
+			Transform transform = new GameObject("School Outer Structure").transform;
+			transform.SetParent(Root, worldPositionStays: false);
+			float num = 72f;
+			float num2 = 11.2f;
+			float num3 = 42f;
+			CreateBox(transform, new Vector3(0f, 11.15f, (0f - num3) * 0.5f), new Vector3(num, 0.25f, num3), matConcrete, addCollider: true, "Roof Slab");
+			CreateBox(transform, new Vector3(0f, 11.55f, 0.1f), new Vector3(num + 0.6f, 0.6f, 0.35f), matConcrete, addCollider: true, "Roof Parapet South");
+			CreateBox(transform, new Vector3(0f, 11.55f, 0f - num3 - 0.1f), new Vector3(num + 0.6f, 0.6f, 0.35f), matConcrete, addCollider: true, "Roof Parapet North");
+			CreateBox(transform, new Vector3((0f - num) * 0.5f - 0.1f, 11.55f, (0f - num3) * 0.5f), new Vector3(0.35f, 0.6f, num3 + 0.6f), matConcrete, addCollider: true, "Roof Parapet West");
+			CreateBox(transform, new Vector3(num * 0.5f + 0.1f, 11.55f, (0f - num3) * 0.5f), new Vector3(0.35f, 0.6f, num3 + 0.6f), matConcrete, addCollider: true, "Roof Parapet East");
+			CreateBox(transform, new Vector3(-36f, num2 * 0.5f, (0f - num3) * 0.5f), new Vector3(0.4f, num2, num3), matPlaster, addCollider: true, "Exterior Wall West");
+			CreateBox(transform, new Vector3(36f, num2 * 0.5f, (0f - num3) * 0.5f), new Vector3(0.4f, num2, num3), matPlaster, addCollider: true, "Exterior Wall East");
+			BuildFacadeWallWithWindows(transform, 0f, isNorth: false);
+			BuildFacadeWallWithWindows(transform, 0f - num3, isNorth: true);
+			CreateBox(transform, new Vector3(0f, 5.7f, 0f), new Vector3(10f, 3.8f, 0.35f), matPlaster, addCollider: true, "South Facade Center 2F");
+			CreateBox(transform, new Vector3(0f, 9.4f, 0f), new Vector3(10f, 3.6f, 0.35f), matPlaster, addCollider: true, "South Facade Center 3F");
+			GameObject gameObject = CreateCylinder(transform, new Vector3(0f, 6.2f, 0.22f), 0.85f, 0.12f, matDarkMetal, addCollider: false, "Clock");
+			gameObject.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+			CreateCylinder(gameObject.transform, new Vector3(0f, 0.07f, 0f), 0.76f, 0.03f, matWhite, addCollider: false);
+			for (int i = -1; i <= 1; i += 2)
+			{
+				for (int j = 0; j < 5; j++)
+				{
+					float num4 = (float)i * (8.5f + (float)j * 5.6f);
+					CreateBox(transform, new Vector3(num4, 0.35f, 1.4f), new Vector3(4.2f, 0.7f, 1f), matConcrete, addCollider: true, "Planter");
+					CreateBox(transform, new Vector3(num4, 0.9f, 1.4f), new Vector3(3.8f, 0.8f, 0.8f), matFoliage, addCollider: false, "Shrub");
+					if (j == 1 || j == 3)
+					{
+						CreateCylinder(transform, new Vector3(num4 + 1.2f, 2f, 1.4f), 0.22f, 2.8f, matBark);
+						CreateBox(transform, new Vector3(num4 + 1.2f, 3.5f, 1.4f), new Vector3(2.4f, 0.8f, 2.4f), matFoliage, addCollider: false);
+					}
+				}
+			}
+			BuildSchoolEntrance(transform);
+		}
+
+		private void BuildFacadeWallWithWindows(Transform parent, float facadeZ, bool isNorth)
+		{
+			Transform transform = new GameObject((isNorth ? "North" : "South") + " Facade Wall").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			CreateBox(transform, new Vector3(-20.5f, 0.55f, facadeZ), new Vector3(31f, 1.1f, 0.35f), matPlaster);
+			CreateBox(transform, new Vector3(20.5f, 0.55f, facadeZ), new Vector3(31f, 1.1f, 0.35f), matPlaster);
+			CreateBox(transform, new Vector3(-20.5f, 3.7f, facadeZ), new Vector3(31f, 1.2f, 0.35f), matPlaster);
+			CreateBox(transform, new Vector3(20.5f, 3.7f, facadeZ), new Vector3(31f, 1.2f, 0.35f), matPlaster);
+			CreateBox(transform, new Vector3(-20.5f, 6.95f, facadeZ), new Vector3(31f, 1.3f, 0.35f), matPlaster);
+			CreateBox(transform, new Vector3(20.5f, 6.95f, facadeZ), new Vector3(31f, 1.3f, 0.35f), matPlaster);
+			CreateBox(transform, new Vector3(-20.5f, 10.55f, facadeZ), new Vector3(31f, 1.3f, 0.35f), matPlaster);
+			CreateBox(transform, new Vector3(20.5f, 10.55f, facadeZ), new Vector3(31f, 1.3f, 0.35f), matPlaster);
+			if (isNorth)
+			{
+				CreateBox(transform, new Vector3(-3.1f, 0.55f, facadeZ), new Vector3(3.8f, 1.1f, 0.35f), matPlaster);
+				CreateBox(transform, new Vector3(3.1f, 0.55f, facadeZ), new Vector3(3.8f, 1.1f, 0.35f), matPlaster);
+				CreateBox(transform, new Vector3(0f, 3.65f, facadeZ), new Vector3(10f, 0.9f, 0.35f), matPlaster);
+				CreateBox(transform, new Vector3(0f, 7.25f, facadeZ), new Vector3(10f, 0.9f, 0.35f), matPlaster);
+				CreateBox(transform, new Vector3(0f, 10.55f, facadeZ), new Vector3(10f, 1.3f, 0.35f), matPlaster);
+				for (int i = 0; i < 3; i++)
+				{
+					float num = i switch
+					{
+						1 => 5.3f, 
+						0 => 2.1f, 
+						_ => 8.9f, 
+					};
+					if (i == 0)
+					{
+						CreateBox(transform, new Vector3(-3.1f, num, facadeZ), new Vector3(3.8f, 2f, 0.08f), matGlass, addCollider: true, "Rear Exit Sidelight L");
+						CreateBox(transform, new Vector3(3.1f, num, facadeZ), new Vector3(3.8f, 2f, 0.08f), matGlass, addCollider: true, "Rear Exit Sidelight R");
+						CreateBox(transform, new Vector3(-1.15f, num, facadeZ), new Vector3(0.1f, 2.1f, 0.18f), matDarkMetal);
+						CreateBox(transform, new Vector3(1.15f, num, facadeZ), new Vector3(0.1f, 2.1f, 0.18f), matDarkMetal);
+						CreateBox(transform, new Vector3(0f, 3.15f, facadeZ), new Vector3(2.3f, 0.1f, 0.18f), matDarkMetal, addCollider: false);
+					}
+					else
+					{
+						CreateBox(transform, new Vector3(0f, num, facadeZ), new Vector3(9.3f, 1.9f, 0.08f), matGlass, addCollider: true, "Rear Corridor Window");
+						CreateBox(transform, new Vector3(0f, num - 1f, facadeZ), new Vector3(9.5f, 0.1f, 0.16f), matWhite, addCollider: false);
+						CreateBox(transform, new Vector3(0f, num + 1f, facadeZ), new Vector3(9.5f, 0.1f, 0.16f), matWhite, addCollider: false);
+					}
+				}
+			}
+			for (int j = 0; j < 3; j++)
+			{
+				float num2 = j switch
+				{
+					1 => 5.3f, 
+					0 => 2.1f, 
+					_ => 8.9f, 
+				};
+				for (int k = -1; k <= 1; k += 2)
+				{
+					CreateBox(transform, new Vector3((float)k * 34.5f, num2, facadeZ), new Vector3(3f, 2f, 0.35f), matPlaster);
+					CreateBox(transform, new Vector3((float)k * 6.5f, num2, facadeZ), new Vector3(3f, 2f, 0.35f), matPlaster);
+					for (int l = 0; l < 4; l++)
+					{
+						float num3 = (float)k * (10.5f + (float)l * 5.4f);
+						CreateBox(transform, new Vector3(num3, num2, facadeZ), new Vector3(3.8f, 1.9f, 0.02f), matGlass, addCollider: true, "Transparent Classroom Window");
+						CreateBox(transform, new Vector3(num3 - 1.95f, num2, facadeZ), new Vector3(0.12f, 2f, 0.14f), matWhite, addCollider: false);
+						CreateBox(transform, new Vector3(num3 + 1.95f, num2, facadeZ), new Vector3(0.12f, 2f, 0.14f), matWhite, addCollider: false);
+						CreateBox(transform, new Vector3(num3, num2 - 0.95f, facadeZ), new Vector3(4f, 0.12f, 0.14f), matWhite, addCollider: false);
+						CreateBox(transform, new Vector3(num3, num2 + 0.95f, facadeZ), new Vector3(4f, 0.12f, 0.14f), matWhite, addCollider: false);
+						CreateBox(transform, new Vector3(num3, num2, facadeZ), new Vector3(0.06f, 1.9f, 0.06f), matDarkMetal, addCollider: false);
+						CreateBox(transform, new Vector3(num3, num2, facadeZ), new Vector3(3.8f, 0.06f, 0.06f), matDarkMetal, addCollider: false);
+						if (l < 3)
+						{
+							CreateBox(transform, new Vector3((float)k * (13.2f + (float)l * 5.4f), num2, facadeZ), new Vector3(1.4f, 2f, 0.35f), matPlaster);
+						}
+					}
+				}
+			}
+		}
+
+		private void BuildSchoolEntrance(Transform parent)
+		{
+			Transform transform = new GameObject("School Entrance (玄関)").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			CreateBox(transform, new Vector3(0f, 0.225f, 2.1f), new Vector3(10.5f, 0.45f, 4.2f), matConcrete, addCollider: true, "Porch Landing");
+			CreateBox(transform, new Vector3(0f, 0.12f, 4.8f), new Vector3(10.5f, 0.15f, 0.6f), matConcrete, addCollider: true, "Porch Step 1");
+			CreateBox(transform, new Vector3(0f, 0.27f, 4.5f), new Vector3(10.5f, 0.15f, 0.6f), matConcrete, addCollider: true, "Porch Step 2");
+			CreateBox(transform, new Vector3(0f, 3.95f, 2.4f), new Vector3(11.2f, 0.35f, 4.8f), matConcrete, addCollider: true, "Canopy Roof");
+			CreateBox(transform, new Vector3(-4.8f, 1.9f, 4.2f), new Vector3(0.7f, 3.8f, 0.7f), matConcrete, addCollider: true, "Canopy Pillar L");
+			CreateBox(transform, new Vector3(4.8f, 1.9f, 4.2f), new Vector3(0.7f, 3.8f, 0.7f), matConcrete, addCollider: true, "Canopy Pillar R");
+			GameObject gameObject = CreateBox(transform, new Vector3(0f, 3.25f, 0.22f), new Vector3(4.8f, 0.65f, 0.08f), matDarkMetal, addCollider: false, "School Plaque");
+			CreateBox(gameObject.transform, new Vector3(0f, 0f, 0.05f), new Vector3(4.5f, 0.48f, 0.04f), matGold, addCollider: false, "Gold Lettering Plate");
+			CreateBox(transform, new Vector3(-4.8f, 1.7f, 0.08f), new Vector3(0.4f, 3.4f, 0.18f), matDarkMetal);
+			CreateBox(transform, new Vector3(4.8f, 1.7f, 0.08f), new Vector3(0.4f, 3.4f, 0.18f), matDarkMetal);
+			CreateBox(transform, new Vector3(0f, 3.25f, 0.08f), new Vector3(9.6f, 0.35f, 0.18f), matDarkMetal, addCollider: false);
+			CreateBox(transform, new Vector3(-3.3f, 1.6f, 0.08f), new Vector3(2.6f, 2.9f, 0.04f), matGlass, addCollider: true, "Entrance Glass Fixed L");
+			CreateBox(transform, new Vector3(3.3f, 1.6f, 0.08f), new Vector3(2.6f, 2.9f, 0.04f), matGlass, addCollider: true, "Entrance Glass Fixed R");
+			CreateBox(transform, new Vector3(-1.1f, 1.6f, 0.14f), new Vector3(1.8f, 2.9f, 0.04f), matGlass, addCollider: true, "Entrance Sliding Door Closed");
+			CreateBox(transform, new Vector3(2.2f, 1.6f, 0.14f), new Vector3(1.4f, 2.9f, 0.04f), matGlass, addCollider: false, "Entrance Door Slid Open");
+			CreateBox(transform, new Vector3(0f, 0.225f, -1.5f), new Vector3(9.6f, 0.45f, 3f), matConcrete, addCollider: true, "Genkan Doma Floor");
+			CreateBox(transform, new Vector3(0f, 0.525f, -3.15f), new Vector3(9.6f, 0.15f, 0.35f), matWoodFloor, addCollider: true, "Shikidai Threshold Step");
+			CreateBox(transform, new Vector3(0f, 0.3f, -5.9f), new Vector3(9.6f, 0.6f, 5.2f), matWoodFloor, addCollider: true, "Genkan Hall Floor");
+			CreateBox(transform, new Vector3(-4.9f, 2.2f, -4.25f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, addCollider: true, "Genkan Wall L");
+			CreateBox(transform, new Vector3(4.9f, 2.2f, -4.25f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster, addCollider: true, "Genkan Wall R");
+			BuildShoeLockers(transform, new Vector3(-4.1f, 0.6f, -5.5f), 90f);
+			BuildShoeLockers(transform, new Vector3(4.1f, 0.6f, -5.5f), -90f);
+			CreateInteriorLamp(transform, new Vector3(0f, 3.65f, -4.5f));
+		}
+
+		private void BuildShoeLockers(Transform parent, Vector3 pos, float yaw)
+		{
+			Transform transform = new GameObject("Getabako Shoe Lockers").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			transform.localPosition = pos;
+			transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+			float num = 5.2f;
+			float num2 = 1.9f;
+			float num3 = 0.65f;
+			CreateBox(transform, new Vector3(0f, num2 * 0.5f, 0f), new Vector3(num, num2, num3), matShoeLocker, addCollider: true, "Locker Main Body");
+			int num4 = 4;
+			int num5 = 10;
+			float num6 = (num - 0.2f) / (float)num5;
+			float num7 = (num2 - 0.2f) / (float)num4;
+			for (int i = 0; i < num4; i++)
+			{
+				for (int j = 0; j < num5; j++)
+				{
+					float num8 = (0f - num) * 0.5f + 0.15f + (float)j * num6 + num6 * 0.5f;
+					float num9 = 0.15f + (float)i * num7 + num7 * 0.5f;
+					CreateBox(transform, new Vector3(num8, num9, 0.05f), new Vector3(num6 * 0.85f, num7 * 0.85f, num3 * 0.7f), matDarkMetal, addCollider: false);
+					if ((i + j) % 2 == 0)
+					{
+						CreateBox(transform, new Vector3(num8 - 0.08f, num9 - 0.08f, 0.1f), new Vector3(0.09f, 0.05f, 0.22f), matWhite, addCollider: false);
+						CreateBox(transform, new Vector3(num8 + 0.08f, num9 - 0.08f, 0.1f), new Vector3(0.09f, 0.05f, 0.22f), matWhite, addCollider: false);
+					}
+				}
+			}
+		}
+
+		private void BuildFirstFloorInteriors()
+		{
+			Transform transform = new GameObject("First Floor Interiors").transform;
+			transform.SetParent(Root, worldPositionStays: false);
+			float num = 0.6f;
+			float num2 = 3.8f;
+			CreateBox(transform, new Vector3(0f, num * 0.5f, -11f), new Vector3(72f, num, 22f), matWoodFloor, addCollider: true, "Floor 1 Ground");
+			CreateBox(transform, new Vector3(-21f, num2 + 0.05f, -11f), new Vector3(30f, 0.15f, 22f), matConcrete, addCollider: true, "Ceiling Left Wing");
+			CreateBox(transform, new Vector3(21f, num2 + 0.05f, -11f), new Vector3(30f, 0.15f, 22f), matConcrete, addCollider: true, "Ceiling Right Wing");
+			CreateBox(transform, new Vector3(0f, num2 + 0.05f, -6.75f), new Vector3(12f, 0.15f, 13.5f), matConcrete, addCollider: true, "Ceiling Center South");
+			for (float num3 = -30f; num3 <= 30f; num3 += 10f)
+			{
+				CreateInteriorLamp(transform, new Vector3(num3, num2 - 0.15f, -11f));
+			}
+			BuildExitSign(transform, new Vector3(-20.5f, 2.9f, -8.65f));
+			BuildExitSign(transform, new Vector3(20.5f, 2.9f, -8.65f));
+			BuildExitSign(transform, new Vector3(-6f, 2.9f, -13.35f));
+			BuildFireHydrant(transform, new Vector3(-18f, 1.4f, -8.65f));
+			BuildFireHydrant(transform, new Vector3(18f, 1.4f, -8.65f));
+			BuildNoticeBoard(transform, new Vector3(-12f, 2f, -8.65f));
+			BuildNoticeBoard(transform, new Vector3(12f, 2f, -8.65f));
+			CreateBox(transform, new Vector3(-32.6f, 2.2f, -8.5f), new Vector3(6.8f, 3.2f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(-20.75f, 2.2f, -8.5f), new Vector3(14f, 3.2f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(-8.5f, 2.2f, -8.5f), new Vector3(7.5f, 3.2f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(8.5f, 2.2f, -8.5f), new Vector3(7.5f, 3.2f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(20.75f, 2.2f, -8.5f), new Vector3(14f, 3.2f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(32.6f, 2.2f, -8.5f), new Vector3(6.8f, 3.2f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(-28.5f, 3.3f, -8.5f), new Vector3(1.5f, 1f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(-13f, 3.3f, -8.5f), new Vector3(1.5f, 1f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(13f, 3.3f, -8.5f), new Vector3(1.5f, 1f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(28.5f, 3.3f, -8.5f), new Vector3(1.5f, 1f, 0.25f), matPlaster);
+			BuildClassroomDoor(transform, new Vector3(-28.5f, num, -8.5f), 0f, "1-A");
+			BuildClassroomDoor(transform, new Vector3(-13f, num, -8.5f), 0f, "1-B");
+			BuildClassroomDoor(transform, new Vector3(13f, num, -8.5f), 0f, "1-C");
+			BuildClassroomDoor(transform, new Vector3(28.5f, num, -8.5f), 0f, "保健室");
+			CreateBox(transform, new Vector3(-32.6f, 2.2f, -13.5f), new Vector3(6.8f, 3.2f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(-20.75f, 2.2f, -13.5f), new Vector3(14f, 3.2f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(-9.25f, 2.2f, -13.5f), new Vector3(6.5f, 3.2f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(9.25f, 2.2f, -13.5f), new Vector3(6.5f, 3.2f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(20.75f, 2.2f, -13.5f), new Vector3(14f, 3.2f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(32.6f, 2.2f, -13.5f), new Vector3(6.8f, 3.2f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(-28.5f, 3.3f, -13.5f), new Vector3(1.5f, 1f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(-13f, 3.3f, -13.5f), new Vector3(1.5f, 1f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(13f, 3.3f, -13.5f), new Vector3(1.5f, 1f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(28.5f, 3.3f, -13.5f), new Vector3(1.5f, 1f, 0.25f), matPlaster);
+			BuildClassroomDoor(transform, new Vector3(-28.5f, num, -13.5f), 180f, "職員室");
+			BuildClassroomDoor(transform, new Vector3(-13f, num, -13.5f), 180f, "校長室");
+			BuildClassroomDoor(transform, new Vector3(13f, num, -13.5f), 180f, "PC室");
+			BuildClassroomDoor(transform, new Vector3(28.5f, num, -13.5f), 180f, "資料室");
+			CreateBox(transform, new Vector3(-20.5f, 2.2f, -4.25f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster);
+			CreateBox(transform, new Vector3(-5f, 2.2f, -4.25f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster);
+			CreateBox(transform, new Vector3(5f, 2.2f, -4.25f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster);
+			CreateBox(transform, new Vector3(20.5f, 2.2f, -4.25f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster);
+			CreateBox(transform, new Vector3(-20.5f, 2.2f, -17.75f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster);
+			CreateBox(transform, new Vector3(-6f, 2.2f, -17.75f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster);
+			CreateBox(transform, new Vector3(6f, 2.2f, -17.75f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster);
+			CreateBox(transform, new Vector3(20.5f, 2.2f, -17.75f), new Vector3(0.25f, 3.2f, 8.5f), matPlaster);
+			BuildClassroom(transform, -28.25f, num, -4.25f, "1-A", 1);
+			BuildClassroom(transform, -12.75f, num, -4.25f, "1-B", 2);
+			BuildClassroom(transform, 12.75f, num, -4.25f, "1-C", 3);
+			BuildNurseOffice(transform, 28.25f, num);
+			BuildStaffRoom(transform, -28.25f, num);
+			BuildPrincipalOffice(transform, -12.75f, num);
+			BuildComputerLab(transform, 12.75f, num);
+			BuildArchiveRoom(transform, 28.25f, num);
+		}
+
+		private void BuildSecondFloorInteriors()
+		{
+			Transform transform = new GameObject("Second Floor Interiors").transform;
+			transform.SetParent(Root, worldPositionStays: false);
+			float num = 3.8f;
+			float num2 = 7.4f;
+			CreateBox(transform, new Vector3(-21f, num + 0.05f, -11f), new Vector3(30f, 0.1f, 22f), matWoodFloor, addCollider: true, "Floor 2 Parquet Left");
+			CreateBox(transform, new Vector3(21f, num + 0.05f, -11f), new Vector3(30f, 0.1f, 22f), matWoodFloor, addCollider: true, "Floor 2 Parquet Right");
+			CreateBox(transform, new Vector3(0f, num + 0.05f, -4.25f), new Vector3(12f, 0.1f, 8.5f), matWoodFloor, addCollider: true, "Floor 2 Parquet South Center");
+			CreateBox(transform, new Vector3(0f, num + 0.05f, -11f), new Vector3(12f, 0.1f, 5f), matWoodFloor, addCollider: true, "Floor 2 Parquet Corridor Center");
+			for (float num3 = -30f; num3 <= 30f; num3 += 10f)
+			{
+				CreateInteriorLamp(transform, new Vector3(num3, num2 - 0.15f, -11f));
+			}
+			BuildExitSign(transform, new Vector3(-20.5f, num + 2.9f, -8.65f));
+			BuildExitSign(transform, new Vector3(20.5f, num + 2.9f, -8.65f));
+			CreateBox(transform, new Vector3(-32.6f, num + 1.8f, -8.5f), new Vector3(6.8f, 3.6f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(-20.75f, num + 1.8f, -8.5f), new Vector3(14f, 3.6f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(-8.5f, num + 1.8f, -8.5f), new Vector3(7.5f, 3.6f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(0f, num + 1.8f, -8.5f), new Vector3(10f, 3.6f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(8.5f, num + 1.8f, -8.5f), new Vector3(7.5f, 3.6f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(20.75f, num + 1.8f, -8.5f), new Vector3(14f, 3.6f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(32.6f, num + 1.8f, -8.5f), new Vector3(6.8f, 3.6f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(-28.5f, num + 3.3f, -8.5f), new Vector3(1.5f, 1f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(-13f, num + 3.3f, -8.5f), new Vector3(1.5f, 1f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(13f, num + 3.3f, -8.5f), new Vector3(1.5f, 1f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(28.5f, num + 3.3f, -8.5f), new Vector3(1.5f, 1f, 0.25f), matPlaster);
+			BuildClassroomDoor(transform, new Vector3(-28.5f, num, -8.5f), 0f, "2-A");
+			BuildClassroomDoor(transform, new Vector3(-13f, num, -8.5f), 0f, "2-B");
+			BuildClassroomDoor(transform, new Vector3(13f, num, -8.5f), 0f, "2-C");
+			BuildClassroomDoor(transform, new Vector3(28.5f, num, -8.5f), 0f, "音楽室");
+			CreateBox(transform, new Vector3(-32.6f, num + 1.8f, -13.5f), new Vector3(6.8f, 3.6f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(-20.75f, num + 1.8f, -13.5f), new Vector3(14f, 3.6f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(-9.25f, num + 1.8f, -13.5f), new Vector3(6.5f, 3.6f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(9.25f, num + 1.8f, -13.5f), new Vector3(6.5f, 3.6f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(20.75f, num + 1.8f, -13.5f), new Vector3(14f, 3.6f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(32.6f, num + 1.8f, -13.5f), new Vector3(6.8f, 3.6f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(-28.5f, num + 3.3f, -13.5f), new Vector3(1.5f, 1f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(-13f, num + 3.3f, -13.5f), new Vector3(1.5f, 1f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(13f, num + 3.3f, -13.5f), new Vector3(1.5f, 1f, 0.25f), matPlaster);
+			CreateBox(transform, new Vector3(28.5f, num + 3.3f, -13.5f), new Vector3(1.5f, 1f, 0.25f), matPlaster);
+			BuildClassroomDoor(transform, new Vector3(-28.5f, num, -13.5f), 180f, "理科室");
+			BuildClassroomDoor(transform, new Vector3(-13f, num, -13.5f), 180f, "準備室");
+			BuildClassroomDoor(transform, new Vector3(13f, num, -13.5f), 180f, "図書室");
+			BuildClassroomDoor(transform, new Vector3(28.5f, num, -13.5f), 180f, "放送室");
+			CreateBox(transform, new Vector3(-20.5f, num + 1.8f, -4.25f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster);
+			CreateBox(transform, new Vector3(-5f, num + 1.8f, -4.25f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster);
+			CreateBox(transform, new Vector3(5f, num + 1.8f, -4.25f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster);
+			CreateBox(transform, new Vector3(20.5f, num + 1.8f, -4.25f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster);
+			CreateBox(transform, new Vector3(-20.5f, num + 1.8f, -17.75f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster);
+			CreateBox(transform, new Vector3(-6f, num + 1.8f, -17.75f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster);
+			CreateBox(transform, new Vector3(6f, num + 1.8f, -17.75f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster);
+			CreateBox(transform, new Vector3(20.5f, num + 1.8f, -17.75f), new Vector3(0.25f, 3.6f, 8.5f), matPlaster);
+			CreateBox(transform, new Vector3(2.6f, num + 0.5f, -13.6f), new Vector3(6.4f, 1f, 0.08f), matDarkMetal, addCollider: true, "Void Rail South");
+			CreateBox(transform, new Vector3(-0.6f, num + 0.5f, -16f), new Vector3(0.08f, 1f, 4.8f), matDarkMetal, addCollider: true, "Void Rail Center");
+			BuildClassroom(transform, -28.25f, num, -4.25f, "2-A", 4);
+			BuildClassroom(transform, -12.75f, num, -4.25f, "2-B", 5);
+			BuildClassroom(transform, 12.75f, num, -4.25f, "2-C", 6);
+			BuildMusicRoom(transform, 28.25f, num);
+			BuildScienceLab(transform, -28.25f, num);
+			BuildSciencePrepRoom(transform, -12.75f, num);
+			BuildLibrary(transform, 12.75f, num);
+			BuildBroadcastRoom(transform, 28.25f, num);
+		}
+
+		private void BuildStairs()
+		{
+			Transform transform = new GameObject("Grand Switchback Stairwell").transform;
+			transform.SetParent(Root, worldPositionStays: false);
+			float num = 0.6f;
+			float num2 = 2.2f;
+			float num3 = 3.8f;
+			CreateBox(transform, new Vector3(0f, num2 - 0.09f, -20f), new Vector3(11.2f, 0.18f, 3.6f), matConcrete, addCollider: true, "Midway Landing Platform");
+			CreateBox(transform, new Vector3(0f, 2f, -16f), new Vector3(0.2f, 3.2f, 4.4f), matConcrete, addCollider: true, "Stair Central Spine");
+			int num4 = 10;
+			float num5 = (num2 - num) / (float)num4;
+			float num6 = 4.4f / (float)num4;
+			for (int i = 0; i < num4; i++)
+			{
+				float y = num + ((float)i + 0.5f) * num5;
+				float z = -13.8f - ((float)i + 0.5f) * num6;
+				CreateBox(transform, new Vector3(3f, y, z), new Vector3(4.4f, num5, num6), matConcrete, addCollider: true, "Step F1 " + i);
+			}
+			CreateRamp(transform, new Vector3(3f, 1.4f, -16f), new Vector3(4.4f, 0.1f, 4.8f), 19.5f, "Flight 1 Smooth Ramp");
+			CreateBox(transform, new Vector3(5.3f, 2.25f, -16f), new Vector3(0.08f, 0.9f, 4.4f), matDarkMetal, addCollider: false, "Handrail F1 Wall");
+			CreateBox(transform, new Vector3(0.7f, 2.25f, -16f), new Vector3(0.08f, 0.9f, 4.4f), matDarkMetal, addCollider: false, "Handrail F1 Inner");
+			int num7 = 10;
+			float num8 = (num3 - num2) / (float)num7;
+			float num9 = 4.4f / (float)num7;
+			for (int j = 0; j < num7; j++)
+			{
+				float y2 = num2 + ((float)j + 0.5f) * num8;
+				float z2 = -18.2f + ((float)j + 0.5f) * num9;
+				CreateBox(transform, new Vector3(-3f, y2, z2), new Vector3(4.4f, num8, num9), matConcrete, addCollider: true, "Step F2 " + j);
+			}
+			CreateRamp(transform, new Vector3(-3f, 3f, -16f), new Vector3(4.4f, 0.1f, 4.8f), -19.5f, "Flight 2 Smooth Ramp");
+			CreateBox(transform, new Vector3(-5.3f, 3.85f, -16f), new Vector3(0.08f, 0.9f, 4.4f), matDarkMetal, addCollider: false, "Handrail F2 Wall");
+			CreateBox(transform, new Vector3(-0.7f, 3.85f, -16f), new Vector3(0.08f, 0.9f, 4.4f), matDarkMetal, addCollider: false, "Handrail F2 Inner");
+			CreateBox(transform, new Vector3(0f, num2 + 0.5f, -21.8f), new Vector3(11f, 1f, 0.08f), matDarkMetal, addCollider: false, "Landing Railing");
+		}
+
+		private void BuildClassroomDoor(Transform parent, Vector3 basePos, float yaw, string roomName)
+		{
+			Transform transform = new GameObject("Sliding Door " + roomName).transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			transform.localPosition = basePos;
+			transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+			CreateBox(transform, new Vector3(-0.75f, 1.15f, 0f), new Vector3(0.12f, 2.3f, 0.28f), matDarkMetal);
+			CreateBox(transform, new Vector3(0.75f, 1.15f, 0f), new Vector3(0.12f, 2.3f, 0.28f), matDarkMetal);
+			CreateBox(transform, new Vector3(0f, 2.36f, 0f), new Vector3(1.62f, 0.12f, 0.28f), matDarkMetal, addCollider: false);
+			GameObject gameObject = CreateBox(transform, new Vector3(0f, 2.58f, 0.15f), new Vector3(0.75f, 0.28f, 0.06f), matWoodFloor, addCollider: false, "Nameplate");
+			CreateBox(gameObject.transform, new Vector3(0f, 0f, 0.04f), new Vector3(0.68f, 0.22f, 0.02f), matWhite, addCollider: false, "Label Base");
+			GameObject gameObject2 = CreateBox(transform, new Vector3(0.85f, 1.12f, 0.08f), new Vector3(0.95f, 2.2f, 0.05f), matDoorWood, addCollider: true, "Sliding Leaf");
+			CreateBox(gameObject2.transform, new Vector3(0f, 0.45f, 0f), new Vector3(0.75f, 0.75f, 0.03f), matGlass, addCollider: false, "Door Window Glass");
+			CreateBox(gameObject2.transform, new Vector3(0f, 0.45f, 0.02f), new Vector3(0.04f, 0.75f, 0.04f), matDoorWood, addCollider: false);
+			CreateBox(gameObject2.transform, new Vector3(0f, 0.45f, 0.02f), new Vector3(0.75f, 0.04f, 0.04f), matDoorWood, addCollider: false);
+			CreateBox(gameObject2.transform, new Vector3(-0.38f, 0f, 0.03f), new Vector3(0.04f, 0.18f, 0.02f), matDarkMetal, addCollider: false);
+		}
+
+		private void BuildClassroom(Transform parent, float centerX, float floorY, float centerZ, string roomName, int classroomIndex)
+		{
+			Transform transform = new GameObject("Classroom " + roomName).transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			CreateBox(transform, new Vector3(centerX, floorY + 1.85f, centerZ + 4.05f), new Vector3(6.2f, 1.6f, 0.08f), matChalkboard, addCollider: true, "Chalkboard");
+			CreateBox(transform, new Vector3(centerX, floorY + 1f, centerZ + 4f), new Vector3(6.2f, 0.08f, 0.14f), matWoodFloor, addCollider: false, "Chalk Tray");
+			CreateBox(transform, new Vector3(centerX - 0.8f, floorY + 0.015f, centerZ + 3.8f), new Vector3(0.08f, 0.03f, 0.03f), matWhite, addCollider: false, "Chalk Stick");
+			CreateBox(transform, new Vector3(centerX + 0.5f, floorY + 0.015f, centerZ + 3.7f), new Vector3(0.06f, 0.03f, 0.03f), matTorii, addCollider: false, "Red Chalk");
+			CreateBox(transform, new Vector3(centerX + 1.2f, floorY + 0.025f, centerZ + 3.65f), new Vector3(0.18f, 0.05f, 0.09f), matDarkMetal, addCollider: false, "Felt Eraser");
+			CreateBox(transform, new Vector3(centerX, floorY + 0.08f, centerZ + 2.8f), new Vector3(2.8f, 0.16f, 1.4f), matWoodFloor, addCollider: true, "Podium Stage");
+			CreateBox(transform, new Vector3(centerX, floorY + 0.55f, centerZ + 2.8f), new Vector3(1.6f, 0.75f, 0.85f), matDeskWood, addCollider: true, "Teacher Desk");
+			CreateBox(transform, new Vector3(centerX + 0.4f, floorY + 0.95f, centerZ + 2.8f), new Vector3(0.35f, 0.04f, 0.25f), matPaper, addCollider: false, "Grade Binder");
+			int num = 0;
+			for (int i = 0; i < 3; i++)
+			{
+				for (int j = 0; j < 4; j++)
+				{
+					num++;
+					float x = centerX - 4.2f + (float)j * 2.8f;
+					float z = centerZ + 0.9f - (float)i * 2.2f;
+					bool isOverturned = (classroomIndex + num) % 11 == 0;
+					bool num2 = (classroomIndex * 3 + num) % 5 == 0;
+					bool isTippedChair = (classroomIndex * 2 + num) % 7 == 0;
+					float yaw = (num2 ? ((num % 2 == 0) ? 22f : (-28f)) : UnityEngine.Random.Range(-3f, 3f));
+					BuildAuthenticDesk(transform, new Vector3(x, floorY, z), yaw, isOverturned, isTippedChair);
+				}
+			}
+			for (int k = -1; k <= 1; k += 2)
+			{
+				float num3 = centerX + (float)k * 3.8f;
+				CreateBox(transform, new Vector3(num3, floorY + 0.5f, centerZ - 3.95f), new Vector3(4.2f, 1f, 0.4f), matDeskWood, addCollider: true, "Cubby Unit");
+				for (int l = 0; l < 4; l++)
+				{
+					float num4 = num3 - 1.5f + (float)l;
+					CreateBox(transform, new Vector3(num4, floorY + 0.5f, centerZ - 3.95f), new Vector3(0.04f, 0.95f, 0.38f), matDeskWood, addCollider: false);
+					if ((l + classroomIndex + k) % 2 == 0)
+					{
+						CreateBox(transform, new Vector3(num4 + 0.35f, floorY + 0.25f, centerZ - 3.95f), new Vector3(0.35f, 0.22f, 0.25f), matBooks, addCollider: false);
+					}
+				}
+			}
+			BuildClassroomTrashAndClutter(transform, centerX, floorY, centerZ, classroomIndex);
+			CreateCylinder(transform, new Vector3(centerX, floorY + 3f, centerZ + 4.05f), 0.35f, 0.06f, matWhite, addCollider: false).transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+			CreateInteriorLamp(transform, new Vector3(centerX - 2.8f, floorY + 3.1f, centerZ));
+			CreateInteriorLamp(transform, new Vector3(centerX + 2.8f, floorY + 3.1f, centerZ));
+		}
+
+		private void BuildAuthenticDesk(Transform parent, Vector3 pos, float yaw, bool isOverturned, bool isTippedChair)
+		{
+			Transform transform = new GameObject("Authentic School Desk").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			transform.localPosition = pos;
+			transform.localRotation = Quaternion.Euler(0f, yaw, isOverturned ? 85f : 0f);
+			CreateBox(transform, new Vector3(0f, 0.72f, 0f), new Vector3(0.68f, 0.03f, 0.48f), matDeskWood, addCollider: true, "Desktop");
+			CreateBox(transform, new Vector3(0f, 0.62f, 0f), new Vector3(0.56f, 0.06f, 0.38f), matDarkMetal, addCollider: false, "Book Shelf");
+			for (int i = -1; i <= 1; i += 2)
+			{
+				for (int j = -1; j <= 1; j += 2)
+				{
+					CreateCylinder(transform, new Vector3((float)i * 0.3f, 0.36f, (float)j * 0.2f), 0.016f, 0.72f, matDarkMetal, addCollider: false);
+				}
+			}
+			Transform transform2 = new GameObject("Student Chair").transform;
+			transform2.SetParent(transform, worldPositionStays: false);
+			transform2.localPosition = (isTippedChair ? new Vector3(0f, 0.2f, 0.8f) : Vector3.zero);
+			transform2.localRotation = (isTippedChair ? Quaternion.Euler(-75f, 15f, 0f) : Quaternion.identity);
+			CreateBox(transform2, new Vector3(0f, 0.42f, 0.45f), new Vector3(0.4f, 0.025f, 0.38f), matDeskWood, addCollider: true, "Seat");
+			CreateBox(transform2, new Vector3(0f, 0.78f, 0.62f), new Vector3(0.4f, 0.18f, 0.025f), matDeskWood, addCollider: false, "Backrest");
+			for (int k = -1; k <= 1; k += 2)
+			{
+				CreateCylinder(transform2, new Vector3((float)k * 0.16f, 0.21f, 0.45f), 0.014f, 0.42f, matDarkMetal, addCollider: false);
+				CreateCylinder(transform2, new Vector3((float)k * 0.16f, 0.6f, 0.61f), 0.014f, 0.4f, matDarkMetal, addCollider: false);
+			}
+			CreateBox(transform, new Vector3(-0.36f, 0.45f, 0f), new Vector3(0.1f, 0.32f, 0.22f), matDarkMetal, addCollider: false, "School Bag");
+			if (!isOverturned && (int)(pos.x + pos.z) % 2 == 0)
+			{
+				CreateBox(transform, new Vector3(UnityEngine.Random.Range(-0.1f, 0.1f), 0.74f, 0f), new Vector3(0.24f, 0.005f, 0.32f), matPaper, addCollider: false, "Desk Paper");
+			}
+		}
+
+		private void BuildClassroomTrashAndClutter(Transform parent, float centerX, float floorY, float centerZ, int seed)
+		{
+			Transform transform = new GameObject("Classroom Debris & Trash").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			System.Random random = new System.Random(seed * 777 + 123);
+			int num = 12;
+			for (int i = 0; i < num; i++)
+			{
+				float x = centerX + (float)(random.NextDouble() * 10.0 - 5.0);
+				float z = centerZ + (float)(random.NextDouble() * 6.5 - 3.2);
+				float y = (float)(random.NextDouble() * 360.0);
+				CreateBox(transform, new Vector3(x, floorY + 0.01f, z), new Vector3(0.28f, 0.005f, 0.2f), matPaper, addCollider: false, "Loose Exam Paper").transform.rotation = Quaternion.Euler(0f, y, 0f);
+			}
+			for (int j = 0; j < 6; j++)
+			{
+				float x2 = centerX + (float)(random.NextDouble() * 8.0 - 4.0);
+				float z2 = centerZ + (float)(random.NextDouble() * 6.0 - 3.0);
+				CreateBox(transform, new Vector3(x2, floorY + 0.04f, z2), new Vector3(0.08f, 0.08f, 0.08f), matPaper, addCollider: false, "Crumpled Paper Ball");
+			}
+			GameObject gameObject = CreateCylinder(transform, new Vector3(centerX + 5.8f, floorY + 0.3f, centerZ + 3.2f), 0.18f, 0.6f, matTrashCan, addCollider: true, "Trash Bin");
+			CreateBox(gameObject.transform, new Vector3(0f, 0.32f, 0f), new Vector3(0.22f, 0.14f, 0.22f), matPaper, addCollider: false, "Trash Overflow");
+			CreateCylinder(transform, new Vector3(centerX - 2.5f, floorY + 0.035f, centerZ - 1.8f), 0.035f, 0.12f, matCan, addCollider: false, "Soda Can").transform.rotation = Quaternion.Euler(90f, 45f, 0f);
+			CreateCylinder(transform, new Vector3(centerX + 3.2f, floorY + 0.035f, centerZ + 0.5f), 0.035f, 0.12f, matCan, addCollider: false, "Tea Can").transform.rotation = Quaternion.Euler(90f, -30f, 0f);
+			for (int k = 0; k < 3; k++)
+			{
+				float x3 = centerX + (float)(random.NextDouble() * 8.0 - 4.0);
+				float z3 = centerZ + (float)(random.NextDouble() * 5.0 - 2.5);
+				float y2 = (float)(random.NextDouble() * 180.0);
+				CreateBox(transform, new Vector3(x3, floorY + 0.02f, z3), new Vector3(0.22f, 0.035f, 0.3f), matBooks, addCollider: false, "Dropped Textbook").transform.rotation = Quaternion.Euler(0f, y2, 0f);
+			}
+		}
+
+		private void BuildNurseOffice(Transform parent, float centerX, float floorY)
+		{
+			Transform transform = new GameObject("Nurse Office (保健室)").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			for (int i = 0; i < 2; i++)
+			{
+				float num = -3.2f - (float)i * 2.8f;
+				CreateBox(transform, new Vector3(centerX + 4.2f, floorY + 0.45f, num), new Vector3(1.3f, 0.4f, 2.3f), matWhite, addCollider: true, "Bed");
+				CreateBox(transform, new Vector3(centerX + 4.2f, floorY + 0.7f, num + 0.9f), new Vector3(0.9f, 0.15f, 0.5f), matPlaster, addCollider: false, "Pillow");
+				CreateBox(transform, new Vector3(centerX + 3f, floorY + 1.2f, num), new Vector3(0.05f, 1.8f, 2.2f), matWhite, addCollider: false, "Privacy Curtain");
+			}
+			CreateBox(transform, new Vector3(centerX - 3.5f, floorY + 1.5f, -6.5f), new Vector3(2.4f, 2.8f, 0.6f), matDarkMetal, addCollider: true, "Medicine Cabinet");
+			CreateBox(transform, new Vector3(centerX - 3.5f, floorY + 0.75f, -2.5f), new Vector3(1.8f, 0.75f, 1f), matDeskWood, addCollider: true, "Nurse Desk");
+			CreateBox(transform, new Vector3(centerX + 1f, floorY + 1f, -7.5f), new Vector3(0.35f, 2f, 0.35f), matWhite, addCollider: true, "Height Scale");
+			CreateBox(transform, new Vector3(centerX - 1.5f, floorY + 0.03f, -4.5f), new Vector3(0.14f, 0.06f, 0.14f), matWhite, addCollider: false, "Bandage Roll");
+			CreateBox(transform, new Vector3(centerX - 1.8f, floorY + 0.02f, -4.2f), new Vector3(0.12f, 0.04f, 0.08f), matPaper, addCollider: false, "Medicine Box");
+			CreateInteriorLamp(transform, new Vector3(centerX, floorY + 3.1f, -4.25f));
+		}
+
+		private void BuildStaffRoom(Transform parent, float centerX, float floorY)
+		{
+			Transform transform = new GameObject("Staff Room (職員室)").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			for (int i = 0; i < 2; i++)
+			{
+				float z = -16f - (float)i * 3.4f;
+				GameObject gameObject = CreateBox(transform, new Vector3(centerX, floorY + 0.75f, z), new Vector3(7.2f, 0.75f, 1.8f), matDeskWood, addCollider: true, "Staff Pod Desk");
+				for (float num = -2.4f; num <= 2.4f; num += 2.4f)
+				{
+					CreateBox(gameObject.transform, new Vector3(num, 0.45f, 0.3f), new Vector3(0.4f, 0.25f, 0.3f), matPaper, addCollider: false, "Paper Stack");
+					CreateBox(gameObject.transform, new Vector3(num, 0.45f, -0.3f), new Vector3(0.4f, 0.25f, 0.3f), matPaper, addCollider: false, "Paper Stack");
+				}
+			}
+			CreateBox(transform, new Vector3(centerX - 5.5f, floorY + 1.6f, -17.75f), new Vector3(0.8f, 2.8f, 6f), matDarkMetal, addCollider: true, "Filing Cabinets");
+			for (int j = 0; j < 8; j++)
+			{
+				float x = centerX + UnityEngine.Random.Range(-4.5f, 4.5f);
+				float z2 = -17.75f + UnityEngine.Random.Range(-2.5f, 2.5f);
+				CreateBox(transform, new Vector3(x, floorY + 0.01f, z2), new Vector3(0.28f, 0.005f, 0.22f), matPaper, addCollider: false, "Printout Document");
+			}
+			CreateInteriorLamp(transform, new Vector3(centerX, floorY + 3.1f, -17.75f));
+		}
+
+		private void BuildPrincipalOffice(Transform parent, float centerX, float floorY)
+		{
+			Transform transform = new GameObject("Principal Office (校長室)").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			CreateBox(transform, new Vector3(centerX - 3.4f, floorY + 0.75f, -18.9f), new Vector3(2.8f, 0.75f, 1.4f), matDeskWood, addCollider: true, "Executive Desk");
+			CreateBox(transform, new Vector3(centerX - 3.4f, floorY + 0.65f, -19.9f), new Vector3(0.8f, 1.1f, 0.8f), matDarkMetal, addCollider: true, "Leather Chair");
+			CreateBox(transform, new Vector3(centerX - 2.5f, floorY + 0.45f, -16.5f), new Vector3(1.8f, 0.65f, 0.8f), matDarkMetal, addCollider: true, "Sofa L");
+			CreateBox(transform, new Vector3(centerX + 2.5f, floorY + 0.45f, -16.5f), new Vector3(1.8f, 0.65f, 0.8f), matDarkMetal, addCollider: true, "Sofa R");
+			CreateBox(transform, new Vector3(centerX - 3.4f, floorY + 0.35f, -16.5f), new Vector3(1.6f, 0.45f, 0.8f), matDeskWood, addCollider: true, "Coffee Table");
+			CreateInteriorLamp(transform, new Vector3(centerX, floorY + 3.1f, -17.75f));
+		}
+
+		private void BuildComputerLab(Transform parent, float centerX, float floorY)
+		{
+			Transform transform = new GameObject("Computer Lab (PC室)").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			for (int i = 0; i < 2; i++)
+			{
+				float z = -16f - (float)i * 3.2f;
+				GameObject gameObject = CreateBox(transform, new Vector3(centerX, floorY + 0.72f, z), new Vector3(8f, 0.72f, 1.4f), matLabCounter, addCollider: true, "Computer Bench");
+				for (float num = -2.8f; num <= 2.8f; num += 1.8f)
+				{
+					CreateBox(gameObject.transform, new Vector3(num, 0.55f, 0f), new Vector3(0.55f, 0.42f, 0.12f), matDarkMetal, addCollider: false, "Monitor");
+					CreateBox(gameObject.transform, new Vector3(num, 0.38f, 0.35f), new Vector3(0.45f, 0.03f, 0.18f), matWhite, addCollider: false, "Keyboard");
+				}
+			}
+			CreateInteriorLamp(transform, new Vector3(centerX, floorY + 3.1f, -17.75f));
+		}
+
+		private void BuildArchiveRoom(Transform parent, float centerX, float floorY)
+		{
+			Transform transform = new GameObject("Archive Room (資料室)").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			for (int i = 0; i < 3; i++)
+			{
+				float z = -15.5f - (float)i * 2.2f;
+				GameObject gameObject = CreateBox(transform, new Vector3(centerX - 1.5f, floorY + 1.4f, z), new Vector3(6.5f, 2.6f, 0.7f), matDeskWood, addCollider: true, "Archive Shelf");
+				for (int j = 0; j < 3; j++)
+				{
+					CreateBox(gameObject.transform, new Vector3(0f, -0.8f + (float)j * 0.75f, 0.05f), new Vector3(6.2f, 0.45f, 0.55f), matBooks, addCollider: false);
+				}
+			}
+			CreateInteriorLamp(transform, new Vector3(centerX, floorY + 3.1f, -17.75f));
+		}
+
+		private void BuildMusicRoom(Transform parent, float centerX, float floorY)
+		{
+			Transform transform = new GameObject("Music Room (音楽室)").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			GameObject gameObject = CreateBox(transform, new Vector3(centerX + 3.5f, floorY + 0.7f, -4.25f), new Vector3(1.8f, 1.3f, 1.4f), matDarkMetal, addCollider: true, "Upright Piano");
+			CreateBox(gameObject.transform, new Vector3(0f, -0.1f, 0.65f), new Vector3(1.6f, 0.18f, 0.35f), matWhite, addCollider: false, "Keyboard");
+			CreateBox(transform, new Vector3(centerX + 3.5f, floorY + 0.45f, -3.2f), new Vector3(0.6f, 0.45f, 0.4f), matDeskWood, addCollider: true, "Piano Stool");
+			for (int i = 0; i < 9; i++)
+			{
+				float x = centerX + UnityEngine.Random.Range(-3.5f, 3.5f);
+				float z = -4.25f + UnityEngine.Random.Range(-2.5f, 2.5f);
+				CreateBox(transform, new Vector3(x, floorY + 0.01f, z), new Vector3(0.24f, 0.005f, 0.32f), matPaper, addCollider: false, "Sheet Music Page");
+			}
+			for (int j = 0; j < 3; j++)
+			{
+				float num = -2.5f - (float)j * 1.8f;
+				for (int k = 0; k < 4; k++)
+				{
+					float x2 = centerX - 3.8f + (float)k * 1.8f;
+					CreateBox(transform, new Vector3(x2, floorY + 0.45f, num), new Vector3(0.45f, 0.45f, 0.45f), matDeskWood, addCollider: true, "Chair");
+					CreateCylinder(transform, new Vector3(x2, floorY + 0.9f, num + 0.6f), 0.02f, 0.9f, matDarkMetal, addCollider: false, "Music Stand");
+					CreateBox(transform, new Vector3(x2, floorY + 1.2f, num + 0.6f), new Vector3(0.4f, 0.3f, 0.03f), matDarkMetal, addCollider: false);
+				}
+			}
+			CreateInteriorLamp(transform, new Vector3(centerX, floorY + 3.1f, -4.25f));
+		}
+
+		private void BuildScienceLab(Transform parent, float centerX, float floorY)
+		{
+			Transform transform = new GameObject("Science Lab (理科室)").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			for (int i = 0; i < 2; i++)
+			{
+				float z = -16.2f - (float)i * 3.4f;
+				GameObject gameObject = CreateBox(transform, new Vector3(centerX, floorY + 0.45f, z), new Vector3(7.5f, 0.9f, 1.6f), matLabCounter, addCollider: true, "Lab Bench");
+				CreateBox(gameObject.transform, new Vector3(2.8f, 0.45f, 0f), new Vector3(0.9f, 0.2f, 0.7f), matDarkMetal, addCollider: false, "Sink");
+				CreateCylinder(gameObject.transform, new Vector3(2.8f, 0.7f, 0f), 0.02f, 0.4f, matWhite, addCollider: false, "Faucet");
+				CreateCylinder(gameObject.transform, new Vector3(-2.2f, 0.55f, 0.2f), 0.06f, 0.22f, matGlass, addCollider: false, "Beaker");
+				CreateCylinder(gameObject.transform, new Vector3(-1.6f, 0.55f, 0.2f), 0.08f, 0.25f, matGlass, addCollider: false, "Beaker 2");
+				CreateBox(gameObject.transform, new Vector3(0f, 0.55f, -0.3f), new Vector3(0.45f, 0.18f, 0.15f), matDeskWood, addCollider: false, "Test Tubes");
+			}
+			Transform transform2 = new GameObject("Skeleton Stand").transform;
+			transform2.SetParent(transform, worldPositionStays: false);
+			transform2.localPosition = new Vector3(centerX + 5.5f, floorY, -20.5f);
+			CreateCylinder(transform2, new Vector3(0f, 0.9f, 0f), 0.025f, 1.8f, matDarkMetal, addCollider: false, "Stand");
+			CreateBox(transform2, new Vector3(0f, 1.6f, 0f), new Vector3(0.24f, 0.28f, 0.24f), matWhite, addCollider: false, "Skull");
+			CreateBox(transform2, new Vector3(0f, 1.15f, 0f), new Vector3(0.35f, 0.55f, 0.22f), matWhite, addCollider: false, "Ribcage");
+			CreateInteriorLamp(transform, new Vector3(centerX, floorY + 3.1f, -17.75f));
+		}
+
+		private void BuildSciencePrepRoom(Transform parent, float centerX, float floorY)
+		{
+			Transform transform = new GameObject("Science Prep (準備室)").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			CreateBox(transform, new Vector3(centerX - 3.5f, floorY + 1.5f, -17.75f), new Vector3(2f, 2.8f, 6f), matDarkMetal, addCollider: true, "Reagent Cabinets");
+			CreateBox(transform, new Vector3(centerX + 2f, floorY + 0.45f, -17.75f), new Vector3(4.5f, 0.9f, 1.6f), matLabCounter, addCollider: true, "Prep Desk");
+			CreateInteriorLamp(transform, new Vector3(centerX, floorY + 3.1f, -17.75f));
+		}
+
+		private void BuildLibrary(Transform parent, float centerX, float floorY)
+		{
+			Transform transform = new GameObject("Library (図書室)").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			for (int i = 0; i < 3; i++)
+			{
+				float z = -15.5f - (float)i * 2.6f;
+				GameObject gameObject = CreateBox(transform, new Vector3(centerX - 3f, floorY + 1.4f, z), new Vector3(5.5f, 2.8f, 0.65f), matDeskWood, addCollider: true, "Bookshelf");
+				for (int j = 0; j < 4; j++)
+				{
+					CreateBox(gameObject.transform, new Vector3(0f, -1f + (float)j * 0.65f, 0.05f), new Vector3(5.2f, 0.45f, 0.55f), matBooks, addCollider: false);
+				}
+			}
+			GameObject gameObject2 = CreateBox(transform, new Vector3(centerX + 3.2f, floorY + 0.4f, -17.75f), new Vector3(2.6f, 0.8f, 4.8f), matDeskWood, addCollider: true, "Study Table");
+			for (float num = -1.5f; num <= 1.5f; num += 1.5f)
+			{
+				Light light = CreateBox(gameObject2.transform, new Vector3(0f, 0.55f, num), new Vector3(0.22f, 0.35f, 0.22f), matTorii, addCollider: false, "Desk Lamp").AddComponent<Light>();
+				light.type = LightType.Point;
+				light.color = new Color(0.9f, 1f, 0.7f);
+				light.intensity = 0.9f;
+				light.range = 3.2f;
+			}
+			for (int k = 0; k < 6; k++)
+			{
+				float x = centerX + UnityEngine.Random.Range(-4f, 4f);
+				float z2 = -17.75f + UnityEngine.Random.Range(-3f, 3f);
+				CreateBox(transform, new Vector3(x, floorY + 0.02f, z2), new Vector3(0.22f, 0.04f, 0.32f), matBooks, addCollider: false, "Fallen Library Book");
+			}
+			CreateInteriorLamp(transform, new Vector3(centerX, floorY + 3.1f, -17.75f));
+		}
+
+		private void BuildBroadcastRoom(Transform parent, float centerX, float floorY)
+		{
+			Transform transform = new GameObject("AV Room (放送室)").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			CreateBox(transform, new Vector3(centerX, floorY + 0.45f, -17.75f), new Vector3(4.2f, 0.9f, 1.6f), matDarkMetal, addCollider: true, "Console Desk");
+			CreateBox(transform, new Vector3(centerX, floorY + 1.25f, -17.75f), new Vector3(3.2f, 0.55f, 0.35f), matLabCounter, addCollider: false, "Rack Equipment");
+			CreateBox(transform, new Vector3(centerX - 2.2f, floorY + 1.2f, -17.75f), new Vector3(0.4f, 0.6f, 0.4f), matDarkMetal, addCollider: false, "Speaker L");
+			CreateBox(transform, new Vector3(centerX + 2.2f, floorY + 1.2f, -17.75f), new Vector3(0.4f, 0.6f, 0.4f), matDarkMetal, addCollider: false, "Speaker R");
+			CreateInteriorLamp(transform, new Vector3(centerX, floorY + 3.1f, -17.75f));
+		}
+
+		private void CreateInteriorLamp(Transform parent, Vector3 pos)
+		{
+			Transform transform = new GameObject("Hallway Lamp").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			transform.localPosition = pos;
+			CreateBox(transform, Vector3.zero, new Vector3(1.6f, 0.08f, 0.35f), matWhite, addCollider: false);
+			GameObject gameObject = CreateBox(transform, new Vector3(0f, -0.04f, 0f), new Vector3(1.4f, 0.04f, 0.25f), matPlaster, addCollider: false);
+			Light light = transform.gameObject.AddComponent<Light>();
+			light.type = LightType.Point;
+			light.color = new Color(1f, 0.95f, 0.84f);
+			light.intensity = 1.6f;
+			light.range = 8.5f;
+			lamps.Add(new FlickeringLamp
+			{
+				light = light,
+				bulb = gameObject.GetComponent<Renderer>(),
+				baseIntensity = 1.6f,
+				worksNormally = true,
+				flickerOffset = UnityEngine.Random.value * 20f
+			});
+		}
+
+		private void BuildExitSign(Transform parent, Vector3 pos)
+		{
+			Light light = CreateBox(parent, pos, new Vector3(0.6f, 0.3f, 0.08f), matTorii, addCollider: false, "ExitSign").AddComponent<Light>();
+			light.type = LightType.Point;
+			light.color = new Color(0.1f, 1f, 0.4f);
+			light.intensity = 1.1f;
+			light.range = 2.8f;
+		}
+
+		private void BuildFireHydrant(Transform parent, Vector3 pos)
+		{
+			GameObject gameObject = CreateBox(parent, pos, new Vector3(0.7f, 1.2f, 0.15f), matTorii, addCollider: true, "FireHydrant");
+			CreateBox(gameObject.transform, new Vector3(0f, 0.25f, 0.08f), new Vector3(0.3f, 0.3f, 0.04f), matWhite, addCollider: false);
+		}
+
+		private void BuildNoticeBoard(Transform parent, Vector3 pos)
+		{
+			GameObject gameObject = CreateBox(parent, pos, new Vector3(2.4f, 1.2f, 0.06f), matWoodFloor, addCollider: false, "NoticeBoard");
+			CreateBox(gameObject.transform, new Vector3(-0.6f, 0.15f, 0.04f), new Vector3(0.45f, 0.6f, 0.02f), matPaper, addCollider: false, "Poster 1");
+			CreateBox(gameObject.transform, new Vector3(0.4f, -0.1f, 0.04f), new Vector3(0.55f, 0.45f, 0.02f), matPaper, addCollider: false, "Poster 2");
+		}
+
+		private void BuildTraditionalPark()
+		{
+			Transform transform = new GameObject("Traditional Japanese Park").transform;
+			transform.SetParent(Root, worldPositionStays: false);
+			CreateBox(transform, new Vector3(0f, -0.05f, 80f), new Vector3(90f, 0.1f, 60f), matFoliage, addCollider: true, "Park Moss Ground");
+			for (int i = -1; i <= 1; i += 2)
+			{
+				float num = 38f;
+				float x = (float)i * (5.5f + num * 0.5f);
+				CreateBox(transform, new Vector3(x, 0.65f, 50f), new Vector3(num, 1.3f, 0.45f), matStone, addCollider: true, "Park Stone Wall");
+				CreateBox(transform, new Vector3((float)i * 5.5f, 1.2f, 50f), new Vector3(0.9f, 2.4f, 0.9f), matStone, addCollider: true, "Park Gate Post");
+			}
+			CreateBox(transform, new Vector3(0f, 0.02f, 68f), new Vector3(4.8f, 0.02f, 36f), matStone, addCollider: false, "Stone Path Main");
+			CreateBox(transform, new Vector3(-14f, 0.02f, 80f), new Vector3(20f, 0.02f, 3.4f), matStone, addCollider: false, "Stone Path Left");
+			CreateBox(transform, new Vector3(14f, 0.02f, 80f), new Vector3(20f, 0.02f, 3.4f), matStone, addCollider: false, "Stone Path Right");
+			CreateBox(transform, new Vector3(0f, 0.02f, 96f), new Vector3(5.2f, 0.02f, 24f), matStone, addCollider: false, "Shrine Approach Path");
+			Vector2[] array = new Vector2[16]
+			{
+				new Vector2(-16f, 56f),
+				new Vector2(16f, 56f),
+				new Vector2(-26f, 68f),
+				new Vector2(26f, 68f),
+				new Vector2(-12f, 78f),
+				new Vector2(12f, 78f),
+				new Vector2(-24f, 88f),
+				new Vector2(24f, 88f),
+				new Vector2(-8f, 98f),
+				new Vector2(8f, 98f),
+				new Vector2(-30f, 82f),
+				new Vector2(30f, 82f),
+				new Vector2(-20f, 62f),
+				new Vector2(20f, 62f),
+				new Vector2(-34f, 98f),
+				new Vector2(34f, 98f)
+			};
+			for (int j = 0; j < array.Length; j++)
+			{
+				Vector2 vector = array[j];
+				BuildAncientTree(transform, new Vector3(vector.x, 0f, vector.y));
+			}
+			array = new Vector2[8]
+			{
+				new Vector2(-3.4f, 54f),
+				new Vector2(3.4f, 54f),
+				new Vector2(-3.6f, 68f),
+				new Vector2(3.6f, 68f),
+				new Vector2(-3.6f, 82f),
+				new Vector2(3.6f, 82f),
+				new Vector2(-3.6f, 94f),
+				new Vector2(3.6f, 94f)
+			};
+			for (int j = 0; j < array.Length; j++)
+			{
+				Vector2 vector2 = array[j];
+				BuildStoneLantern(transform, new Vector3(vector2.x, 0f, vector2.y));
+			}
+			BuildToriiGate(transform, new Vector3(0f, 0f, 86f));
+			BuildShintoShrine(transform, new Vector3(0f, 0f, 100f));
+			BuildAzumayaGazebo(transform, new Vector3(16f, 0f, 72f));
+			BuildParkBench(transform, new Vector3(-14f, 0f, 64f), 45f);
+			BuildParkBench(transform, new Vector3(-16f, 0f, 84f), 90f);
+			BuildParkBench(transform, new Vector3(18f, 0f, 86f), -90f);
+			Vector3[] array2 = new Vector3[8]
+			{
+				new Vector3(-12f, 0f, 48.5f),
+				new Vector3(12f, 0f, 48.5f),
+				new Vector3(-6f, 0f, 60f),
+				new Vector3(6f, 0f, 60f),
+				new Vector3(-7f, 0f, 75f),
+				new Vector3(7f, 0f, 75f),
+				new Vector3(-5f, 0f, 90f),
+				new Vector3(5f, 0f, 90f)
+			};
+			for (int k = 0; k < array2.Length; k++)
+			{
+				bool flag = k % 2 == 1;
+				BuildStreetLamp(transform, array2[k], !flag);
+			}
+		}
+
+		private void BuildAncientTree(Transform parent, Vector3 pos)
+		{
+			Transform transform = new GameObject("Ancient Tree").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			transform.localPosition = pos;
+			CreateCylinder(transform, new Vector3(0f, 3.2f, 0f), 0.85f, 6.4f, matBark, addCollider: true, "Trunk");
+			for (int i = 0; i < 4; i++)
+			{
+				float f = (float)i * MathF.PI * 0.5f;
+				CreateBox(transform, new Vector3(Mathf.Sin(f) * 0.95f, 0.6f, Mathf.Cos(f) * 0.95f), new Vector3(0.9f, 1.2f, 0.9f), matBark);
+			}
+			for (int j = 0; j < 5; j++)
+			{
+				float f2 = (float)j / 5f * MathF.PI * 2f + 0.35f;
+				Vector3 localPos = new Vector3(Mathf.Sin(f2) * 2.2f, 6f + (float)(j % 2) * 0.9f, Mathf.Cos(f2) * 2.2f);
+				CreateCylinder(transform, localPos, 0.38f, 4.4f, matBark, addCollider: false);
+				Vector3 localPos2 = new Vector3(Mathf.Sin(f2) * 3.6f, 7.8f + (float)(j % 2) * 1f, Mathf.Cos(f2) * 3.6f);
+				CreateBox(transform, localPos2, new Vector3(4.8f, 3.2f, 4.8f), matFoliage, addCollider: false);
+			}
+			CreateBox(transform, new Vector3(0f, 9.6f, 0f), new Vector3(7f, 4.2f, 7f), matFoliage, addCollider: false);
+		}
+
+		private void BuildStoneLantern(Transform parent, Vector3 pos)
+		{
+			Transform transform = new GameObject("Stone Toro").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			transform.localPosition = pos;
+			CreateBox(transform, new Vector3(0f, 0.15f, 0f), new Vector3(0.95f, 0.3f, 0.95f), matStone);
+			CreateCylinder(transform, new Vector3(0f, 0.85f, 0f), 0.26f, 1.1f, matStone);
+			CreateBox(transform, new Vector3(0f, 1.45f, 0f), new Vector3(0.88f, 0.18f, 0.88f), matStone);
+			CreateBox(transform, new Vector3(0f, 1.8f, 0f), new Vector3(0.58f, 0.55f, 0.58f), matDarkMetal);
+			CreateBox(transform, new Vector3(0f, 2.2f, 0f), new Vector3(1.1f, 0.22f, 1.1f), matStone);
+			CreateBox(transform, new Vector3(0f, 2.4f, 0f), new Vector3(0.65f, 0.18f, 0.65f), matStone, addCollider: false);
+			Light light = transform.gameObject.AddComponent<Light>();
+			light.type = LightType.Point;
+			light.color = new Color(1f, 0.68f, 0.28f);
+			light.intensity = 1.5f;
+			light.range = 5.2f;
+		}
+
+		private void BuildToriiGate(Transform parent, Vector3 pos)
+		{
+			Transform transform = new GameObject("Grand Torii Gate").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			transform.localPosition = pos;
+			for (int i = -1; i <= 1; i += 2)
+			{
+				CreateCylinder(transform, new Vector3((float)i * 3.8f, 0.4f, 0f), 0.52f, 0.8f, matDarkMetal);
+				CreateCylinder(transform, new Vector3((float)i * 3.8f, 4.2f, 0f), 0.4f, 6.8f, matTorii);
+			}
+			CreateBox(transform, new Vector3(0f, 5.6f, 0f), new Vector3(8.8f, 0.45f, 0.45f), matTorii);
+			CreateBox(transform, new Vector3(0f, 7.2f, 0f), new Vector3(10.8f, 0.6f, 0.6f), matTorii);
+			CreateBox(transform, new Vector3(0f, 7.6f, 0f), new Vector3(11.2f, 0.2f, 0.7f), matDarkMetal, addCollider: false);
+		}
+
+		private void BuildShintoShrine(Transform parent, Vector3 pos)
+		{
+			Transform transform = new GameObject("Shinto Shrine").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			transform.localPosition = pos;
+			CreateBox(transform, new Vector3(0f, 2.2f, 0f), new Vector3(5.6f, 4.4f, 5f), matWoodFloor, addCollider: true, "Shrine Hall");
+			CreateBox(transform, new Vector3(0f, 4.7f, 0f), new Vector3(7.2f, 0.6f, 6.2f), matKawaraRoof);
+			CreateBox(transform, new Vector3(0f, 5.3f, 0f), new Vector3(5.8f, 0.7f, 5f), matKawaraRoof, addCollider: false);
+			CreateBox(transform, new Vector3(0f, 0.8f, -2.8f), new Vector3(1.6f, 0.9f, 1f), matWoodFloor, addCollider: true, "Offering Box");
+		}
+
+		private void BuildAzumayaGazebo(Transform parent, Vector3 pos)
+		{
+			Transform transform = new GameObject("Azumaya Gazebo (四阿)").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			transform.localPosition = pos;
+			CreateBox(transform, new Vector3(0f, 0.25f, 0f), new Vector3(4.8f, 0.5f, 4.8f), matWoodFloor);
+			for (int i = -1; i <= 1; i += 2)
+			{
+				for (int j = -1; j <= 1; j += 2)
+				{
+					CreateCylinder(transform, new Vector3((float)i * 2f, 1.8f, (float)j * 2f), 0.12f, 3.2f, matWoodFloor, addCollider: false);
+				}
+			}
+			CreateBox(transform, new Vector3(0f, 3.6f, 0f), new Vector3(5.8f, 0.5f, 5.8f), matKawaraRoof);
+			CreateBox(transform, new Vector3(0f, 4.2f, 0f), new Vector3(4.2f, 0.7f, 4.2f), matKawaraRoof, addCollider: false);
+		}
+
+		private void BuildParkBench(Transform parent, Vector3 pos, float yaw)
+		{
+			Transform transform = new GameObject("Park Bench").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			transform.localPosition = pos;
+			transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+			CreateBox(transform, new Vector3(0f, 0.45f, 0f), new Vector3(2.2f, 0.08f, 0.6f), matWoodFloor);
+			CreateBox(transform, new Vector3(0f, 0.88f, 0.26f), new Vector3(2.2f, 0.45f, 0.06f), matWoodFloor, addCollider: false);
+			CreateCylinder(transform, new Vector3(-0.9f, 0.22f, 0f), 0.035f, 0.45f, matDarkMetal, addCollider: false);
+			CreateCylinder(transform, new Vector3(0.9f, 0.22f, 0f), 0.035f, 0.45f, matDarkMetal, addCollider: false);
+		}
+
+		private void BuildStreetLamp(Transform parent, Vector3 pos, bool worksNormally)
+		{
+			Transform transform = new GameObject("Street Lamp").transform;
+			transform.SetParent(parent, worldPositionStays: false);
+			transform.localPosition = pos;
+			CreateCylinder(transform, new Vector3(0f, 3f, 0f), 0.09f, 6f, matDarkMetal);
+			CreateBox(transform, new Vector3(0.42f, 5.8f, 0f), new Vector3(0.9f, 0.08f, 0.08f), matDarkMetal, addCollider: false);
+			CreateBox(transform, new Vector3(0.85f, 5.65f, 0f), new Vector3(0.45f, 0.25f, 0.45f), matDarkMetal, addCollider: false);
+			GameObject gameObject = CreateBox(transform, new Vector3(0.85f, 5.48f, 0f), new Vector3(0.35f, 0.06f, 0.35f), matWhite, addCollider: false);
+			Light light = transform.gameObject.AddComponent<Light>();
+			light.type = LightType.Point;
+			light.color = new Color(1f, 0.9f, 0.68f);
+			light.intensity = (worksNormally ? 3f : 1.4f);
+			light.range = 15f;
+			light.shadows = LightShadows.Soft;
+			lamps.Add(new FlickeringLamp
+			{
+				light = light,
+				bulb = gameObject.GetComponent<Renderer>(),
+				baseIntensity = 3f,
+				worksNormally = worksNormally,
+				flickerOffset = UnityEngine.Random.value * 50f
+			});
+		}
+
+		private void BuildNewsVan()
+		{
+			Transform transform = new GameObject("Journalist News Van").transform;
+			transform.SetParent(Root, worldPositionStays: false);
+			transform.localPosition = new Vector3(0f, 0f, 43f);
+			transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+			CreateBox(transform, new Vector3(0f, 1.05f, 0f), new Vector3(2.4f, 1.4f, 5.2f), matWhite, addCollider: true, "Van Body");
+			CreateBox(transform, new Vector3(0f, 1.85f, -0.4f), new Vector3(2.35f, 1.2f, 3.6f), matWhite, addCollider: true, "Van Cabin");
+			CreateBox(transform, new Vector3(0f, 1.75f, 1.75f), new Vector3(2.25f, 0.95f, 0.95f), matGlass, addCollider: false, "Windshield");
+			for (int i = -1; i <= 1; i += 2)
+			{
+				for (int j = -1; j <= 1; j += 2)
+				{
+					CreateCylinder(transform, new Vector3((float)i * 1.25f, 0.4f, (float)j * 1.5f), 0.4f, 0.28f, matDarkMetal).transform.rotation = Quaternion.Euler(0f, 0f, 90f);
+				}
+			}
+			CreateCylinder(transform, new Vector3(0f, 2.65f, -0.9f), 0.05f, 0.7f, matDarkMetal, addCollider: false);
+			CreateCylinder(transform, new Vector3(0f, 3f, -0.9f), 0.65f, 0.14f, matWhite, addCollider: false).transform.rotation = Quaternion.Euler(25f, 0f, 0f);
+			for (int k = -1; k <= 1; k += 2)
+			{
+				Transform transform2 = new GameObject("Headlight").transform;
+				transform2.SetParent(transform, worldPositionStays: false);
+				transform2.localPosition = new Vector3((float)k * 0.85f, 0.85f, 2.65f);
+				Light light = transform2.gameObject.AddComponent<Light>();
+				light.type = LightType.Spot;
+				light.color = new Color(1f, 0.96f, 0.85f);
+				light.intensity = 5f;
+				light.range = 24f;
+				light.spotAngle = 48f;
+			}
+		}
+
+		public void Update(RoomState state, float dt)
+		{
+			if (state == null)
+			{
+				return;
+			}
+			float time = Time.time;
+			if (time >= nextLightUpdate)
+			{
+				nextLightUpdate = time + 0.1f;
+				if (viewCamera == null)
+				{
+					viewCamera = Camera.main;
+				}
+				Vector3 vector = ((viewCamera != null) ? viewCamera.transform.position : Vector3.zero);
+				for (int i = 0; i < lamps.Count; i++)
+				{
+					FlickeringLamp flickeringLamp = lamps[i];
+					if (flickeringLamp.light == null)
+					{
+						continue;
+					}
+					float num = flickeringLamp.light.range + 18f;
+					bool flag = viewCamera == null || (flickeringLamp.light.transform.position - vector).sqrMagnitude < num * num;
+					if (flickeringLamp.worksNormally)
+					{
+						if (flickeringLamp.light.enabled != flag)
+						{
+							flickeringLamp.light.enabled = flag;
+						}
+						continue;
+					}
+					float num2 = Mathf.Sin((time + flickeringLamp.flickerOffset) * 12.3f) * Mathf.Cos((time + flickeringLamp.flickerOffset) * 3.7f);
+					bool flag2 = flag && num2 > -0.2f && Mathf.Sin((time + flickeringLamp.flickerOffset) * 1.8f) > -0.6f;
+					if (flickeringLamp.light.enabled != flag2)
+					{
+						flickeringLamp.light.enabled = flag2;
+					}
+					if (flag2)
+					{
+						flickeringLamp.light.intensity = flickeringLamp.baseIntensity * UnityEngine.Random.Range(0.6f, 1.1f);
+					}
+					if (flickeringLamp.bulb != null && flag2 != flickeringLamp.lastBulbOn)
+					{
+						lampPropertyBlock.SetColor(LampColorId, flag2 ? Color.white : new Color(0.2f, 0.2f, 0.2f));
+						flickeringLamp.bulb.SetPropertyBlock(lampPropertyBlock);
+						flickeringLamp.lastBulbOn = flag2;
+					}
+				}
+			}
+			for (int j = 0; j < pills.Count; j++)
+			{
+				PillItem pillItem = pills[j];
+				if (!(pillItem.go == null))
+				{
+					bool flag3 = state.Collected(pillItem.id);
+					if (flag3 != pillItem.collected)
+					{
+						pillItem.collected = flag3;
+						pillItem.go.SetActive(!flag3);
+					}
+					if (!pillItem.collected)
+					{
+						float y = Mathf.Sin(time * 3f + (float)j) * 0.04f;
+						pillItem.go.transform.localPosition = pillItem.position + new Vector3(0f, y, 0f);
+						pillItem.go.transform.Rotate(0f, 45f * dt, 0f);
+					}
+				}
+			}
+			for (int k = 0; k < evidenceTapes.Count; k++)
+			{
+				EvidenceTapeItem evidenceTapeItem = evidenceTapes[k];
+				if (!(evidenceTapeItem.go == null))
+				{
+					bool flag4 = state.Collected(evidenceTapeItem.id);
+					if (flag4 != evidenceTapeItem.collected)
+					{
+						evidenceTapeItem.collected = flag4;
+						evidenceTapeItem.go.SetActive(!flag4);
+					}
+					if (!evidenceTapeItem.collected)
+					{
+						float y2 = Mathf.Sin(time * 2.5f + (float)k) * 0.03f;
+						evidenceTapeItem.go.transform.localPosition = evidenceTapeItem.position + new Vector3(0f, y2, 0f);
+					}
+				}
+			}
+		}
+	}
 }
+
