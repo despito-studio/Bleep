@@ -9,6 +9,8 @@ namespace DeadAir
         Quaternion closedRotation;
         float openAngle = 95, angle, from, target, elapsed, cycleAngle, cycleTime = -1;
         bool initialized, open;
+        Transform[] handles;
+        Quaternion[] handleRotations;
         const float SwingSeconds = .48f;
         public bool IsAjar => Mathf.Abs(angle) > 3 || open || cycleTime >= 0;
         public float Angle => angle;
@@ -37,6 +39,13 @@ namespace DeadAir
             closedRotation = transform.localRotation;
             openAngle = degrees;
             elapsed = SwingSeconds;
+            DeadAirArtMotion.MakeDynamic(transform);
+            var movingHandles = new System.Collections.Generic.List<Transform>();
+            foreach (var part in GetComponentsInChildren<Transform>(true))
+                if (part.name == "motion:doorHandle") movingHandles.Add(part);
+            handles = movingHandles.ToArray();
+            handleRotations = new Quaternion[handles.Length];
+            for (int i = 0; i < handles.Length; i++) handleRotations[i] = handles[i].localRotation;
         }
 
         public void SetOpen(bool value, float sign = 1f)
@@ -75,8 +84,12 @@ namespace DeadAir
             }
             if (angle != previousAngle)
                 transform.localRotation = closedRotation * Quaternion.Euler(0, angle, 0);
+            float contactAge = cycleTime >= 0 ? cycleTime : elapsed;
+            float depression = contactAge < .22f ? Mathf.Sin(Mathf.Clamp01(contactAge / .22f) * Mathf.PI) * -18 : 0;
+            for (int i = 0; handles != null && i < handles.Length; i++)
+                if (handles[i] != null) handles[i].localRotation = handleRotations[i] * Quaternion.Euler(depression, 0, 0);
         }
 
-        static float Ease(float t) { t = Mathf.Clamp01(t); return t * t * (3 - 2 * t); }
+        static float Ease(float t) => DeadAirArtMotion.Ease(t);
     }
 }

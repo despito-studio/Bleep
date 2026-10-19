@@ -141,20 +141,21 @@ namespace DeadAir
             snowMaterial.SetColor("_Color", new Color(.82f, .88f, .94f));
             snowMaterial.SetFloat("_Glossiness", .09f);
             snowMaterial.SetFloat("_Metallic", 0);
-            grain = new Texture2D(64, 64, TextureFormat.RGBA32, true) { name = "Winter / deterministic snow grain", wrapMode = TextureWrapMode.Repeat, hideFlags = HideFlags.DontSave };
-            var pixels = new Color32[64 * 64];
-            for (int i = 0; i < pixels.Length; i++)
+            DeadAirArtMaterials.Apply(snowMaterial, "snow");
+            foreach (var renderer in office.GetComponentsInChildren<MeshRenderer>(true))
             {
-                byte level = (byte)random.Next(215, 256);
-                pixels[i] = new Color32(level, level, level, 255);
+                if (!IsScannedFoliage(renderer.transform)) continue;
+                var block = new MaterialPropertyBlock();
+                renderer.GetPropertyBlock(block);
+                block.SetFloat("_SnowCover", .82f);
+                block.SetTexture("_SnowTex", snowMaterial.mainTexture);
+                renderer.SetPropertyBlock(block);
             }
-            grain.SetPixels32(pixels);
-            grain.Apply(true, true);
-            snowMaterial.mainTexture = grain;
             wetMaterial = new Material(shader) { name = "Blackpine / wet boot marks", hideFlags = HideFlags.DontSave };
             wetMaterial.SetColor("_Color", new Color(.115f, .14f, .16f));
             wetMaterial.SetFloat("_Glossiness", .62f);
             wetMaterial.SetFloat("_Metallic", 0);
+            DeadAirArtMaterials.Apply(wetMaterial, "snow-asphalt");
             var particleShader = Resources.Load<Shader>("Shaders/DeadAirWinterFlake") ?? Shader.Find("Dead Air/Winter Flake");
             if (particleShader == null) particleShader = Shader.Find("Particles/Standard Unlit");
             flakeMaterial = new Material(particleShader) { name = "Blackpine / soft snowflakes", hideFlags = HideFlags.DontSave };
@@ -262,6 +263,16 @@ namespace DeadAir
                     var renderer = filter.GetComponent<MeshRenderer>();
                     var mesh = filter.sharedMesh;
                     if (renderer == null || !renderer.enabled || mesh == null || !mesh.isReadable) continue;
+                    if (IsScannedFoliage(filter.transform)) continue;
+                    var lod = filter.GetComponentInParent<LODGroup>();
+                    if (lod != null)
+                    {
+                        bool primary = false;
+                        var levels = lod.GetLODs();
+                        if (levels.Length > 0)
+                            foreach (var entry in levels[0].renderers) if (entry == renderer) { primary = true; break; }
+                        if (!primary) continue;
+                    }
                     var bounds = renderer.bounds;
                     if (bounds.max.y < .18f || bounds.min.y > 10 || bounds.size.x > 18 || bounds.size.z > 18) continue;
                     if (bounds.center.x < -31 || bounds.center.x > 31 || bounds.center.z < -77 || bounds.center.z > 39) continue;
@@ -293,6 +304,13 @@ namespace DeadAir
                 if (parent.name.StartsWith("door:", StringComparison.Ordinal) || parent.name.StartsWith("interactive:", StringComparison.Ordinal) ||
                     parent.name.StartsWith("state:", StringComparison.Ordinal) || parent.name.StartsWith("prop:van-", StringComparison.Ordinal) ||
                     parent.name.StartsWith("vehicle:crew-van", StringComparison.Ordinal) || parent.name.StartsWith("Broadcast service van", StringComparison.Ordinal)) return true;
+            return false;
+        }
+
+        static bool IsScannedFoliage(Transform part)
+        {
+            for (var parent = part; parent != null; parent = parent.parent)
+                if (parent.name == "Scanned pine-tree" || parent.name == "Scanned fir-tree" || parent.name == "Scanned shrub") return true;
             return false;
         }
 

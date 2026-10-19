@@ -25,6 +25,12 @@ namespace DeadAir.Editor
             =>"furniture-"+type+"-"+string.Join("-",Array.ConvertAll(dimensions,n=>n.ToString("F4",CultureInfo.InvariantCulture)));
         static Mesh Save(string key,Shape shape,int[][] submeshes=null)
         {
+            for(int i=0;i<shape.v.Count;i++)
+            {
+                var p=shape.v[i];
+                if(float.IsNaN(p.x)||float.IsNaN(p.y)||float.IsNaN(p.z)||float.IsInfinity(p.x)||float.IsInfinity(p.y)||float.IsInfinity(p.z))
+                    throw new InvalidOperationException("Non-finite authored vertex "+i+" in "+key);
+            }
             if(cache.TryGetValue(key,out var ready))return ready;
             var mesh=AssetDatabase.LoadAssetAtPath<Mesh>(Folder+"/"+key+".asset");
             if(mesh==null){mesh=new Mesh();AssetDatabase.CreateAsset(mesh,Folder+"/"+key+".asset");}
@@ -43,6 +49,28 @@ namespace DeadAir.Editor
             r.shadowCastingMode=ShadowCastingMode.On;r.receiveShadows=true;
             if(collide){var b=go.AddComponent<BoxCollider>();b.center=mesh.bounds.center;b.size=mesh.bounds.size;}
             return go;
+        }
+
+        public static Mesh Surface(string family,Vector3[][] rows,Vector3 outward)
+        {
+            if(rows.Length<2||rows[0].Length<2)throw new ArgumentException("A surface needs two rows and columns.");
+            var signature=new System.Text.StringBuilder(family);
+            foreach(var row in rows)foreach(var p in row)signature.Append('|').Append(p.x.ToString("R",CultureInfo.InvariantCulture)).Append(',').Append(p.y.ToString("R",CultureInfo.InvariantCulture)).Append(',').Append(p.z.ToString("R",CultureInfo.InvariantCulture));
+            string key="furniture-surface-"+family+"-"+Hash128.Compute(signature.ToString());
+            if(cache.TryGetValue(key,out var ready))return ready;
+            var shape=new Shape();int count=rows[0].Length;bool reverse=false,oriented=false;
+            for(int i=0;i<rows.Length;i++)
+            {
+                if(rows[i].Length!=count)throw new ArgumentException("Surface row widths differ.");
+                for(int j=0;j<count;j++)shape.Vertex(rows[i][j],new Vector2(j/(float)(count-1),i/(float)(rows.Length-1)));
+            }
+            for(int i=0;i<rows.Length-1;i++)for(int j=0;j<count-1;j++)
+            {
+                int a=i*count+j,b=a+count,c=b+1,d=a+1;
+                if(!oriented){var normal=Vector3.Cross(shape.v[b]-shape.v[a],shape.v[c]-shape.v[a]);if(normal.sqrMagnitude>.0000001f){reverse=Vector3.Dot(normal,outward)<0;oriented=true;}}
+                if(reverse)shape.Quad(a,d,c,b);else shape.Quad(a,b,c,d);
+            }
+            return Save(key,shape);
         }
 
         /// <summary>Rounded horizontal outline with a narrow bevel on the top and bottom edges.</summary>
@@ -152,6 +180,131 @@ namespace DeadAir.Editor
                 for(int i=0;i<sides;i++)if(row==0)s.Triangle(center,first+i,first+(i+1)%sides);else s.Triangle(center,first+(i+1)%sides,first+i);
             }
             return Save(key,s);
+        }
+
+        // A closed radial cross-section keeps the inside of a vessel and its rim physical.
+        public static Mesh Revolved(Vector2[] profile,int sides=32)
+        {
+            if(profile==null||profile.Length<3)throw new ArgumentException("A radial section needs at least three points.");
+            var dimensions=new List<float>{sides};foreach(var p in profile){dimensions.Add(p.x);dimensions.Add(p.y);}
+            string key=Key("radial-section",dimensions.ToArray());if(cache.TryGetValue(key,out var ready))return ready;
+            var shape=new Shape();
+            for(int row=0;row<profile.Length;row++)for(int i=0;i<=sides;i++)
+            {
+                float a=i*Mathf.PI*2/sides;var p=profile[row];
+                shape.Vertex(new Vector3(Mathf.Cos(a)*p.x,p.y,Mathf.Sin(a)*p.x),new Vector2(i/(float)sides*Mathf.PI*2*p.x*.5f,p.y*.5f));
+            }
+            for(int row=0;row<profile.Length;row++)for(int i=0;i<sides;i++)
+            {int a=row*(sides+1)+i,b=((row+1)%profile.Length)*(sides+1)+i;shape.Quad(a,b,b+1,a+1);}
+            return Save(key,shape);
+        }
+
+        public static Mesh OpenVessel(float height,float bottomRadius,float topRadius,float wall=.016f)
+        {
+            return Revolved(new[]{new Vector2(bottomRadius,0),new Vector2(topRadius,height-.012f),new Vector2(topRadius,height),
+                new Vector2(topRadius-wall,height),new Vector2(bottomRadius-wall,.035f),new Vector2(.001f,.035f),new Vector2(.001f,0)},32);
+        }
+
+        public static Mesh Ring(float radius,float thickness,int segments=32)
+        {
+            var profile=new Vector2[9];for(int i=0;i<profile.Length;i++)
+            {float a=i*Mathf.PI*2/profile.Length;profile[i]=new Vector2(radius+Mathf.Cos(a)*thickness,Mathf.Sin(a)*thickness);}
+            return Revolved(profile,segments);
+        }
+
+        public static Mesh Sweep(Vector3[] path,Vector2[] radii,int sides=12)
+        {
+            if(path.Length<2||path.Length!=radii.Length)throw new ArgumentException("Sweep needs matching path sections.");
+            var dimensions=new List<float>{sides};
+            for(int i=0;i<path.Length;i++)dimensions.AddRange(new[]{path[i].x,path[i].y,path[i].z,radii[i].x,radii[i].y});
+            string key="furniture-sweep-"+Hash128.Compute(string.Join(",",dimensions.ConvertAll(v=>v.ToString("R",CultureInfo.InvariantCulture))));
+            if(cache.TryGetValue(key,out var ready))return ready;
+            var shape=new Shape();float distance=0;
+            for(int row=0;row<path.Length;row++)
+            {
+                Vector3 tangent=(path[Mathf.Min(row+1,path.Length-1)]-path[Mathf.Max(0,row-1)]).normalized;
+                Vector3 reference=Mathf.Abs(Vector3.Dot(tangent,Vector3.forward))>.92f?Vector3.up:Vector3.forward;
+                Vector3 x=Vector3.Cross(reference,tangent).normalized,z=Vector3.Cross(tangent,x).normalized;
+                if(row>0)distance+=Vector3.Distance(path[row-1],path[row]);
+                for(int i=0;i<=sides;i++)
+                {
+                    float a=i*Mathf.PI*2/sides;
+                    shape.Vertex(path[row]+x*(Mathf.Cos(a)*radii[row].x)+z*(Mathf.Sin(a)*radii[row].y),new Vector2(i/(float)sides,distance));
+                }
+            }
+            for(int row=0;row<path.Length-1;row++)for(int i=0;i<sides;i++)
+            {int a=row*(sides+1)+i,b=a+sides+1;shape.Quad(a,a+1,b+1,b);}
+            foreach(int row in new[]{0,path.Length-1})
+            {
+                int center=shape.Vertex(path[row],Vector2.one*.5f),first=row*(sides+1);
+                for(int i=0;i<sides;i++)if(row==0)shape.Triangle(center,first+i+1,first+i);else shape.Triangle(center,first+i,first+i+1);
+            }
+            return Save(key,shape);
+        }
+
+        public static Mesh RotaryDial(float outerRadius=.086f,float holeRadius=.011f,float height=.007f,int holes=10)
+        {
+            string key=Key("perforated-rotary-dial",outerRadius,holeRadius,height,holes);
+            if(cache.TryGetValue(key,out var ready))return ready;
+            var shape=new Shape();float innerRadius=outerRadius*.45f,centers=outerRadius*.72f,half=Mathf.PI/holes;
+            for(int sector=0;sector<holes;sector++)
+            {
+                float angle=sector*Mathf.PI*2/holes;
+                Vector2 radial=new Vector2(Mathf.Cos(angle),Mathf.Sin(angle)),tangent=new Vector2(-radial.y,radial.x),center=radial*centers;
+                var angles=new List<float>();for(int i=0;i<24;i++)angles.Add(i*Mathf.PI*2/24);
+                foreach(float r in new[]{innerRadius,outerRadius})foreach(float sign in new[]{-1f,1f})
+                {
+                    Vector2 corner=new Vector2(Mathf.Cos(angle+sign*half),Mathf.Sin(angle+sign*half))*r-center;
+                    float a=Mathf.Atan2(Vector2.Dot(corner,tangent),Vector2.Dot(corner,radial));if(a<0)a+=Mathf.PI*2;angles.Add(a);
+                }
+                angles.Sort();var outer=new List<Vector2>();var inner=new List<Vector2>();
+                foreach(float a in angles)
+                {
+                    Vector2 direction=radial*Mathf.Cos(a)+tangent*Mathf.Sin(a);float low=holeRadius,high=outerRadius*3;
+                    for(int iteration=0;iteration<25;iteration++)
+                    {
+                        float mid=(low+high)*.5f;Vector2 p=center+direction*mid;
+                        float delta=Mathf.Atan2(Vector2.Dot(p,tangent),Vector2.Dot(p,radial));
+                        if(p.magnitude>=innerRadius&&p.magnitude<=outerRadius&&Mathf.Abs(delta)<=half)low=mid;else high=mid;
+                    }
+                    inner.Add(center+direction*holeRadius);outer.Add(center+direction*low);
+                }
+                for(int i=0;i<angles.Count;i++)
+                {
+                    int next=(i+1)%angles.Count;Vector2 a=inner[i],b=inner[next],c=outer[next],d=outer[i];
+                    BookFace(shape,shape.t,new Vector3(a.x,height,a.y),new Vector3(b.x,height,b.y),new Vector3(c.x,height,c.y),new Vector3(d.x,height,d.y),Vector3.up);
+                    BookFace(shape,shape.t,new Vector3(a.x,0,a.y),new Vector3(d.x,0,d.y),new Vector3(c.x,0,c.y),new Vector3(b.x,0,b.y),Vector3.down);
+                    Vector2 holeNormal=(a+b)*.5f-center;
+                    BookFace(shape,shape.t,new Vector3(a.x,0,a.y),new Vector3(b.x,0,b.y),new Vector3(b.x,height,b.y),new Vector3(a.x,height,a.y),new Vector3(-holeNormal.x,0,-holeNormal.y));
+                    Vector2 rimNormal=(c+d)*.5f;
+                    if(rimNormal.magnitude<innerRadius+.001f)rimNormal=-rimNormal;
+                    BookFace(shape,shape.t,new Vector3(d.x,0,d.y),new Vector3(d.x,height,d.y),new Vector3(c.x,height,c.y),new Vector3(c.x,0,c.y),new Vector3(rimNormal.x,0,rimNormal.y));
+                }
+            }
+            int top=shape.Vertex(Vector3.up*height,Vector2.one*.5f),bottom=shape.Vertex(Vector3.zero,Vector2.one*.5f);
+            const int centerSides=60;
+            for(int i=0;i<centerSides;i++)
+            {
+                float a=i*Mathf.PI*2/centerSides,b=(i+1)*Mathf.PI*2/centerSides;
+                int first=shape.Vertex(new Vector3(Mathf.Cos(a)*innerRadius,height,Mathf.Sin(a)*innerRadius),Vector2.zero);
+                int second=shape.Vertex(new Vector3(Mathf.Cos(b)*innerRadius,height,Mathf.Sin(b)*innerRadius),Vector2.one);
+                shape.Triangle(top,second,first);
+                int c=shape.Vertex(new Vector3(Mathf.Cos(a)*innerRadius,0,Mathf.Sin(a)*innerRadius),Vector2.zero);
+                int d=shape.Vertex(new Vector3(Mathf.Cos(b)*innerRadius,0,Mathf.Sin(b)*innerRadius),Vector2.one);
+                shape.Triangle(bottom,c,d);
+            }
+            return Save(key,shape);
+        }
+
+        public static Mesh SlopingConsole(float width,float depth,float backHeight,float frontHeight)
+        {
+            string key=Key("sloping-console",width,depth,backHeight,frontHeight);if(cache.TryGetValue(key,out var ready))return ready;
+            var shape=new Shape();float x=width*.5f,z=depth*.5f;
+            Vector3[] p={new Vector3(-x,0,-z),new Vector3(x,0,-z),new Vector3(x,0,z),new Vector3(-x,0,z),
+                new Vector3(-x,backHeight,-z),new Vector3(x,backHeight,-z),new Vector3(x,frontHeight,z),new Vector3(-x,frontHeight,z)};
+            int[][] faces={new[]{0,3,2,1},new[]{4,5,6,7},new[]{0,1,5,4},new[]{1,2,6,5},new[]{2,3,7,6},new[]{3,0,4,7}};
+            foreach(var face in faces){int first=shape.v.Count;foreach(int i in face)shape.Vertex(p[i],new Vector2(p[i].x*.5f,(p[i].z+p[i].y)*.5f));shape.Quad(first,first+3,first+2,first+1);}
+            return Save(key,shape);
         }
 
         public static GameObject Support(Transform parent,string name,Vector3 a,Vector3 b,float lowerRadius,float upperRadius,Material material)

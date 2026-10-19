@@ -5,6 +5,8 @@ Shader "Dead Air/Window Glass"
         _Color("Glass tint and opacity", Color) = (0.12,0.18,0.19,0.18)
         _Glossiness("Smoothness", Range(0,1)) = 0.8
         _ReflectionStrength("Light reflection", Range(0,1)) = 0.12
+        _DirtMap("Dust and dried water marks", 2D) = "black" {}
+        _DirtStrength("Surface weathering", Range(0,1)) = 0.35
     }
     SubShader
     {
@@ -22,14 +24,16 @@ Shader "Dead Air/Window Glass"
         #include "Lighting.cginc"
 
         fixed4 _Color;
-        half _Glossiness, _ReflectionStrength;
-        struct Input { float3 worldPos; };
+        sampler2D _DirtMap;
+        half _Glossiness, _ReflectionStrength, _DirtStrength;
+        struct Input { float3 worldPos; float2 uv_DirtMap; };
 
         inline half4 LightingWindowGlass(SurfaceOutput s, half3 viewDir, UnityGI gi)
         {
             half3 halfDirection = normalize(gi.light.dir + viewDir);
             half highlight = pow(saturate(dot(s.Normal, halfDirection)), lerp(24.0h, 128.0h, s.Gloss));
-            return half4(gi.light.color * highlight * _ReflectionStrength, s.Alpha);
+            half fresnel = .1h + .9h * pow(1 - saturate(abs(dot(s.Normal, viewDir))), 5);
+            return half4(gi.light.color * highlight * s.Specular * fresnel, s.Alpha);
         }
 
         inline void LightingWindowGlass_GI(SurfaceOutput s, UnityGIInput data, inout UnityGI gi)
@@ -39,13 +43,12 @@ Shader "Dead Air/Window Glass"
 
         void surf(Input IN, inout SurfaceOutput o)
         {
-            // One constant alpha, with no texture, dither or world-space grain.
-            // Illumination affects only the smooth reflection, never opacity.
+            half dust = saturate(tex2D(_DirtMap, IN.uv_DirtMap).r * _DirtStrength);
             o.Albedo = 0;
-            o.Emission = _Color.rgb;
+            o.Emission = _Color.rgb + dust * half3(.07, .066, .054);
             o.Alpha = _Color.a;
-            o.Gloss = _Glossiness;
-            o.Specular = 0;
+            o.Gloss = lerp(_Glossiness, .22h, dust);
+            o.Specular = _ReflectionStrength * lerp(1, .25h, dust);
         }
         ENDCG
     }

@@ -8,6 +8,14 @@ Shader "Dead Air/Source Surface"
         _Metallic("Metallic", Range(0,1)) = 0
         _BumpMap("Surface normal", 2D) = "bump" {}
         _SurfaceMap("Smoothness variation", 2D) = "white" {}
+        _MaskMap("AO / roughness / metalness", 2D) = "white" {}
+        _MaskMapEnabled("Use PBR mask", Float) = 0
+        _BumpScale("Normal strength", Range(0,2)) = 1
+        _OcclusionStrength("Occlusion strength", Range(0,1)) = 1
+        _MetallicMapStrength("Metalness map strength", Range(0,1)) = 1
+        _RoughnessFactor("Roughness factor", Range(0,1)) = 1
+        _SnowCover("Outdoor foliage snow", Range(0,1)) = 0
+        _SnowTex("Snow albedo", 2D) = "white" {}
         _PlanarReflection("Polished floor reflection", Range(0,1)) = 0
         _EmissionColor("Emission", Color) = (0,0,0,0)
         _EmissionMap("Emission map", 2D) = "white" {}
@@ -37,7 +45,8 @@ Shader "Dead Air/Source Surface"
         #pragma multi_compile_instancing
         #include "Lighting.cginc"
 
-        sampler2D _MainTex, _EmissionMap, _BumpMap, _SurfaceMap;
+        sampler2D _MainTex, _EmissionMap, _BumpMap, _SurfaceMap, _MaskMap;
+        sampler2D _SnowTex;
         sampler2D _DeadAirReflectionTex;
         float4x4 _DeadAirReflectionVP;
         float4 _DeadAirReflectionTex_TexelSize;
@@ -46,6 +55,9 @@ Shader "Dead Air/Source Surface"
         float4 _DeadAirOwnerBodyEye, _DeadAirOwnerBodyUp, _DeadAirOwnerBodyForward, _DeadAirOwnerBodyClearance;
         fixed4 _Color;
         half _Glossiness, _Metallic, _Cutoff, _PlanarReflection;
+        half _MaskMapEnabled, _BumpScale, _OcclusionStrength, _MetallicMapStrength;
+        half _RoughnessFactor;
+        half _SnowCover;
         half4 _EmissionColor;
 
         struct Input
@@ -73,13 +85,26 @@ Shader "Dead Air/Source Surface"
                 clip(-fromEye.y - _DeadAirOwnerBodyClearance.y);
             }
             half reflections = 1 - saturate(_DeadAirReflectionsDisabled);
-            half metallic = _Metallic * reflections;
+            half3 mask = tex2D(_MaskMap, IN.uv_MainTex).rgb;
+            half metallic = lerp(_Metallic, mask.b * _MetallicMapStrength, saturate(_MaskMapEnabled)) * reflections;
             o.Albedo = c.rgb * (1 - metallic);
-            o.Normal = UnpackNormal(tex2D(_BumpMap, IN.uv_BumpMap));
+            o.Normal = UnpackNormal(tex2D(_BumpMap, lerp(IN.uv_BumpMap, IN.uv_MainTex, saturate(_MaskMapEnabled))));
+            o.Normal.xy *= _BumpScale;
+            o.Normal = normalize(o.Normal);
             o.Alpha = c.a;
-            o.Smoothness = _Glossiness * tex2D(_SurfaceMap, IN.uv_SurfaceMap).r * reflections;
+            half roughnessSmoothness = 1 - mask.g * _RoughnessFactor;
+            o.Smoothness = _Glossiness * lerp(tex2D(_SurfaceMap, IN.uv_SurfaceMap).r,
+                roughnessSmoothness, saturate(_MaskMapEnabled)) * reflections;
             o.Specular = lerp(half3(.04, .04, .04), c.rgb, metallic) * reflections;
-            o.Occlusion = 1;
+            o.Occlusion = lerp(1, mask.r, _OcclusionStrength * saturate(_MaskMapEnabled));
+            if (_SnowCover > .01)
+            {
+                half cover = smoothstep(.25, .8, WorldNormalVector(IN, o.Normal).y) * _SnowCover;
+                half3 snow = tex2D(_SnowTex, IN.worldPos.xz * .5).rgb * half3(.86, .91, .97);
+                o.Albedo = lerp(o.Albedo, snow, cover);
+                o.Specular = lerp(o.Specular, half3(.04, .04, .04) * reflections, cover);
+                o.Smoothness = lerp(o.Smoothness, .12h, cover);
+            }
             o.Emission = tex2D(_EmissionMap, IN.uv_EmissionMap).rgb * _EmissionColor.rgb;
             o.Emission += o.Albedo * (_DeadAirOwnerBodyEye.w * _DeadAirOwnerBodyClearance.w);
             // Reflection comes from an actual mirrored camera, so lamps, furniture

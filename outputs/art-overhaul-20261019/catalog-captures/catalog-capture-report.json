@@ -1,0 +1,3214 @@
+{
+    "generatedUtc": "2026-10-19T11:34:14.8858954Z",
+    "graphicsDevice": "NVIDIA GeForce GT 730",
+    "graphicsApi": "Direct3D11",
+    "framing": "640px square; automatic bounds, LOD0, neutral three-quarter studio, actual geometry/materials. Real HDR environment captured from studio ground and reflection-only softboxes with the tested model excluded. No UI.",
+    "expectedTypes": 64,
+    "capturedTypes": 64,
+    "failedTypes": 0,
+    "entries": [
+        {
+            "type": "abandonedCar",
+            "prefab": "Assets/Office/Authoring/Types/abandonedCar.prefab",
+            "image": "abandonedCar.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.7584999799728394,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 2.0776000022888184,
+                "y": 1.5169999599456787,
+                "z": 4.159754753112793
+            },
+            "meshParts": 146,
+            "uniqueMeshes": 76,
+            "renderers": 146,
+            "uniqueMaterials": 9,
+            "colliders": 3,
+            "enabledColliders": 3,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 13930,
+            "triangles": 18348,
+            "lod0Triangles": 18348,
+            "geometryCheckedMeshes": 76,
+            "geometryCheckedVertices": 6494,
+            "normalMappedMaterials": 3,
+            "surfaceMappedMaterials": 3,
+            "magentaPixels": 0,
+            "foregroundPixels": 88260,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.2710525095462799,
+            "luminanceRange": 0.8881152868270874,
+            "luminanceStdDev": 0.1365579217672348,
+            "foregroundFraction": 0.21547850966453552,
+            "materialNames": [
+                "production-archive-paper",
+                "production-bakelite-and-rubber",
+                "production-ivory-enamel",
+                "production-saloon-aged-chrome",
+                "production-saloon-amber-indicator",
+                "production-saloon-dark-seat-cloth",
+                "production-saloon-dull-sage-body",
+                "production-saloon-red-tail-lens",
+                "production-saloon-smoked-glass"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface",
+                "Dead Air/Window Glass"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "abandonedTruck",
+            "prefab": "Assets/Office/Authoring/Types/abandonedTruck.prefab",
+            "image": "abandonedTruck.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 1.0772500038146973,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 2.5,
+                "y": 2.1545000076293945,
+                "z": 5.6529998779296875
+            },
+            "meshParts": 224,
+            "uniqueMeshes": 54,
+            "renderers": 224,
+            "uniqueMaterials": 7,
+            "colliders": 12,
+            "enabledColliders": 12,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 21864,
+            "triangles": 28734,
+            "lod0Triangles": 28734,
+            "geometryCheckedMeshes": 54,
+            "geometryCheckedVertices": 5020,
+            "normalMappedMaterials": 4,
+            "surfaceMappedMaterials": 4,
+            "magentaPixels": 0,
+            "foregroundPixels": 98721,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.2516423165798187,
+            "luminanceRange": 0.8340988159179688,
+            "luminanceStdDev": 0.13867011666297913,
+            "foregroundFraction": 0.24101807177066803,
+            "materialNames": [
+                "production-bakelite-and-rubber",
+                "production-gaz66-darkened-steel-fittings",
+                "production-gaz66-weathered-olive-body",
+                "production-institutional-wool",
+                "production-ivory-enamel",
+                "production-oak-veneer",
+                "production-saloon-smoked-glass"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface",
+                "Dead Air/Window Glass"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "airDuct",
+            "prefab": "Assets/Office/Authoring/Types/airDuct.prefab",
+            "image": "airDuct.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 1.75,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 1.1549999713897705,
+                "y": 3.5,
+                "z": 1.167961597442627
+            },
+            "meshParts": 17,
+            "uniqueMeshes": 6,
+            "renderers": 17,
+            "uniqueMaterials": 1,
+            "colliders": 1,
+            "enabledColliders": 1,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 874,
+            "triangles": 1080,
+            "lod0Triangles": 1080,
+            "geometryCheckedMeshes": 6,
+            "geometryCheckedVertices": 332,
+            "normalMappedMaterials": 0,
+            "surfaceMappedMaterials": 0,
+            "magentaPixels": 0,
+            "foregroundPixels": 113103,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.25423532724380493,
+            "luminanceRange": 0.9301513433456421,
+            "luminanceStdDev": 0.16005945205688477,
+            "foregroundFraction": 0.2761303782463074,
+            "materialNames": [
+                "duct-zinc-C7CCD1FF-580"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "anchorDesk",
+            "prefab": "Assets/Office/Authoring/Types/anchorDesk.prefab",
+            "image": "anchorDesk.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.4270000159740448,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 3.0,
+                "y": 0.8540000319480896,
+                "z": 1.2999999523162842
+            },
+            "meshParts": 20,
+            "uniqueMeshes": 8,
+            "renderers": 20,
+            "uniqueMaterials": 4,
+            "colliders": 3,
+            "enabledColliders": 3,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 1144,
+            "triangles": 1392,
+            "lod0Triangles": 1392,
+            "geometryCheckedMeshes": 8,
+            "geometryCheckedVertices": 536,
+            "normalMappedMaterials": 3,
+            "surfaceMappedMaterials": 3,
+            "magentaPixels": 0,
+            "foregroundPixels": 112138,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.2547602653503418,
+            "luminanceRange": 0.9525952935218811,
+            "luminanceStdDev": 0.14782249927520752,
+            "foregroundFraction": 0.2737744152545929,
+            "materialNames": [
+                "painted-trim",
+                "sign-board",
+                "steel",
+                "wood"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "archivistDesk",
+            "prefab": "Assets/Office/Authoring/Types/archivistDesk.prefab",
+            "image": "archivistDesk.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.4970000088214874,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 2.5999999046325684,
+                "y": 0.9940000176429749,
+                "z": 1.350000023841858
+            },
+            "meshParts": 60,
+            "uniqueMeshes": 27,
+            "renderers": 71,
+            "uniqueMaterials": 9,
+            "colliders": 3,
+            "enabledColliders": 3,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 14711,
+            "triangles": 17500,
+            "lod0Triangles": 17500,
+            "geometryCheckedMeshes": 27,
+            "geometryCheckedVertices": 9864,
+            "normalMappedMaterials": 3,
+            "surfaceMappedMaterials": 3,
+            "magentaPixels": 0,
+            "foregroundPixels": 128375,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.2424321472644806,
+            "luminanceRange": 0.9534447193145752,
+            "luminanceStdDev": 0.15163441002368927,
+            "foregroundFraction": 0.31341552734375,
+            "materialNames": [
+                "ceramic-C7BFA1FF-270",
+                "duct-zinc-E8EDF0FF-650",
+                "painted-trim",
+                "precision-equipment-lettering",
+                "rubber-050505FF-120",
+                "rubber-0E0B0AFF-380",
+                "sign-board",
+                "steel",
+                "wood"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface",
+                "Dead Air/World Sign"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "bench",
+            "prefab": "Assets/Office/Authoring/Types/bench.prefab",
+            "image": "bench.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.2449999898672104,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 2.4000000953674316,
+                "y": 0.4899999797344208,
+                "z": 0.6499999761581421
+            },
+            "meshParts": 2,
+            "uniqueMeshes": 2,
+            "renderers": 2,
+            "uniqueMaterials": 1,
+            "colliders": 1,
+            "enabledColliders": 1,
+            "triggerColliders": 0,
+            "lodGroups": 1,
+            "vertices": 1030,
+            "triangles": 882,
+            "lod0Triangles": 630,
+            "geometryCheckedMeshes": 2,
+            "geometryCheckedVertices": 1030,
+            "normalMappedMaterials": 1,
+            "surfaceMappedMaterials": 1,
+            "magentaPixels": 0,
+            "foregroundPixels": 83909,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.28754177689552307,
+            "luminanceRange": 0.7400007843971252,
+            "luminanceStdDev": 0.142777219414711,
+            "foregroundFraction": 0.20485596358776093,
+            "materialNames": [
+                "painted_wooden_bench"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "MeshCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "cableSpool",
+            "prefab": "Assets/Office/Authoring/Types/cableSpool.prefab",
+            "image": "cableSpool.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.38600003719329834,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 1.100000023841858,
+                "y": 0.7720000743865967,
+                "z": 1.100000023841858
+            },
+            "meshParts": 36,
+            "uniqueMeshes": 4,
+            "renderers": 36,
+            "uniqueMaterials": 3,
+            "colliders": 1,
+            "enabledColliders": 1,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 8427,
+            "triangles": 14976,
+            "lod0Triangles": 14976,
+            "geometryCheckedMeshes": 4,
+            "geometryCheckedVertices": 735,
+            "normalMappedMaterials": 2,
+            "surfaceMappedMaterials": 2,
+            "magentaPixels": 0,
+            "foregroundPixels": 139926,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.22589027881622314,
+            "luminanceRange": 0.6831952929496765,
+            "luminanceStdDev": 0.1527078002691269,
+            "foregroundFraction": 0.3416162133216858,
+            "materialNames": [
+                "production-bakelite-and-rubber",
+                "production-galvanized-steel",
+                "production-oak-veneer"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "camera",
+            "prefab": "Assets/Office/Authoring/Types/camera.prefab",
+            "image": "camera.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.9325000047683716,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 0.8406206369400024,
+                "y": 1.8650000095367432,
+                "z": 1.4332976341247559
+            },
+            "meshParts": 11,
+            "uniqueMeshes": 11,
+            "renderers": 12,
+            "uniqueMaterials": 7,
+            "colliders": 1,
+            "enabledColliders": 1,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 850,
+            "triangles": 1016,
+            "lod0Triangles": 1016,
+            "geometryCheckedMeshes": 11,
+            "geometryCheckedVertices": 850,
+            "normalMappedMaterials": 3,
+            "surfaceMappedMaterials": 3,
+            "magentaPixels": 0,
+            "foregroundPixels": 44320,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.2631225287914276,
+            "luminanceRange": 0.9453184604644775,
+            "luminanceStdDev": 0.1377008855342865,
+            "foregroundFraction": 0.10820312798023224,
+            "materialNames": [
+                "production-bakelite-and-rubber",
+                "production-equipment-glass",
+                "production-galvanized-steel",
+                "production-industrial-sage-enamel",
+                "sign-font",
+                "sign-plate-white",
+                "steel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface",
+                "Dead Air/World Sign"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "cardCatalog",
+            "prefab": "Assets/Office/Authoring/Types/cardCatalog.prefab",
+            "image": "cardCatalog.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.8500000238418579,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 1.5,
+                "y": 1.7000000476837158,
+                "z": 0.6325000524520874
+            },
+            "meshParts": 94,
+            "uniqueMeshes": 1,
+            "renderers": 94,
+            "uniqueMaterials": 4,
+            "colliders": 13,
+            "enabledColliders": 13,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 2256,
+            "triangles": 1128,
+            "lod0Triangles": 1128,
+            "geometryCheckedMeshes": 1,
+            "geometryCheckedVertices": 24,
+            "normalMappedMaterials": 3,
+            "surfaceMappedMaterials": 3,
+            "magentaPixels": 0,
+            "foregroundPixels": 208433,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.1646803468465805,
+            "luminanceRange": 0.5791968703269958,
+            "luminanceStdDev": 0.13900300860404968,
+            "foregroundFraction": 0.5088696479797363,
+            "materialNames": [
+                "production-archive-paper",
+                "production-galvanized-steel",
+                "production-industrial-sage-enamel",
+                "production-oak-veneer"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "chair",
+            "prefab": "Assets/Office/Authoring/Types/chair.prefab",
+            "image": "chair.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.46000000834465027,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 0.6499999761581421,
+                "y": 0.9200000166893005,
+                "z": 0.6499999761581421
+            },
+            "meshParts": 2,
+            "uniqueMeshes": 2,
+            "renderers": 2,
+            "uniqueMaterials": 1,
+            "colliders": 1,
+            "enabledColliders": 1,
+            "triggerColliders": 0,
+            "lodGroups": 1,
+            "vertices": 4770,
+            "triangles": 7100,
+            "lod0Triangles": 5072,
+            "geometryCheckedMeshes": 2,
+            "geometryCheckedVertices": 4770,
+            "normalMappedMaterials": 1,
+            "surfaceMappedMaterials": 1,
+            "magentaPixels": 0,
+            "foregroundPixels": 87914,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.24044613540172577,
+            "luminanceRange": 0.9977349042892456,
+            "luminanceStdDev": 0.140117347240448,
+            "foregroundFraction": 0.2146337926387787,
+            "materialNames": [
+                "SchoolChair_01"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "MeshCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "chromakeyBackdrop",
+            "prefab": "Assets/Office/Authoring/Types/chromakeyBackdrop.prefab",
+            "image": "chromakeyBackdrop.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 1.600000023841858,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 5.849999904632568,
+                "y": 3.200000047683716,
+                "z": 0.23999997973442078
+            },
+            "meshParts": 55,
+            "uniqueMeshes": 4,
+            "renderers": 55,
+            "uniqueMaterials": 2,
+            "colliders": 2,
+            "enabledColliders": 2,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 2822,
+            "triangles": 3576,
+            "lod0Triangles": 3576,
+            "geometryCheckedMeshes": 4,
+            "geometryCheckedVertices": 232,
+            "normalMappedMaterials": 2,
+            "surfaceMappedMaterials": 2,
+            "magentaPixels": 0,
+            "foregroundPixels": 146588,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.1850709766149521,
+            "luminanceRange": 0.4504455029964447,
+            "luminanceStdDev": 0.14898578822612762,
+            "foregroundFraction": 0.3578808605670929,
+            "materialNames": [
+                "production-broadcast-chromakey-cloth",
+                "production-galvanized-steel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "cleaningCart",
+            "prefab": "Assets/Office/Authoring/Types/cleaningCart.prefab",
+            "image": "cleaningCart.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.46999993920326233,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 1.2000000476837158,
+                "y": 0.9399998784065247,
+                "z": 0.75
+            },
+            "meshParts": 2,
+            "uniqueMeshes": 2,
+            "renderers": 2,
+            "uniqueMaterials": 1,
+            "colliders": 1,
+            "enabledColliders": 1,
+            "triggerColliders": 0,
+            "lodGroups": 1,
+            "vertices": 24822,
+            "triangles": 26462,
+            "lod0Triangles": 18902,
+            "geometryCheckedMeshes": 2,
+            "geometryCheckedVertices": 24822,
+            "normalMappedMaterials": 1,
+            "surfaceMappedMaterials": 1,
+            "magentaPixels": 0,
+            "foregroundPixels": 193693,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.20055247843265533,
+            "luminanceRange": 0.7461678385734558,
+            "luminanceStdDev": 0.1359889656305313,
+            "foregroundFraction": 0.47288331389427185,
+            "materialNames": [
+                "industrial_storage_cart"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "MeshCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "coatRack",
+            "prefab": "Assets/Office/Authoring/Types/coatRack.prefab",
+            "image": "coatRack.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.984000027179718,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 1.2119998931884766,
+                "y": 1.968000054359436,
+                "z": 0.550000011920929
+            },
+            "meshParts": 14,
+            "uniqueMeshes": 6,
+            "renderers": 14,
+            "uniqueMaterials": 2,
+            "colliders": 2,
+            "enabledColliders": 2,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 814,
+            "triangles": 1012,
+            "lod0Triangles": 1012,
+            "geometryCheckedMeshes": 6,
+            "geometryCheckedVertices": 346,
+            "normalMappedMaterials": 2,
+            "surfaceMappedMaterials": 2,
+            "magentaPixels": 0,
+            "foregroundPixels": 80401,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.22224785387516022,
+            "luminanceRange": 0.42411136627197266,
+            "luminanceStdDev": 0.1480315923690796,
+            "foregroundFraction": 0.1962915062904358,
+            "materialNames": [
+                "period-grey-overcoat",
+                "steel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "coffeeTable",
+            "prefab": "Assets/Office/Authoring/Types/coffeeTable.prefab",
+            "image": "coffeeTable.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.24525000154972076,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 1.899999976158142,
+                "y": 0.49050000309944153,
+                "z": 0.8999999761581421
+            },
+            "meshParts": 17,
+            "uniqueMeshes": 12,
+            "renderers": 17,
+            "uniqueMaterials": 4,
+            "colliders": 1,
+            "enabledColliders": 1,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 1026,
+            "triangles": 1184,
+            "lod0Triangles": 1184,
+            "geometryCheckedMeshes": 12,
+            "geometryCheckedVertices": 728,
+            "normalMappedMaterials": 2,
+            "surfaceMappedMaterials": 2,
+            "magentaPixels": 0,
+            "foregroundPixels": 100165,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.2806471884250641,
+            "luminanceRange": 0.9027161002159119,
+            "luminanceStdDev": 0.14451751112937927,
+            "foregroundFraction": 0.24454346299171448,
+            "materialNames": [
+                "dark-detail",
+                "painted-trim",
+                "sign-board",
+                "wood-E0CCB0FF-290"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "copier",
+            "prefab": "Assets/Office/Authoring/Types/copier.prefab",
+            "image": "copier.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.5544999241828918,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 1.100000023841858,
+                "y": 1.1089998483657837,
+                "z": 0.800000011920929
+            },
+            "meshParts": 14,
+            "uniqueMeshes": 9,
+            "renderers": 14,
+            "uniqueMaterials": 5,
+            "colliders": 2,
+            "enabledColliders": 2,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 924,
+            "triangles": 1152,
+            "lod0Triangles": 1152,
+            "geometryCheckedMeshes": 9,
+            "geometryCheckedVertices": 722,
+            "normalMappedMaterials": 2,
+            "surfaceMappedMaterials": 2,
+            "magentaPixels": 0,
+            "foregroundPixels": 184944,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.2689985930919647,
+            "luminanceRange": 0.9573506116867065,
+            "luminanceStdDev": 0.20947644114494324,
+            "foregroundFraction": 0.45152342319488525,
+            "materialNames": [
+                "dark-detail",
+                "dark-window",
+                "painted-trim",
+                "sign-board",
+                "steel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "corkboard",
+            "prefab": "Assets/Office/Authoring/Types/corkboard.prefab",
+            "image": "corkboard.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.7250000238418579,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 3.065000057220459,
+                "y": 1.4500000476837158,
+                "z": 0.08050002157688141
+            },
+            "meshParts": 29,
+            "uniqueMeshes": 7,
+            "renderers": 35,
+            "uniqueMaterials": 7,
+            "colliders": 0,
+            "enabledColliders": 0,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 1714,
+            "triangles": 2000,
+            "lod0Triangles": 2000,
+            "geometryCheckedMeshes": 7,
+            "geometryCheckedVertices": 394,
+            "normalMappedMaterials": 4,
+            "surfaceMappedMaterials": 4,
+            "magentaPixels": 0,
+            "foregroundPixels": 144221,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.24963894486427307,
+            "luminanceRange": 0.6552368402481079,
+            "luminanceStdDev": 0.17935681343078613,
+            "foregroundFraction": 0.35210204124450684,
+            "materialNames": [
+                "production-archive-paper",
+                "production-galvanized-steel",
+                "production-institutional-wool",
+                "production-oak-veneer",
+                "sign-font",
+                "sign-plate-white",
+                "steel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface",
+                "Dead Air/World Sign"
+            ],
+            "colliderKinds": [],
+            "issues": []
+        },
+        {
+            "type": "crate",
+            "prefab": "Assets/Office/Authoring/Types/crate.prefab",
+            "image": "crate.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.5499999523162842,
+                "z": -5.960464477539063e-8
+            },
+            "boundsSize": {
+                "x": 1.100000023841858,
+                "y": 1.0999999046325684,
+                "z": 1.100000023841858
+            },
+            "meshParts": 6,
+            "uniqueMeshes": 6,
+            "renderers": 6,
+            "uniqueMaterials": 1,
+            "colliders": 3,
+            "enabledColliders": 3,
+            "triggerColliders": 0,
+            "lodGroups": 1,
+            "vertices": 6976,
+            "triangles": 9205,
+            "lod0Triangles": 6576,
+            "geometryCheckedMeshes": 6,
+            "geometryCheckedVertices": 6976,
+            "normalMappedMaterials": 1,
+            "surfaceMappedMaterials": 1,
+            "magentaPixels": 0,
+            "foregroundPixels": 174521,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.220926895737648,
+            "luminanceRange": 0.9304658770561218,
+            "luminanceStdDev": 0.1520301103591919,
+            "foregroundFraction": 0.42607665061950684,
+            "materialNames": [
+                "wooden_crate_01"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "MeshCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "deskLamp",
+            "prefab": "Assets/Office/Authoring/Types/deskLamp.prefab",
+            "image": "deskLamp.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.20999999344348907,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 0.20000000298023224,
+                "y": 0.41999998688697815,
+                "z": 0.2199999988079071
+            },
+            "meshParts": 2,
+            "uniqueMeshes": 2,
+            "renderers": 2,
+            "uniqueMaterials": 2,
+            "colliders": 1,
+            "enabledColliders": 1,
+            "triggerColliders": 0,
+            "lodGroups": 1,
+            "vertices": 27869,
+            "triangles": 33742,
+            "lod0Triangles": 24102,
+            "geometryCheckedMeshes": 2,
+            "geometryCheckedVertices": 27869,
+            "normalMappedMaterials": 2,
+            "surfaceMappedMaterials": 2,
+            "magentaPixels": 0,
+            "foregroundPixels": 35036,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.2907542288303375,
+            "luminanceRange": 0.9829184412956238,
+            "luminanceStdDev": 0.13792209327220917,
+            "foregroundFraction": 0.08553710579872131,
+            "materialNames": [
+                "desk_lamp_arm_01",
+                "desk_lamp_arm_01_light"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "MeshCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "dieselGenerator",
+            "prefab": "Assets/Office/Authoring/Types/dieselGenerator.prefab",
+            "image": "dieselGenerator.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 1.1549999713897705,
+                "z": 5.960464477539063e-8
+            },
+            "boundsSize": {
+                "x": 3.319999933242798,
+                "y": 2.309999942779541,
+                "z": 1.9825000762939453
+            },
+            "meshParts": 26,
+            "uniqueMeshes": 13,
+            "renderers": 27,
+            "uniqueMaterials": 7,
+            "colliders": 3,
+            "enabledColliders": 3,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 1792,
+            "triangles": 2232,
+            "lod0Triangles": 2232,
+            "geometryCheckedMeshes": 13,
+            "geometryCheckedVertices": 910,
+            "normalMappedMaterials": 3,
+            "surfaceMappedMaterials": 3,
+            "magentaPixels": 0,
+            "foregroundPixels": 188218,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.17543116211891174,
+            "luminanceRange": 0.6552368402481079,
+            "luminanceStdDev": 0.13421037793159485,
+            "foregroundFraction": 0.45951661467552185,
+            "materialNames": [
+                "production-archive-paper",
+                "production-bakelite-and-rubber",
+                "production-galvanized-steel",
+                "production-industrial-sage-enamel",
+                "sign-font",
+                "sign-plate-white",
+                "steel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface",
+                "Dead Air/World Sign"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "directory",
+            "prefab": "Assets/Office/Authoring/Types/directory.prefab",
+            "image": "directory.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.7250000238418579,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 2.265000104904175,
+                "y": 1.4500000476837158,
+                "z": 0.09250007569789886
+            },
+            "meshParts": 7,
+            "uniqueMeshes": 5,
+            "renderers": 8,
+            "uniqueMaterials": 5,
+            "colliders": 0,
+            "enabledColliders": 0,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 298,
+            "triangles": 344,
+            "lod0Triangles": 344,
+            "geometryCheckedMeshes": 5,
+            "geometryCheckedVertices": 198,
+            "normalMappedMaterials": 3,
+            "surfaceMappedMaterials": 3,
+            "magentaPixels": 0,
+            "foregroundPixels": 187489,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.24002975225448608,
+            "luminanceRange": 0.6552368402481079,
+            "luminanceStdDev": 0.20583483576774597,
+            "foregroundFraction": 0.4577368199825287,
+            "materialNames": [
+                "production-institutional-wool",
+                "production-oak-veneer",
+                "sign-font",
+                "sign-plate-white",
+                "steel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface",
+                "Dead Air/World Sign"
+            ],
+            "colliderKinds": [],
+            "issues": []
+        },
+        {
+            "type": "dumpster",
+            "prefab": "Assets/Office/Authoring/Types/dumpster.prefab",
+            "image": "dumpster.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.7354999780654907,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 2.4800000190734863,
+                "y": 1.4709999561309814,
+                "z": 1.78000009059906
+            },
+            "meshParts": 23,
+            "uniqueMeshes": 8,
+            "renderers": 23,
+            "uniqueMaterials": 3,
+            "colliders": 6,
+            "enabledColliders": 6,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 1654,
+            "triangles": 2104,
+            "lod0Triangles": 2104,
+            "geometryCheckedMeshes": 8,
+            "geometryCheckedVertices": 576,
+            "normalMappedMaterials": 2,
+            "surfaceMappedMaterials": 2,
+            "magentaPixels": 0,
+            "foregroundPixels": 207551,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.18639443814754486,
+            "luminanceRange": 0.5534368753433228,
+            "luminanceStdDev": 0.14070963859558105,
+            "foregroundFraction": 0.5067163109779358,
+            "materialNames": [
+                "production-bakelite-and-rubber",
+                "production-galvanized-steel",
+                "production-industrial-sage-enamel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "fan",
+            "prefab": "Assets/Office/Authoring/Types/fan.prefab",
+            "image": "fan.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.6299999952316284,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 1.2599999904632568,
+                "y": 1.2599999904632568,
+                "z": 0.23090890049934387
+            },
+            "meshParts": 19,
+            "uniqueMeshes": 11,
+            "renderers": 19,
+            "uniqueMaterials": 2,
+            "colliders": 0,
+            "enabledColliders": 0,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 2377,
+            "triangles": 4032,
+            "lod0Triangles": 4032,
+            "geometryCheckedMeshes": 11,
+            "geometryCheckedVertices": 1929,
+            "normalMappedMaterials": 1,
+            "surfaceMappedMaterials": 1,
+            "magentaPixels": 0,
+            "foregroundPixels": 211872,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.1449984461069107,
+            "luminanceRange": 0.6390854716300964,
+            "luminanceStdDev": 0.14633946120738983,
+            "foregroundFraction": 0.5172656178474426,
+            "materialNames": [
+                "production-bakelite-and-rubber",
+                "production-galvanized-steel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [],
+            "issues": []
+        },
+        {
+            "type": "fireSafetyBoard",
+            "prefab": "Assets/Office/Authoring/Types/fireSafetyBoard.prefab",
+            "image": "fireSafetyBoard.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.6624999642372131,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 1.2999999523162842,
+                "y": 1.3249999284744263,
+                "z": 0.3400000035762787
+            },
+            "meshParts": 8,
+            "uniqueMeshes": 8,
+            "renderers": 9,
+            "uniqueMaterials": 6,
+            "colliders": 0,
+            "enabledColliders": 0,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 760,
+            "triangles": 1256,
+            "lod0Triangles": 1256,
+            "geometryCheckedMeshes": 8,
+            "geometryCheckedVertices": 760,
+            "normalMappedMaterials": 3,
+            "surfaceMappedMaterials": 3,
+            "magentaPixels": 0,
+            "foregroundPixels": 184599,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.20366856455802917,
+            "luminanceRange": 0.6555200219154358,
+            "luminanceStdDev": 0.16894342005252838,
+            "foregroundFraction": 0.4506811499595642,
+            "materialNames": [
+                "production-fire-safety-red-enamel",
+                "production-galvanized-steel",
+                "production-oak-veneer",
+                "sign-font",
+                "sign-plate-white",
+                "steel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface",
+                "Dead Air/World Sign"
+            ],
+            "colliderKinds": [],
+            "issues": []
+        },
+        {
+            "type": "floodlightTower",
+            "prefab": "Assets/Office/Authoring/Types/floodlightTower.prefab",
+            "image": "floodlightTower.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 3.809999942779541,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 1.2899999618530273,
+                "y": 7.619999885559082,
+                "z": 0.766573965549469
+            },
+            "meshParts": 38,
+            "uniqueMeshes": 7,
+            "renderers": 38,
+            "uniqueMaterials": 2,
+            "colliders": 1,
+            "enabledColliders": 1,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 1788,
+            "triangles": 1856,
+            "lod0Triangles": 1856,
+            "geometryCheckedMeshes": 7,
+            "geometryCheckedVertices": 358,
+            "normalMappedMaterials": 1,
+            "surfaceMappedMaterials": 1,
+            "magentaPixels": 0,
+            "foregroundPixels": 25121,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.16659210622310638,
+            "luminanceRange": 0.8165090084075928,
+            "luminanceStdDev": 0.09990274906158447,
+            "foregroundFraction": 0.06133056804537773,
+            "materialNames": [
+                "production-galvanized-steel",
+                "production-ivory-enamel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "fridge",
+            "prefab": "Assets/Office/Authoring/Types/fridge.prefab",
+            "image": "fridge.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 1.0,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 0.9019999504089355,
+                "y": 2.0,
+                "z": 0.885461688041687
+            },
+            "meshParts": 14,
+            "uniqueMeshes": 8,
+            "renderers": 14,
+            "uniqueMaterials": 2,
+            "colliders": 6,
+            "enabledColliders": 6,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 1108,
+            "triangles": 1400,
+            "lod0Triangles": 1400,
+            "geometryCheckedMeshes": 8,
+            "geometryCheckedVertices": 576,
+            "normalMappedMaterials": 1,
+            "surfaceMappedMaterials": 1,
+            "magentaPixels": 0,
+            "foregroundPixels": 160348,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.3295438885688782,
+            "luminanceRange": 0.9677309989929199,
+            "luminanceStdDev": 0.23548758029937744,
+            "foregroundFraction": 0.3914746046066284,
+            "materialNames": [
+                "production-galvanized-steel",
+                "production-ivory-enamel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "fuelStore",
+            "prefab": "Assets/Office/Authoring/Types/fuelStore.prefab",
+            "image": "fuelStore.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.5219999551773071,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 3.055000066757202,
+                "y": 1.0439999103546143,
+                "z": 1.5549999475479126
+            },
+            "meshParts": 23,
+            "uniqueMeshes": 6,
+            "renderers": 23,
+            "uniqueMaterials": 2,
+            "colliders": 8,
+            "enabledColliders": 8,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 4738,
+            "triangles": 8448,
+            "lod0Triangles": 8448,
+            "geometryCheckedMeshes": 6,
+            "geometryCheckedVertices": 787,
+            "normalMappedMaterials": 2,
+            "surfaceMappedMaterials": 2,
+            "magentaPixels": 0,
+            "foregroundPixels": 90980,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.2526809573173523,
+            "luminanceRange": 0.8564596176147461,
+            "luminanceStdDev": 0.1483544260263443,
+            "foregroundFraction": 0.22211913764476776,
+            "materialNames": [
+                "production-galvanized-steel",
+                "production-industrial-sage-enamel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "fusePanel",
+            "prefab": "Assets/Office/Authoring/Types/fusePanel.prefab",
+            "image": "fusePanel.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.5799999833106995,
+                "z": -1.4901161193847656e-8
+            },
+            "boundsSize": {
+                "x": 0.699999988079071,
+                "y": 1.1600000858306885,
+                "z": 0.35546159744262695
+            },
+            "meshParts": 19,
+            "uniqueMeshes": 9,
+            "renderers": 20,
+            "uniqueMaterials": 6,
+            "colliders": 5,
+            "enabledColliders": 5,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 970,
+            "triangles": 1168,
+            "lod0Triangles": 1168,
+            "geometryCheckedMeshes": 9,
+            "geometryCheckedVertices": 430,
+            "normalMappedMaterials": 3,
+            "surfaceMappedMaterials": 3,
+            "magentaPixels": 0,
+            "foregroundPixels": 175193,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.19633455574512482,
+            "luminanceRange": 0.8562753200531006,
+            "luminanceStdDev": 0.15671475231647491,
+            "foregroundFraction": 0.42771729826927185,
+            "materialNames": [
+                "production-galvanized-steel",
+                "production-industrial-sage-enamel",
+                "production-ivory-enamel",
+                "sign-font",
+                "sign-plate-white",
+                "steel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface",
+                "Dead Air/World Sign"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "gateBarrier",
+            "prefab": "Assets/Office/Authoring/Types/gateBarrier.prefab",
+            "image": "gateBarrier.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 3.1290783882141113,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 1.3641762733459473,
+                "y": 6.258156776428223,
+                "z": 0.4300000071525574
+            },
+            "meshParts": 10,
+            "uniqueMeshes": 3,
+            "renderers": 10,
+            "uniqueMaterials": 3,
+            "colliders": 1,
+            "enabledColliders": 1,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 596,
+            "triangles": 768,
+            "lod0Triangles": 768,
+            "geometryCheckedMeshes": 3,
+            "geometryCheckedVertices": 246,
+            "normalMappedMaterials": 1,
+            "surfaceMappedMaterials": 1,
+            "magentaPixels": 0,
+            "foregroundPixels": 14212,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.1908368170261383,
+            "luminanceRange": 0.912211000919342,
+            "luminanceStdDev": 0.1144690215587616,
+            "foregroundFraction": 0.034697264432907104,
+            "materialNames": [
+                "production-archive-paper",
+                "production-barrier-red",
+                "production-industrial-sage-enamel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "generatorShelter",
+            "prefab": "Assets/Office/Authoring/Types/generatorShelter.prefab",
+            "image": "generatorShelter.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 1.7662500143051147,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 8.104999542236328,
+                "y": 3.5325000286102295,
+                "z": 7.179999828338623
+            },
+            "meshParts": 58,
+            "uniqueMeshes": 11,
+            "renderers": 58,
+            "uniqueMaterials": 4,
+            "colliders": 5,
+            "enabledColliders": 5,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 5240,
+            "triangles": 6728,
+            "lod0Triangles": 6728,
+            "geometryCheckedMeshes": 11,
+            "geometryCheckedVertices": 634,
+            "normalMappedMaterials": 3,
+            "surfaceMappedMaterials": 3,
+            "magentaPixels": 0,
+            "foregroundPixels": 143623,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.2041739523410797,
+            "luminanceRange": 0.6208823323249817,
+            "luminanceStdDev": 0.12491769343614578,
+            "foregroundFraction": 0.3506420850753784,
+            "materialNames": [
+                "light-panel",
+                "production-galvanized-steel",
+                "production-weathered-service-brick",
+                "steel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "guardBooth",
+            "prefab": "Assets/Office/Authoring/Types/guardBooth.prefab",
+            "image": "guardBooth.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 1.3049999475479126,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 2.380000114440918,
+                "y": 2.609999895095825,
+                "z": 2.180000066757202
+            },
+            "meshParts": 17,
+            "uniqueMeshes": 12,
+            "renderers": 18,
+            "uniqueMaterials": 7,
+            "colliders": 14,
+            "enabledColliders": 14,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 942,
+            "triangles": 1176,
+            "lod0Triangles": 1176,
+            "geometryCheckedMeshes": 12,
+            "geometryCheckedVertices": 692,
+            "normalMappedMaterials": 4,
+            "surfaceMappedMaterials": 4,
+            "magentaPixels": 0,
+            "foregroundPixels": 185686,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.1801501363515854,
+            "luminanceRange": 0.9565482139587402,
+            "luminanceStdDev": 0.13846610486507416,
+            "foregroundFraction": 0.4533349573612213,
+            "materialNames": [
+                "production-equipment-glass",
+                "production-galvanized-steel",
+                "production-industrial-sage-enamel",
+                "production-oak-veneer",
+                "sign-font",
+                "sign-plate-white",
+                "steel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface",
+                "Dead Air/World Sign"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "kitchen",
+            "prefab": "Assets/Office/Authoring/Types/kitchen.prefab",
+            "image": "kitchen.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.6575000286102295,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 3.200000047683716,
+                "y": 1.315000057220459,
+                "z": 0.7229616641998291
+            },
+            "meshParts": 46,
+            "uniqueMeshes": 13,
+            "renderers": 46,
+            "uniqueMaterials": 3,
+            "colliders": 32,
+            "enabledColliders": 32,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 3185,
+            "triangles": 4080,
+            "lod0Triangles": 4080,
+            "geometryCheckedMeshes": 13,
+            "geometryCheckedVertices": 1087,
+            "normalMappedMaterials": 2,
+            "surfaceMappedMaterials": 2,
+            "magentaPixels": 0,
+            "foregroundPixels": 125811,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.28203555941581726,
+            "luminanceRange": 0.9766910076141357,
+            "luminanceStdDev": 0.18632927536964417,
+            "foregroundFraction": 0.3071557581424713,
+            "materialNames": [
+                "production-galvanized-steel",
+                "production-industrial-sage-enamel",
+                "production-ivory-enamel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "locker",
+            "prefab": "Assets/Office/Authoring/Types/locker.prefab",
+            "image": "locker.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 1.1037499904632568,
+                "z": 5.960464477539063e-8
+            },
+            "boundsSize": {
+                "x": 1.1749999523162842,
+                "y": 2.2074999809265137,
+                "z": 1.0899999141693115
+            },
+            "meshParts": 20,
+            "uniqueMeshes": 12,
+            "renderers": 21,
+            "uniqueMaterials": 5,
+            "colliders": 7,
+            "enabledColliders": 7,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 1976,
+            "triangles": 3204,
+            "lod0Triangles": 3204,
+            "geometryCheckedMeshes": 12,
+            "geometryCheckedVertices": 1784,
+            "normalMappedMaterials": 2,
+            "surfaceMappedMaterials": 2,
+            "magentaPixels": 0,
+            "foregroundPixels": 168281,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.17144738137722015,
+            "luminanceRange": 0.6552368402481079,
+            "luminanceStdDev": 0.13494928181171417,
+            "foregroundFraction": 0.41084229946136475,
+            "materialNames": [
+                "cobweb-silk",
+                "painted-trim",
+                "sign-font",
+                "sign-plate-white",
+                "steel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface",
+                "Dead Air/World Sign"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "meetingTable",
+            "prefab": "Assets/Office/Authoring/Types/meetingTable.prefab",
+            "image": "meetingTable.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.4970000088214874,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 4.199999809265137,
+                "y": 0.9940000176429749,
+                "z": 1.5
+            },
+            "meshParts": 46,
+            "uniqueMeshes": 25,
+            "renderers": 57,
+            "uniqueMaterials": 7,
+            "colliders": 1,
+            "enabledColliders": 1,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 13883,
+            "triangles": 16460,
+            "lod0Triangles": 16460,
+            "geometryCheckedMeshes": 25,
+            "geometryCheckedVertices": 9644,
+            "normalMappedMaterials": 1,
+            "surfaceMappedMaterials": 1,
+            "magentaPixels": 0,
+            "foregroundPixels": 72432,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.28014546632766724,
+            "luminanceRange": 0.949507474899292,
+            "luminanceStdDev": 0.1331404149532318,
+            "foregroundFraction": 0.17683593928813934,
+            "materialNames": [
+                "ceramic-C7BFA1FF-270",
+                "duct-zinc-E8EDF0FF-650",
+                "precision-equipment-lettering",
+                "rubber-050505FF-120",
+                "rubber-0E0B0AFF-380",
+                "sign-board",
+                "wood"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface",
+                "Dead Air/World Sign"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "micStand",
+            "prefab": "Assets/Office/Authoring/Types/micStand.prefab",
+            "image": "micStand.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.7324999570846558,
+                "z": -2.9802322387695313e-8
+            },
+            "boundsSize": {
+                "x": 0.4000000059604645,
+                "y": 1.4649999141693115,
+                "z": 0.6864999532699585
+            },
+            "meshParts": 10,
+            "uniqueMeshes": 6,
+            "renderers": 10,
+            "uniqueMaterials": 3,
+            "colliders": 1,
+            "enabledColliders": 1,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 548,
+            "triangles": 704,
+            "lod0Triangles": 704,
+            "geometryCheckedMeshes": 6,
+            "geometryCheckedVertices": 348,
+            "normalMappedMaterials": 2,
+            "surfaceMappedMaterials": 2,
+            "magentaPixels": 0,
+            "foregroundPixels": 22877,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.261133074760437,
+            "luminanceRange": 0.8506501913070679,
+            "luminanceStdDev": 0.15213210880756378,
+            "foregroundFraction": 0.055852051824331284,
+            "materialNames": [
+                "dark-detail",
+                "painted-trim",
+                "steel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "mirror",
+            "prefab": "Assets/Office/Authoring/Types/mirror.prefab",
+            "image": "mirror.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.6299999952316284,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 2.455000162124634,
+                "y": 1.2599999904632568,
+                "z": 0.05999999865889549
+            },
+            "meshParts": 5,
+            "uniqueMeshes": 3,
+            "renderers": 5,
+            "uniqueMaterials": 2,
+            "colliders": 0,
+            "enabledColliders": 0,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 250,
+            "triangles": 320,
+            "lod0Triangles": 320,
+            "geometryCheckedMeshes": 3,
+            "geometryCheckedVertices": 150,
+            "normalMappedMaterials": 2,
+            "surfaceMappedMaterials": 2,
+            "magentaPixels": 0,
+            "foregroundPixels": 34921,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.2975153923034668,
+            "luminanceRange": 0.4714258909225464,
+            "luminanceStdDev": 0.12968839704990387,
+            "foregroundFraction": 0.08525634557008743,
+            "materialNames": [
+                "production-oak-veneer",
+                "production-silvered-mirror"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [],
+            "issues": []
+        },
+        {
+            "type": "mixingConsole",
+            "prefab": "Assets/Office/Authoring/Types/mixingConsole.prefab",
+            "image": "mixingConsole.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.6167500019073486,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 2.5999999046325684,
+                "y": 1.2335000038146973,
+                "z": 1.399999976158142
+            },
+            "meshParts": 82,
+            "uniqueMeshes": 9,
+            "renderers": 82,
+            "uniqueMaterials": 6,
+            "colliders": 6,
+            "enabledColliders": 6,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 7642,
+            "triangles": 9900,
+            "lod0Triangles": 9900,
+            "geometryCheckedMeshes": 9,
+            "geometryCheckedVertices": 608,
+            "normalMappedMaterials": 3,
+            "surfaceMappedMaterials": 3,
+            "magentaPixels": 0,
+            "foregroundPixels": 129676,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.24499815702438354,
+            "luminanceRange": 0.9340729117393494,
+            "luminanceStdDev": 0.14071567356586456,
+            "foregroundFraction": 0.3165917992591858,
+            "materialNames": [
+                "production-archive-paper",
+                "production-bakelite-and-rubber",
+                "production-equipment-glass",
+                "production-galvanized-steel",
+                "production-industrial-sage-enamel",
+                "production-oak-veneer"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "monitorWall",
+            "prefab": "Assets/Office/Authoring/Types/monitorWall.prefab",
+            "image": "monitorWall.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 1.273400068283081,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 3.0,
+                "y": 2.546800136566162,
+                "z": 0.9317699670791626
+            },
+            "meshParts": 91,
+            "uniqueMeshes": 9,
+            "renderers": 91,
+            "uniqueMaterials": 4,
+            "colliders": 11,
+            "enabledColliders": 11,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 6374,
+            "triangles": 8256,
+            "lod0Triangles": 8256,
+            "geometryCheckedMeshes": 9,
+            "geometryCheckedVertices": 690,
+            "normalMappedMaterials": 2,
+            "surfaceMappedMaterials": 2,
+            "magentaPixels": 0,
+            "foregroundPixels": 218240,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.15119417011737823,
+            "luminanceRange": 0.8882297873497009,
+            "luminanceStdDev": 0.13062310218811035,
+            "foregroundFraction": 0.5328124761581421,
+            "materialNames": [
+                "production-bakelite-and-rubber",
+                "production-equipment-glass",
+                "production-galvanized-steel",
+                "production-industrial-sage-enamel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "officePlant",
+            "prefab": "Assets/Office/Authoring/Types/officePlant.prefab",
+            "image": "officePlant.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.6500000357627869,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 0.6999999284744263,
+                "y": 1.3000000715255737,
+                "z": 0.7000000476837158
+            },
+            "meshParts": 8,
+            "uniqueMeshes": 8,
+            "renderers": 8,
+            "uniqueMaterials": 2,
+            "colliders": 1,
+            "enabledColliders": 1,
+            "triggerColliders": 0,
+            "lodGroups": 1,
+            "vertices": 46226,
+            "triangles": 41729,
+            "lod0Triangles": 29865,
+            "geometryCheckedMeshes": 8,
+            "geometryCheckedVertices": 46226,
+            "normalMappedMaterials": 2,
+            "surfaceMappedMaterials": 2,
+            "magentaPixels": 0,
+            "foregroundPixels": 73984,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.2504553198814392,
+            "luminanceRange": 0.8799168467521667,
+            "luminanceStdDev": 0.14952102303504944,
+            "foregroundFraction": 0.18062500655651093,
+            "materialNames": [
+                "potted_plant_01_leaves",
+                "potted_plant_01_pot"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "paperCart",
+            "prefab": "Assets/Office/Authoring/Types/paperCart.prefab",
+            "image": "paperCart.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.4699999690055847,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 0.8999999761581421,
+                "y": 0.9399999380111694,
+                "z": 0.7000000476837158
+            },
+            "meshParts": 2,
+            "uniqueMeshes": 2,
+            "renderers": 2,
+            "uniqueMaterials": 1,
+            "colliders": 1,
+            "enabledColliders": 1,
+            "triggerColliders": 0,
+            "lodGroups": 1,
+            "vertices": 24822,
+            "triangles": 26462,
+            "lod0Triangles": 18902,
+            "geometryCheckedMeshes": 2,
+            "geometryCheckedVertices": 24822,
+            "normalMappedMaterials": 1,
+            "surfaceMappedMaterials": 1,
+            "magentaPixels": 0,
+            "foregroundPixels": 175053,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.2072087675333023,
+            "luminanceRange": 0.79294353723526,
+            "luminanceStdDev": 0.1364964246749878,
+            "foregroundFraction": 0.4273754954338074,
+            "materialNames": [
+                "industrial_storage_cart"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "MeshCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "planter",
+            "prefab": "Assets/Office/Authoring/Types/planter.prefab",
+            "image": "planter.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.5368653535842896,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 2.0,
+                "y": 1.073730707168579,
+                "z": 1.2000000476837158
+            },
+            "meshParts": 32,
+            "uniqueMeshes": 8,
+            "renderers": 32,
+            "uniqueMaterials": 4,
+            "colliders": 5,
+            "enabledColliders": 5,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 1264,
+            "triangles": 1392,
+            "lod0Triangles": 1392,
+            "geometryCheckedMeshes": 8,
+            "geometryCheckedVertices": 528,
+            "normalMappedMaterials": 4,
+            "surfaceMappedMaterials": 4,
+            "magentaPixels": 0,
+            "foregroundPixels": 134138,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.24047523736953735,
+            "luminanceRange": 0.5709670782089233,
+            "luminanceStdDev": 0.1438801884651184,
+            "foregroundFraction": 0.3274853527545929,
+            "materialNames": [
+                "production-aggregate-planter",
+                "production-dusty-foliage",
+                "production-oak-veneer",
+                "production-potting-earth"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "prisonBed",
+            "prefab": "Assets/Office/Authoring/Types/prisonBed.prefab",
+            "image": "prisonBed.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.34903502464294434,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 2.3999998569488525,
+                "y": 0.6980700492858887,
+                "z": 0.870259165763855
+            },
+            "meshParts": 27,
+            "uniqueMeshes": 7,
+            "renderers": 27,
+            "uniqueMaterials": 3,
+            "colliders": 5,
+            "enabledColliders": 5,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 1302,
+            "triangles": 1344,
+            "lod0Triangles": 1344,
+            "geometryCheckedMeshes": 7,
+            "geometryCheckedVertices": 462,
+            "normalMappedMaterials": 2,
+            "surfaceMappedMaterials": 2,
+            "magentaPixels": 0,
+            "foregroundPixels": 96530,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.27447840571403503,
+            "luminanceRange": 0.9379944801330566,
+            "luminanceStdDev": 0.15886031091213226,
+            "foregroundFraction": 0.23566894233226776,
+            "materialNames": [
+                "production-archive-paper",
+                "production-galvanized-steel",
+                "production-institutional-wool"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "prisonSanitary",
+            "prefab": "Assets/Office/Authoring/Types/prisonSanitary.prefab",
+            "image": "prisonSanitary.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.6410595178604126,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 0.550000011920929,
+                "y": 1.2821190357208252,
+                "z": 0.8955000638961792
+            },
+            "meshParts": 12,
+            "uniqueMeshes": 11,
+            "renderers": 12,
+            "uniqueMaterials": 3,
+            "colliders": 7,
+            "enabledColliders": 7,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 1665,
+            "triangles": 2616,
+            "lod0Triangles": 2616,
+            "geometryCheckedMeshes": 11,
+            "geometryCheckedVertices": 1519,
+            "normalMappedMaterials": 1,
+            "surfaceMappedMaterials": 1,
+            "magentaPixels": 0,
+            "foregroundPixels": 76404,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.27364373207092285,
+            "luminanceRange": 0.9907097816467285,
+            "luminanceStdDev": 0.16497132182121277,
+            "foregroundFraction": 0.18653319776058197,
+            "materialNames": [
+                "production-bakelite-and-rubber",
+                "production-galvanized-steel",
+                "production-ivory-enamel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "radiator",
+            "prefab": "Assets/Office/Authoring/Types/radiator.prefab",
+            "image": "radiator.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.3400000035762787,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 1.8350000381469727,
+                "y": 0.6800000071525574,
+                "z": 0.18000000715255737
+            },
+            "meshParts": 16,
+            "uniqueMeshes": 3,
+            "renderers": 16,
+            "uniqueMaterials": 2,
+            "colliders": 0,
+            "enabledColliders": 0,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 800,
+            "triangles": 1024,
+            "lod0Triangles": 1024,
+            "geometryCheckedMeshes": 3,
+            "geometryCheckedVertices": 150,
+            "normalMappedMaterials": 2,
+            "surfaceMappedMaterials": 2,
+            "magentaPixels": 0,
+            "foregroundPixels": 106125,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.24128930270671844,
+            "luminanceRange": 0.5619050860404968,
+            "luminanceStdDev": 0.1620788723230362,
+            "foregroundFraction": 0.25909423828125,
+            "materialNames": [
+                "painted-trim",
+                "steel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [],
+            "issues": []
+        },
+        {
+            "type": "radioCabinet",
+            "prefab": "Assets/Office/Authoring/Types/radioCabinet.prefab",
+            "image": "radioCabinet.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.675000011920929,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 1.1010000705718994,
+                "y": 1.350000023841858,
+                "z": 0.6218999624252319
+            },
+            "meshParts": 124,
+            "uniqueMeshes": 22,
+            "renderers": 128,
+            "uniqueMaterials": 8,
+            "colliders": 7,
+            "enabledColliders": 7,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 6736,
+            "triangles": 7944,
+            "lod0Triangles": 7944,
+            "geometryCheckedMeshes": 22,
+            "geometryCheckedVertices": 1468,
+            "normalMappedMaterials": 2,
+            "surfaceMappedMaterials": 2,
+            "magentaPixels": 0,
+            "foregroundPixels": 196567,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.1765858680009842,
+            "luminanceRange": 0.9797945022583008,
+            "luminanceStdDev": 0.14507335424423218,
+            "foregroundFraction": 0.47989991307258606,
+            "materialNames": [
+                "ceramic-0B130FFF-500",
+                "ceramic-941F12FF-240",
+                "ceramic-D4C79CFF-150",
+                "duct-zinc-E0E6E8FF-650",
+                "precision-equipment-lettering",
+                "production-bakelite-and-rubber",
+                "production-institutional-wool",
+                "production-oak-veneer"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface",
+                "Dead Air/World Sign"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "rotaryTelephone",
+            "prefab": "Assets/Office/Authoring/Types/rotaryTelephone.prefab",
+            "image": "rotaryTelephone.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.08699999749660492,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 0.3776000142097473,
+                "y": 0.17399999499320984,
+                "z": 0.27650725841522217
+            },
+            "meshParts": 40,
+            "uniqueMeshes": 19,
+            "renderers": 51,
+            "uniqueMaterials": 5,
+            "colliders": 0,
+            "enabledColliders": 0,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 13567,
+            "triangles": 16108,
+            "lod0Triangles": 16108,
+            "geometryCheckedMeshes": 19,
+            "geometryCheckedVertices": 9328,
+            "normalMappedMaterials": 0,
+            "surfaceMappedMaterials": 0,
+            "magentaPixels": 0,
+            "foregroundPixels": 96229,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.2909373939037323,
+            "luminanceRange": 0.9977349042892456,
+            "luminanceStdDev": 0.17066925764083862,
+            "foregroundFraction": 0.23493407666683197,
+            "materialNames": [
+                "ceramic-C7BFA1FF-270",
+                "duct-zinc-E8EDF0FF-650",
+                "precision-equipment-lettering",
+                "rubber-050505FF-120",
+                "rubber-0E0B0AFF-380"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface",
+                "Dead Air/World Sign"
+            ],
+            "colliderKinds": [],
+            "issues": []
+        },
+        {
+            "type": "securityTurnstile",
+            "prefab": "Assets/Office/Authoring/Types/securityTurnstile.prefab",
+            "image": "securityTurnstile.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.6700000166893005,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 0.7018094062805176,
+                "y": 1.340000033378601,
+                "z": 0.8346697092056274
+            },
+            "meshParts": 6,
+            "uniqueMeshes": 6,
+            "renderers": 6,
+            "uniqueMaterials": 3,
+            "colliders": 1,
+            "enabledColliders": 1,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 372,
+            "triangles": 440,
+            "lod0Triangles": 440,
+            "geometryCheckedMeshes": 6,
+            "geometryCheckedVertices": 372,
+            "normalMappedMaterials": 2,
+            "surfaceMappedMaterials": 2,
+            "magentaPixels": 0,
+            "foregroundPixels": 102717,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.21429294347763062,
+            "luminanceRange": 0.6726964712142944,
+            "luminanceStdDev": 0.1370268315076828,
+            "foregroundFraction": 0.25077393651008606,
+            "materialNames": [
+                "production-bakelite-and-rubber",
+                "production-galvanized-steel",
+                "production-industrial-sage-enamel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "serverRack",
+            "prefab": "Assets/Office/Authoring/Types/serverRack.prefab",
+            "image": "serverRack.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 1.1749999523162842,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 1.0,
+                "y": 2.3499999046325684,
+                "z": 0.8344616293907166
+            },
+            "meshParts": 151,
+            "uniqueMeshes": 9,
+            "renderers": 151,
+            "uniqueMaterials": 4,
+            "colliders": 5,
+            "enabledColliders": 5,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 7646,
+            "triangles": 9072,
+            "lod0Triangles": 9072,
+            "geometryCheckedMeshes": 9,
+            "geometryCheckedVertices": 530,
+            "normalMappedMaterials": 2,
+            "surfaceMappedMaterials": 2,
+            "magentaPixels": 0,
+            "foregroundPixels": 157686,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.1722346991300583,
+            "luminanceRange": 0.7557505965232849,
+            "luminanceStdDev": 0.1352607160806656,
+            "foregroundFraction": 0.3849755823612213,
+            "materialNames": [
+                "production-archive-paper",
+                "production-bakelite-and-rubber",
+                "production-galvanized-steel",
+                "production-industrial-sage-enamel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "shelf",
+            "prefab": "Assets/Office/Authoring/Types/shelf.prefab",
+            "image": "shelf.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 1.059000015258789,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 2.0899999141693115,
+                "y": 2.118000030517578,
+                "z": 0.6499999761581421
+            },
+            "meshParts": 65,
+            "uniqueMeshes": 11,
+            "renderers": 65,
+            "uniqueMaterials": 7,
+            "colliders": 9,
+            "enabledColliders": 9,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 4820,
+            "triangles": 2780,
+            "lod0Triangles": 2780,
+            "geometryCheckedMeshes": 11,
+            "geometryCheckedVertices": 758,
+            "normalMappedMaterials": 2,
+            "surfaceMappedMaterials": 2,
+            "magentaPixels": 0,
+            "foregroundPixels": 207127,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.16905060410499573,
+            "luminanceRange": 0.9604384303092957,
+            "luminanceStdDev": 0.16159974038600922,
+            "foregroundFraction": 0.5056811571121216,
+            "materialNames": [
+                "period-book-cover-0",
+                "period-book-cover-1",
+                "period-book-cover-2",
+                "period-book-cover-3",
+                "sign-board",
+                "steel",
+                "wood"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "sink",
+            "prefab": "Assets/Office/Authoring/Types/sink.prefab",
+            "image": "sink.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.3054477572441101,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 0.7480000257492065,
+                "y": 0.6108955144882202,
+                "z": 0.5454000234603882
+            },
+            "meshParts": 9,
+            "uniqueMeshes": 8,
+            "renderers": 9,
+            "uniqueMaterials": 2,
+            "colliders": 6,
+            "enabledColliders": 6,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 887,
+            "triangles": 1248,
+            "lod0Triangles": 1248,
+            "geometryCheckedMeshes": 8,
+            "geometryCheckedVertices": 741,
+            "normalMappedMaterials": 1,
+            "surfaceMappedMaterials": 1,
+            "magentaPixels": 0,
+            "foregroundPixels": 103898,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.28224363923072815,
+            "luminanceRange": 0.980612576007843,
+            "luminanceStdDev": 0.1963043361902237,
+            "foregroundFraction": 0.2536572217941284,
+            "materialNames": [
+                "production-galvanized-steel",
+                "production-ivory-enamel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "sofa",
+            "prefab": "Assets/Office/Authoring/Types/sofa.prefab",
+            "image": "sofa.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.5400000214576721,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 3.0999999046325684,
+                "y": 1.0800000429153442,
+                "z": 0.9500000476837158
+            },
+            "meshParts": 4,
+            "uniqueMeshes": 4,
+            "renderers": 4,
+            "uniqueMaterials": 1,
+            "colliders": 2,
+            "enabledColliders": 2,
+            "triggerColliders": 0,
+            "lodGroups": 1,
+            "vertices": 2700,
+            "triangles": 3816,
+            "lod0Triangles": 2728,
+            "geometryCheckedMeshes": 4,
+            "geometryCheckedVertices": 2700,
+            "normalMappedMaterials": 1,
+            "surfaceMappedMaterials": 1,
+            "magentaPixels": 0,
+            "foregroundPixels": 96806,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.2475184202194214,
+            "luminanceRange": 0.7273937463760376,
+            "luminanceStdDev": 0.14732059836387634,
+            "foregroundFraction": 0.23634277284145355,
+            "materialNames": [
+                "sofa_02"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "MeshCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "table",
+            "prefab": "Assets/Office/Authoring/Types/table.prefab",
+            "image": "table.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.4270000159740448,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 2.4000000953674316,
+                "y": 0.8540000319480896,
+                "z": 1.2999999523162842
+            },
+            "meshParts": 20,
+            "uniqueMeshes": 8,
+            "renderers": 20,
+            "uniqueMaterials": 4,
+            "colliders": 3,
+            "enabledColliders": 3,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 1144,
+            "triangles": 1392,
+            "lod0Triangles": 1392,
+            "geometryCheckedMeshes": 8,
+            "geometryCheckedVertices": 536,
+            "normalMappedMaterials": 3,
+            "surfaceMappedMaterials": 3,
+            "magentaPixels": 0,
+            "foregroundPixels": 136134,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.2394665777683258,
+            "luminanceRange": 0.9534290432929993,
+            "luminanceStdDev": 0.15293583273887634,
+            "foregroundFraction": 0.33235839009284973,
+            "materialNames": [
+                "painted-trim",
+                "sign-board",
+                "steel",
+                "wood"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "tapeRecorder",
+            "prefab": "Assets/Office/Authoring/Types/tapeRecorder.prefab",
+            "image": "tapeRecorder.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.25999999046325684,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 0.699999988079071,
+                "y": 0.5199999809265137,
+                "z": 0.3450000286102295
+            },
+            "meshParts": 20,
+            "uniqueMeshes": 9,
+            "renderers": 20,
+            "uniqueMaterials": 4,
+            "colliders": 0,
+            "enabledColliders": 0,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 1734,
+            "triangles": 2496,
+            "lod0Triangles": 2496,
+            "geometryCheckedMeshes": 9,
+            "geometryCheckedVertices": 921,
+            "normalMappedMaterials": 2,
+            "surfaceMappedMaterials": 2,
+            "magentaPixels": 0,
+            "foregroundPixels": 201725,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.17953816056251526,
+            "luminanceRange": 0.6829082369804382,
+            "luminanceStdDev": 0.15395382046699524,
+            "foregroundFraction": 0.49249267578125,
+            "materialNames": [
+                "dark-detail",
+                "sign-board",
+                "steel",
+                "wood"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [],
+            "issues": []
+        },
+        {
+            "type": "toilet",
+            "prefab": "Assets/Office/Authoring/Types/toilet.prefab",
+            "image": "toilet.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 1.0199999809265137,
+                "z": 1.1920928955078125e-7
+            },
+            "boundsSize": {
+                "x": 2.367000102996826,
+                "y": 2.0399999618530273,
+                "z": 3.7762608528137207
+            },
+            "meshParts": 13,
+            "uniqueMeshes": 11,
+            "renderers": 13,
+            "uniqueMaterials": 4,
+            "colliders": 6,
+            "enabledColliders": 6,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 1238,
+            "triangles": 1888,
+            "lod0Triangles": 1888,
+            "geometryCheckedMeshes": 11,
+            "geometryCheckedVertices": 1146,
+            "normalMappedMaterials": 2,
+            "surfaceMappedMaterials": 2,
+            "magentaPixels": 0,
+            "foregroundPixels": 119605,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.2304990291595459,
+            "luminanceRange": 0.6178980469703674,
+            "luminanceStdDev": 0.12937085330486298,
+            "foregroundFraction": 0.29200440645217896,
+            "materialNames": [
+                "production-bakelite-and-rubber",
+                "production-galvanized-steel",
+                "production-industrial-sage-enamel",
+                "production-ivory-enamel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "toolboard",
+            "prefab": "Assets/Office/Authoring/Types/toolboard.prefab",
+            "image": "toolboard.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.7250000238418579,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 2.565000057220459,
+                "y": 1.4500000476837158,
+                "z": 0.1274999976158142
+            },
+            "meshParts": 26,
+            "uniqueMeshes": 6,
+            "renderers": 26,
+            "uniqueMaterials": 3,
+            "colliders": 0,
+            "enabledColliders": 0,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 1244,
+            "triangles": 1496,
+            "lod0Triangles": 1496,
+            "geometryCheckedMeshes": 6,
+            "geometryCheckedVertices": 292,
+            "normalMappedMaterials": 3,
+            "surfaceMappedMaterials": 3,
+            "magentaPixels": 0,
+            "foregroundPixels": 166422,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.17660154402256012,
+            "luminanceRange": 0.48317018151283264,
+            "luminanceStdDev": 0.15151691436767578,
+            "foregroundFraction": 0.4063037037849426,
+            "materialNames": [
+                "production-galvanized-steel",
+                "production-institutional-wool",
+                "production-oak-veneer"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [],
+            "issues": []
+        },
+        {
+            "type": "trashBin",
+            "prefab": "Assets/Office/Authoring/Types/trashBin.prefab",
+            "image": "trashBin.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.3050000071525574,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 0.5,
+                "y": 0.6100000143051147,
+                "z": 0.5
+            },
+            "meshParts": 8,
+            "uniqueMeshes": 8,
+            "renderers": 8,
+            "uniqueMaterials": 2,
+            "colliders": 4,
+            "enabledColliders": 4,
+            "triggerColliders": 0,
+            "lodGroups": 1,
+            "vertices": 7345,
+            "triangles": 10543,
+            "lod0Triangles": 7532,
+            "geometryCheckedMeshes": 8,
+            "geometryCheckedVertices": 7345,
+            "normalMappedMaterials": 2,
+            "surfaceMappedMaterials": 2,
+            "magentaPixels": 0,
+            "foregroundPixels": 135500,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.223765566945076,
+            "luminanceRange": 0.9458690285682678,
+            "luminanceStdDev": 0.15538954734802246,
+            "foregroundFraction": 0.330810546875,
+            "materialNames": [
+                "metal_trash_can_rust",
+                "metal_trash_can_rust_slot_2"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "MeshCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "typewriter",
+            "prefab": "Assets/Office/Authoring/Types/typewriter.prefab",
+            "image": "typewriter.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.21549999713897705,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 0.6325000524520874,
+                "y": 0.4309999942779541,
+                "z": 0.42000001668930054
+            },
+            "meshParts": 217,
+            "uniqueMeshes": 61,
+            "renderers": 260,
+            "uniqueMaterials": 7,
+            "colliders": 0,
+            "enabledColliders": 0,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 23741,
+            "triangles": 24940,
+            "lod0Triangles": 24940,
+            "geometryCheckedMeshes": 61,
+            "geometryCheckedVertices": 6815,
+            "normalMappedMaterials": 0,
+            "surfaceMappedMaterials": 0,
+            "magentaPixels": 0,
+            "foregroundPixels": 110538,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.31074509024620056,
+            "luminanceRange": 0.9909929633140564,
+            "luminanceStdDev": 0.17887143790721893,
+            "foregroundFraction": 0.2698681652545929,
+            "materialNames": [
+                "ceramic-576357FF-290",
+                "ceramic-C7BFA1FF-270",
+                "duct-zinc-E8EDF0FF-650",
+                "paper-F2E8CCFF-50",
+                "precision-equipment-lettering",
+                "rubber-050505FF-120",
+                "rubber-0E0B0AFF-380"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface",
+                "Dead Air/World Sign"
+            ],
+            "colliderKinds": [],
+            "issues": []
+        },
+        {
+            "type": "van",
+            "prefab": "Assets/Office/Authoring/Types/van.prefab",
+            "image": "van.png",
+            "boundsCenter": {
+                "x": -2.384185791015625e-7,
+                "y": 1.6800000667572021,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 4.069999694824219,
+                "y": 3.3600001335144043,
+                "z": 7.714999675750732
+            },
+            "meshParts": 75,
+            "uniqueMeshes": 49,
+            "renderers": 77,
+            "uniqueMaterials": 14,
+            "colliders": 13,
+            "enabledColliders": 13,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 5750,
+            "triangles": 7240,
+            "lod0Triangles": 7240,
+            "geometryCheckedMeshes": 49,
+            "geometryCheckedVertices": 4018,
+            "normalMappedMaterials": 1,
+            "surfaceMappedMaterials": 1,
+            "magentaPixels": 0,
+            "foregroundPixels": 106532,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.3332536816596985,
+            "luminanceRange": 0.9156494140625,
+            "luminanceStdDev": 0.21166278421878815,
+            "foregroundFraction": 0.26008787751197815,
+            "materialNames": [
+                "sign-font",
+                "sign-plate-white",
+                "steel",
+                "van-alloy",
+                "van-blue-seat-fabric",
+                "van-cabin-diffuser",
+                "van-cabin-floor",
+                "van-graphite-trim",
+                "van-headlamp-lens",
+                "van-interior-lining",
+                "van-pearl-body",
+                "van-red-tail-lens",
+                "van-rubber",
+                "van-tinted-glass"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface",
+                "Dead Air/World Sign"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "vendingMachine",
+            "prefab": "Assets/Office/Authoring/Types/vendingMachine.prefab",
+            "image": "vendingMachine.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 1.0499999523162842,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 1.1000001430511475,
+                "y": 2.0999999046325684,
+                "z": 0.8810000419616699
+            },
+            "meshParts": 21,
+            "uniqueMeshes": 15,
+            "renderers": 22,
+            "uniqueMaterials": 6,
+            "colliders": 9,
+            "enabledColliders": 9,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 1134,
+            "triangles": 1408,
+            "lod0Triangles": 1408,
+            "geometryCheckedMeshes": 15,
+            "geometryCheckedVertices": 786,
+            "normalMappedMaterials": 3,
+            "surfaceMappedMaterials": 3,
+            "magentaPixels": 0,
+            "foregroundPixels": 169674,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.19522812962532043,
+            "luminanceRange": 0.7932313680648804,
+            "luminanceStdDev": 0.148758664727211,
+            "foregroundFraction": 0.4142431616783142,
+            "materialNames": [
+                "production-bakelite-and-rubber",
+                "production-galvanized-steel",
+                "production-industrial-sage-enamel",
+                "sign-font",
+                "sign-plate-white",
+                "steel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface",
+                "Dead Air/World Sign"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "wallClock",
+            "prefab": "Assets/Office/Authoring/Types/wallClock.prefab",
+            "image": "wallClock.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.20000000298023224,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 0.40000003576278687,
+                "y": 0.4000000059604645,
+                "z": 0.10000000894069672
+            },
+            "meshParts": 8,
+            "uniqueMeshes": 8,
+            "renderers": 8,
+            "uniqueMaterials": 2,
+            "colliders": 4,
+            "enabledColliders": 4,
+            "triggerColliders": 0,
+            "lodGroups": 1,
+            "vertices": 5984,
+            "triangles": 5133,
+            "lod0Triangles": 3658,
+            "geometryCheckedMeshes": 8,
+            "geometryCheckedVertices": 5984,
+            "normalMappedMaterials": 1,
+            "surfaceMappedMaterials": 2,
+            "magentaPixels": 0,
+            "foregroundPixels": 172565,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.33333903551101685,
+            "luminanceRange": 0.9338054656982422,
+            "luminanceStdDev": 0.2284725457429886,
+            "foregroundFraction": 0.4213012754917145,
+            "materialNames": [
+                "wall_clock",
+                "wall_clock_glass"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "MeshCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "wallMap",
+            "prefab": "Assets/Office/Authoring/Types/wallMap.prefab",
+            "image": "wallMap.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 1.8866666555404663,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 5.599999904632568,
+                "y": 3.7733333110809326,
+                "z": 0.10250000655651093
+            },
+            "meshParts": 2,
+            "uniqueMeshes": 2,
+            "renderers": 2,
+            "uniqueMaterials": 2,
+            "colliders": 0,
+            "enabledColliders": 0,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 102,
+            "triangles": 130,
+            "lod0Triangles": 130,
+            "geometryCheckedMeshes": 2,
+            "geometryCheckedVertices": 102,
+            "normalMappedMaterials": 1,
+            "surfaceMappedMaterials": 1,
+            "magentaPixels": 0,
+            "foregroundPixels": 198566,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.27376440167427063,
+            "luminanceRange": 0.5588180422782898,
+            "luminanceStdDev": 0.1702786386013031,
+            "foregroundFraction": 0.48478028178215027,
+            "materialNames": [
+                "Transmission map oak frame",
+                "broadcast-network-1988"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [],
+            "issues": []
+        },
+        {
+            "type": "wardrobe",
+            "prefab": "Assets/Office/Authoring/Types/wardrobe.prefab",
+            "image": "wardrobe.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 1.0,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 2.202000141143799,
+                "y": 2.0,
+                "z": 0.7354615926742554
+            },
+            "meshParts": 20,
+            "uniqueMeshes": 8,
+            "renderers": 20,
+            "uniqueMaterials": 2,
+            "colliders": 7,
+            "enabledColliders": 7,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 1576,
+            "triangles": 1968,
+            "lod0Triangles": 1968,
+            "geometryCheckedMeshes": 8,
+            "geometryCheckedVertices": 576,
+            "normalMappedMaterials": 2,
+            "surfaceMappedMaterials": 2,
+            "magentaPixels": 0,
+            "foregroundPixels": 221903,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.15932217240333557,
+            "luminanceRange": 0.5358384251594543,
+            "luminanceStdDev": 0.1328718215227127,
+            "foregroundFraction": 0.5417553782463074,
+            "materialNames": [
+                "production-galvanized-steel",
+                "production-oak-veneer"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "whiteboard",
+            "prefab": "Assets/Office/Authoring/Types/whiteboard.prefab",
+            "image": "whiteboard.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.7749999165534973,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 3.6649999618530273,
+                "y": 1.5499999523162842,
+                "z": 0.08050002157688141
+            },
+            "meshParts": 29,
+            "uniqueMeshes": 7,
+            "renderers": 35,
+            "uniqueMaterials": 7,
+            "colliders": 0,
+            "enabledColliders": 0,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 1714,
+            "triangles": 2000,
+            "lod0Triangles": 2000,
+            "geometryCheckedMeshes": 7,
+            "geometryCheckedVertices": 394,
+            "normalMappedMaterials": 3,
+            "surfaceMappedMaterials": 3,
+            "magentaPixels": 0,
+            "foregroundPixels": 129690,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.3000403344631195,
+            "luminanceRange": 0.6552368402481079,
+            "luminanceStdDev": 0.1744946837425232,
+            "foregroundFraction": 0.3166259825229645,
+            "materialNames": [
+                "production-archive-paper",
+                "production-galvanized-steel",
+                "production-ivory-enamel",
+                "production-oak-veneer",
+                "sign-font",
+                "sign-plate-white",
+                "steel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface",
+                "Dead Air/World Sign"
+            ],
+            "colliderKinds": [],
+            "issues": []
+        },
+        {
+            "type": "workstation",
+            "prefab": "Assets/Office/Authoring/Types/workstation.prefab",
+            "image": "workstation.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 0.6274999976158142,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 2.299999952316284,
+                "y": 1.2549999952316284,
+                "z": 1.25
+            },
+            "meshParts": 303,
+            "uniqueMeshes": 91,
+            "renderers": 357,
+            "uniqueMaterials": 11,
+            "colliders": 9,
+            "enabledColliders": 9,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 38970,
+            "triangles": 42508,
+            "lod0Triangles": 42508,
+            "geometryCheckedMeshes": 91,
+            "geometryCheckedVertices": 16947,
+            "normalMappedMaterials": 3,
+            "surfaceMappedMaterials": 3,
+            "magentaPixels": 0,
+            "foregroundPixels": 127551,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.2427086979150772,
+            "luminanceRange": 0.9977349042892456,
+            "luminanceStdDev": 0.15644142031669617,
+            "foregroundFraction": 0.3114038109779358,
+            "materialNames": [
+                "ceramic-576357FF-290",
+                "ceramic-C7BFA1FF-270",
+                "duct-zinc-E8EDF0FF-650",
+                "painted-trim",
+                "paper-F2E8CCFF-50",
+                "precision-equipment-lettering",
+                "rubber-050505FF-120",
+                "rubber-0E0B0AFF-380",
+                "sign-board",
+                "steel",
+                "wood"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface",
+                "Dead Air/World Sign"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        },
+        {
+            "type": "yardLamp",
+            "prefab": "Assets/Office/Authoring/Types/yardLamp.prefab",
+            "image": "yardLamp.png",
+            "boundsCenter": {
+                "x": 0.0,
+                "y": 2.2171735763549805,
+                "z": 0.0
+            },
+            "boundsSize": {
+                "x": 0.3499999940395355,
+                "y": 4.434347152709961,
+                "z": 0.9600000381469727
+            },
+            "meshParts": 5,
+            "uniqueMeshes": 5,
+            "renderers": 5,
+            "uniqueMaterials": 2,
+            "colliders": 2,
+            "enabledColliders": 2,
+            "triggerColliders": 0,
+            "lodGroups": 0,
+            "vertices": 530,
+            "triangles": 680,
+            "lod0Triangles": 680,
+            "geometryCheckedMeshes": 5,
+            "geometryCheckedVertices": 530,
+            "normalMappedMaterials": 1,
+            "surfaceMappedMaterials": 1,
+            "magentaPixels": 0,
+            "foregroundPixels": 12673,
+            "magentaFraction": 0.0,
+            "meanLuminance": 0.19284451007843018,
+            "luminanceRange": 0.5265647172927856,
+            "luminanceStdDev": 0.11650149524211884,
+            "foregroundFraction": 0.030939942225813866,
+            "materialNames": [
+                "production-galvanized-steel",
+                "production-ivory-enamel"
+            ],
+            "shaderNames": [
+                "Dead Air/Source Surface"
+            ],
+            "colliderKinds": [
+                "BoxCollider"
+            ],
+            "issues": []
+        }
+    ]
+}

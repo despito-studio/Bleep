@@ -1,0 +1,105 @@
+PASSED: BLACKPINE RUNTIME SMOKE AND RENDER REVIEW
+UTC: 2026-10-19T11:52:23.6341541Z
+Unity 6000.6.4f1; NVIDIA GeForce GT 730; LAN protocol 5
+Elapsed seconds: 37,9
+Fixture scope: real TCP commands/snapshots with staged positions/prerequisites, then staged visual review. No full physical walkthrough claimed.
+Process-only reflection override: True; saved reflection preference before/after: False/False; saved preference unchanged: True. The capture driver writes no PlayerPrefs.
+PASS: Gameplay bootstrap becomes available.
+PASS: Rendered review frames require an actual graphics device; omit -nographics.
+PASS: Host opens the actual LAN port: 
+PASS: Actual TCP guest joins and receives a room snapshot.
+PASS: Socket guest receives the same room code and Blackpine chapter.
+PASS: Socket guest receives the start snapshot.
+PASS: Guest picks up hen through the actual TCP command path.
+PASS: Host receives hen from nearby guest and the handoff reaches the guest snapshot.
+PASS: Dropping the hen replicates across the socket.
+PASS: Dropped hen retains its authoritative position.
+PASS: Guest takes the dropped hen for disconnect recovery.
+PASS: In-progress receiver capture is replicated to the real guest.
+PASS: Leaving the receiver pauses its operation.
+PASS: Receiver progress survives interruption.
+PASS: Resumed receiver capture completes and reaches the actual guest.
+PASS: The midpoint interception produces an echo and leaves extraction unfinished.
+PASS: Actual socket disconnect releases the guest's hen.
+PASS: Disconnect recovery preserves the mission key and ladder.
+Socket smoke uses real TcpListener/TcpClient sessions with protocol 5; player locations and receiver prerequisites are explicitly staged fixtures.
+PASS: Fresh solo creative run starts for review frames.
+PASS: The real HDR world and VHS presentation cameras are available.
+PASS: The real game canvas is available for GPU capture.
+PASS: A real GPU review target is allocated.
+PASS: The active chapter respects the two-probe 128px maximum runtime budget.
+ACTUAL LOCAL REFLECTION DIAGNOSTIC: {"chapter":"blackpine","frame":"01-snowy-front-overview","outcome":"completed realtime probe observed","reflectionsEnabled":true,"automaticCameraProgressUsed":true,"automaticWorldCameraFrames":0,"waitSeconds":0.0032100677490234375,"actual":{"allocatedProbes":2,"activeRealtimeProbes":2,"completedRealtimeProbes":1,"maximumResolution":64,"renderedFaceCallbacks":17,"restoredSectorSurfaces":0,"faceScopeOpen":false}}
+PIXELS: 01-snowy-front-overview: meanLuma=16,39, range=108, colors=141, visible=0,661, minimumFrameDifference=255,00
+PASS: Rendered frame has nontrivial luminance and color: 01-snowy-front-overview: meanLuma=16,39, range=108, colors=141, visible=0,661, minimumFrameDifference=255,00
+PASS: Rendered frame differs from every earlier review image: 01-snowy-front-overview: meanLuma=16,39, range=108, colors=141, visible=0,661, minimumFrameDifference=255,00
+PASS: Live winter is active, capped and aware of both collider-free animal shelters.
+PIXELS: 02-farmyard-goat-and-hen: meanLuma=17,73, range=100, colors=240, visible=0,534, minimumFrameDifference=14,55
+PASS: Rendered frame has nontrivial luminance and color: 02-farmyard-goat-and-hen: meanLuma=17,73, range=100, colors=240, visible=0,534, minimumFrameDifference=14,55
+PASS: Rendered frame differs from every earlier review image: 02-farmyard-goat-and-hen: meanLuma=17,73, range=100, colors=240, visible=0,534, minimumFrameDifference=14,55
+PIXELS: 03-goat-close-view: meanLuma=29,88, range=151, colors=342, visible=0,767, minimumFrameDifference=22,92
+PASS: Rendered frame has nontrivial luminance and color: 03-goat-close-view: meanLuma=29,88, range=151, colors=342, visible=0,767, minimumFrameDifference=22,92
+PASS: Rendered frame differs from every earlier review image: 03-goat-close-view: meanLuma=29,88, range=151, colors=342, visible=0,767, minimumFrameDifference=22,92
+PASS: Solo host picks up the rendered hen.
+PASS: Carrying the hen leaves the actual equipment slot empty.
+PIXELS: 04-hen-carried-first-person: meanLuma=27,11, range=207, colors=455, visible=0,597, minimumFrameDifference=20,06
+PASS: Rendered frame has nontrivial luminance and color: 04-hen-carried-first-person: meanLuma=27,11, range=207, colors=455, visible=0,597, minimumFrameDifference=20,06
+PASS: Rendered frame differs from every earlier review image: 04-hen-carried-first-person: meanLuma=27,11, range=207, colors=455, visible=0,597, minimumFrameDifference=20,06
+PASS: The real field journal opens.
+PIXELS: 05-evidence-field-journal: meanLuma=135,50, range=229, colors=102, visible=0,880, minimumFrameDifference=115,69
+PASS: Rendered frame has nontrivial luminance and color: 05-evidence-field-journal: meanLuma=135,50, range=229, colors=102, visible=0,880, minimumFrameDifference=115,69
+PASS: Rendered frame differs from every earlier review image: 05-evidence-field-journal: meanLuma=135,50, range=229, colors=102, visible=0,880, minimumFrameDifference=115,69
+PASS: The actual receiver tuning panel opens.
+PIXELS: 06-receiver-tuning-panel: meanLuma=22,61, range=221, colors=187, visible=0,792, minimumFrameDifference=19,97
+PASS: Rendered frame has nontrivial luminance and color: 06-receiver-tuning-panel: meanLuma=22,61, range=221, colors=187, visible=0,792, minimumFrameDifference=19,97
+PASS: Rendered frame differs from every earlier review image: 06-receiver-tuning-panel: meanLuma=22,61, range=221, colors=187, visible=0,792, minimumFrameDifference=19,97
+PIXELS: 07-rear-yard-antenna: meanLuma=12,61, range=89, colors=133, visible=0,592, minimumFrameDifference=12,47
+PASS: Rendered frame has nontrivial luminance and color: 07-rear-yard-antenna: meanLuma=12,61, range=89, colors=133, visible=0,592, minimumFrameDifference=12,47
+PASS: Rendered frame differs from every earlier review image: 07-rear-yard-antenna: meanLuma=12,61, range=89, colors=133, visible=0,592, minimumFrameDifference=12,47
+PIXELS: 08-basement-resonator: meanLuma=25,09, range=223, colors=450, visible=0,738, minimumFrameDifference=21,37
+PASS: Rendered frame has nontrivial luminance and color: 08-basement-resonator: meanLuma=25,09, range=223, colors=450, visible=0,738, minimumFrameDifference=21,37
+PASS: Rendered frame differs from every earlier review image: 08-basement-resonator: meanLuma=25,09, range=223, colors=450, visible=0,738, minimumFrameDifference=21,37
+PIXELS: 09-disturbed-office-after-interception: meanLuma=11,15, range=218, colors=144, visible=0,510, minimumFrameDifference=12,38
+PASS: Rendered frame has nontrivial luminance and color: 09-disturbed-office-after-interception: meanLuma=11,15, range=218, colors=144, visible=0,510, minimumFrameDifference=12,38
+PASS: Rendered frame differs from every earlier review image: 09-disturbed-office-after-interception: meanLuma=11,15, range=218, colors=144, visible=0,510, minimumFrameDifference=12,38
+PIXELS: 10-evidence-playback-subtitles: meanLuma=10,20, range=218, colors=145, visible=0,523, minimumFrameDifference=1,52
+PASS: Rendered frame has nontrivial luminance and color: 10-evidence-playback-subtitles: meanLuma=10,20, range=218, colors=145, visible=0,523, minimumFrameDifference=1,52
+PASS: Rendered frame differs from every earlier review image: 10-evidence-playback-subtitles: meanLuma=10,20, range=218, colors=145, visible=0,523, minimumFrameDifference=1,52
+Ten review images render the real HDR world, equipment, VHS presentation and UI cameras into a GPU target; every readback passes luminance, color and distinct-frame checks.
+Review images stage chapter flags and camera locations after the socket smoke. They are visual review fixtures, not a full physical walkthrough.
+Capture writes no PlayerPrefs and does not alter graphics, audio, display or accessibility preferences.
+PASS: The school completes its staged loading.
+PASS: Restored school contains nine pill pickups and all five evidence tapes.
+PASS: The actual school builds the third floor, extended rear wing and sports playground.
+PASS: The active chapter respects the two-probe 128px maximum runtime budget.
+ACTUAL LOCAL REFLECTION DIAGNOSTIC: {"chapter":"coming-soon","frame":"11-restored-school-and-playground","outcome":"completed realtime probe observed","reflectionsEnabled":true,"automaticCameraProgressUsed":true,"automaticWorldCameraFrames":1,"waitSeconds":0.09535980224609375,"actual":{"allocatedProbes":2,"activeRealtimeProbes":1,"completedRealtimeProbes":1,"maximumResolution":64,"renderedFaceCallbacks":6,"restoredSectorSurfaces":0,"faceScopeOpen":false}}
+PIXELS: 11-restored-school-and-playground: meanLuma=11,80, range=79, colors=118, visible=0,561, minimumFrameDifference=10,55
+PASS: Rendered frame has nontrivial luminance and color: 11-restored-school-and-playground: meanLuma=11,80, range=79, colors=118, visible=0,561, minimumFrameDifference=10,55
+PASS: Rendered frame differs from every earlier review image: 11-restored-school-and-playground: meanLuma=11,80, range=79, colors=118, visible=0,561, minimumFrameDifference=10,55
+PIXELS: 12-third-floor-rear-wing: meanLuma=26,34, range=218, colors=244, visible=0,491, minimumFrameDifference=23,83
+PASS: Rendered frame has nontrivial luminance and color: 12-third-floor-rear-wing: meanLuma=26,34, range=218, colors=244, visible=0,491, minimumFrameDifference=23,83
+PASS: Rendered frame differs from every earlier review image: 12-third-floor-rear-wing: meanLuma=26,34, range=218, colors=244, visible=0,491, minimumFrameDifference=23,83
+PIXELS: 13-restored-traditional-park: meanLuma=12,64, range=112, colors=232, visible=0,571, minimumFrameDifference=10,84
+PASS: Rendered frame has nontrivial luminance and color: 13-restored-traditional-park: meanLuma=12,64, range=112, colors=232, visible=0,571, minimumFrameDifference=10,84
+PASS: Rendered frame differs from every earlier review image: 13-restored-traditional-park: meanLuma=12,64, range=112, colors=232, visible=0,571, minimumFrameDifference=10,84
+PASS: School tape pickup succeeds at its restored position: tape-1
+PASS: School tape pickup succeeds at its restored position: tape-2
+PASS: School tape pickup succeeds at its restored position: tape-3
+PASS: School tape pickup succeeds at its restored position: tape-4
+PASS: School tape pickup succeeds at its restored position: tape-5
+PASS: The restored school exits with all five tapes at the journalists' van.
+School scope: restored geometry, actual staged loading, thirteen rendered review frames overall, and evidence/exit commands at staged positions. No complete physical walkthrough claimed.
+Rendered images: 13
+01-snowy-front-overview.png
+02-farmyard-goat-and-hen.png
+03-goat-close-view.png
+04-hen-carried-first-person.png
+05-evidence-field-journal.png
+06-receiver-tuning-panel.png
+07-rear-yard-antenna.png
+08-basement-resonator.png
+09-disturbed-office-after-interception.png
+10-evidence-playback-subtitles.png
+11-restored-school-and-playground.png
+12-third-floor-rear-wing.png
+13-restored-traditional-park.png
+Unity runtime errors: 0

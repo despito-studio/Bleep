@@ -1,0 +1,235 @@
+{
+  "schemaVersion": 2,
+  "generatedUtc": "2026-10-19T12:48:26.204490+00:00",
+  "sourceCommit": "f16f1318b0c09f31fdde37a5163d5f387c77a019",
+  "sourceRepository": "https://github.com/dorimommy/Dear-air.git",
+  "localChanges": true,
+  "scope": "Оточення та механізми офісу Blackpine, школи, сусідніх вулиць і парку.",
+  "assetLibrary": {
+    "scannedPbrSets": 19,
+    "uniformPhysicalBases": 6,
+    "importedScannedModelKeys": 33,
+    "unusedCanonRejectedModelKeys": [
+      "wooden-chair",
+      "coffee-table"
+    ],
+    "downloadedSourceFiles": 243,
+    "license": "CC0-1.0",
+    "provenance": "Art/ProductionSources/PolyHaven/manifest.json",
+    "runtimeResourcesModelKeys": 18,
+    "authoringOnlyModelKeys": [
+      "armchair",
+      "barrel",
+      "bookshelf",
+      "cardboard-box",
+      "coffee-table",
+      "fire-alarm",
+      "kettle",
+      "military-crate",
+      "searchlight",
+      "security-camera",
+      "steel-shelves",
+      "video-camera",
+      "wall-lamp",
+      "wooden-cabinet",
+      "wooden-chair"
+    ],
+    "authoringOnlyModelDirectory": "Assets/ArtProduction/UnusedModels",
+    "sourcePolicy": "Exact downloaded images are reproducible local originals outside Assets and excluded from Git; committed images are budgeted derivatives with separate hashes and dimensions in the source manifest."
+  },
+  "authoring": {
+    "families": 64,
+    "placements": 300,
+    "meshPartsIncludingAlternativeLods": 12533,
+    "collisionShapes": 1288,
+    "articulatedNodes": 138,
+    "catalog": "Assets/Office/Authoring/prop-catalog.json",
+    "worldSources": [
+      "Assets/Office/Authoring/World/station-source.prefab",
+      "Assets/Office/Authoring/World/exterior-source.prefab"
+    ]
+  },
+  "legacyArchive": {
+    "archived": 1877,
+    "examined": 2345,
+    "report": "outputs/art-overhaul-20261019/legacy-resource-archive.json"
+  },
+  "workbook": {
+    "path": "outputs/art-overhaul-20261019/DeadAir-Art-Overhaul-2026-10-19.xlsx",
+    "exists": true,
+    "status": "updated with actual texture budgets and separate historical validation scope",
+    "sha256": "addc798d10147e4c94dbef6675f5f446f562145264324310e5a6433c1f9c738f",
+    "sheets": 22,
+    "historicalSheets": 20,
+    "historicalPreserved": true,
+    "originalAuditSha256": "5d6f60e3f67f3526f62d1f0383107edde461fe1e823b8cec8e42b46169baa13b"
+  },
+  "coverageLimits": [
+    "Після фізичного зменшення текстур, оновлення стримінгу та вилучення невикористаних ресурсів виконано лише виробничий імпорт і збірку Windows; повторні тести, GPU-кадри та нативні запуски за вказівкою користувача не виконувалися.",
+    "Нативна перевірка використовує фактичні TCP-команди й знімки стану зі встановленими тестовими позиціями; повне ручне проходження не заявляється.",
+    "24 оглядові кадри не охоплюють кожний ракурс карти; дорожні дзеркала школи не потрапили в ці 12 шкільних кадрів.",
+    "Анімації персонажів не входили до оновлення оточення.",
+    "Unity 6000.6.4 автоматично запекла колізію 103 сіток; явне налаштування prebake потребує перегляду перед майбутнім переходом на версію Unity, яка припинить автоматичне запікання."
+  ],
+  "historicalValidation": {
+    "coreValidation": {
+      "status": "passed",
+      "log": "Logs/art-production-final-repair-rebake-v6.log",
+      "navigationNodesReachable": 8458,
+      "navigationNodesTotal": 8458,
+      "bodyBlockedNodes": 0,
+      "doorCases": 216,
+      "doors": 36,
+      "schoolRenderersIncludingAlternativeLods": 10600,
+      "schoolSlidingLeaves": 43,
+      "schoolSupportedPickupAnchors": 14,
+      "finiteDerivedMeshes": 1700,
+      "finiteDerivedVertices": 3831056
+    },
+    "gpu": {
+      "status": "passed",
+      "catalogImages": 64,
+      "flaggedFamilies": 0,
+      "sceneFrames": 24,
+      "officeGeometry": {
+        "uniqueMeshes": 1853,
+        "rendererBounds": 6298,
+        "vertices": 3832894
+      },
+      "schoolGeometry": {
+        "uniqueMeshes": 732,
+        "rendererBounds": 10600,
+        "vertices": 6694313
+      },
+      "sceneReport": "outputs/art-overhaul-20261019/captures/capture-report.json",
+      "catalogReport": "outputs/art-overhaul-20261019/catalog-captures/catalog-capture-report.json"
+    },
+    "windows": {
+      "status": "passed",
+      "executable": "Builds/ArtOverhaul-20261019/DeadAir.exe",
+      "packagedFiles": 161,
+      "packagedBytes": 1444794952,
+      "nativeFrames": 13,
+      "runtimeErrors": 0,
+      "negativeColliderWarnings": 0,
+      "nonfiniteWarnings": 0,
+      "elapsedSeconds": 45.4,
+      "realReflectionDiagnostics": {
+        "processOnlyReflectionOverride": true,
+        "savedPreferenceBefore": false,
+        "savedPreferenceAfter": false,
+        "savedPreferenceUnchanged": true,
+        "captures": [
+          {
+            "chapter": "blackpine",
+            "frame": "01-snowy-front-overview",
+            "outcome": "completed realtime probe observed",
+            "reflectionsEnabled": true,
+            "automaticCameraProgressUsed": true,
+            "automaticWorldCameraFrames": 0,
+            "waitSeconds": 0.0032100677490234375,
+            "actual": {
+              "allocatedProbes": 2,
+              "activeRealtimeProbes": 2,
+              "completedRealtimeProbes": 1,
+              "maximumResolution": 64,
+              "renderedFaceCallbacks": 17,
+              "restoredSectorSurfaces": 0,
+              "faceScopeOpen": false
+            }
+          },
+          {
+            "chapter": "coming-soon",
+            "frame": "11-restored-school-and-playground",
+            "outcome": "completed realtime probe observed",
+            "reflectionsEnabled": true,
+            "automaticCameraProgressUsed": true,
+            "automaticWorldCameraFrames": 1,
+            "waitSeconds": 0.09535980224609375,
+            "actual": {
+              "allocatedProbes": 2,
+              "activeRealtimeProbes": 1,
+              "completedRealtimeProbes": 1,
+              "maximumResolution": 64,
+              "renderedFaceCallbacks": 6,
+              "restoredSectorSurfaces": 0,
+              "faceScopeOpen": false
+            }
+          }
+        ]
+      },
+      "report": "outputs/art-overhaul-20261019/runtime-smoke-v3/blackpine-runtime-report.txt",
+      "launchResult": "outputs/art-overhaul-20261019/runtime-smoke-v3/launch-result.json"
+    },
+    "scope": "Pre-texture-optimization geometry, GPU captures and native Windows run. These results do not attest the optimized texture payload or the subsequent build.",
+    "testedBuildManifest": "outputs/art-overhaul-20261019/runtime-smoke-v3/tested-build-info.json"
+  },
+  "textureOptimization": {
+    "manifest": "Art/ProductionSources/texture-optimization.json",
+    "preparedImages": 185,
+    "unityImages": 184,
+    "beforeImageBytes": 1243962725,
+    "afterImageBytes": 48216338,
+    "imageByteReductionPercent": 96.12,
+    "measurementScope": "Encoded image files in the preparation manifest, excluding additional source copies; not runtime VRAM, frame time or FPS.",
+    "policy": {
+      "largeSurfaceAlbedo": 1024,
+      "largeSurfaceNormalAndMask": 512,
+      "otherSurfaceMaps": 512,
+      "defaultModelAlbedo": 512,
+      "defaultModelData": 256,
+      "smallFixtureMaps": 256,
+      "smallFixtureKeys": [
+        "desk-lamp",
+        "fire-alarm",
+        "kettle",
+        "security-camera",
+        "wall-clock",
+        "wall-lamp"
+      ],
+      "largeFurnitureAndFoliageMaps": 512,
+      "largeModelKeys": [
+        "armchair",
+        "barrel",
+        "bookshelf",
+        "fir-tree",
+        "generator",
+        "military-crate",
+        "pine-tree",
+        "shrub",
+        "sofa",
+        "steel-shelves",
+        "wooden-cabinet",
+        "wooden-crate"
+      ],
+      "networkGraphic": 1024,
+      "windowGrime": 512
+    },
+    "streamingBudgetMb": {
+      "low": 128,
+      "medium": 192,
+      "high": 256
+    },
+    "streamingMaximumMipReduction": 3,
+    "removedGeneratedCache": {
+      "manifest": "Art/ProductionSources/fitted-cache-cleanup.json",
+      "assets": 446,
+      "retainedReferencedAssets": 122,
+      "bytesIncludingMeta": 1203139312,
+      "archiveExcludedFromGit": true
+    }
+  },
+  "windows": {
+    "buildResult": "Succeeded",
+    "builtAtUtc": "2026-10-19T12:43:45.4227688Z",
+    "executable": "Builds/ArtOverhaul-20261019/DeadAir.exe",
+    "manifest": "outputs/art-overhaul-20261019/optimized-build-info.json",
+    "packagedFiles": 161,
+    "packagedBytes": 529541848,
+    "previousPackagedBytes": 1444794952,
+    "packageByteReductionPercent": 63.35,
+    "runtimeVerification": "not-run-per-user-request-after-texture-optimization",
+    "tests": "Повторні тести не запускалися за вказівкою користувача.",
+    "productionBuildLog": "Logs/art-texture-budget-production-build.log"
+  }
+}

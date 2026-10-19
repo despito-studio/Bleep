@@ -1,0 +1,98 @@
+{
+  "provider": "OpenAI image_gen built-in tool",
+  "mode": "built-in generation and edit; no CLI or external API key",
+  "asset": "Assets/ArtProduction/Graphics/broadcast-network-1988.png",
+  "purpose": "Fictional period broadcast-station wall map, preserving the Blackpine setting",
+  "generatedSource": "exec-b5ab5c18-9ced-480f-aba7-c8fe0147586b.png",
+  "selectedEditedSource": "exec-da2e46c8-74d9-4a4e-869c-f8731555b493.png",
+  "generationPrompt": "Create one finished game environment texture: a flat, front-facing, landscape 3:2 archival engineering wall map on aged ivory drafting paper, for an abandoned late-1980s Ukrainian district television broadcast station in the fictional Carpathian town Blackpine. Entire canvas is printed paper, no frame, no perspective, no photographed room, no surrounding background. A precise restrained Soviet-era cartographic plate: thin warm grey contour lines, a forested mountain valley, a small town street grid, dark charcoal building blocks, pale muted green forest hatching, delicate muted blue river, a red triangular transmitter symbol on a hill with three thin red radio coverage rings. Title at top left exactly 'СХЕМА ТЕЛЕМЕРЕЖІ'. Small top right date '1988'. A small technical legend and numbered survey points, elegant practical sans serif Cyrillic labels, little ink stamps and pencil corrections. Credible hand-drafted engineering map, careful linework, readable large title, detailed actual visual information, restrained ink, modest foxing and weathered edges, quiet institutional realism, no propaganda, no real company logos, no horror symbols, no dramatic lighting or baked shadows. Texture should fill the canvas, export-quality high detail.",
+  "editPrompt": "Edit only the small violet circular technical stamp in the lower right portion of this 1988 Ukrainian district television network engineering map: remove the trident national emblem inside the stamp and replace it with a tiny simple radio antenna line symbol. The stamp must contain no state emblems, flags, coats of arms or political symbols, since it is a plain fictional technical department inspection stamp. Preserve all map geometry, all text, all colours, all aging, the 3:2 canvas dimensions and every other detail exactly. Flat game texture, no room or frame.",
+  "windowGrime": {
+    "asset": "Assets/Resources/ArtProduction/Textures/window-grime.png",
+    "source": "exec-13ecafe6-2337-445e-b547-fe572a2ed242.png",
+    "use": "Artistic linear dust/roughness mask. Window opacity remains a stable material value; weathering modifies reflected light and surface tint.",
+    "prompt": "A production game texture mask, monochrome grayscale, square 1:1, flat orthographic data texture for the accumulated dust, fine dried water streaks and faint greasy cleaning smears on an old institutional window pane. Black represents perfectly clean transparent glass, white represents opaque accumulated dust. Mostly very dark charcoal (80 percent clean glass); a faint highly detailed delicate mottled dust film in the middle with a few soft hand-cleaned patches, slightly more dust at the perimeter, subtle vertical dried raindrop trails and tiny mineral flecks. Quiet plausible realism, no cracks, no holes, no frame, no objects, no scenery, no writing, no reflections, no lighting, no baked highlight or shadow. The density must be subtle and natural rather than dramatic grunge. Seamless edges for tiling within window panes. Export-quality technical mask texture, high detail.",
+    "texturePreparation": {
+      "kind": "generated",
+      "key": "window-grime",
+      "channel": "mask",
+      "original": {
+        "path": "Art/ProductionSources/GeneratedGraphics/OriginalTextures/window-grime.png",
+        "bytes": 3475528,
+        "md5": "99ae234cb4f49ffff8666d81dd8653bb",
+        "sha256": "978a541861879c324ab8d67aea0bfe304f1b75233db6844349ac0df1a761d443",
+        "dimensions": [
+          1254,
+          1254
+        ]
+      },
+      "before": {
+        "path": "Assets/Resources/ArtProduction/Textures/window-grime.png",
+        "bytes": 3475528,
+        "md5": "99ae234cb4f49ffff8666d81dd8653bb",
+        "sha256": "978a541861879c324ab8d67aea0bfe304f1b75233db6844349ac0df1a761d443"
+      },
+      "derived": {
+        "path": "Assets/Resources/ArtProduction/Textures/window-grime.png",
+        "bytes": 487347,
+        "md5": "fa794bb92f98b22e2fd11a1487d5aa11",
+        "sha256": "9e570f2e9440ccdf43d6e09a3a39c48746bb57be5f174ad3eb1aed39d28cf9c3",
+        "dimensions": [
+          512,
+          512
+        ],
+        "channel": "mask",
+        "maximumDimension": 512,
+        "method": "linear data-channel Lanczos downsample",
+        "alpha": {
+          "present": false,
+          "mode": "OPAQUE"
+        }
+      },
+      "additionalDerivedCopies": [],
+      "sourceProvider": "image_gen",
+      "sourceUrl": null
+    }
+  },
+  "texturePreparation": {
+    "kind": "generated",
+    "key": "broadcast-network",
+    "channel": "albedo",
+    "original": {
+      "path": "Art/ProductionSources/GeneratedGraphics/OriginalTextures/broadcast-network-1988.png",
+      "bytes": 2810625,
+      "md5": "af394ecb24cbb751da5218a5f9d2f461",
+      "sha256": "242f50f1990cfb2919901e1eacc683cea253511d86c9fee8a945eee5e9e0ad15",
+      "dimensions": [
+        1536,
+        1024
+      ]
+    },
+    "before": {
+      "path": "Assets/ArtProduction/Graphics/broadcast-network-1988.png",
+      "bytes": 2810625,
+      "md5": "af394ecb24cbb751da5218a5f9d2f461",
+      "sha256": "242f50f1990cfb2919901e1eacc683cea253511d86c9fee8a945eee5e9e0ad15"
+    },
+    "derived": {
+      "path": "Assets/ArtProduction/Graphics/broadcast-network-1988.png",
+      "bytes": 1227525,
+      "md5": "160e8ca6f6945d8210ef09da0a021227",
+      "sha256": "08d32c490b93b573a51b67493a1bafc6536494efa235e37dd642509a9e27b7ca",
+      "dimensions": [
+        1024,
+        683
+      ],
+      "channel": "albedo",
+      "maximumDimension": 1024,
+      "method": "sRGB decode; linear-light Lanczos downsample; sRGB encode",
+      "alpha": {
+        "present": false,
+        "mode": "OPAQUE"
+      }
+    },
+    "additionalDerivedCopies": [],
+    "sourceProvider": "image_gen",
+    "sourceUrl": null
+  }
+}

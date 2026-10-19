@@ -19,6 +19,8 @@ namespace DeadAir.Editor
         static readonly Dictionary<string, Mesh> meshes = new Dictionary<string, Mesh>();
         static readonly Dictionary<string, GameObject> templates = new Dictionary<string, GameObject>();
         static readonly Dictionary<string, Transform> sectors = new Dictionary<string, Transform>();
+        static readonly List<KeyValuePair<Transform,string>> pendingBatches = new List<KeyValuePair<Transform,string>>();
+        static bool collectingAuthoringSources;
         static WorldData world;
         static GameObject station, exterior;
         static int meshSerial;
@@ -87,7 +89,8 @@ namespace DeadAir.Editor
             foreach (string folder in new[] { Folder, Library, Folder + "/Materials", Folder + "/Textures", Folder + "/Meshes" })
                 Directory.CreateDirectory(folder);
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
-            CacheFurniture();
+            DeadAirProductionProps.ClearCaches();DeadAirPeriodProps.ClearCaches();
+            templates.Clear();
             PrepareMaterials();
             signFont = Resources.Load<Font>("Fonts/IBMPlexMono-Regular");
             materials.Clear(); meshes.Clear(); sectors.Clear(); meshSerial = 0;
@@ -96,6 +99,7 @@ namespace DeadAir.Editor
             exterior = new GameObject("exterior");
             station.AddComponent<DeadAirOfficeLayout>();
             exterior.AddComponent<DeadAirOfficeLayout>();
+            pendingBatches.Clear();collectingAuthoringSources=true;
             try
             {
                 BuildShell();
@@ -112,6 +116,12 @@ namespace DeadAir.Editor
                 DeadAirSovietOfficeArt.Interiors(station.transform, world, Block, Sign, wood, metal, paper, trim, black);
                 BuildOfficeDressing();
                 BuildLighting();
+                DeadAirArtGeometryValidation.RequireFiniteAssembly(station.transform);
+                DeadAirArtGeometryValidation.RequireFiniteAssembly(exterior.transform);
+                DeadAirProductionCatalog.Save(world,station,exterior);
+                collectingAuthoringSources=false;
+                foreach(var batch in pendingBatches)BatchStaticGeometry(batch.Key,batch.Value);
+                pendingBatches.Clear();
                 BatchStaticGeometry(station.transform.Find("shell"), "station-shell");
                 BatchStaticGeometry(exterior.transform.Find("shell"), "exterior-shell");
                 foreach (var entry in sectors) BatchStaticGeometry(entry.Value, "room-" + Array.IndexOf(world.rooms,world.rooms.First(r=>SectorKey(r)==entry.Key)));
@@ -121,6 +131,7 @@ namespace DeadAir.Editor
             }
             finally
             {
+                collectingAuthoringSources=false;pendingBatches.Clear();
                 UnityEngine.Object.DestroyImmediate(station);
                 UnityEngine.Object.DestroyImmediate(exterior);
             }
@@ -131,6 +142,53 @@ namespace DeadAir.Editor
 
         // Map Builder can edit the saved records and regenerate their geometry without resetting any placement.
         public static void RebuildFromSavedData() => Build();
+
+        [MenuItem("Dead Air/Art Production/Rebake Runtime From Authored Worlds")]
+        public static void RebakeRuntimeFromAuthoring()
+        {
+            DeadAirPrecisionEquipment.RepairTelephoneReceiverMesh();
+            DeadAirArtGeometryValidation.ValidateGate();
+            world=WorldData.Load();
+            station=UnityEngine.Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Office/Authoring/World/station-source.prefab"));
+            exterior=UnityEngine.Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Office/Authoring/World/exterior-source.prefab"));
+            station.name="station";exterior.name="exterior";
+            collectingAuthoringSources=false;pendingBatches.Clear();sectors.Clear();
+            try
+            {
+                DeadAirArtGeometryValidation.RequireFiniteAssembly(station.transform);
+                DeadAirArtGeometryValidation.RequireFiniteAssembly(exterior.transform);
+                var consumed=new HashSet<Transform>();
+                foreach(var room in world.rooms)
+                {
+                    var parent=DeadAirOfficeLayout.IsInterior(room)?station.transform:exterior.transform;
+                    var sector=parent.Cast<Transform>().FirstOrDefault(t=>t.name=="sector:"+room.name&&!consumed.Contains(t));
+                    if(sector==null)throw new InvalidOperationException("Authored room sector is missing: "+SectorKey(room));
+                    consumed.Add(sector);sectors[SectorKey(room)]=sector;
+                }
+                BatchStaticGeometry(exterior.transform.Find("Beyond the fence"),"outside-background");
+                foreach(var van in exterior.GetComponentsInChildren<Transform>(true).Where(t=>t.name=="vehicle:crew-van").ToArray())
+                    BatchStaticGeometry(van,"crew-van");
+                BatchStaticGeometry(station.transform.Find("shell"),"station-shell");
+                BatchStaticGeometry(exterior.transform.Find("shell"),"exterior-shell");
+                foreach(var entry in sectors)
+                    BatchStaticGeometry(entry.Value,"room-"+Array.IndexOf(world.rooms,world.rooms.First(r=>SectorKey(r)==entry.Key)));
+                var inside=DeadAirArtGeometryValidation.RequireFiniteAssembly(station.transform);
+                var outside=DeadAirArtGeometryValidation.RequireFiniteAssembly(exterior.transform);
+                PrefabUtility.SaveAsPrefabAsset(station,"Assets/Resources/World/station.prefab");
+                PrefabUtility.SaveAsPrefabAsset(exterior,"Assets/Resources/World/exterior.prefab");
+                AssetDatabase.SaveAssets();
+                Debug.Log("AUTHORED WORLD REBAKE PASSED: finite derived meshes="+(inside.uniqueMeshes+outside.uniqueMeshes)+
+                    "; vertices="+(inside.vertices+outside.vertices)+"; authored placements and mesh GUID references retained.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(station);UnityEngine.Object.DestroyImmediate(exterior);sectors.Clear();
+            }
+            Validate();
+            DeadAirNavigationBake.BakeSavedPrefabs();
+            DeadAirEditorSetup.CreateScene();
+            DeadAirArtProductionBuilder.ValidateWorlds();
+        }
 
         [MenuItem("Dead Air/Refresh Generator Appearance")]
         public static void RefreshGeneratorAppearance()
@@ -395,7 +453,7 @@ namespace DeadAir.Editor
             wood.SetFloat("_Glossiness", .26f); doorWood.SetFloat("_Glossiness", .22f);
             floor.SetFloat("_Glossiness", .86f); floor.SetFloat("_PlanarReflection", 1);
             carpet.SetFloat("_Glossiness", .035f); ceilingPanel.SetFloat("_Glossiness", .08f);
-            BuildFloorSurfaceMaps();
+            // Production PBR maps already include the floor normal and finish response.
             string signPath=Folder+"/Materials/sign-font.mat";
             signLetters=AssetDatabase.LoadAssetAtPath<Material>(signPath);
             var signShader=Shader.Find("Dead Air/World Sign");
@@ -512,7 +570,29 @@ namespace DeadAir.Editor
             material.renderQueue = alpha<.99f ? 3000 : 2000;
             material.SetFloat("_FogEnabled",1); material.SetFloat("_Cutoff",0);
             material.SetColor("_EmissionColor",emission??Color.black);material.enableInstancing=true;
+            DeadAirArtMaterials.Apply(material,ProductionSurfaceKey(name));
+            material.color=new Color(Mathf.Lerp(.55f,1,color.r),Mathf.Lerp(.55f,1,color.g),Mathf.Lerp(.55f,1,color.b),alpha);
             EditorUtility.SetDirty(material);return material;
+        }
+
+        static string ProductionSurfaceKey(string name)
+        {
+            switch(name)
+            {
+                case "plaster":case "acoustic-ceiling":return "plaster";
+                case "brick":return "brick";
+                case "painted-trim":case "worn-sage-paint":return "painted-wall";
+                case "floor-tile":return "floor-tile";
+                case "office-carpet":return "fabric";
+                case "steel":return "steel";
+                case "wood":case "door-wood":return "wood";
+                case "aged-parquet":return "parquet";
+                case "asphalt":return "asphalt";
+                case "grass":return "foliage";
+                case "dark-window":return "glass";
+                case "dark-detail":return "rubber";
+                default:return "paper";
+            }
         }
 
         static Transform Group(Transform parent,string name)
@@ -1040,8 +1120,26 @@ namespace DeadAir.Editor
         static void Tree(Transform parent,float x,float z)
         {
             var t=Group(parent,"Courtyard birch");t.localPosition=DeadAirOfficeLayout.Position(x,-.03f,z);
-            Block(t,"Tree trunk",new Vector3(0,2.4f,0),new Vector3(.26f,4.8f,.26f),wood,false);
-            for(int i=0;i<3;i++)Block(t,"Tree crown",new Vector3((i-1)*.5f,4.6f+i*.75f,.15f*(i%2)),new Vector3(3.2f-i*.55f,1.6f,3.1f-i*.6f),grass,false);
+            int variant=Mathf.Abs(Mathf.RoundToInt(x*17+z*13))%3;float height=7.1f+variant*.55f,width=3.4f+variant*.18f;
+            string key=variant==1?"fir-tree":"pine-tree";
+            var scanned=DeadAirScannedModels.TryInstall(t,key,Vector3.zero,Quaternion.Euler(0,Mathf.Repeat(x*37+z*11,360),0),new Vector3(width,height,width));
+            if(scanned!=null)
+                foreach(var collider in scanned.GetComponentsInChildren<Collider>(true))UnityEngine.Object.DestroyImmediate(collider);
+            else
+            {
+                var bark=DeadAirArtMaterials.Create("Courtyard tree bark","bark",new Color(.8f,.79f,.73f),.08f);
+                DeadAirFurnitureMeshes.Install(t,"Tree trunk",DeadAirFurnitureMeshes.Turned(new[]{0f,1.7f,3.7f,height},new[]{.18f,.14f,.08f,.008f},20),Vector3.zero,bark);
+                for(int tier=0;tier<7;tier++)for(int branch=0;branch<7;branch++)
+                {
+                    float a=(branch*360f/7+tier*29)*Mathf.Deg2Rad,reach=width*.46f*(1-tier*.11f),y=1.8f+tier*.72f;
+                    var end=new Vector3(Mathf.Cos(a)*reach,y-.22f,Mathf.Sin(a)*reach);
+                    DeadAirFurnitureMeshes.Support(t,"Tapered conifer branch",new Vector3(0,y,0),end,.027f,.007f,bark);
+                    var crown=DeadAirFurnitureMeshes.Install(t,"Curved evergreen spray",DeadAirFurnitureMeshes.Leaf(),end,grass);
+                    crown.transform.localRotation=Quaternion.Euler(52,90-a*Mathf.Rad2Deg,0);crown.transform.localScale=new Vector3(.62f,1,.84f);
+                }
+            }
+            var collision=Group(t,"Tree trunk collision");var capsule=collision.gameObject.AddComponent<CapsuleCollider>();
+            capsule.center=new Vector3(0,2.25f,0);capsule.height=4.5f;capsule.radius=.17f;capsule.direction=1;
         }
 
         static void BuildBeyondFence()
@@ -1300,11 +1398,14 @@ namespace DeadAir.Editor
         {
             if(p.type=="locker")return; // The animated locker is generated once from LockerData.
             var root=PropRoot(p);
+            if(DeadAirProductionArtOverrides.TryBuild(root,p))return;
             if(p.type=="van")
             {
                 DeadAirModernVanBuilder.Build(root,p,Sign,BatchStaticGeometry);
                 return;
             }
+            if(DeadAirScannedPropLibrary.TryBuild(root,p))return;
+            if(DeadAirProductionProps.TryBuild(root,p,Sign,(t,n,at,range,intensity,color)=>{Practical(t,n,at,range,intensity,color);},GeneratorServiceLamp))return;
             if(DeadAirPeriodProps.TryBuild(root,p,Block,Sign,wood,trim,metal,paper,black,darkScreen))return;
             bool generated=p.type=="table"||p.type=="archivistDesk"||p.type=="workstation"||p.type=="chair"||p.type=="shelf"||p.type=="cardCatalog"||p.type=="serverRack"||p.type=="crt"||
                 p.type=="dieselGenerator"||p.type=="fusePanel"||p.type=="monitorWall"||p.type=="mixingConsole"||p.type=="anchorDesk";
@@ -1596,7 +1697,8 @@ namespace DeadAir.Editor
             foreach(float x in new[]{-.06f,.06f})
             {
                 Block(pivot,"Door handle plate",new Vector3(x,1.17f,width-.28f),new Vector3(.016f,.28f,.07f),metal,false);
-                Block(pivot,"Door handle",new Vector3(x*1.6f,1.17f,width-.28f),new Vector3(.06f,.035f,.18f),metal,false);
+                var handle=Group(pivot,"motion:doorHandle");handle.localPosition=new Vector3(x*1.6f,1.17f,width-.35f);
+                DeadAirFurnitureMeshes.Install(handle,"Door handle",DeadAirFurnitureMeshes.RoundedBox(new Vector3(.06f,.035f,.18f),.012f,.006f),new Vector3(0,0,.07f),metal);
             }
             float ledFace=d.id=="door-front"||d.id=="door-rear"?.204f:.140f;
             var led=Block(casing,"door-led:"+d.id,new Vector3(ledFace,1.48f,-width/2-.28f),new Vector3(.055f,.07f,.12f),lightSurface,false);
@@ -1618,6 +1720,8 @@ namespace DeadAir.Editor
         {
             var root=Group(Sector(l.x,l.y,l.z),"interactive:"+l.id);
             root.localPosition=DeadAirOfficeLayout.Position(l.x,l.y,l.z);root.localRotation=DeadAirOfficeLayout.Rotation(l.ry);
+            var specification=world.props.FirstOrDefault(p=>p.id==l.id);
+            if(specification!=null&&DeadAirProductionArtOverrides.TryBuild(root,specification))return;
             const float w=1.12f,d=.95f,h=2.18f;
             Block(root,"Locker back",new Vector3(0,h/2,-d/2),new Vector3(w,h,.055f),metal,true);
             foreach(float x in new[]{-w/2,w/2})Block(root,"Locker side",new Vector3(x,h/2,0),new Vector3(.055f,h,d),metal,true);
@@ -1722,7 +1826,10 @@ namespace DeadAir.Editor
                     Block(root,"Valve housing",new Vector3(0,0,-.08f),new Vector3(.4f,.4f,.16f),metal,false);
                     Block(root,"Wall-mounted pressure pipe",new Vector3(0,0,-.12f),new Vector3(.10f,2.2f,.10f),metal,false);
                     foreach(float y in new[]{-.80f,.80f})Block(root,"Pressure pipe wall bracket",new Vector3(0,y,-.15f),new Vector3(.30f,.07f,.18f),metal,false);
-                    for(int i=0;i<8;i++){float a=i*Mathf.PI/4;Block(root,"Valve wheel",new Vector3(Mathf.Sin(a)*.23f,Mathf.Cos(a)*.23f,.07f),new Vector3(.12f,.12f,.06f),trim,false);}break;
+                    var wheel=Group(root,"motion:pressureValveWheel");wheel.localPosition=new Vector3(0,0,.07f);
+                    var rim=DeadAirFurnitureMeshes.Install(wheel,"Pressure valve circular handwheel",DeadAirFurnitureMeshes.Ring(.23f,.024f),Vector3.zero,trim);
+                    rim.transform.localRotation=Quaternion.Euler(90,0,0);
+                    for(int i=0;i<3;i++){float a=i*Mathf.PI*2/3;DeadAirFurnitureMeshes.Support(wheel,"Valve wheel spoke",Vector3.zero,new Vector3(Mathf.Sin(a)*.23f,Mathf.Cos(a)*.23f,0),.014f,.014f,metal);}break;
                 case "power":
                     root.localRotation=Quaternion.Euler(0,0,0);
                     Block(root,"Power control cabinet",new Vector3(0,.10f,0),new Vector3(1,1.25f,.22f),metal,true);
@@ -1914,7 +2021,7 @@ namespace DeadAir.Editor
             {
                 if(t.name.StartsWith("vehicle:")||t.name.StartsWith("interactive:")||t.name.StartsWith("door:")||t.name.StartsWith("door-led:")||
                    t.name.StartsWith("locker-door:")||t.name.StartsWith("drawer:")||t.name.StartsWith("state:")||t.name.StartsWith("fan:")||t.name.StartsWith("monitor:")||
-                   t.name.StartsWith("headlamp-lens:")||t.name.StartsWith("Cobweb:")) return true;
+                   t.name.StartsWith("headlamp-lens:")||t.name.StartsWith("motion:")||t.name.StartsWith("mirror:")||t.name.StartsWith("Cobweb:")) return true;
                 t=t.parent;
             }
             return false;
@@ -1938,8 +2045,10 @@ namespace DeadAir.Editor
         static void BatchStaticGeometry(Transform parent,string groupId)
         {
             if(parent==null)return;
+            if(collectingAuthoringSources){pendingBatches.Add(new KeyValuePair<Transform,string>(parent,groupId));return;}
             var sources=parent.GetComponentsInChildren<MeshRenderer>(true).Where(r=>r.gameObject.activeInHierarchy&&
                 r.GetComponent<TextMesh>()==null&&r.TryGetComponent<MeshFilter>(out var filter)&&filter.sharedMesh!=null&&
+                r.GetComponentInParent<LODGroup>()==null&&
                 !AnimatedAncestor(r.transform,parent)&&r.sharedMaterials.All(m=>m==null||m.renderQueue<2500)).ToArray();
             bool spatial=groupId.EndsWith("shell",StringComparison.Ordinal);
             var groups=new Dictionary<(Material material,int x,int y,int z),List<CombineInstance>>();

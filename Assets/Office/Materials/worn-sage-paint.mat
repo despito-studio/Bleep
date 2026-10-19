@@ -12,7 +12,8 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords: []
+  m_InvalidKeywords:
+  - _NORMALMAP
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
@@ -24,7 +25,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _BumpMap:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: 183471e44dcd8f04bb2ef8fe2e9e23de, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _EmissionMap:
@@ -32,7 +33,15 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: f499030783e0ce44b82e61706305f539, type: 3}
+        m_Texture: {fileID: 2800000, guid: 1156d0c1abbcbf142ae59facc2033723, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MaskMap:
+        m_Texture: {fileID: 2800000, guid: 7d837ff16db2500488487fd3e811da6c, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SnowTex:
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _SurfaceMap:
@@ -41,17 +50,27 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _BumpScale: 0.8
     - _Cull: 2
     - _Cutoff: 0
     - _DstBlend: 0
     - _Glossiness: 0.1
+    - _MaskMapEnabled: 1
     - _Metallic: 0
+    - _MetallicMapStrength: 1
+    - _OcclusionStrength: 0.85
     - _PlanarReflection: 0
+    - _RoughnessFactor: 1
+    - _SnowCover: 0
     - _SrcBlend: 1
     - _ZTest: 4
     - _ZWrite: 1
     m_Colors:
-    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _Color: {r: 0.6625, g: 0.7075, b: 0.68050003, a: 1}
+    - _DeadAirOwnerBodyClearance: {r: 0.06, g: 0.04, b: 0, a: 0.12}
+    - _DeadAirOwnerBodyEye: {r: 0, g: 0, b: 0, a: 0}
+    - _DeadAirOwnerBodyForward: {r: 0, g: 0, b: 1, a: 0}
+    - _DeadAirOwnerBodyUp: {r: 0, g: 1, b: 0, a: 0}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

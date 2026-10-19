@@ -30,6 +30,7 @@ namespace DeadAir
         Camera originalCanvasCamera;
         float originalCanvasPlane;
         bool originalWorldEnabled, originalOutputEnabled;
+        bool automaticProbeProgress;
         int originalWorldMask;
         CameraClearFlags originalClearFlags;
         readonly Dictionary<GameObject, int> originalUILayers = new Dictionary<GameObject, int>();
@@ -37,8 +38,25 @@ namespace DeadAir
         readonly List<string> checks = new List<string>();
         readonly List<string> frames = new List<string>();
         readonly List<string> errors = new List<string>();
+        readonly HashSet<string> reflectionChapters = new HashSet<string>();
+        readonly ProbeReport probeReport = new ProbeReport();
+        [Serializable] sealed class ProbeReport
+        {
+            public bool processOnlyReflectionOverride, savedPreferenceBefore, savedPreferenceAfter, savedPreferenceUnchanged;
+            public List<ProbeRecord> captures = new List<ProbeRecord>();
+        }
+        [Serializable] sealed class ProbeRecord
+        {
+            public string chapter, frame, outcome;
+            public bool reflectionsEnabled;
+            public bool automaticCameraProgressUsed;
+            public int automaticWorldCameraFrames;
+            public float waitSeconds;
+            public DeadAirArtReflectionProbes.RuntimeDiagnostic actual;
+        }
         float startedAt;
         bool finished;
+        bool savedReflectionKeyBefore;
 
         public static bool IsRequested => Array.IndexOf(Environment.GetCommandLineArgs(), Argument) >= 0;
 
@@ -58,6 +76,9 @@ namespace DeadAir
             capture.output = args[argument + 1];
             Directory.CreateDirectory(capture.output);
             capture.startedAt = Time.realtimeSinceStartup;
+            capture.savedReflectionKeyBefore = PlayerPrefs.HasKey("DeadAir.Reflections");
+            capture.probeReport.savedPreferenceBefore = PlayerPrefs.GetInt("DeadAir.Reflections", 1) != 0;
+            capture.probeReport.processOnlyReflectionOverride = DeadAirSettings.ArtReviewReflectionsOverride;
             Application.logMessageReceived += capture.ObserveLog;
             capture.StartCoroutine(capture.Guard(capture.Run()));
         }
@@ -135,6 +156,13 @@ namespace DeadAir
         void LateUpdate()
         {
             if (finished || captureFrame == null) return;
+            if (automaticProbeProgress)
+            {
+                frameRenderer.EnsureTargets();
+                captureWorld.PrepareRender(player.ViewCamera);
+                captureFarmyard?.PrepareOwnerCarry(player.ViewCamera);
+                return;
+            }
             try { RenderOffscreen(); }
             catch (Exception error) { Finish(false, "GPU review rendering failed: " + error); }
         }
@@ -394,6 +422,8 @@ namespace DeadAir
         IEnumerator Save(string name)
         {
             yield return new WaitForSecondsRealtime(.75f);
+            string chapter = session.State.chapterId ?? "blackpine";
+            if (reflectionChapters.Add(chapter)) yield return ObserveRuntimeProbes(chapter, name);
             for (int i = 0; i < 3; i++) yield return null;
             RenderOffscreen();
             string path = Path.Combine(output, name + ".png");
@@ -409,6 +439,47 @@ namespace DeadAir
             ValidatePixels(name, readback);
             frames.Add(name + ".png");
             Debug.Log("BLACKPINE REVIEW FRAME: " + path);
+        }
+
+        IEnumerator ObserveRuntimeProbes(string chapter, string frame)
+        {
+            float began = Time.realtimeSinceStartup;
+            var record = new ProbeRecord { chapter = chapter, frame = frame, reflectionsEnabled = DeadAirSettings.Reflections };
+            if (record.reflectionsEnabled)
+            {
+                var view = player.ViewCamera;
+                bool previousEnabled = view.enabled;
+                Camera.CameraCallback countAutomaticFrame = camera => { if (camera == view) record.automaticWorldCameraFrames++; };
+                try
+                {
+                    automaticProbeProgress = true; record.automaticCameraProgressUsed = true;
+                    Camera.onPostRender += countAutomaticFrame;
+                    view.enabled = true;
+                    do
+                    {
+                        foreach (var probes in FindObjectsByType<DeadAirArtReflectionProbes>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+                        {
+                            var diagnostic = probes.GetRuntimeDiagnostic();
+                            if (diagnostic.activeRealtimeProbes > 0) { record.actual = diagnostic; break; }
+                        }
+                        if (record.actual.completedRealtimeProbes > 0 && record.actual.renderedFaceCallbacks > 0) break;
+                        yield return null;
+                    } while (Time.realtimeSinceStartup - began < 8);
+                }
+                finally
+                {
+                    view.enabled = previousEnabled;
+                    Camera.onPostRender -= countAutomaticFrame;
+                    automaticProbeProgress = false;
+                }
+                record.outcome = record.actual.completedRealtimeProbes > 0 && record.actual.renderedFaceCallbacks > 0
+                    ? "completed realtime probe observed" : "not observed within 8 seconds; runtime probe validation incomplete";
+                Require(record.actual.allocatedProbes <= 2 && record.actual.maximumResolution <= 128,
+                    "The active chapter respects the two-probe 128px maximum runtime budget.");
+            }
+            else record.outcome = "skipped: player reflection preference is disabled";
+            record.waitSeconds = Time.realtimeSinceStartup - began; probeReport.captures.Add(record);
+            checks.Add("ACTUAL LOCAL REFLECTION DIAGNOSTIC: " + JsonUtility.ToJson(record));
         }
 
         void ValidatePixels(string name, Texture2D image)
@@ -488,6 +559,12 @@ namespace DeadAir
             report.AppendLine("Unity " + Application.unityVersion + "; " + SystemInfo.graphicsDeviceName + "; LAN protocol " + DeadAirSession.NetworkProtocol);
             report.AppendLine("Elapsed seconds: " + (Time.realtimeSinceStartup - startedAt).ToString("F1"));
             report.AppendLine("Fixture scope: real TCP commands/snapshots with staged positions/prerequisites, then staged visual review. No full physical walkthrough claimed.");
+            probeReport.savedPreferenceAfter = PlayerPrefs.GetInt("DeadAir.Reflections", 1) != 0;
+            probeReport.savedPreferenceUnchanged = probeReport.savedPreferenceBefore == probeReport.savedPreferenceAfter &&
+                savedReflectionKeyBefore == PlayerPrefs.HasKey("DeadAir.Reflections");
+            report.AppendLine("Process-only reflection override: " + probeReport.processOnlyReflectionOverride +
+                "; saved reflection preference before/after: " + probeReport.savedPreferenceBefore + "/" + probeReport.savedPreferenceAfter +
+                "; saved preference unchanged: " + probeReport.savedPreferenceUnchanged + ". The capture driver writes no PlayerPrefs.");
             foreach (var check in checks) report.AppendLine(check);
             report.AppendLine("Rendered images: " + frames.Count);
             foreach (var frame in frames) report.AppendLine(frame);
@@ -495,6 +572,7 @@ namespace DeadAir
             if (!string.IsNullOrEmpty(failure)) report.AppendLine("FAILURE: " + failure);
             File.WriteAllText(Path.Combine(output, "blackpine-runtime-report.txt"), report.ToString());
             File.WriteAllText(Path.Combine(output, "blackpine-runtime-errors.txt"), string.Join("\n\n", errors));
+            File.WriteAllText(Path.Combine(output, "blackpine-runtime-probes.json"), JsonUtility.ToJson(probeReport, true));
             Debug.Log(success ? "BLACKPINE RUNTIME CAPTURE PASSED: " + output : "BLACKPINE RUNTIME CAPTURE FAILED: " + failure);
             Application.Quit(success ? 0 : 1);
         }

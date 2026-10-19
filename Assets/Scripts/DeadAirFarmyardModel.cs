@@ -22,6 +22,9 @@ namespace DeadAir
         Material material;
         string sampledClip;
         int sampledFrame = -1;
+        float sampledBlend = -1;
+        Vector3[] blendedPositions, blendedNormals, transitionPositions, transitionNormals;
+        float previousClock, transitionAge = .16f;
 
         public static DeadAirFarmyardModel Load(string resource, Transform parent, string name)
         {
@@ -62,7 +65,11 @@ namespace DeadAir
                     clips.Add(clip.name, clip);
                 }
                 mesh = new Mesh { name = "CC0 " + resource + " / sampled skeletal mesh" };
+                blendedPositions = new Vector3[vertexCount]; blendedNormals = new Vector3[vertexCount];
+                transitionPositions = new Vector3[vertexCount]; transitionNormals = new Vector3[vertexCount];
                 mesh.MarkDynamic(); mesh.vertices = clips["idle"].positions[0]; mesh.normals = clips["idle"].normals[0];
+                Array.Copy(clips["idle"].positions[0], blendedPositions, vertexCount);
+                Array.Copy(clips["idle"].normals[0], blendedNormals, vertexCount);
                 mesh.uv = uv; mesh.triangles = triangles;
                 // Include every authored pose once; avoid per-frame bounds scans and clipping horns/wings.
                 var bounds = new Bounds(Vector3.zero, Vector3.one * .01f);
@@ -87,11 +94,30 @@ namespace DeadAir
         public void Sample(string name, float clock)
         {
             if (mesh == null || !clips.TryGetValue(name, out var clip)) return;
-            // Quantising to 24fps preserves the authored motion with negligible mesh upload cost.
-            int f = Mathf.FloorToInt(Mathf.Repeat(clock * clip.fps, clip.positions.Length));
-            if (sampledClip == name && sampledFrame == f) return;
-            sampledClip = name; sampledFrame = f;
-            mesh.vertices = clip.positions[f]; mesh.normals = clip.normals[f];
+            float frame = Mathf.Repeat(clock * clip.fps, clip.positions.Length);
+            int f = Mathf.FloorToInt(frame), next = (f + 1) % clip.positions.Length;
+            float blend = frame - f;
+            bool changedClip = sampledClip != name;
+            if (!changedClip && sampledFrame == f && Mathf.Abs(sampledBlend - blend) < .0001f) return;
+            if (changedClip)
+            {
+                Array.Copy(blendedPositions, transitionPositions, blendedPositions.Length);
+                Array.Copy(blendedNormals, transitionNormals, blendedNormals.Length);
+                transitionAge = sampledClip == null ? .16f : 0;
+            }
+            float step = Mathf.Clamp(clock - previousClock, 0, .05f);
+            previousClock = clock;
+            transitionAge = Mathf.Min(.16f, transitionAge + step);
+            float transition = DeadAirArtMotion.Ease(transitionAge / .16f);
+            for (int i = 0; i < blendedPositions.Length; i++)
+            {
+                var position = Vector3.LerpUnclamped(clip.positions[f][i], clip.positions[next][i], blend);
+                var normal = Vector3.LerpUnclamped(clip.normals[f][i], clip.normals[next][i], blend).normalized;
+                blendedPositions[i] = transition < 1 ? Vector3.LerpUnclamped(transitionPositions[i], position, transition) : position;
+                blendedNormals[i] = transition < 1 ? Vector3.LerpUnclamped(transitionNormals[i], normal, transition).normalized : normal;
+            }
+            sampledClip = name; sampledFrame = f; sampledBlend = blend;
+            mesh.vertices = blendedPositions; mesh.normals = blendedNormals;
         }
 
         void OnDestroy()

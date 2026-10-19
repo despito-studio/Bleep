@@ -297,9 +297,15 @@ namespace DeadAir.Editor
                 {update.Invoke(host,null);update.Invoke(guest,null);System.Threading.Thread.Sleep(15);}
                 if(host.State.Player(id).cigarettesRemaining!=11||guest.State.Player(id).cigarettesRemaining!=11)
                     throw new Exception("LAN role action must consume one cigarette on both peers.");
+                host.State.elapsed=Mathf.Max(host.State.elapsed,DeadAirVanPresentation.ArrivalDuration+.01f);
+                typeof(DeadAirSession).GetMethod("Publish",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(host,null);
+                for(int i=0;i<100&&guest.State.elapsed<DeadAirVanPresentation.ArrivalDuration;i++)
+                {update.Invoke(host,null);update.Invoke(guest,null);System.Threading.Thread.Sleep(15);}
+                if(guest.State.elapsed<DeadAirVanPresentation.ArrivalDuration)
+                    throw new Exception("LAN post-arrival movement precondition was not replicated.");
                 var before = host.State.Player(id);
                 float startZ = before.z;
-                guest.Command(new NetPacket { type = "move", x = before.x, z = startZ + .5f,
+                guest.Command(new NetPacket { type = "move", x = before.x, y = before.y, z = startZ + .5f,
                     yaw = 0, flashlight = true,moveSequence=1 });
                 for (int i = 0; i < 100 && host.State.Player(id).z < startZ + .4f; i++)
                 {

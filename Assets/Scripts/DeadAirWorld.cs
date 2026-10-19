@@ -23,12 +23,13 @@ namespace DeadAir
         readonly Dictionary<string, Renderer> doorLeds = new Dictionary<string, Renderer>();
         readonly Dictionary<string, Light> doorLights = new Dictionary<string, Light>();
         readonly Dictionary<string, byte> doorTintStates = new Dictionary<string, byte>();
-        readonly List<Transform> fans = new List<Transform>();
+        readonly DeadAirArtMotion artMotion;
         readonly List<Renderer> monitors = new List<Renderer>();
         readonly List<Practical> lamps = new List<Practical>();
         readonly GameObject anchor, bloodyAnchor;
         readonly DeadAirMonsterMotion anchorMotion, bloodyAnchorMotion;
         readonly Dictionary<string, GameObject> droppedViews = new Dictionary<string, GameObject>();
+        readonly Dictionary<string, float> droppedRestHeights = new Dictionary<string, float>();
         readonly HashSet<string> activeDropped = new HashSet<string>();
         readonly List<string> droppedToRemove = new List<string>();
         bool lastPower, lastBroadcast, lastBreaker, lastIntercepted;
@@ -39,6 +40,7 @@ namespace DeadAir
         readonly Material interiorLampMaterial;
         readonly DeadAirSky sky;
         readonly DeadAirCulling culling;
+        readonly DeadAirArtReflectionProbes artReflectionProbes;
         Camera renderCamera;
         DeadAirSchoolWorld schoolWorld;
         GameObject tekeTekeObject;
@@ -68,7 +70,7 @@ namespace DeadAir
             ambientProbe.AddAmbientLight(new Color(.024f,.034f,.056f));
             RenderSettings.ambientIntensity=1;
             RenderSettings.ambientProbe=ambientProbe;
-            RenderSettings.reflectionIntensity = 0;
+            RenderSettings.reflectionIntensity = 1;
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.ExponentialSquared;
             ColorUtility.TryParseHtmlString("#101621",out var night);
@@ -141,7 +143,7 @@ namespace DeadAir
                 else if(t.name.StartsWith("door-light:")) doorLights[t.name.Substring(11)] = t.GetComponent<Light>();
                 else if(t.name.StartsWith("state:")) { stateViews[t.name.Substring(6)] = t; dynamicRoots.Add(t); }
                 else if(t.name == "window-director-glass") { windowDirectorGlass = t.gameObject; dynamicRoots.Add(t); }
-                else if(t.name.StartsWith("fan:")) { fans.Add(t); dynamicRoots.Add(t); }
+                else if(t.name.StartsWith("fan:") || t.name.StartsWith("motion:") || t.name.StartsWith("mirror:") || t.GetComponent<DeadAirArtMotionRotor>() != null || t.GetComponent<DeadAirArtMotionSlidingLeaf>() != null) dynamicRoots.Add(t);
                 else if(t.name.StartsWith("monitor:")) monitors.Add(t.GetComponent<Renderer>());
                 else if(t.name.StartsWith("lamp:"))
                 {
@@ -151,6 +153,8 @@ namespace DeadAir
                 }
             }
             drawerPresentation = new DeadAirDrawerPresentation(root, data);
+            artMotion = DeadAirArtMotion.Attach(root);
+            artReflectionProbes = DeadAirArtReflectionProbes.Attach(root, data);
             vanPresentation=DeadAirVanPresentation.Attach(root,data);
             if (interactables.TryGetValue("key-main", out var directorKey))
                 foreach (var part in root.GetComponentsInChildren<Transform>(true))
@@ -598,7 +602,6 @@ namespace DeadAir
                 if(!DeadAirChapters.IsChapter2(state.chapterId) && (obj.id=="fuel-canister-2"||obj.id=="fuel-canister-3"||obj.id=="pressure-valve"))
                 { view.gameObject.SetActive(false); continue; }
                 if(obj.type=="tape"||obj.type=="fuse"||obj.type=="keycard"||obj.type=="key"||obj.type=="ladder"||obj.type=="canister")view.gameObject.SetActive(!state.Collected(obj.id));
-                if(obj.id=="pressure-valve")view.localRotation=interactionRotations[obj.id]*Quaternion.Euler(0,0,state.valveOpened?180:0);
             }
             bool flicker=DeadAirSettings.Flicker;
             bool intercepted = !DeadAirChapters.IsChapter2(state.chapterId) && state.blackpine != null && state.blackpine.intercepted;
@@ -625,10 +628,7 @@ namespace DeadAir
                 if(lamp.appliedIntensity!=intensity)
                 { lamp.light.intensity=intensity;lamp.appliedIntensity=intensity; }
             }
-            if(state.power && state.breakerOn)
-                foreach(var fan in fans)fan.Rotate(0,0,-Time.deltaTime*14*Mathf.Rad2Deg,Space.Self);
-            if(stateViews.TryGetValue("powerLever",out var lever))lever.localRotation=Quaternion.Euler(0,0,-(state.power?-.7f:.55f)*Mathf.Rad2Deg);
-            if(stateViews.TryGetValue("breakerHandle",out var breakerH))breakerH.localRotation=Quaternion.Euler(-(state.breakerOn?45f:-45f),0,0);
+            artMotion.Apply(state, animationDelta);
             drawerPresentation.Apply(state, animationDelta);
             if(stateViews.TryGetValue("placedLadder",out var ladderView))ladderView.gameObject.SetActive(state.ladderPlaced);
             directorWindow.Apply(state.windowBroken, animationDelta);
@@ -716,6 +716,7 @@ namespace DeadAir
                 renderCamera=cam;
                 sky?.UpdatePosition(cam.transform.position);
                 if (!isCh2) culling?.Update(state,cam);
+                artReflectionProbes?.Present(state, cam, !isCh2);
             }
         }
 
@@ -747,10 +748,11 @@ namespace DeadAir
                     {
                         view = CreateDroppedView(item);
                         droppedViews[item.id] = view;
+                        if (view != null) droppedRestHeights[item.id] = DeadAirArtMotionProps.RestingHeight(view.transform);
                     }
                     if (view != null)
                     {
-                        view.transform.position = new Vector3(-item.x, item.y + 0.15f, item.z);
+                        view.transform.position = new Vector3(-item.x, item.y + (droppedRestHeights.TryGetValue(item.id, out var height) ? height : .025f), item.z);
                     }
                 }
             }
@@ -767,6 +769,7 @@ namespace DeadAir
                     UnityEngine.Object.Destroy(view);
                 }
                 droppedViews.Remove(id);
+                droppedRestHeights.Remove(id);
             }
         }
 
@@ -776,19 +779,17 @@ namespace DeadAir
             GameObject view = null;
             if (type == "flashlight")
             {
-                view = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                view = DeadAirArtMotionProps.Flashlight(root);
                 view.name = "dropped_flashlight_" + item.id;
-                view.transform.SetParent(root, false);
-                view.transform.localScale = new Vector3(0.08f, 0.16f, 0.08f);
-                view.transform.rotation = Quaternion.Euler(0, UnityEngine.Random.Range(0, 360), 90);
-                var ren = view.GetComponent<Renderer>();
-                if (ren != null) ren.material.color = new Color(0.18f, 0.18f, 0.18f);
+                int orientation = 0;
+                foreach (char letter in item.id) orientation = (orientation * 31 + letter) & 0x7fffffff;
+                view.transform.rotation = Quaternion.Euler(0, orientation % 360, 0);
                 var lightObj = new GameObject("dropped_light");
                 lightObj.transform.SetParent(view.transform, false);
                 var l = lightObj.AddComponent<Light>();
                 l.enabled = false;
-                lightObj.transform.localPosition=new Vector3(0,1.05f,0);
-                lightObj.transform.localRotation=Quaternion.Euler(-90,0,0);
+                lightObj.transform.localPosition=new Vector3(0,0,.173f);
+                lightObj.transform.localRotation=Quaternion.identity;
                 l.type = LightType.Spot;
                 l.range = 15;
                 l.cullingMask = ~((1 << 28) | (1 << 29) | (1 << 30));

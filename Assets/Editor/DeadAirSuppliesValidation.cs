@@ -26,6 +26,7 @@ namespace DeadAir.Editor
         {
             var rules = new DeadAirRules(world, "host", "Supply validation", "engineer", solo, true);
             Require(rules.Start("host") == null, "Could not start the round.");
+            rules.State.elapsed = DeadAirVanPresentation.ArrivalDuration + 1;
             return rules;
         }
 

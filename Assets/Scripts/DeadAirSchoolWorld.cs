@@ -6,7 +6,7 @@ using UnityEngine.Rendering;
 
 namespace DeadAir
 {
-	public sealed class DeadAirSchoolWorld
+	public sealed partial class DeadAirSchoolWorld
 	{
 		private struct PickupPlacement
 		{
@@ -109,9 +109,7 @@ namespace DeadAir
 
 		private readonly WorldData data;
 
-		private static Mesh boxMesh;
 
-		private static Mesh cylinderMesh;
 
 		private readonly List<FlickeringLamp> lamps = new List<FlickeringLamp>();
 
@@ -122,6 +120,7 @@ namespace DeadAir
 		private readonly MaterialPropertyBlock lampPropertyBlock = new MaterialPropertyBlock();
 
 		private Camera viewCamera;
+        private DeadAirArtReflectionProbes artReflectionProbes;
 
 		private float nextLightUpdate;
 
@@ -349,7 +348,14 @@ namespace DeadAir
 		{
 			Transform transform = new GameObject("Mapped Classroom " + label).transform;
 			transform.SetParent(parent, worldPositionStays: false);
-			CreateBox(transform, new Vector3(centerX, floorY + 2f, centerZ + 4f), new Vector3(6f, 1.45f, 0.08f), matChalkboard, addCollider: false, "Lesson Board");
+			bool broadRearRoom = centerZ < -22f;
+            float teachingSide = ClassroomTeachingSideX(centerX, centerZ);
+            BuildTeachingWall(transform, broadRearRoom ? new Vector3(centerX, floorY, centerZ + 4.78f) : new Vector3(teachingSide, floorY, centerZ), broadRearRoom ? 180f : 90f);
+            if (!broadRearRoom)
+            {
+                Transform teachingDesk = BuildWorktable(transform, new Vector3(teachingSide + 1.35f, floorY + .45f, centerZ), new Vector3(1.25f, .9f, .7f), matDeskWood, "Teacher teaching desk", true);
+                teachingDesk.localRotation = Quaternion.Euler(0f, 90f, 0f);
+            }
 			CreateBox(transform, new Vector3(centerX, floorY + 0.9f, centerZ + 2.7f), new Vector3(1.7f, 0.7f, 0.8f), matDeskWood, addCollider: true, "Teacher Desk");
 			if (centerZ != -17.75f)
 			{
@@ -367,17 +373,7 @@ namespace DeadAir
 				{
 					float x2 = centerX + (float)(k - 1) * 2.25f;
 					float z = centerZ + 0.6f - (float)j * 2.1f;
-					Transform transform2 = new GameObject("Student Desk").transform;
-					transform2.SetParent(transform, worldPositionStays: false);
-					transform2.localPosition = new Vector3(x2, floorY, z);
-					transform2.localRotation = Quaternion.Euler(0f, ((seed + j + k) % 5 == 0) ? 9f : 0f, 0f);
-					CreateBox(transform2, new Vector3(0f, 0.52f, 0f), new Vector3(0.85f, 1.04f, 0.48f), matDarkMetal, addCollider: true, "Desk Base");
-					CreateBox(transform2, new Vector3(0f, 1.05f, 0f), new Vector3(0.98f, 0.08f, 0.62f), matDeskWood, addCollider: false, "Desk Top");
-					CreateBox(transform2, new Vector3(0f, 0.46f, -0.78f), new Vector3(0.6f, 0.9f, 0.45f), matDeskWood, addCollider: true, "Chair");
-					if ((seed + j + k) % 3 == 0)
-					{
-						CreateBox(transform2, new Vector3(0.1f, 1.1f, 0f), new Vector3(0.35f, 0.02f, 0.27f), matPaper, addCollider: false, "Notebook");
-					}
+                    BuildAuthenticDesk(transform, new Vector3(x2, floorY, z), (broadRearRoom ? 180f : 90f) + (((seed + j + k) % 5 == 0) ? 9f : 0f), false, false);
 				}
 			}
 			CreateBox(transform, new Vector3(centerX - 3.5f, floorY + 1.7f, centerZ - 4.38f), new Vector3(0.7f, 0.9f, 0.05f), matPaper, addCollider: false, "Class Timetable");
@@ -391,6 +387,8 @@ namespace DeadAir
 			Material mat = CreateMat("CourtLinePaint", matWhite.shader, new Color(0.91f, 0.91f, 0.82f), 0.12f);
 			Material mat2 = CreateMat("CourtWeatheredBlue", matAsphalt.shader, new Color(0.19f, 0.3f, 0.37f), 0.18f);
 			Material mat3 = CreateMat("PlaygroundRubber", matAsphalt.shader, new Color(0.28f, 0.22f, 0.18f), 0.08f);
+            DeadAirArtMaterials.Apply(mat2, "asphalt");
+            DeadAirArtMaterials.Apply(mat3, "rubber");
 			CreateBox(transform, new Vector3(0f, 0.03f, -43.8f), new Vector3(5.2f, 0.06f, 3.6f), matStone, addCollider: false, "Rear Exit Walkway");
 			CreateBox(transform, new Vector3(0f, 0.32f, -43.15f), new Vector3(2.25f, 0.12f, 3f), matConcrete, addCollider: true, "Rear Exit Accessible Ramp").transform.localRotation = Quaternion.Euler(9.5f, 0f, 0f);
 			CreateBox(transform, new Vector3(0f, 0.015f, -55f), new Vector3(28f, 0.03f, 19f), mat2, addCollider: false, "Basketball Court Surface");
@@ -509,6 +507,13 @@ namespace DeadAir
 
 		private void BuildPlaygroundBench(Transform parent, Vector3 pos, float yaw)
 		{
+            GameObject scanned = DeadAirSchoolPhysics.InstallScanned(parent, "wooden-bench", pos, Quaternion.Euler(0f, yaw, 0f), new Vector3(2.5f, .49f, 0.6f));
+            if (scanned != null)
+            {
+                AddCollisionProxy(scanned.transform, new Vector3(0f, 0.45f, 0f), new Vector3(2.5f, 0.08f, 0.58f), "Bench seat collision");
+
+                return;
+            }
 			Transform transform = new GameObject("Schoolyard Bench").transform;
 			transform.SetParent(parent, worldPositionStays: false);
 			transform.localPosition = pos;
@@ -554,6 +559,9 @@ namespace DeadAir
 			SpawnEvidenceTapes();
 			yield return null;
 			SetupLighting();
+            schoolDoorLeaves = Root.GetComponentsInChildren<DeadAirArtMotionSlidingLeaf>(true);
+            BatchSchoolArchitecture();
+			artReflectionProbes = DeadAirArtReflectionProbes.Attach(Root);
 			yield return null;
 		}
 
@@ -565,12 +573,12 @@ namespace DeadAir
 				return;
 			}
 			Shader shader = ((matStone != null) ? matStone.shader : Shader.Find("Standard"));
-			Material material = CreateTexturedMat("Park grass and soil", shader, CreateParkTexture(new Color(0.22f, 0.28f, 0.16f), new Color(0.31f, 0.29f, 0.2f), 0.055f), Color.white, 0.05f);
-			material.mainTextureScale = new Vector2(8f, 6f);
-			Material material2 = CreateTexturedMat("Compacted park gravel", shader, CreateParkTexture(new Color(0.37f, 0.36f, 0.31f), new Color(0.49f, 0.47f, 0.4f), 0.19f), Color.white, 0.08f);
-			material2.mainTextureScale = new Vector2(1.5f, 3f);
-			Material material3 = CreateMat("Mixed park foliage", shader, new Color(0.16f, 0.27f, 0.14f), 0.04f);
-			Material material4 = CreateMat("Park understory", shader, new Color(0.2f, 0.3f, 0.16f), 0.03f);
+			Material material = DeadAirArtMaterials.Create("Park grass and soil", "soil", new Color(0.45f, 0.48f, 0.35f), 0.05f);
+			material.mainTextureScale = Vector2.one;
+			Material material2 = DeadAirArtMaterials.Create("Compacted park gravel", "concrete", new Color(0.59f, 0.56f, 0.48f), 0.08f);
+			material2.mainTextureScale = Vector2.one;
+			Material material3 = DeadAirArtMaterials.Create("Mixed park foliage", "foliage", new Color(0.32f, 0.4f, 0.24f), 0.04f);
+			Material material4 = DeadAirArtMaterials.Create("Park understory", "foliage", new Color(0.38f, 0.43f, 0.25f), 0.03f);
 			Material water = CreateMat("Shallow rain garden", shader, new Color(0.19f, 0.27f, 0.26f), 0.62f);
 			Transform transform2 = transform.Find("Park Moss Ground");
 			if (transform2 != null)
@@ -602,6 +610,7 @@ namespace DeadAir
 				{
 					continue;
 				}
+                if (child2.GetComponentInChildren<LODGroup>(true) != null) { num++; continue; }
 				for (int k = 0; k < child2.childCount; k++)
 				{
 					Transform child3 = child2.GetChild(k);
@@ -636,7 +645,8 @@ namespace DeadAir
 				if (!(Mathf.Abs(num3) < 6f) && (!(num3 > 10f) || !(num3 < 21f) || !(num4 > 68f) || !(num4 < 77f)) && (!(Mathf.Abs(num3) < 7f) || !(num4 > 95f)) && (!(num3 < -19f) || !(num4 > 96f)))
 				{
 					float num5 = 0.55f + (float)random.NextDouble() * 0.65f;
-					AddCanopyLobe(vertices2, triangles2, new Vector3(num3, 0.35f, num4), new Vector3(num5, 0.38f + num5 * 0.35f, num5 * 0.8f), 7, 3);
+					if (!TryInstallSchoolShrub(transform, new Vector3(num3, .03f, num4), new Vector3(num5 * 2f, .76f + num5 * .7f, num5 * 1.6f), Mathf.Repeat(num3 * 17f + num4 * 11f, 360f)))
+                        AddCanopyLobe(vertices2, triangles2, new Vector3(num3, 0.35f, num4), new Vector3(num5, 0.38f + num5 * 0.35f, num5 * 0.8f), 7, 3);
 				}
 			}
 			for (int m = 0; m < 30; m++)
@@ -669,26 +679,7 @@ namespace DeadAir
 			}
 		}
 
-		private static Texture2D CreateParkTexture(Color baseColor, Color accent, float frequency)
-		{
-			Color32[] array = new Color32[16384];
-			for (int i = 0; i < 128; i++)
-			{
-				for (int j = 0; j < 128; j++)
-				{
-					float num = Mathf.PerlinNoise((float)j * frequency, (float)i * frequency);
-					float num2 = Mathf.PerlinNoise((float)j * 0.43f + 17f, (float)i * 0.43f + 37f) * 0.12f;
-					array[i * 128 + j] = Color.Lerp(baseColor, accent, Mathf.Clamp01(num * 0.85f + num2));
-				}
-			}
-			Texture2D texture2D = new Texture2D(128, 128, TextureFormat.RGBA32, mipChain: true);
-			texture2D.name = "Park ground variation";
-			texture2D.SetPixels32(array);
-			texture2D.wrapMode = TextureWrapMode.Repeat;
-			texture2D.filterMode = FilterMode.Trilinear;
-			texture2D.Apply(updateMipmaps: true, makeNoLongerReadable: true);
-			return texture2D;
-		}
+
 
 		private void AddParkPath(Transform parent, string name, Material material, float halfWidth, params Vector2[] points)
 		{
@@ -773,9 +764,21 @@ namespace DeadAir
 			{
 				mesh.SetUVs(0, uv);
 			}
-			mesh.RecalculateNormals();
-			mesh.RecalculateBounds();
-			GameObject gameObject = new GameObject(name);
+            mesh.RecalculateNormals();
+            if (uv == null)
+            {
+                var metricUV = new List<Vector2>(vertices.Count);
+                Vector3[] normals = mesh.normals;
+                for (int i = 0; i < vertices.Count; i++)
+                {
+                    Vector3 p = vertices[i], n = normals[i];
+                    metricUV.Add(Mathf.Abs(n.y) > 0.7f ? new Vector2(p.x, p.z) : Mathf.Abs(n.x) > Mathf.Abs(n.z) ? new Vector2(p.z, p.y) : new Vector2(p.x, p.y));
+                }
+                mesh.SetUVs(0, metricUV);
+            }
+            mesh.RecalculateTangents();
+            mesh.RecalculateBounds();
+            GameObject gameObject = new GameObject(name);
 			gameObject.transform.SetParent(parent, worldPositionStays: false);
 			gameObject.AddComponent<MeshFilter>().sharedMesh = mesh;
 			MeshRenderer meshRenderer = gameObject.AddComponent<MeshRenderer>();
@@ -918,257 +921,17 @@ namespace DeadAir
 			InitMaterials();
 		}
 
-		private static Texture2D CreateParquetTexture()
-		{
-			int num = 256;
-			int num2 = 256;
-			Texture2D texture2D = new Texture2D(num, num2, TextureFormat.RGBA32, mipChain: true);
-			Color32[] array = new Color32[num * num2];
-			Color32 color = new Color32(152, 110, 68, byte.MaxValue);
-			Color32 color2 = new Color32(138, 96, 56, byte.MaxValue);
-			Color32 color3 = new Color32(166, 124, 78, byte.MaxValue);
-			Color32 color4 = new Color32(76, 50, 28, byte.MaxValue);
-			for (int i = 0; i < num2; i++)
-			{
-				int num3 = i / 32;
-				for (int j = 0; j < num; j++)
-				{
-					int num4 = num3 % 2 * 64;
-					int num5 = (j + num4) / 64;
-					if (i % 32 == 0 || (j + num4) % 64 == 0)
-					{
-						array[i * num + j] = color4;
-						continue;
-					}
-					int num6 = (int)(Mathf.Sin((float)j * 0.4f + (float)i * 0.05f) * 10f + (Mathf.PerlinNoise((float)j * 0.1f, (float)i * 0.1f) - 0.5f) * 16f);
-					Color32 obj = (((num5 + num3) % 3 == 0) ? color : (((num5 + num3) % 3 == 1) ? color2 : color3));
-					byte r = (byte)Mathf.Clamp(obj.r + num6, 0, 255);
-					byte g = (byte)Mathf.Clamp(obj.g + num6, 0, 255);
-					byte b = (byte)Mathf.Clamp(obj.b + num6, 0, 255);
-					array[i * num + j] = new Color32(r, g, b, byte.MaxValue);
-				}
-			}
-			texture2D.SetPixels32(array);
-			texture2D.wrapMode = TextureWrapMode.Repeat;
-			texture2D.filterMode = FilterMode.Bilinear;
-			texture2D.Apply(updateMipmaps: true, makeNoLongerReadable: true);
-			return texture2D;
-		}
-
-		private static Texture2D CreateDeskWoodTexture()
-		{
-			int num = 128;
-			int num2 = 128;
-			Texture2D texture2D = new Texture2D(num, num2, TextureFormat.RGBA32, mipChain: true);
-			Color32[] array = new Color32[num * num2];
-			Color32 color = new Color32(204, 162, 112, byte.MaxValue);
-			for (int i = 0; i < num2; i++)
-			{
-				for (int j = 0; j < num; j++)
-				{
-					float num3 = Mathf.Sin((float)j * 0.7f + Mathf.Sin((float)i * 0.2f) * 2f) * 8f;
-					float num4 = (Mathf.PerlinNoise((float)j * 0.05f, (float)i * 0.2f) - 0.5f) * 18f;
-					int num5 = (int)(num3 + num4);
-					byte r = (byte)Mathf.Clamp(color.r + num5, 0, 255);
-					byte g = (byte)Mathf.Clamp(color.g + num5, 0, 255);
-					byte b = (byte)Mathf.Clamp(color.b + num5, 0, 255);
-					array[i * num + j] = new Color32(r, g, b, byte.MaxValue);
-				}
-			}
-			texture2D.SetPixels32(array);
-			texture2D.wrapMode = TextureWrapMode.Repeat;
-			texture2D.filterMode = FilterMode.Bilinear;
-			texture2D.Apply(updateMipmaps: true, makeNoLongerReadable: true);
-			return texture2D;
-		}
-
-		private static Texture2D CreatePlasterTexture()
-		{
-			int num = 256;
-			int num2 = 256;
-			Texture2D texture2D = new Texture2D(num, num2, TextureFormat.RGBA32, mipChain: true);
-			Color32[] array = new Color32[num * num2];
-			Color32 color = new Color32(218, 212, 196, byte.MaxValue);
-			Color32 color2 = new Color32(182, 175, 160, byte.MaxValue);
-			for (int i = 0; i < num2; i++)
-			{
-				for (int j = 0; j < num; j++)
-				{
-					if (i % 64 == 0)
-					{
-						array[i * num + j] = color2;
-						continue;
-					}
-					int num3 = (int)((Mathf.PerlinNoise((float)j * 0.15f, (float)i * 0.15f) - 0.5f) * 14f);
-					byte r = (byte)Mathf.Clamp(color.r + num3, 0, 255);
-					byte g = (byte)Mathf.Clamp(color.g + num3, 0, 255);
-					byte b = (byte)Mathf.Clamp(color.b + num3, 0, 255);
-					array[i * num + j] = new Color32(r, g, b, byte.MaxValue);
-				}
-			}
-			texture2D.SetPixels32(array);
-			texture2D.wrapMode = TextureWrapMode.Repeat;
-			texture2D.filterMode = FilterMode.Bilinear;
-			texture2D.Apply(updateMipmaps: true, makeNoLongerReadable: true);
-			return texture2D;
-		}
-
-		private static Texture2D CreateConcreteTexture()
-		{
-			int num = 128;
-			int num2 = 128;
-			Texture2D texture2D = new Texture2D(num, num2, TextureFormat.RGBA32, mipChain: true);
-			Color32[] array = new Color32[num * num2];
-			Color32 color = new Color32(155, 155, 148, byte.MaxValue);
-			for (int i = 0; i < num2; i++)
-			{
-				for (int j = 0; j < num; j++)
-				{
-					int num3 = (int)((Mathf.PerlinNoise((float)j * 0.25f, (float)i * 0.25f) - 0.5f) * 20f);
-					byte b = (byte)Mathf.Clamp(color.r + num3, 0, 255);
-					array[i * num + j] = new Color32(b, b, (byte)((float)(int)b * 0.96f), byte.MaxValue);
-				}
-			}
-			texture2D.SetPixels32(array);
-			texture2D.wrapMode = TextureWrapMode.Repeat;
-			texture2D.filterMode = FilterMode.Bilinear;
-			texture2D.Apply(updateMipmaps: true, makeNoLongerReadable: true);
-			return texture2D;
-		}
-
-		private static Texture2D CreateChalkboardTexture()
-		{
-			int num = 256;
-			int num2 = 128;
-			Texture2D texture2D = new Texture2D(num, num2, TextureFormat.RGBA32, mipChain: false);
-			Color32 color = new Color32(26, 52, 34, byte.MaxValue);
-			Color32 color2 = new Color32(220, 235, 215, byte.MaxValue);
-			Color32[] array = new Color32[num * num2];
-			for (int i = 0; i < num2; i++)
-			{
-				for (int j = 0; j < num; j++)
-				{
-					int num3 = (int)((Mathf.PerlinNoise((float)j * 0.04f, (float)i * 0.08f) - 0.5f) * 12f);
-					byte b = (byte)Mathf.Clamp(color.g + num3, 30, 80);
-					array[i * num + j] = new Color32((byte)((float)(int)b * 0.5f), b, (byte)((float)(int)b * 0.65f), byte.MaxValue);
-				}
-			}
-			for (int k = 16; k < 240; k++)
-			{
-				if (k % 3 == 0)
-				{
-					array[95 * num + k] = color2;
-					array[65 * num + k] = color2;
-					array[35 * num + k] = color2;
-				}
-			}
-			for (int l = 45; l < 85; l++)
-			{
-				array[l * num + 50] = color2;
-				array[l * num + 110] = color2;
-				array[l * num + 170] = color2;
-				array[l * num + 210] = color2;
-			}
-			texture2D.SetPixels32(array);
-			texture2D.wrapMode = TextureWrapMode.Clamp;
-			texture2D.filterMode = FilterMode.Bilinear;
-			texture2D.Apply(updateMipmaps: false, makeNoLongerReadable: true);
-			return texture2D;
-		}
-
-		private static Texture2D CreatePaperTexture()
-		{
-			int num = 64;
-			int num2 = 64;
-			Texture2D texture2D = new Texture2D(num, num2, TextureFormat.RGBA32, mipChain: false);
-			Color32[] array = new Color32[num * num2];
-			Color32 color = new Color32(245, 243, 238, byte.MaxValue);
-			Color32 color2 = new Color32(180, 200, 225, byte.MaxValue);
-			Color32 color3 = new Color32(50, 60, 90, byte.MaxValue);
-			for (int i = 0; i < num2; i++)
-			{
-				for (int j = 0; j < num; j++)
-				{
-					if (i % 8 == 0)
-					{
-						array[i * num + j] = color2;
-					}
-					else if (i > 10 && i < 54 && (j + i * 3) % 19 == 0)
-					{
-						array[i * num + j] = color3;
-					}
-					else
-					{
-						array[i * num + j] = color;
-					}
-				}
-			}
-			texture2D.SetPixels32(array);
-			texture2D.Apply(updateMipmaps: false, makeNoLongerReadable: true);
-			return texture2D;
-		}
-
-		private static Texture2D CreateBooksTexture()
-		{
-			int num = 128;
-			int num2 = 64;
-			Texture2D texture2D = new Texture2D(num, num2, TextureFormat.RGBA32, mipChain: false);
-			Color32[] array = new Color32[num * num2];
-			Color32[] array2 = new Color32[6]
-			{
-				new Color32(95, 45, 40, byte.MaxValue),
-				new Color32(35, 50, 75, byte.MaxValue),
-				new Color32(45, 65, 45, byte.MaxValue),
-				new Color32(115, 95, 65, byte.MaxValue),
-				new Color32(75, 55, 40, byte.MaxValue),
-				new Color32(50, 55, 60, byte.MaxValue)
-			};
-			for (int i = 0; i < num; i++)
-			{
-				int num3 = i / 10 % array2.Length;
-				Color32 color = array2[num3];
-				for (int j = 0; j < num2; j++)
-				{
-					if (i % 10 == 0 || j == 0 || j == num2 - 1)
-					{
-						array[j * num + i] = new Color32(20, 20, 20, byte.MaxValue);
-					}
-					else if (j > 20 && j < 35 && i % 10 > 2 && i % 10 < 8)
-					{
-						array[j * num + i] = new Color32(210, 200, 175, byte.MaxValue);
-					}
-					else
-					{
-						array[j * num + i] = color;
-					}
-				}
-			}
-			texture2D.SetPixels32(array);
-			texture2D.wrapMode = TextureWrapMode.Repeat;
-			texture2D.Apply(updateMipmaps: false, makeNoLongerReadable: true);
-			return texture2D;
-		}
-
 		private void InitMaterials()
 		{
 			Shader shader = Shader.Find("Dead Air/Source Surface") ?? Shader.Find("Standard");
 			Shader shader2 = Shader.Find("Dead Air/Window Glass") ?? Shader.Find("Standard");
-			Texture2D texture = CreateParquetTexture();
-			Texture2D texture2 = CreatePlasterTexture();
-			Texture2D texture3 = CreateDeskWoodTexture();
-			Texture2D texture4 = CreateConcreteTexture();
-			Texture2D texture5 = CreateChalkboardTexture();
-			Texture2D texture6 = CreatePaperTexture();
-			Texture2D texture7 = CreateBooksTexture();
-			matPlaster = CreateTexturedMat("SchoolPlaster", shader, texture2, Color.white, 0.15f);
-			matWoodFloor = CreateTexturedMat("ParquetWood", shader, texture, Color.white, 0.35f);
-			matWoodFloor.mainTextureScale = new Vector2(8f, 8f);
-			matDeskWood = CreateTexturedMat("DeskWood", shader, texture3, Color.white, 0.25f);
-			matConcrete = CreateTexturedMat("ConcreteLight", shader, texture4, Color.white, 0.2f);
-			matChalkboard = CreateTexturedMat("Chalkboard", shader, texture5, Color.white, 0.05f);
-			matPaper = CreateTexturedMat("PaperSheet", shader, texture6, Color.white, 0.1f);
-			matBooks = CreateTexturedMat("BookCovers", shader, texture7, Color.white, 0.2f);
-			matBooks.mainTextureScale = new Vector2(8f, 1f);
+            matPlaster = CreateMat("SchoolPlaster", shader, new Color(0.82f, 0.81f, 0.75f), 0.15f);
+            matWoodFloor = CreateMat("ParquetWood", shader, new Color(0.7f, 0.57f, 0.4f), 0.35f);
+            matDeskWood = CreateMat("DeskWood", shader, new Color(0.67f, 0.54f, 0.37f), 0.25f);
+            matConcrete = CreateMat("ConcreteLight", shader, new Color(0.64f, 0.64f, 0.59f), 0.2f);
+            matChalkboard = CreateMat("Chalkboard", shader, new Color(0.12f, 0.21f, 0.18f), 0.05f);
+            matPaper = CreateMat("PaperSheet", shader, new Color(0.88f, 0.85f, 0.76f), 0.1f);
+            matBooks = CreateMat("BookCovers", shader, new Color(0.32f, 0.38f, 0.34f), 0.2f);
 			matGlass = new Material(shader2)
 			{
 				name = "SchoolWindowGlass",
@@ -1177,6 +940,7 @@ namespace DeadAir
 			matGlass.SetColor("_Color", new Color(0.25f, 0.45f, 0.55f, 0.18f));
 			matGlass.SetFloat("_Glossiness", 0.95f);
 			matGlass.SetFloat("_ReflectionStrength", 0.35f);
+            DeadAirArtMaterials.Apply(matGlass, "glass");
 			matAsphalt = CreateMat("RoadAsphalt", shader, new Color(0.18f, 0.19f, 0.2f), 0.35f);
 			matRoadZebra = CreateMat("RoadZebraWhite", shader, new Color(0.92f, 0.92f, 0.88f), 0.25f);
 			matBark = CreateMat("DarkBark", shader, new Color(0.24f, 0.19f, 0.14f), 0.05f);
@@ -1191,10 +955,51 @@ namespace DeadAir
 			matGuardrail = CreateMat("GuardrailWhite", shader, new Color(0.88f, 0.88f, 0.88f), 0.5f);
 			matLabCounter = CreateMat("LabBlackStone", shader, new Color(0.14f, 0.15f, 0.15f), 0.7f);
 			matGold = CreateMat("SignGold", shader, new Color(0.88f, 0.75f, 0.25f), 0.6f);
-			matDoorWood = CreateTexturedMat("DoorWood", shader, texture3, new Color(0.78f, 0.62f, 0.42f), 0.25f);
+			matDoorWood = CreateMat("DoorWood", shader, new Color(0.62f, 0.47f, 0.3f), 0.25f);
 			matShoeLocker = CreateMat("GetabakoWood", shader, new Color(0.58f, 0.42f, 0.26f), 0.2f);
 			matTrashCan = CreateMat("TrashCanBlue", shader, new Color(0.22f, 0.42f, 0.68f), 0.4f);
 			matCan = CreateMat("CanAluminum", shader, new Color(0.85f, 0.35f, 0.25f), 0.7f);
+            DeadAirArtMaterials.Apply(matPlaster, "plaster");
+            DeadAirArtMaterials.Apply(matWoodFloor, "parquet");
+            DeadAirArtMaterials.Apply(matDeskWood, "wood");
+            DeadAirArtMaterials.Apply(matDoorWood, "wood");
+            DeadAirArtMaterials.Apply(matShoeLocker, "wood");
+            DeadAirArtMaterials.Apply(matConcrete, "concrete");
+            DeadAirArtMaterials.Apply(matStone, "concrete");
+            DeadAirArtMaterials.Apply(matAsphalt, "asphalt");
+            DeadAirArtMaterials.Apply(matBark, "bark");
+            DeadAirArtMaterials.Apply(matFoliage, "foliage");
+            DeadAirArtMaterials.Apply(matDarkMetal, "steel");
+            DeadAirArtMaterials.Apply(matGuardrail, "steel");
+            DeadAirArtMaterials.Apply(matWhite, "painted-wall");
+            DeadAirArtMaterials.Apply(matTorii, "painted-wall");
+            DeadAirArtMaterials.Apply(matHouseStucco, "plaster");
+            DeadAirArtMaterials.Apply(matBlockWall, "brick");
+            DeadAirArtMaterials.Apply(matKawaraRoof, "roof-tile");
+            DeadAirArtMaterials.Apply(matLabCounter, "ceramic");
+            DeadAirArtMaterials.Apply(matPaper, "paper");
+            DeadAirArtMaterials.Apply(matBooks, "paper");
+            DeadAirArtMaterials.Apply(matTrashCan, "steel");
+            DeadAirArtMaterials.Apply(matCan, "steel");
+            matSchoolFabric = DeadAirArtMaterials.Create("School cotton and upholstery", "fabric", new Color(0.49f, 0.51f, 0.44f), 0.16f);
+            matSchoolRubber = DeadAirArtMaterials.Create("School foot caps and soles", "rubber", new Color(0.12f, 0.13f, 0.12f), 0.12f);
+            matSchoolCeramic = DeadAirArtMaterials.Create("School laboratory porcelain", "ceramic", new Color(0.81f, 0.83f, 0.78f), 0.62f);
+            matSchoolCeiling = DeadAirArtMaterials.Create("School matte lime plaster ceiling", "plaster", new Color(.88f, .87f, .81f), .045f);
+            matSchoolCeiling.SetFloat("_Glossiness", .045f);
+            matSchoolCeiling.SetFloat("_MaskMapEnabled", 0f);
+            matSchoolCeiling.SetFloat("_Metallic", 0f);
+            matSchoolCeiling.SetFloat("_BumpScale", .12f);
+            matWoodFloor.SetFloat("_Glossiness", .45f);
+            matSchoolBookBindings = new[] {
+                DeadAirArtMaterials.Create("School oxblood book cloth", "fabric", new Color(0.27f, 0.11f, 0.09f), 0.12f),
+                DeadAirArtMaterials.Create("School navy book cloth", "fabric", new Color(0.09f, 0.14f, 0.19f), 0.12f),
+                DeadAirArtMaterials.Create("School green book cloth", "fabric", new Color(0.15f, 0.23f, 0.17f), 0.12f),
+                DeadAirArtMaterials.Create("School ochre book cloth", "fabric", new Color(0.42f, 0.32f, 0.15f), 0.12f),
+                DeadAirArtMaterials.Create("School charcoal book cloth", "fabric", new Color(0.15f, 0.16f, 0.15f), 0.12f)
+            };
+            matWoodFloor.mainTextureScale = Vector2.one;
+            matBooks.mainTextureScale = Vector2.one;
+
 		}
 
 		private static Material CreateMat(string name, Shader shader, Color color, float gloss)
@@ -1208,17 +1013,7 @@ namespace DeadAir
 			return material;
 		}
 
-		private static Material CreateTexturedMat(string name, Shader shader, Texture2D texture, Color color, float gloss)
-		{
-			Material material = new Material(shader);
-			material.name = name;
-			material.mainTexture = texture;
-			material.color = color;
-			material.hideFlags = HideFlags.DontSave;
-			material.SetFloat("_Glossiness", gloss);
-			material.enableInstancing = true;
-			return material;
-		}
+
 
 		public void Initialize()
 		{
@@ -1239,6 +1034,9 @@ namespace DeadAir
 			SpawnSanityPills();
 			SpawnEvidenceTapes();
 			SetupLighting();
+            schoolDoorLeaves = Root.GetComponentsInChildren<DeadAirArtMotionSlidingLeaf>(true);
+            BatchSchoolArchitecture();
+			artReflectionProbes = DeadAirArtReflectionProbes.Attach(Root);
 		}
 
 		public void SetActive(bool active)
@@ -1246,72 +1044,71 @@ namespace DeadAir
 			if (Root != null)
 			{
 				Root.gameObject.SetActive(active);
+                if (active)
+                {
+                    Physics.SyncTransforms();
+                    BatchSchoolArchitecture();
+                }
 			}
 		}
 
 		private GameObject CreateBox(Transform parent, Vector3 localPos, Vector3 size, Material mat, bool addCollider = true, string name = "Cube")
 		{
-			if (boxMesh == null)
-			{
-				boxMesh = PrimitiveMesh(PrimitiveType.Cube);
-			}
-			GameObject gameObject = new GameObject(name);
-			gameObject.transform.SetParent(parent, worldPositionStays: false);
-			gameObject.transform.localPosition = localPos;
-			gameObject.transform.localScale = size;
-			gameObject.AddComponent<MeshFilter>().sharedMesh = boxMesh;
-			MeshRenderer meshRenderer = gameObject.AddComponent<MeshRenderer>();
-			meshRenderer.sharedMaterial = mat;
-			if (addCollider)
-			{
-				gameObject.AddComponent<BoxCollider>();
-			}
-			else
-			{
-				meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
-				meshRenderer.receiveShadows = false;
-			}
-			return gameObject;
-		}
+            if (TryCreateFurnishedAssembly(parent, localPos, size, mat, addCollider, name, out GameObject assembly)) return assembly;
+            GameObject gameObject = new GameObject(name);
+            gameObject.transform.SetParent(parent, false);
+            gameObject.transform.localPosition = localPos;
+            bool glass = mat == matGlass;
+            float edge = glass || size.y < 0.015f ? 0f : Mathf.Min(0.014f, Mathf.Min(size.x, Mathf.Min(size.y, size.z)) * 0.12f);
+            bool hasCeiling = name.StartsWith("Ceiling ", StringComparison.Ordinal) || name.StartsWith("Floor 2 Parquet", StringComparison.Ordinal) ||
+                name.Contains("Deck") || name == "Roof Slab" || name == "Canopy Roof" ||
+                mat == matWoodFloor && localPos.y > 2f && size.y <= .15f && size.x > 4f && size.z > 2f;
+            gameObject.AddComponent<MeshFilter>().sharedMesh = hasCeiling ? DeadAirSchoolMeshes.FloorWithPlasterCeiling(size, edge) : DeadAirSchoolMeshes.Box(size, edge);
+            MeshRenderer renderer = gameObject.AddComponent<MeshRenderer>();
+            if (hasCeiling) renderer.sharedMaterials = new[] { mat, matSchoolCeiling };
+            else renderer.sharedMaterial = mat;
+            renderer.shadowCastingMode = glass ? ShadowCastingMode.Off : ShadowCastingMode.On;
+            renderer.receiveShadows = !glass;
+            renderer.lightProbeUsage = LightProbeUsage.BlendProbes;
+            renderer.reflectionProbeUsage = ReflectionProbeUsage.BlendProbes;
+            if (addCollider) DeadAirSchoolPhysics.AddBox(gameObject.transform, size);
+            return gameObject;
+        }
 
 		private GameObject CreateCylinder(Transform parent, Vector3 localPos, float radius, float height, Material mat, bool addCollider = true, string name = "Cylinder")
 		{
-			if (cylinderMesh == null)
-			{
-				cylinderMesh = PrimitiveMesh(PrimitiveType.Cylinder);
-			}
-			GameObject gameObject = new GameObject(name);
-			gameObject.transform.SetParent(parent, worldPositionStays: false);
-			gameObject.transform.localPosition = localPos;
-			gameObject.transform.localScale = new Vector3(radius * 2f, height * 0.5f, radius * 2f);
-			gameObject.AddComponent<MeshFilter>().sharedMesh = cylinderMesh;
-			MeshRenderer meshRenderer = gameObject.AddComponent<MeshRenderer>();
-			meshRenderer.sharedMaterial = mat;
-			if (addCollider)
-			{
-				gameObject.AddComponent<CapsuleCollider>();
-			}
-			else
-			{
-				meshRenderer.shadowCastingMode = ShadowCastingMode.Off;
-				meshRenderer.receiveShadows = false;
-			}
-			return gameObject;
-		}
+            if (name == "Trash Bin")
+            {
+                GameObject scanned = BuildScannedFixture(parent, localPos, new Vector3(radius * 2f, height, radius * 2f), "trash-can", name);
+                if (scanned != null)
+                {
+                    if (addCollider) AddCollisionProxy(scanned.transform, Vector3.zero, new Vector3(radius * 2f, height, radius * 2f));
+                    return scanned;
+                }
+            }
+            GameObject gameObject = new GameObject(name);
+            gameObject.transform.SetParent(parent, false);
+            gameObject.transform.localPosition = localPos;
+            bool glass = mat == matGlass;
+            bool hollow = name.IndexOf("Beaker", StringComparison.OrdinalIgnoreCase) >= 0 || name == "Trash Bin" || name == "Test tube";
+            float innerRadius = hollow ? Mathf.Max(radius * 0.65f, radius - 0.008f) : 0f;
+            gameObject.AddComponent<MeshFilter>().sharedMesh = DeadAirSchoolMeshes.Cylinder(radius, height, innerRadius);
+            MeshRenderer renderer = gameObject.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = mat;
+            renderer.shadowCastingMode = glass ? ShadowCastingMode.Off : ShadowCastingMode.On;
+            renderer.receiveShadows = !glass;
+            if (addCollider)
+            {
+                if (height < radius * 2f) DeadAirSchoolPhysics.AddBox(gameObject.transform, new Vector3(radius * 2f, height, radius * 2f));
+                else
+                {
+                    DeadAirSchoolPhysics.AddCapsule(gameObject.transform, radius, height);
+                }
+            }
+            return gameObject;
+        }
 
-		private static Mesh PrimitiveMesh(PrimitiveType type)
-		{
-			GameObject gameObject = GameObject.CreatePrimitive(type);
-			gameObject.SetActive(value: false);
-			Mesh sharedMesh = gameObject.GetComponent<MeshFilter>().sharedMesh;
-			if (Application.isPlaying)
-			{
-				UnityEngine.Object.Destroy(gameObject);
-				return sharedMesh;
-			}
-			UnityEngine.Object.DestroyImmediate(gameObject);
-			return sharedMesh;
-		}
+
 
 		private GameObject CreateRamp(Transform parent, Vector3 center, Vector3 size, float tiltAngleX, string name = "StairRamp")
 		{
@@ -1319,7 +1116,7 @@ namespace DeadAir
 			gameObject.transform.SetParent(parent, worldPositionStays: false);
 			gameObject.transform.localPosition = center;
 			gameObject.transform.localRotation = Quaternion.Euler(tiltAngleX, 0f, 0f);
-			gameObject.AddComponent<BoxCollider>().size = size;
+			DeadAirSchoolPhysics.AddBox(gameObject.transform, size);
 			return gameObject;
 		}
 
@@ -1384,7 +1181,8 @@ namespace DeadAir
 			CreateCylinder(transform, new Vector3(0f, 1.8f, 0f), 0.05f, 3.6f, matGuardrail);
 			GameObject gameObject = CreateCylinder(transform, new Vector3(0f, 3.3f, 0.2f), 0.45f, 0.08f, matTorii, addCollider: false);
 			gameObject.transform.rotation = Quaternion.Euler(75f, 0f, 0f);
-			CreateCylinder(gameObject.transform, new Vector3(0f, 0.04f, 0f), 0.4f, 0.02f, matGlass, addCollider: false);
+			GameObject mirrorDisc = CreateCylinder(gameObject.transform, new Vector3(0f, 0.04f, 0f), 0.4f, 0.02f, matGlass, addCollider: false, "mirror:traffic");
+            DeadAirArtMirror.Attach(mirrorDisc.GetComponent<MeshRenderer>(), Vector3.up);
 		}
 
 		private void BuildLeftNeighborhood()
@@ -1419,36 +1217,42 @@ namespace DeadAir
 
 		private void BuildJapaneseHouse(Transform parent, Vector3 pos, float yaw)
 		{
-			Transform transform = new GameObject("Japanese House").transform;
-			transform.SetParent(parent, worldPositionStays: false);
-			transform.localPosition = pos;
-			transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
-			float num = 12f;
-			float y = 6.8f;
-			float num2 = 11f;
-			CreateBox(transform, new Vector3(0f, 3.4f, 0f), new Vector3(num, y, num2), matHouseStucco, addCollider: true, "House Body");
-			CreateBox(transform, new Vector3(0f, 0.8f, 0f), new Vector3(num + 0.1f, 1.6f, num2 + 0.1f), matBark, addCollider: false, "House Wood Skirt");
-			CreateBox(transform, new Vector3(0f, 7.2f, 0f), new Vector3(num + 1.6f, 0.7f, num2 + 1.6f), matKawaraRoof, addCollider: true, "Kawara Roof Base");
-			CreateBox(transform, new Vector3(0f, 8f, 0f), new Vector3(num * 0.7f, 1f, num2 * 0.7f), matKawaraRoof, addCollider: false, "Kawara Roof Mid");
-			CreateBox(transform, new Vector3(0f, 8.7f, 0f), new Vector3(num * 0.4f, 0.6f, num2 * 0.4f), matKawaraRoof, addCollider: false, "Kawara Roof Top");
-			CreateBox(transform, new Vector3(0f, 3.8f, num2 * 0.5f + 0.6f), new Vector3(num * 0.7f, 0.15f, 1.2f), matConcrete, addCollider: true, "Balcony Floor");
-			CreateBox(transform, new Vector3(0f, 4.3f, num2 * 0.5f + 1.15f), new Vector3(num * 0.7f, 0.8f, 0.1f), matDarkMetal, addCollider: false, "Balcony Rail");
-			for (int i = 0; i < 2; i++)
-			{
-				float y2 = 1.8f + (float)i * 3.4f;
-				GameObject gameObject = CreateBox(transform, new Vector3(2.5f, y2, num2 * 0.5f + 0.05f), new Vector3(2.2f, 1.4f, 0.1f), matWhite, addCollider: false, "Window Frame");
-				CreateBox(gameObject.transform, new Vector3(0f, 0f, 0.02f), new Vector3(2f, 1.2f, 0.05f), matPlaster, addCollider: false, "Lit Window");
-				if (i == 1)
-				{
-					Light light = gameObject.AddComponent<Light>();
-					light.type = LightType.Point;
-					light.color = new Color(1f, 0.82f, 0.55f);
-					light.intensity = 0.8f;
-					light.range = 5f;
-				}
-			}
-			CreateBox(transform, new Vector3(-3.5f, 0.5f, num2 * 0.5f + 0.35f), new Vector3(0.9f, 0.65f, 0.4f), matWhite, addCollider: false, "AC Unit");
-		}
+            Transform house = Assembly(parent, "Japanese House", pos, yaw);
+            CreateBox(house, new Vector3(0f, 0.2f, 0f), new Vector3(12.1f, 0.4f, 11.1f), matConcrete, true, "House foundation");
+            CreateBox(house, new Vector3(0f, 3.4f, -5.4f), new Vector3(12f, 6.8f, 0.2f), matHouseStucco, true, "House rear wall");
+            for (int side = -1; side <= 1; side += 2)
+                CreateBox(house, new Vector3(side * 5.9f, 3.4f, 0f), new Vector3(0.2f, 6.8f, 11f), matHouseStucco, true, "House side wall");
+            CreateBox(house, new Vector3(-2.3f, 3.4f, 5.4f), new Vector3(7.4f, 6.8f, 0.2f), matHouseStucco, true, "House front left pier");
+            CreateBox(house, new Vector3(4.8f, 3.4f, 5.4f), new Vector3(2.4f, 6.8f, 0.2f), matHouseStucco, true, "House front right pier");
+            CreateBox(house, new Vector3(2.5f, 0.55f, 5.4f), new Vector3(2.2f, 1.1f, 0.2f), matHouseStucco, true, "House lower window sill wall");
+            CreateBox(house, new Vector3(2.5f, 3.5f, 5.4f), new Vector3(2.2f, 2f, 0.2f), matHouseStucco, true, "House intermediate window wall");
+            CreateBox(house, new Vector3(2.5f, 6.35f, 5.4f), new Vector3(2.2f, 0.9f, 0.2f), matHouseStucco, true, "House upper window lintel");
+            CreateBox(house, new Vector3(0f, 3.4f, 0f), new Vector3(11.6f, 0.15f, 10.6f), matDeskWood, false, "House internal floor");
+            BuildPitchedRoof(house, new Vector3(0f, 8.15f, 0f), new Vector3(13.6f, 0.1f, 12.6f));
+            CreateBox(house, new Vector3(0f, 3.8f, 6.1f), new Vector3(8.4f, 0.15f, 1.2f), matConcrete, true, "Balcony floor");
+            CreateBox(house, new Vector3(0f, 4.35f, 6.65f), new Vector3(8.4f, 0.065f, 0.065f), matDarkMetal, false, "Balcony top rail");
+            for (float x = -4.1f; x <= 4.1f; x += 0.35f)
+                CreateBox(house, new Vector3(x, 4.05f, 6.65f), new Vector3(0.028f, 0.58f, 0.028f), matDarkMetal, false, "Balcony baluster");
+            for (int floor = 0; floor < 2; floor++)
+            {
+                Transform window = Assembly(house, "Separate house window", new Vector3(2.5f, 1.8f + floor * 3.4f, 5.5f));
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    CreateBox(window, new Vector3(side * 1.07f, 0f, 0f), new Vector3(0.06f, 1.4f, 0.09f), matWhite, false, "House window jamb");
+                    CreateBox(window, new Vector3(0f, side * 0.67f, 0f), new Vector3(2.2f, 0.06f, 0.09f), matWhite, false, "House window rail");
+                }
+                CreateBox(window, Vector3.zero, new Vector3(0.035f, 1.35f, 0.06f), matWhite, false, "House window mullion");
+                CreateBox(window, new Vector3(0f, 0f, -0.016f), new Vector3(2.08f, 1.28f, 0.008f), matGlass, false, "House window glass");
+                CreateBox(window, new Vector3(0f, 0f, -1.2f), new Vector3(2.3f, 1.5f, 0.04f), matSchoolFabric, false, "Recessed interior curtain");
+                if (floor == 1)
+                {
+                    Light light = window.gameObject.AddComponent<Light>();
+                    light.type = LightType.Point; light.color = new Color(1f, 0.82f, 0.55f); light.intensity = 0.8f; light.range = 5f;
+                }
+            }
+            CreateBox(house, new Vector3(-3.5f, 0.5f, 5.85f), new Vector3(0.9f, 0.65f, 0.4f), matWhite, false, "AC Unit");
+            for (int slat = 0; slat < 7; slat++) CreateBox(house, new Vector3(-3.5f, 0.28f + slat * 0.065f, 6.055f), new Vector3(0.76f, 0.022f, 0.008f), matDarkMetal, false, "AC condenser grille slat");
+        }
 
 		private void BuildUtilityPole(Transform parent, Vector3 pos)
 		{
@@ -1494,16 +1298,10 @@ namespace DeadAir
 			}
 		}
 
-		private void BuildForestTree(Transform parent, Vector3 pos)
-		{
-			Transform transform = new GameObject("Dense Forest Tree").transform;
-			transform.SetParent(parent, worldPositionStays: false);
-			transform.localPosition = pos;
-			CreateCylinder(transform, new Vector3(0f, 4.5f, 0f), 0.45f, 9f, matBark);
-			CreateCylinder(transform, new Vector3(0f, 9f, 0f), 2.8f, 4.5f, matFoliage, addCollider: false);
-			CreateCylinder(transform, new Vector3(0f, 12f, 0f), 2f, 3.8f, matFoliage, addCollider: false);
-			CreateCylinder(transform, new Vector3(0f, 14.5f, 0f), 1.2f, 2.8f, matFoliage, addCollider: false);
-		}
+        private void BuildForestTree(Transform parent, Vector3 pos)
+        {
+            BuildRefinedForestTree(parent, pos);
+        }
 
 		private void BuildSchoolCourtyard()
 		{
@@ -1576,9 +1374,7 @@ namespace DeadAir
 			BuildFacadeWallWithWindows(transform, 0f - num3, isNorth: true);
 			CreateBox(transform, new Vector3(0f, 5.7f, 0f), new Vector3(10f, 3.8f, 0.35f), matPlaster, addCollider: true, "South Facade Center 2F");
 			CreateBox(transform, new Vector3(0f, 9.4f, 0f), new Vector3(10f, 3.6f, 0.35f), matPlaster, addCollider: true, "South Facade Center 3F");
-			GameObject gameObject = CreateCylinder(transform, new Vector3(0f, 6.2f, 0.22f), 0.85f, 0.12f, matDarkMetal, addCollider: false, "Clock");
-			gameObject.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-			CreateCylinder(gameObject.transform, new Vector3(0f, 0.07f, 0f), 0.76f, 0.03f, matWhite, addCollider: false);
+            BuildSchoolWallClock(transform, new Vector3(0f, 6.2f, .24f), 1.7f);
 			for (int i = -1; i <= 1; i += 2)
 			{
 				for (int j = 0; j < 5; j++)
@@ -1588,8 +1384,11 @@ namespace DeadAir
 					CreateBox(transform, new Vector3(num4, 0.9f, 1.4f), new Vector3(3.8f, 0.8f, 0.8f), matFoliage, addCollider: false, "Shrub");
 					if (j == 1 || j == 3)
 					{
-						CreateCylinder(transform, new Vector3(num4 + 1.2f, 2f, 1.4f), 0.22f, 2.8f, matBark);
-						CreateBox(transform, new Vector3(num4 + 1.2f, 3.5f, 1.4f), new Vector3(2.4f, 0.8f, 2.4f), matFoliage, addCollider: false);
+                        if (!TryInstallSchoolTree(transform, "pine-tree", new Vector3(num4 + 1.2f, .6f, 1.4f), new Vector3(2.4f, 3.3f, 2.4f), .11f, 2.8f, j * 43f))
+                        {
+                            CreateCylinder(transform, new Vector3(num4 + 1.2f, 2f, 1.4f), 0.22f, 2.8f, matBark);
+                            CreateBox(transform, new Vector3(num4 + 1.2f, 3.5f, 1.4f), new Vector3(2.4f, 0.8f, 2.4f), matFoliage, addCollider: false);
+                        }
 					}
 				}
 			}
@@ -1702,33 +1501,27 @@ namespace DeadAir
 
 		private void BuildShoeLockers(Transform parent, Vector3 pos, float yaw)
 		{
-			Transform transform = new GameObject("Getabako Shoe Lockers").transform;
-			transform.SetParent(parent, worldPositionStays: false);
-			transform.localPosition = pos;
-			transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
-			float num = 5.2f;
-			float num2 = 1.9f;
-			float num3 = 0.65f;
-			CreateBox(transform, new Vector3(0f, num2 * 0.5f, 0f), new Vector3(num, num2, num3), matShoeLocker, addCollider: true, "Locker Main Body");
-			int num4 = 4;
-			int num5 = 10;
-			float num6 = (num - 0.2f) / (float)num5;
-			float num7 = (num2 - 0.2f) / (float)num4;
-			for (int i = 0; i < num4; i++)
-			{
-				for (int j = 0; j < num5; j++)
-				{
-					float num8 = (0f - num) * 0.5f + 0.15f + (float)j * num6 + num6 * 0.5f;
-					float num9 = 0.15f + (float)i * num7 + num7 * 0.5f;
-					CreateBox(transform, new Vector3(num8, num9, 0.05f), new Vector3(num6 * 0.85f, num7 * 0.85f, num3 * 0.7f), matDarkMetal, addCollider: false);
-					if ((i + j) % 2 == 0)
-					{
-						CreateBox(transform, new Vector3(num8 - 0.08f, num9 - 0.08f, 0.1f), new Vector3(0.09f, 0.05f, 0.22f), matWhite, addCollider: false);
-						CreateBox(transform, new Vector3(num8 + 0.08f, num9 - 0.08f, 0.1f), new Vector3(0.09f, 0.05f, 0.22f), matWhite, addCollider: false);
-					}
-				}
-			}
-		}
+            Transform root = Assembly(parent, "Getabako Shoe Lockers", pos, yaw);
+            const float width = 5.2f, height = 1.9f, depth = 0.65f, board = 0.025f;
+            CreateBox(root, new Vector3(0f, height * 0.5f, -depth * 0.5f + board * 0.5f), new Vector3(width, height, board), matShoeLocker, true, "Locker recessed back");
+            for (int col = 0; col <= 10; col++)
+                CreateBox(root, new Vector3(-width * 0.5f + board * 0.5f + col * (width - board) / 10f, height * 0.5f, 0f), new Vector3(board, height, depth), matShoeLocker, true, "Cubby vertical partition");
+            for (int row = 0; row <= 4; row++)
+                CreateBox(root, new Vector3(0f, board * 0.5f + row * (height - board) / 4f, 0f), new Vector3(width, board, depth), matShoeLocker, true, "Cubby shelf board");
+            for (int row = 0; row < 4; row++)
+            for (int col = 0; col < 10; col++)
+            {
+                float x = -width * 0.5f + (col + 0.5f) * width / 10f;
+                float y = (row + 0.5f) * height / 4f;
+                CreateBox(root, new Vector3(x, y - 0.18f, depth * 0.5f + 0.003f), new Vector3(0.15f, 0.035f, 0.005f), matPaper, false, "Cubby number card");
+                if ((row + col) % 3 != 0) continue;
+                for (int shoe = -1; shoe <= 1; shoe += 2)
+                {
+                    CreateBox(root, new Vector3(x + shoe * 0.085f, y - 0.16f, 0.045f), new Vector3(0.12f, 0.045f, 0.23f), matSchoolRubber, false, "Shoe sole");
+                    CreateBox(root, new Vector3(x + shoe * 0.085f, y - 0.115f, 0.015f), new Vector3(0.105f, 0.065f, 0.16f), matWhite, false, "Shoe upper");
+                }
+            }
+        }
 
 		private void BuildFirstFloorInteriors()
 		{
@@ -1943,33 +1736,35 @@ namespace DeadAir
 
 		private void BuildClassroomDoor(Transform parent, Vector3 basePos, float yaw, string roomName)
 		{
-			Transform transform = new GameObject("Sliding Door " + roomName).transform;
-			transform.SetParent(parent, worldPositionStays: false);
-			transform.localPosition = basePos;
-			transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
-			CreateBox(transform, new Vector3(-0.75f, 1.15f, 0f), new Vector3(0.12f, 2.3f, 0.28f), matDarkMetal);
-			CreateBox(transform, new Vector3(0.75f, 1.15f, 0f), new Vector3(0.12f, 2.3f, 0.28f), matDarkMetal);
-			CreateBox(transform, new Vector3(0f, 2.36f, 0f), new Vector3(1.62f, 0.12f, 0.28f), matDarkMetal, addCollider: false);
-			GameObject gameObject = CreateBox(transform, new Vector3(0f, 2.58f, 0.15f), new Vector3(0.75f, 0.28f, 0.06f), matWoodFloor, addCollider: false, "Nameplate");
-			CreateBox(gameObject.transform, new Vector3(0f, 0f, 0.04f), new Vector3(0.68f, 0.22f, 0.02f), matWhite, addCollider: false, "Label Base");
-			GameObject gameObject2 = CreateBox(transform, new Vector3(0.85f, 1.12f, 0.08f), new Vector3(0.95f, 2.2f, 0.05f), matDoorWood, addCollider: true, "Sliding Leaf");
-			CreateBox(gameObject2.transform, new Vector3(0f, 0.45f, 0f), new Vector3(0.75f, 0.75f, 0.03f), matGlass, addCollider: false, "Door Window Glass");
-			CreateBox(gameObject2.transform, new Vector3(0f, 0.45f, 0.02f), new Vector3(0.04f, 0.75f, 0.04f), matDoorWood, addCollider: false);
-			CreateBox(gameObject2.transform, new Vector3(0f, 0.45f, 0.02f), new Vector3(0.75f, 0.04f, 0.04f), matDoorWood, addCollider: false);
-			CreateBox(gameObject2.transform, new Vector3(-0.38f, 0f, 0.03f), new Vector3(0.04f, 0.18f, 0.02f), matDarkMetal, addCollider: false);
-		}
+            Transform door = Assembly(parent, "Sliding Door " + roomName, basePos, yaw);
+            CreateBox(door, new Vector3(-0.75f, 1.15f, 0f), new Vector3(0.12f, 2.3f, 0.28f), matDarkMetal, true, "Left door jamb");
+            CreateBox(door, new Vector3(0.75f, 1.15f, 0f), new Vector3(0.12f, 2.3f, 0.28f), matDarkMetal, true, "Right door jamb");
+            CreateBox(door, new Vector3(0f, 2.36f, 0f), new Vector3(1.62f, 0.12f, 0.28f), matDarkMetal, false, "Sliding door head track");
+            Transform plate = Assembly(door, "Nameplate", new Vector3(0f, 2.58f, 0.15f));
+            CreateBox(plate, Vector3.zero, new Vector3(0.75f, 0.28f, 0.06f), matDoorWood, false, "Nameplate backing");
+            CreateBox(plate, new Vector3(0f, 0f, 0.04f), new Vector3(0.68f, 0.22f, 0.02f), matPaper, false, "Label Base");
+            Transform leaf = Assembly(door, "Sliding Leaf", new Vector3(0.85f, 1.12f, 0.08f));
+            CreateBox(leaf, new Vector3(0f, -0.465f, 0f), new Vector3(0.95f, 1.27f, 0.052f), matDoorWood, false, "Solid lower door panel");
+            CreateBox(leaf, new Vector3(0f, 1.005f, 0f), new Vector3(0.95f, 0.19f, 0.052f), matDoorWood, false, "Door top rail");
+            for (int side = -1; side <= 1; side += 2)
+                CreateBox(leaf, new Vector3(side * 0.4325f, 0.54f, 0f), new Vector3(0.085f, 0.74f, 0.052f), matDoorWood, false, "Door glazing stile");
+            CreateBox(leaf, new Vector3(0f, 0.54f, 0f), new Vector3(0.78f, 0.74f, 0.008f), matGlass, false, "Door Window Glass");
+            CreateBox(leaf, new Vector3(0f, 0.54f, 0f), new Vector3(0.026f, 0.74f, 0.026f), matDoorWood, false, "Window centre mullion");
+            CreateBox(leaf, new Vector3(-0.38f, -0.06f, 0.044f), new Vector3(0.025f, 0.18f, 0.025f), matDarkMetal, false, "Separate sliding pull");
+            CreateBox(leaf, new Vector3(-0.38f, -0.06f, -0.044f), new Vector3(0.025f, 0.18f, 0.025f), matDarkMetal, false, "Reverse sliding pull");
+            DeadAirArtMotionSlidingLeaf.Attach(leaf, new Vector3(0.85f, 1.12f, 0.08f), new Vector3(1.42f, 1.12f, 0.08f), door, 2.5f);
+        }
 
 		private void BuildClassroom(Transform parent, float centerX, float floorY, float centerZ, string roomName, int classroomIndex)
 		{
 			Transform transform = new GameObject("Classroom " + roomName).transform;
 			transform.SetParent(parent, worldPositionStays: false);
-			CreateBox(transform, new Vector3(centerX, floorY + 1.85f, centerZ + 4.05f), new Vector3(6.2f, 1.6f, 0.08f), matChalkboard, addCollider: true, "Chalkboard");
-			CreateBox(transform, new Vector3(centerX, floorY + 1f, centerZ + 4f), new Vector3(6.2f, 0.08f, 0.14f), matWoodFloor, addCollider: false, "Chalk Tray");
-			CreateBox(transform, new Vector3(centerX - 0.8f, floorY + 0.015f, centerZ + 3.8f), new Vector3(0.08f, 0.03f, 0.03f), matWhite, addCollider: false, "Chalk Stick");
-			CreateBox(transform, new Vector3(centerX + 0.5f, floorY + 0.015f, centerZ + 3.7f), new Vector3(0.06f, 0.03f, 0.03f), matTorii, addCollider: false, "Red Chalk");
-			CreateBox(transform, new Vector3(centerX + 1.2f, floorY + 0.025f, centerZ + 3.65f), new Vector3(0.18f, 0.05f, 0.09f), matDarkMetal, addCollider: false, "Felt Eraser");
+            float teachingSide = ClassroomTeachingSideX(centerX, centerZ);
+            BuildTeachingWall(transform, new Vector3(teachingSide, floorY, centerZ), 90f);
+            Transform frontDesk = BuildWorktable(transform, new Vector3(teachingSide + 1.35f, floorY + .45f, centerZ), new Vector3(1.25f, .9f, .7f), matDeskWood, "Teacher teaching desk", true);
+            frontDesk.localRotation = Quaternion.Euler(0f, 90f, 0f);
 			CreateBox(transform, new Vector3(centerX, floorY + 0.08f, centerZ + 2.8f), new Vector3(2.8f, 0.16f, 1.4f), matWoodFloor, addCollider: true, "Podium Stage");
-			CreateBox(transform, new Vector3(centerX, floorY + 0.55f, centerZ + 2.8f), new Vector3(1.6f, 0.75f, 0.85f), matDeskWood, addCollider: true, "Teacher Desk");
+			BuildWorktable(transform, new Vector3(centerX, floorY + 0.55f, centerZ + 2.8f), new Vector3(1.6f, 0.75f, 0.85f), matDeskWood, "Teacher preparation table", true);
 			CreateBox(transform, new Vector3(centerX + 0.4f, floorY + 0.95f, centerZ + 2.8f), new Vector3(0.35f, 0.04f, 0.25f), matPaper, addCollider: false, "Grade Binder");
 			int num = 0;
 			for (int i = 0; i < 3; i++)
@@ -1983,61 +1778,56 @@ namespace DeadAir
 					bool num2 = (classroomIndex * 3 + num) % 5 == 0;
 					bool isTippedChair = (classroomIndex * 2 + num) % 7 == 0;
 					float yaw = (num2 ? ((num % 2 == 0) ? 22f : (-28f)) : UnityEngine.Random.Range(-3f, 3f));
-					BuildAuthenticDesk(transform, new Vector3(x, floorY, z), yaw, isOverturned, isTippedChair);
+					BuildAuthenticDesk(transform, new Vector3(x, floorY, z), 90f + yaw, isOverturned, isTippedChair);
 				}
 			}
 			for (int k = -1; k <= 1; k += 2)
 			{
 				float num3 = centerX + (float)k * 3.8f;
 				CreateBox(transform, new Vector3(num3, floorY + 0.5f, centerZ - 3.95f), new Vector3(4.2f, 1f, 0.4f), matDeskWood, addCollider: true, "Cubby Unit");
-				for (int l = 0; l < 4; l++)
-				{
-					float num4 = num3 - 1.5f + (float)l;
-					CreateBox(transform, new Vector3(num4, floorY + 0.5f, centerZ - 3.95f), new Vector3(0.04f, 0.95f, 0.38f), matDeskWood, addCollider: false);
-					if ((l + classroomIndex + k) % 2 == 0)
-					{
-						CreateBox(transform, new Vector3(num4 + 0.35f, floorY + 0.25f, centerZ - 3.95f), new Vector3(0.35f, 0.22f, 0.25f), matBooks, addCollider: false);
-					}
-				}
+
 			}
 			BuildClassroomTrashAndClutter(transform, centerX, floorY, centerZ, classroomIndex);
-			CreateCylinder(transform, new Vector3(centerX, floorY + 3f, centerZ + 4.05f), 0.35f, 0.06f, matWhite, addCollider: false).transform.rotation = Quaternion.Euler(90f, 0f, 0f);
 			CreateInteriorLamp(transform, new Vector3(centerX - 2.8f, floorY + 3.1f, centerZ));
 			CreateInteriorLamp(transform, new Vector3(centerX + 2.8f, floorY + 3.1f, centerZ));
 		}
 
 		private void BuildAuthenticDesk(Transform parent, Vector3 pos, float yaw, bool isOverturned, bool isTippedChair)
 		{
-			Transform transform = new GameObject("Authentic School Desk").transform;
-			transform.SetParent(parent, worldPositionStays: false);
-			transform.localPosition = pos;
-			transform.localRotation = Quaternion.Euler(0f, yaw, isOverturned ? 85f : 0f);
-			CreateBox(transform, new Vector3(0f, 0.72f, 0f), new Vector3(0.68f, 0.03f, 0.48f), matDeskWood, addCollider: true, "Desktop");
-			CreateBox(transform, new Vector3(0f, 0.62f, 0f), new Vector3(0.56f, 0.06f, 0.38f), matDarkMetal, addCollider: false, "Book Shelf");
-			for (int i = -1; i <= 1; i += 2)
-			{
-				for (int j = -1; j <= 1; j += 2)
-				{
-					CreateCylinder(transform, new Vector3((float)i * 0.3f, 0.36f, (float)j * 0.2f), 0.016f, 0.72f, matDarkMetal, addCollider: false);
-				}
-			}
-			Transform transform2 = new GameObject("Student Chair").transform;
-			transform2.SetParent(transform, worldPositionStays: false);
-			transform2.localPosition = (isTippedChair ? new Vector3(0f, 0.2f, 0.8f) : Vector3.zero);
-			transform2.localRotation = (isTippedChair ? Quaternion.Euler(-75f, 15f, 0f) : Quaternion.identity);
-			CreateBox(transform2, new Vector3(0f, 0.42f, 0.45f), new Vector3(0.4f, 0.025f, 0.38f), matDeskWood, addCollider: true, "Seat");
-			CreateBox(transform2, new Vector3(0f, 0.78f, 0.62f), new Vector3(0.4f, 0.18f, 0.025f), matDeskWood, addCollider: false, "Backrest");
-			for (int k = -1; k <= 1; k += 2)
-			{
-				CreateCylinder(transform2, new Vector3((float)k * 0.16f, 0.21f, 0.45f), 0.014f, 0.42f, matDarkMetal, addCollider: false);
-				CreateCylinder(transform2, new Vector3((float)k * 0.16f, 0.6f, 0.61f), 0.014f, 0.4f, matDarkMetal, addCollider: false);
-			}
-			CreateBox(transform, new Vector3(-0.36f, 0.45f, 0f), new Vector3(0.1f, 0.32f, 0.22f), matDarkMetal, addCollider: false, "School Bag");
-			if (!isOverturned && (int)(pos.x + pos.z) % 2 == 0)
-			{
-				CreateBox(transform, new Vector3(UnityEngine.Random.Range(-0.1f, 0.1f), 0.74f, 0f), new Vector3(0.24f, 0.005f, 0.32f), matPaper, addCollider: false, "Desk Paper");
-			}
-		}
+            Transform furniture = Assembly(parent, "Authentic School Desk", pos, yaw);
+            Transform desk = Assembly(furniture, "Independent student desk", isOverturned ? new Vector3(0f, 0.34f, 0f) : Vector3.zero);
+            desk.localRotation = Quaternion.Euler(0f, 0f, isOverturned ? 85f : 0f);
+            GameObject scannedDesk = DeadAirSchoolPhysics.InstallScanned(desk, "school-desk", Vector3.zero, Quaternion.identity, new Vector3(0.68f, 0.75f, 0.48f));
+            if (scannedDesk == null)
+            {
+                CreateBox(desk, new Vector3(0f, 0.72f, 0f), new Vector3(0.68f, 0.035f, 0.48f), matDeskWood, false, "Laminated student desktop");
+                CreateBox(desk, new Vector3(0f, 0.61f, 0f), new Vector3(0.56f, 0.018f, 0.36f), matDarkMetal, false, "Open book tray base");
+                for (int side = -1; side <= 1; side += 2)
+                {
+                    CreateBox(desk, new Vector3(side * 0.27f, 0.65f, 0f), new Vector3(0.018f, 0.08f, 0.36f), matDarkMetal, false, "Book tray side wall");
+                    for (int front = -1; front <= 1; front += 2)
+                    {
+                        CreateCylinder(desk, new Vector3(side * 0.29f, 0.35f, front * 0.19f), 0.016f, 0.7f, matDarkMetal, false, "Student desk tubular leg");
+                        CreateCylinder(desk, new Vector3(side * 0.29f, 0.018f, front * 0.19f), 0.021f, 0.036f, matSchoolRubber, false, "Student desk foot cap");
+                    }
+                }
+            }
+            AddCollisionProxy(desk, new Vector3(0f, 0.72f, 0f), new Vector3(0.68f, 0.035f, 0.48f), "Desktop collision");
+            for (int x = -1; x <= 1; x += 2)
+                AddCollisionProxy(desk, new Vector3(x * 0.29f, 0.35f, 0f), new Vector3(0.045f, 0.7f, 0.4f), "Desk frame collision");
+            Transform chair = Assembly(furniture, "Independent student chair", isTippedChair ? new Vector3(0f, 0.21f, 0.8f) : new Vector3(0f, 0f, 0.45f));
+            chair.localRotation = isTippedChair ? Quaternion.Euler(-75f, 15f, 0f) : Quaternion.identity;
+            GameObject scannedChair = DeadAirSchoolPhysics.InstallScanned(chair, "school-chair", Vector3.zero, Quaternion.identity, new Vector3(0.4f, 0.9f, 0.4f));
+            if (scannedChair == null) BuildChair(chair, new Vector3(0f, 0.45f, 0f), new Vector3(0.4f, 0.9f, 0.4f), false, "Student chair frame", true);
+            else
+            {
+                AddCollisionProxy(chair, new Vector3(0f, 0.43f, 0f), new Vector3(0.4f, 0.035f, 0.38f), "Chair seat collision");
+                AddCollisionProxy(chair, new Vector3(0f, 0.72f, 0.17f), new Vector3(0.4f, 0.35f, 0.035f), "Chair back collision");
+            }
+            CreateBox(desk, new Vector3(-0.37f, 0.44f, 0f), new Vector3(0.12f, 0.29f, 0.22f), matSchoolFabric, false, "Canvas school bag");
+            if (!isOverturned && (int)(pos.x + pos.z) % 2 == 0)
+                CreateBox(desk, new Vector3(0.02f, 0.743f, 0f), new Vector3(0.24f, 0.005f, 0.32f), matPaper, false, "Desk Paper");
+        }
 
 		private void BuildClassroomTrashAndClutter(Transform parent, float centerX, float floorY, float centerZ, int seed)
 		{
@@ -2079,8 +1869,8 @@ namespace DeadAir
 			{
 				float num = -3.2f - (float)i * 2.8f;
 				CreateBox(transform, new Vector3(centerX + 4.2f, floorY + 0.45f, num), new Vector3(1.3f, 0.4f, 2.3f), matWhite, addCollider: true, "Bed");
-				CreateBox(transform, new Vector3(centerX + 4.2f, floorY + 0.7f, num + 0.9f), new Vector3(0.9f, 0.15f, 0.5f), matPlaster, addCollider: false, "Pillow");
-				CreateBox(transform, new Vector3(centerX + 3f, floorY + 1.2f, num), new Vector3(0.05f, 1.8f, 2.2f), matWhite, addCollider: false, "Privacy Curtain");
+				CreateBox(transform, new Vector3(centerX + 4.2f, floorY + 0.7f, num + 0.9f), new Vector3(0.9f, 0.15f, 0.5f), matSchoolFabric, addCollider: false, "Pillow");
+				CreateBox(transform, new Vector3(centerX + 3f, floorY + 1.2f, num), new Vector3(0.05f, 1.8f, 2.2f), matSchoolFabric, addCollider: false, "Privacy Curtain");
 			}
 			CreateBox(transform, new Vector3(centerX - 3.5f, floorY + 1.5f, -6.5f), new Vector3(2.4f, 2.8f, 0.6f), matDarkMetal, addCollider: true, "Medicine Cabinet");
 			CreateBox(transform, new Vector3(centerX - 3.5f, floorY + 0.75f, -2.5f), new Vector3(1.8f, 0.75f, 1f), matDeskWood, addCollider: true, "Nurse Desk");
@@ -2151,10 +1941,6 @@ namespace DeadAir
 			{
 				float z = -15.5f - (float)i * 2.2f;
 				GameObject gameObject = CreateBox(transform, new Vector3(centerX - 1.5f, floorY + 1.4f, z), new Vector3(6.5f, 2.6f, 0.7f), matDeskWood, addCollider: true, "Archive Shelf");
-				for (int j = 0; j < 3; j++)
-				{
-					CreateBox(transform, new Vector3(centerX - 1.5f, floorY + 0.6f + (float)j * 0.75f, z + 0.05f), new Vector3(6.1f, 0.42f, 0.5f), matBooks, addCollider: false, "Archive Shelf Books");
-				}
 			}
 			CreateInteriorLamp(transform, new Vector3(centerX, floorY + 3.1f, -17.75f));
 		}
@@ -2163,9 +1949,10 @@ namespace DeadAir
 		{
 			Transform transform = new GameObject("Music Room (音楽室)").transform;
 			transform.SetParent(parent, worldPositionStays: false);
-			GameObject gameObject = CreateBox(transform, new Vector3(centerX + 3.5f, floorY + 0.7f, -4.25f), new Vector3(1.8f, 1.3f, 1.4f), matDarkMetal, addCollider: true, "Upright Piano");
-			CreateBox(gameObject.transform, new Vector3(0f, -0.1f, 0.65f), new Vector3(1.6f, 0.18f, 0.35f), matWhite, addCollider: false, "Keyboard");
-			CreateBox(transform, new Vector3(centerX + 3.5f, floorY + 0.45f, -3.2f), new Vector3(0.6f, 0.45f, 0.4f), matDeskWood, addCollider: true, "Piano Stool");
+            // The first-floor ceiling slab also forms the visible second-floor cap above the parquet.
+            float furnishingFloor = floorY + .125f;
+            BuildUprightPiano(transform, new Vector3(centerX + 3.5f, floorY, -4.25f));
+            BuildPianoStool(transform, new Vector3(centerX + 3.5f, furnishingFloor, -3.2f));
 			for (int i = 0; i < 9; i++)
 			{
 				float x = centerX + UnityEngine.Random.Range(-3.5f, 3.5f);
@@ -2178,9 +1965,9 @@ namespace DeadAir
 				for (int k = 0; k < 4; k++)
 				{
 					float x2 = centerX - 3.8f + (float)k * 1.8f;
-					CreateBox(transform, new Vector3(x2, floorY + 0.45f, num), new Vector3(0.45f, 0.45f, 0.45f), matDeskWood, addCollider: true, "Chair");
-					CreateCylinder(transform, new Vector3(x2, floorY + 0.9f, num + 0.6f), 0.02f, 0.9f, matDarkMetal, addCollider: false, "Music Stand");
-					CreateBox(transform, new Vector3(x2, floorY + 1.2f, num + 0.6f), new Vector3(0.4f, 0.3f, 0.03f), matDarkMetal, addCollider: false);
+                    CreateBox(transform, new Vector3(x2, furnishingFloor + .45f, num), new Vector3(.45f, .9f, .45f), matDeskWood, true, "Chair")
+                        .transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+                    BuildMusicStand(transform, new Vector3(x2, furnishingFloor, num + .6f));
 				}
 			}
 			CreateInteriorLamp(transform, new Vector3(centerX, floorY + 3.1f, -4.25f));
@@ -2193,12 +1980,7 @@ namespace DeadAir
 			for (int i = 0; i < 2; i++)
 			{
 				float z = -16.2f - (float)i * 3.4f;
-				GameObject gameObject = CreateBox(transform, new Vector3(centerX, floorY + 0.45f, z), new Vector3(7.5f, 0.9f, 1.6f), matLabCounter, addCollider: true, "Lab Bench");
-				CreateBox(gameObject.transform, new Vector3(2.8f, 0.45f, 0f), new Vector3(0.9f, 0.2f, 0.7f), matDarkMetal, addCollider: false, "Sink");
-				CreateCylinder(gameObject.transform, new Vector3(2.8f, 0.7f, 0f), 0.02f, 0.4f, matWhite, addCollider: false, "Faucet");
-				CreateCylinder(gameObject.transform, new Vector3(-2.2f, 0.55f, 0.2f), 0.06f, 0.22f, matGlass, addCollider: false, "Beaker");
-				CreateCylinder(gameObject.transform, new Vector3(-1.6f, 0.55f, 0.2f), 0.08f, 0.25f, matGlass, addCollider: false, "Beaker 2");
-				CreateBox(gameObject.transform, new Vector3(0f, 0.55f, -0.3f), new Vector3(0.45f, 0.18f, 0.15f), matDeskWood, addCollider: false, "Test Tubes");
+                BuildSinkBench(transform, new Vector3(centerX, floorY + 0.45f, z));
 			}
 			Transform transform2 = new GameObject("Skeleton Stand").transform;
 			transform2.SetParent(transform, worldPositionStays: false);
@@ -2226,10 +2008,6 @@ namespace DeadAir
 			{
 				float z = -15.5f - (float)i * 2.6f;
 				GameObject gameObject = CreateBox(transform, new Vector3(centerX - 3f, floorY + 1.4f, z), new Vector3(5.5f, 2.8f, 0.65f), matDeskWood, addCollider: true, "Bookshelf");
-				for (int j = 0; j < 4; j++)
-				{
-					CreateBox(transform, new Vector3(centerX - 3f, floorY + 0.45f + (float)j * 0.62f, z + 0.05f), new Vector3(5.1f, 0.38f, 0.48f), matBooks, addCollider: false, "Library Shelf Books");
-				}
 			}
 			GameObject gameObject2 = CreateBox(transform, new Vector3(centerX + 3.2f, floorY + 0.4f, -17.75f), new Vector3(2.6f, 0.8f, 4.8f), matDeskWood, addCollider: true, "Study Table");
 			for (float num = -1.5f; num <= 1.5f; num += 1.5f)
@@ -2255,6 +2033,8 @@ namespace DeadAir
 			transform.SetParent(parent, worldPositionStays: false);
 			CreateBox(transform, new Vector3(centerX, floorY + 0.45f, -17.75f), new Vector3(4.2f, 0.9f, 1.6f), matDarkMetal, addCollider: true, "Console Desk");
 			CreateBox(transform, new Vector3(centerX, floorY + 1.25f, -17.75f), new Vector3(3.2f, 0.55f, 0.35f), matLabCounter, addCollider: false, "Rack Equipment");
+            DeadAirSchoolPhysics.InstallScanned(transform, "cassette-player", new Vector3(centerX - 0.8f, floorY + 0.9f, -17.22f), Quaternion.identity, new Vector3(0.6f, 0.28f, 0.28f));
+            DeadAirSchoolPhysics.InstallScanned(transform, "radio-transceiver", new Vector3(centerX + 0.65f, floorY + 0.9f, -17.25f), Quaternion.identity, new Vector3(0.62f, 0.25f, 0.3f));
 			CreateBox(transform, new Vector3(centerX - 2.2f, floorY + 1.2f, -17.75f), new Vector3(0.4f, 0.6f, 0.4f), matDarkMetal, addCollider: false, "Speaker L");
 			CreateBox(transform, new Vector3(centerX + 2.2f, floorY + 1.2f, -17.75f), new Vector3(0.4f, 0.6f, 0.4f), matDarkMetal, addCollider: false, "Speaker R");
 			CreateInteriorLamp(transform, new Vector3(centerX, floorY + 3.1f, -17.75f));
@@ -2427,6 +2207,8 @@ namespace DeadAir
 			Transform transform = new GameObject("Ancient Tree").transform;
 			transform.SetParent(parent, worldPositionStays: false);
 			transform.localPosition = pos;
+            if (TryInstallSchoolTree(transform, "pine-tree", Vector3.zero, new Vector3(7.5f, 11.7f, 7.5f), .48f, 6.4f,
+                Mathf.Repeat(pos.x * 13f + pos.z * 7f, 360f))) return;
 			CreateCylinder(transform, new Vector3(0f, 3.2f, 0f), 0.85f, 6.4f, matBark, addCollider: true, "Trunk");
 			for (int i = 0; i < 4; i++)
 			{
@@ -2483,8 +2265,7 @@ namespace DeadAir
 			transform.SetParent(parent, worldPositionStays: false);
 			transform.localPosition = pos;
 			CreateBox(transform, new Vector3(0f, 2.2f, 0f), new Vector3(5.6f, 4.4f, 5f), matWoodFloor, addCollider: true, "Shrine Hall");
-			CreateBox(transform, new Vector3(0f, 4.7f, 0f), new Vector3(7.2f, 0.6f, 6.2f), matKawaraRoof);
-			CreateBox(transform, new Vector3(0f, 5.3f, 0f), new Vector3(5.8f, 0.7f, 5f), matKawaraRoof, addCollider: false);
+			BuildPitchedRoof(transform, new Vector3(0f, 5.6f, 0f), new Vector3(7.2f, 0.1f, 6.2f));
 			CreateBox(transform, new Vector3(0f, 0.8f, -2.8f), new Vector3(1.6f, 0.9f, 1f), matWoodFloor, addCollider: true, "Offering Box");
 		}
 
@@ -2501,12 +2282,18 @@ namespace DeadAir
 					CreateCylinder(transform, new Vector3((float)i * 2f, 1.8f, (float)j * 2f), 0.12f, 3.2f, matWoodFloor, addCollider: false);
 				}
 			}
-			CreateBox(transform, new Vector3(0f, 3.6f, 0f), new Vector3(5.8f, 0.5f, 5.8f), matKawaraRoof);
-			CreateBox(transform, new Vector3(0f, 4.2f, 0f), new Vector3(4.2f, 0.7f, 4.2f), matKawaraRoof, addCollider: false);
+			BuildPitchedRoof(transform, new Vector3(0f, 4.6f, 0f), new Vector3(5.8f, 0.1f, 5.8f));
 		}
 
 		private void BuildParkBench(Transform parent, Vector3 pos, float yaw)
 		{
+            GameObject scanned = DeadAirSchoolPhysics.InstallScanned(parent, "wooden-bench", pos, Quaternion.Euler(0f, yaw, 0f), new Vector3(2.2f, .49f, 0.6f));
+            if (scanned != null)
+            {
+                AddCollisionProxy(scanned.transform, new Vector3(0f, 0.45f, 0f), new Vector3(2.2f, 0.08f, 0.58f), "Bench seat collision");
+
+                return;
+            }
 			Transform transform = new GameObject("Park Bench").transform;
 			transform.SetParent(parent, worldPositionStays: false);
 			transform.localPosition = pos;
@@ -2545,38 +2332,12 @@ namespace DeadAir
 
 		private void BuildNewsVan()
 		{
-			Transform transform = new GameObject("Journalist News Van").transform;
-			transform.SetParent(Root, worldPositionStays: false);
-			transform.localPosition = new Vector3(0f, 0f, 43f);
-			transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
-			CreateBox(transform, new Vector3(0f, 1.05f, 0f), new Vector3(2.4f, 1.4f, 5.2f), matWhite, addCollider: true, "Van Body");
-			CreateBox(transform, new Vector3(0f, 1.85f, -0.4f), new Vector3(2.35f, 1.2f, 3.6f), matWhite, addCollider: true, "Van Cabin");
-			CreateBox(transform, new Vector3(0f, 1.75f, 1.75f), new Vector3(2.25f, 0.95f, 0.95f), matGlass, addCollider: false, "Windshield");
-			for (int i = -1; i <= 1; i += 2)
-			{
-				for (int j = -1; j <= 1; j += 2)
-				{
-					CreateCylinder(transform, new Vector3((float)i * 1.25f, 0.4f, (float)j * 1.5f), 0.4f, 0.28f, matDarkMetal).transform.rotation = Quaternion.Euler(0f, 0f, 90f);
-				}
-			}
-			CreateCylinder(transform, new Vector3(0f, 2.65f, -0.9f), 0.05f, 0.7f, matDarkMetal, addCollider: false);
-			CreateCylinder(transform, new Vector3(0f, 3f, -0.9f), 0.65f, 0.14f, matWhite, addCollider: false).transform.rotation = Quaternion.Euler(25f, 0f, 0f);
-			for (int k = -1; k <= 1; k += 2)
-			{
-				Transform transform2 = new GameObject("Headlight").transform;
-				transform2.SetParent(transform, worldPositionStays: false);
-				transform2.localPosition = new Vector3((float)k * 0.85f, 0.85f, 2.65f);
-				Light light = transform2.gameObject.AddComponent<Light>();
-				light.type = LightType.Spot;
-				light.color = new Color(1f, 0.96f, 0.85f);
-				light.intensity = 5f;
-				light.range = 24f;
-				light.spotAngle = 48f;
-			}
-		}
+            BuildRefinedNewsVan();
+        }
 
 		public void Update(RoomState state, float dt)
 		{
+            UpdateSchoolDoorMotion(state, dt);
 			if (state == null)
 			{
 				return;
@@ -2588,6 +2349,11 @@ namespace DeadAir
 				if (viewCamera == null)
 				{
 					viewCamera = Camera.main;
+                    if (viewCamera == null)
+                    {
+                        var player = UnityEngine.Object.FindAnyObjectByType<DeadAirPlayer>();
+                        if (player != null) viewCamera = player.ViewCamera;
+                    }
 				}
 				Vector3 vector = ((viewCamera != null) ? viewCamera.transform.position : Vector3.zero);
 				bool interiorPowered = state != null && state.power && state.breakerOn;
@@ -2664,6 +2430,7 @@ namespace DeadAir
 					}
 				}
 			}
+            artReflectionProbes?.Present(state, viewCamera != null ? viewCamera : Camera.main);
 			for (int j = 0; j < pills.Count; j++)
 			{
 				PillItem pillItem = pills[j];

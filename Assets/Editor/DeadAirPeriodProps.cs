@@ -18,6 +18,7 @@ namespace DeadAir.Editor
         static readonly Dictionary<string, SourcePart[]> sources = new Dictionary<string, SourcePart[]>();
         static readonly Dictionary<string, Material> sourceMaterials = new Dictionary<string, Material>();
         static readonly Dictionary<string, Material> furnitureMaterials = new Dictionary<string, Material>();
+        public static void ClearCaches(){sources.Clear();sourceMaterials.Clear();furnitureMaterials.Clear();}
         sealed class SourcePart { public Mesh mesh; public string material; }
         sealed class ObjPart
         {
@@ -34,7 +35,7 @@ namespace DeadAir.Editor
             public Action<Transform,string,Vector3,Quaternion,float,float> sign;
             public Material wood,trim,metal,paper,black,screen;
             public GameObject Box(string name, Vector3 position, Vector3 size, Material material, bool collide=false)
-                => block(root,name,position,size,material,collide);
+                => Rounded(name,position,size,material,Mathf.Min(.025f,Mathf.Min(size.x,size.z)*.18f),collide,Mathf.Min(.005f,size.y*.18f));
             public void Sign(string text,Vector3 position,float width,float height)
                 => sign(root,text,position,Quaternion.identity,width,height);
             public GameObject Rounded(string name,Vector3 position,Vector3 size,Material material,float radius=.035f,bool collide=false,float bevel=.012f)
@@ -260,6 +261,8 @@ namespace DeadAir.Editor
             if(furnitureMaterials.TryGetValue(name,out var saved))return saved;
             string path=MaterialFolder+"/"+name+".mat";saved=AssetDatabase.LoadAssetAtPath<Material>(path);
             if(saved==null){saved=new Material(Shader.Find("Dead Air/Source Surface"));AssetDatabase.CreateAsset(saved,path);}
+            string surface=name.Contains("leaf")?"foliage":name.Contains("terracotta")?"ceramic":name.Contains("book-cover")?"paper":"fabric";
+            DeadAirArtMaterials.Apply(saved,surface);
             saved.SetColor("_Color",color);saved.SetColor("_EmissionColor",Color.black);saved.SetFloat("_Glossiness",smoothness);saved.SetFloat("_Cull",2);
             saved.enableInstancing=true;EditorUtility.SetDirty(saved);furnitureMaterials[name]=saved;return saved;
         }
@@ -304,11 +307,19 @@ namespace DeadAir.Editor
         static void CoffeeTable(Context c,PropData p)
         {
             float w=p.w>0?p.w:1.5f,d=p.d>0?p.d:.75f;
-            c.Rounded("Low tabletop",new Vector3(0,.43f,0),new Vector3(w,.08f,d),c.wood,.09f,true);
-            c.Rounded("Low table magazine shelf",new Vector3(0,.15f,0),new Vector3(w*.75f,.045f,d*.75f),c.wood,.04f);
+            var walnut=DeadAirArtMaterials.Create("period-restrained-walnut-low-table","wood",new Color(.88f,.80f,.69f),.29f);
+            c.Rounded("Walnut veneered low tabletop",new Vector3(0,.4475f,0),new Vector3(w,.045f,d),walnut,.045f,true);
+            c.Rounded("Separate solid walnut tabletop edge",new Vector3(0,.422f,0),new Vector3(w-.015f,.012f,d-.015f),walnut,.041f);
+            c.Rounded("Low table magazine shelf",new Vector3(0,.145f,0),new Vector3(w*.75f,.028f,d*.75f),walnut,.022f);
+            foreach(float z in new[]{-d*.35f,d*.35f})c.Rounded("Long low-table apron",new Vector3(0,.382f,z),new Vector3(w*.77f,.071f,.026f),walnut,.006f);
+            foreach(float x in new[]{-w*.38f,w*.38f})c.Rounded("Short low-table apron",new Vector3(x,.382f,0),new Vector3(.026f,.071f,d*.72f),walnut,.006f);
             foreach(float x in new[]{-w*.38f,w*.38f})foreach(float z in new[]{-d*.34f,d*.34f})
-                DeadAirFurnitureMeshes.Support(c.root,"Tapered low table leg",new Vector3(x,0,z),new Vector3(x*.94f,.40f,z*.94f),.026f,.034f,c.wood);
-            c.Rounded("Abandoned journal",new Vector3(.15f,.49f,0),new Vector3(.34f,.035f,.25f),c.paper,.008f);
+            {
+                DeadAirFurnitureMeshes.Support(c.root,"Splayed tapered walnut low-table leg",new Vector3(x,0,z),new Vector3(x*.94f,.425f,z*.94f),.018f,.030f,walnut);
+                c.Turned("Dark protective foot ferrule",new Vector3(x,0,z),new[]{0f,.023f},new[]{.019f,.020f},c.black,16);
+            }
+            c.Rounded("Folded period journal / paper block",new Vector3(.15f,.479f,0),new Vector3(.34f,.016f,.25f),c.paper,.004f);
+            c.Rounded("Separate journal cover",new Vector3(.15f,.489f,0),new Vector3(.345f,.003f,.255f),c.trim,.004f);
         }
 
         static void Chair(Context c,PropData p)
@@ -442,26 +453,12 @@ namespace DeadAir.Editor
 
         static void Typewriter(Context c,Vector3 p)
         {
-            c.Box("Mechanical typewriter body",p+new Vector3(0,.07f,0),new Vector3(.56f,.14f,.40f),c.trim);
-            c.Box("Typewriter key bed",p+new Vector3(0,.095f,.18f),new Vector3(.53f,.055f,.20f),c.black);
-            for(int row=0;row<3;row++)for(int col=0;col<10;col++)
-                c.Box("Typewriter key",p+new Vector3(-.225f+col*.05f,.127f+row*.004f,.225f-row*.055f),new Vector3(.032f,.018f,.028f),c.paper);
-            c.Box("Typewriter space bar",p+new Vector3(0,.126f,.283f),new Vector3(.32f,.025f,.027f),c.black);
-            c.Box("Typewriter platen",p+new Vector3(0,.21f,-.135f),new Vector3(.52f,.08f,.075f),c.black);
-            c.Box("Typewriter carriage rail",p+new Vector3(0,.205f,-.20f),new Vector3(.67f,.035f,.04f),c.metal);
-            c.Box("Paper in typewriter",p+new Vector3(0,.322f,-.155f),new Vector3(.30f,.24f,.012f),c.paper);
-            for(int i=0;i<4;i++)c.Box("Typed report line",p+new Vector3(0,.38f-i*.025f,-.145f),new Vector3(.20f,.006f,.003f),c.black);
+            DeadAirPrecisionEquipment.Typewriter(c.root,p,c.sign);
         }
 
         static void Telephone(Context c,Vector3 p)
         {
-            c.Box("Rotary telephone base",p+new Vector3(0,.05f,0),new Vector3(.28f,.10f,.23f),c.black);
-            c.Box("Telephone handset bridge",p+new Vector3(0,.145f,-.06f),new Vector3(.34f,.055f,.055f),c.black);
-            foreach(float x in new[]{-.135f,.135f})c.Box("Telephone handset cup",p+new Vector3(x,.12f,-.06f),new Vector3(.09f,.08f,.11f),c.black);
-            for(int i=0;i<10;i++)
-            {float a=i*Mathf.PI*.2f;c.Box("Rotary dial finger hole",p+new Vector3(Mathf.Sin(a)*.068f,.105f,.035f+Mathf.Cos(a)*.063f),new Vector3(.022f,.012f,.022f),c.paper);}
-            c.Box("Telephone dial hub",p+new Vector3(0,.106f,.035f),new Vector3(.053f,.018f,.053f),c.metal);
-            for(int i=0;i<8;i++)c.Box("Telephone coiled cord",p+new Vector3(-.19f,.025f,.03f+i*.019f),new Vector3(.055f,.025f,.014f),c.black);
+            DeadAirPrecisionEquipment.Telephone(c.root,p,c.sign);
         }
 
         static void DeskLamp(Context c,Vector3 p)
@@ -489,9 +486,19 @@ namespace DeadAir.Editor
             c.Box("Recorder brushed panel",new Vector3(0,.26f,.135f),new Vector3(.64f,.46f,.018f),c.metal);
             foreach(float x in new[]{-.175f,.175f})
             {
-                for(int i=0;i<12;i++){float a=i*Mathf.PI/6;var rim=c.Box("Reel rim",new Vector3(x+Mathf.Sin(a)*.12f,.34f+Mathf.Cos(a)*.12f,.165f),new Vector3(.07f,.018f,.03f),c.black);rim.transform.localRotation=Quaternion.Euler(0,0,-i*30);}
-                c.Box("Reel spindle",new Vector3(x,.34f,.177f),new Vector3(.038f,.038f,.025f),c.paper);
-                for(int i=0;i<3;i++){var spoke=c.Box("Reel spoke",new Vector3(x,.34f,.18f),new Vector3(.19f,.013f,.014f),c.metal);spoke.transform.localRotation=Quaternion.Euler(0,0,i*60);}
+                var rotor=Group(c.root,"motion:tapeReel-"+(x<0?"supply":"takeup"));rotor.localPosition=new Vector3(x,.34f,.175f);
+                var rim=DeadAirFurnitureMeshes.Install(rotor,"Closed aluminium reel rim",DeadAirFurnitureMeshes.Ring(.12f,.008f,32),Vector3.zero,c.metal);
+                rim.transform.localRotation=Quaternion.Euler(90,0,0);
+                var tape=DeadAirFurnitureMeshes.Install(rotor,"Wound magnetic tape",DeadAirFurnitureMeshes.Turned(new[]{-.008f,.008f},new[]{x<0?.10f:.074f,x<0?.10f:.074f},32),Vector3.zero,c.black);
+                tape.transform.localRotation=Quaternion.Euler(90,0,0);
+                for(int i=0;i<3;i++)
+                {
+                    var spoke=DeadAirFurnitureMeshes.Install(rotor,"Separate reel spoke",DeadAirFurnitureMeshes.RoundedBox(new Vector3(.23f,.014f,.008f),.003f,.002f),new Vector3(0,0,.013f),c.metal);
+                    spoke.transform.localRotation=Quaternion.Euler(0,0,i*60);
+                }
+                var spindle=DeadAirFurnitureMeshes.Install(rotor,"Reel spindle",DeadAirFurnitureMeshes.Turned(new[]{0f,.022f},new[]{.021f,.021f},16),new Vector3(0,0,.023f),c.paper);
+                spindle.transform.localRotation=Quaternion.Euler(90,0,0);
+                DeadAirArtMotionRotor.Attach(rotor,Vector3.forward,x<0?120:160,true);
             }
             for(int i=0;i<5;i++)c.Box("Recorder transport key",new Vector3(-.17f+i*.085f,.09f,.159f),new Vector3(.052f,.035f,.025f),c.paper);
             c.Box("Recorder tape bridge",new Vector3(0,.245f,.164f),new Vector3(.24f,.035f,.02f),c.black);

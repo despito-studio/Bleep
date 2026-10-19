@@ -134,15 +134,21 @@ namespace DeadAir.Editor
                 var p=new Vector3(Mathf.Cos(a)*rx,0,-20+Mathf.Sin(a)*rz);
                 float height=6+(float)random.NextDouble()*7,width=height*.29f;
                 var right=new Vector3(-Mathf.Sin(a),0,Mathf.Cos(a));
-                // Two crossed cut-out silhouettes give parallax at a few triangles per tree.
+                // Crossed branch fans retain a serrated conifer outline behind the scanned near trees.
                 foreach(var axis in new[]{right,new Vector3(right.z,0,-right.x)})
                 {
-                    for(int tier=0;tier<3;tier++)
+                    int trunk=forest.Count;
+                    forest.Add(p-axis*.07f);forest.Add(p+axis*.07f);forest.Add(p+axis*.035f+Vector3.up*height*.86f);forest.Add(p-axis*.035f+Vector3.up*height*.86f);
+                    indices.AddRange(new[]{trunk,trunk+1,trunk+2,trunk,trunk+2,trunk+3});
+                    for(int tier=0;tier<9;tier++)
                     {
-                        float top=height-tier*height*.20f,bottom=top-height*.48f,half=width*(1-tier*.17f);
-                        int first=forest.Count;
-                        forest.Add(p+Vector3.up*top);forest.Add(p+Vector3.up*bottom-axis*half);forest.Add(p+Vector3.up*bottom+axis*half);
-                        indices.AddRange(new[]{first,first+1,first+2});
+                        float top=height-tier*height*.078f,span=height*(.19f+tier*.008f);
+                        float half=width*(.17f+tier*.085f)*(1+Mathf.Sin(i*1.7f+tier*.9f)*.08f);
+                        float[] lateral={0,-.19f,-.32f,-.29f,-.56f,-.49f,-.78f,-.69f,-1,0,1,.69f,.78f,.49f,.56f,.29f,.32f,.19f};
+                        float[] drop={0,.23f,.22f,.37f,.43f,.54f,.67f,.76f,1,.91f,1,.76f,.67f,.54f,.43f,.37f,.22f,.23f};
+                        int centre=forest.Count;forest.Add(p+Vector3.up*(top-span*.52f));int first=forest.Count;
+                        for(int point=0;point<lateral.Length;point++)forest.Add(p+axis*(lateral[point]*half)+Vector3.up*(top-span*drop[point]));
+                        for(int point=0;point<lateral.Length;point++)indices.AddRange(new[]{centre,first+point,first+(point+1)%lateral.Length});
                     }
                 }
             }

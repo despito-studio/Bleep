@@ -8,6 +8,9 @@ namespace DeadAir
     {
         public static event Action Changed;
         static bool applyingPreset, presetChanged;
+        public static bool ArtReviewReflectionsOverride { get; } = ResolveArtReviewReflections(Environment.GetCommandLineArgs());
+        public static bool ResolveArtReviewReflections(string[] arguments) => arguments != null &&
+            Array.IndexOf(arguments, "-deadAirBlackpineCapture") >= 0 && Array.IndexOf(arguments, "-deadAirArtReviewReflections") >= 0;
         public static bool Fullscreen { get => PlayerPrefs.GetInt("DeadAir.Fullscreen", 1) != 0; set { SetInt("DeadAir.Fullscreen", value ? 1 : 0); ApplyDisplay(); } }
         public static void ApplyDisplay()
         {
@@ -29,7 +32,7 @@ namespace DeadAir
         public static bool AmbientOcclusion { get => PlayerPrefs.GetInt("DeadAir.AmbientOcclusion",1)!=0; set => SetInt("DeadAir.AmbientOcclusion",value?1:0); }
         public static bool Bloom { get => PlayerPrefs.GetInt("DeadAir.Bloom",1)!=0; set => SetInt("DeadAir.Bloom",value?1:0); }
         public static bool Antialiasing { get => PlayerPrefs.GetInt("DeadAir.Antialiasing",1)!=0; set => SetInt("DeadAir.Antialiasing",value?1:0); }
-        public static bool Reflections { get => PlayerPrefs.GetInt("DeadAir.Reflections",1)!=0; set => SetInt("DeadAir.Reflections",value?1:0); }
+        public static bool Reflections { get => ArtReviewReflectionsOverride || PlayerPrefs.GetInt("DeadAir.Reflections",1)!=0; set => SetInt("DeadAir.Reflections",value?1:0); }
         public static float Brightness { get => Mathf.Clamp(PlayerPrefs.GetFloat("DeadAir.Brightness",1),.8f,1.2f); set => SetFloat("DeadAir.Brightness",Mathf.Clamp(value,.8f,1.2f)); }
         public static int ShadowQuality { get => Mathf.Clamp(PlayerPrefs.GetInt("DeadAir.ShadowQuality",2),0,2); set => SetInt("DeadAir.ShadowQuality",Mathf.Clamp(value,0,2)); }
         public static void ApplyGraphicsPreset(int quality)

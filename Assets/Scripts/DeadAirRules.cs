@@ -568,7 +568,9 @@ namespace DeadAir
                 var delta = Vector3.Distance(new Vector3(p.x, p.y, p.z), new Vector3(input.x, input.y, input.z));
                 float moveSeconds=movementBudgets.TryGetValue(id,out var lastBudget)?Mathf.Max(.04f,(float)(movementTime()-lastBudget.at)):.1f;
                 if (!p.noclip && (!MovementWithinBudget(p, delta) || !Walkable(input.x, input.y, input.z) ||
-                    SegmentBlocked(p.x, p.y, p.z, input.x, input.y, input.z))) return;
+                    SegmentBlocked(p.x, p.y, p.z, input.x, input.y, input.z) ||
+                    DeadAirChapters.IsChapter2(State.chapterId) && SchoolMovementSweepBlocked(
+                        new Vector3(-p.x, p.y, p.z), new Vector3(-input.x, input.y, input.z), p.crouching))) return;
                 if (movementBudgets.TryGetValue(id, out var budget))
                     budget.distance = Mathf.Max(0, budget.distance - delta);
                 p.x = input.x; p.y = input.y; p.z = input.z;
@@ -644,6 +646,7 @@ namespace DeadAir
             // The host sees the same imported collision geometry as its local controller.
             // A torso-height ray catches walls even if a packet skips across their thin collider.
             if (PhysicalSegmentBlocked(new Vector3(-ax, ay + .75f, az), new Vector3(-bx, by + .75f, bz), true)) return true;
+            if (DeadAirChapters.IsChapter2(State.chapterId)) return false;
             foreach (var door in world.doors)
             {
                 if (State.Door(door.id)?.open == true || Mathf.Abs((ay + by) * .5f + 1.4f - door.y) > 1) continue;
@@ -660,6 +663,36 @@ namespace DeadAir
         }
 
         static readonly RaycastHit[] movementHits = new RaycastHit[128];
+
+        static bool SchoolMovementSweepBlocked(Vector3 origin, Vector3 target, bool crouching)
+        {
+            Vector3 travel = target - origin;
+            float distance = travel.magnitude;
+            if (distance < .0001f) return false;
+            // Match the local controller after its skin and step allowance. The raised foot
+            // segment lets the controller perform its .28 m step while walls and furniture
+            // still intercept the swept torso and head, including below the old torso ray.
+            const float radius = .185f;
+            float height = crouching ? DeadAirLocomotion.CrouchingHeight : DeadAirLocomotion.StandingHeight;
+            float stepAllowance = Mathf.Min(.28f, height * .25f);
+            Vector3 lower = origin + Vector3.up * (stepAllowance + radius);
+            Vector3 upper = origin + Vector3.up * (height - radius);
+            int count = Physics.CapsuleCastNonAlloc(lower, upper, radius, travel / distance,
+                movementHits, distance, -1, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < count; i++)
+            {
+                Collider collider = movementHits[i].collider;
+                if (collider is CharacterController || collider.GetComponentInParent<DeadAirPlayer>() != null ||
+                    collider.GetComponentInParent<DeadAirCharacterMotion>() != null) continue;
+                string name = collider.name;
+                if (name.StartsWith("Step F1", StringComparison.Ordinal) || name.StartsWith("Step F2", StringComparison.Ordinal) ||
+                    name.StartsWith("Flight 1 Smooth Ramp", StringComparison.Ordinal) || name.StartsWith("Flight 2 Smooth Ramp", StringComparison.Ordinal) ||
+                    name == "Third Floor Stair Tread" || name == "Third Floor Smooth Stair Collider") continue;
+                if (movementHits[i].normal.y >= .67f) continue;
+                return true;
+            }
+            return count == movementHits.Length;
+        }
 
 
 		private static bool PhysicalSegmentBlocked(Vector3 origin, Vector3 target, bool ignoreDoors = false)

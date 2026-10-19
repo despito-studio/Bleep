@@ -12,7 +12,8 @@ Material:
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
-  m_InvalidKeywords: []
+  m_InvalidKeywords:
+  - _NORMALMAP
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
@@ -32,7 +33,15 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: 5c3b2767046872a47801c94279d5d3c3, type: 3}
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MaskMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SnowTex:
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _SurfaceMap:
@@ -41,19 +50,29 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _BumpScale: 1
     - _Cull: 2
     - _Cutoff: 0
     - _DstBlend: 0
     - _Glossiness: 0.03
     - _LightBanding: 0
+    - _MaskMapEnabled: 0
     - _Metallic: 0
+    - _MetallicMapStrength: 1
+    - _OcclusionStrength: 1
     - _PlanarReflection: 0
+    - _RoughnessFactor: 1
+    - _SnowCover: 0
     - _SrcBlend: 1
     - _SurfaceGrain: 0
     - _ZTest: 4
     - _ZWrite: 1
     m_Colors:
-    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _Color: {r: 0.91, g: 0.90099996, b: 0.829, a: 1}
+    - _DeadAirOwnerBodyClearance: {r: 0.06, g: 0.04, b: 0, a: 0.12}
+    - _DeadAirOwnerBodyEye: {r: 0, g: 0, b: 0, a: 0}
+    - _DeadAirOwnerBodyForward: {r: 0, g: 0, b: 1, a: 0}
+    - _DeadAirOwnerBodyUp: {r: 0, g: 1, b: 0, a: 0}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _ShadowTint: {r: 0.86, g: 0.95, b: 1.08, a: 1}
   m_BuildTextureStacks: []
