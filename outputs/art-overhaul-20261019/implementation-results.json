@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
-  "generatedUtc": "2026-10-19T12:48:26.204490+00:00",
-  "sourceCommit": "f16f1318b0c09f31fdde37a5163d5f387c77a019",
+  "generatedUtc": "2026-10-19T13:02:23.474544+00:00",
+  "sourceCommit": "015fe0d4da1e67ae7e2bb33897487fb8934def5a",
   "sourceRepository": "https://github.com/dorimommy/Dear-air.git",
   "localChanges": true,
   "scope": "Оточення та механізми офісу Blackpine, школи, сусідніх вулиць і парку.",
@@ -58,7 +58,7 @@
     "path": "outputs/art-overhaul-20261019/DeadAir-Art-Overhaul-2026-10-19.xlsx",
     "exists": true,
     "status": "updated with actual texture budgets and separate historical validation scope",
-    "sha256": "addc798d10147e4c94dbef6675f5f446f562145264324310e5a6433c1f9c738f",
+    "sha256": "7f4d345b3464e0c1d3b4b18f9d0dbf29a56adac062247e506ec7f88d5dd6fb63",
     "sheets": 22,
     "historicalSheets": 20,
     "historicalPreserved": true,
@@ -221,8 +221,9 @@
   },
   "windows": {
     "buildResult": "Succeeded",
-    "builtAtUtc": "2026-10-19T12:43:45.4227688Z",
-    "executable": "Builds/ArtOverhaul-20261019/DeadAir.exe",
+    "builtAtUtc": "2026-10-19T12:56:21.6118609Z",
+    "version": "2.0.0",
+    "executable": "Builds/Windows-v2.0.0/DeadAir.exe",
     "manifest": "outputs/art-overhaul-20261019/optimized-build-info.json",
     "packagedFiles": 161,
     "packagedBytes": 529541848,
@@ -230,6 +231,17 @@
     "packageByteReductionPercent": 63.35,
     "runtimeVerification": "not-run-per-user-request-after-texture-optimization",
     "tests": "Повторні тести не запускалися за вказівкою користувача.",
-    "productionBuildLog": "Logs/art-texture-budget-production-build.log"
-  }
+    "productionBuildLog": "Logs/art-v2.0.0-production-build.log",
+    "releasePackage": {
+      "version": "2.0.0",
+      "archive": "D:\\DeadAirUnityProject\\Builds\\Releases-v2.0.0\\DeadAir-Windows-v2.0.0.zip",
+      "bytes": 263612940,
+      "sha256": "80b7fc1710bd3b0ee1dcdca13fb68e1a42d9386547824014a08a374d837d1de7",
+      "packagedRuntimeFiles": 161,
+      "runtimeVerification": "not-run-per-user-request-after-texture-optimization",
+      "operation": "Packaging only; no tests, player launch or runtime attestation performed."
+    }
+  },
+  "version": "2.0.0",
+  "releaseTag": "v2.0.0"
 }
