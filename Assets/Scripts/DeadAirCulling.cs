@@ -31,6 +31,13 @@ namespace DeadAir
             public RoomData room;
             public LightShadows shadows;
             public float priority;
+            // A lamp behind a wall is resolved with up to three raycasts. Its
+            // answer only changes when a door moves or the eye travels, so it is
+            // reused briefly instead of being sampled on every visibility tick.
+            public bool visibilityCached;
+            public Vector3 visibilityEye;
+            public float visibilityTime;
+            public bool visibilityResult;
         }
         readonly List<Sector> sectors = new List<Sector>();
         readonly Plane[] planes = new Plane[6];
@@ -86,7 +93,7 @@ namespace DeadAir
                         foreach(var room in world.rooms)
                             if(Mathf.Abs(room.floorY-volume.floor*DeadAirOfficeLayout.FloorHeight)<.01f &&
                                 Contains(room,light.transform.position)){volume.room=room;break;}
-                        light.shadowCustomResolution=DeadAirSettings.ShadowQuality==2?1024:512;
+                        light.shadowCustomResolution=512;
                     }
                 }
                 sectors.Add(new Sector { bounds = bounds, renderers = renderers, shadowModes=shadowModes,
@@ -119,12 +126,18 @@ namespace DeadAir
         {
             if(!volume.ceilingFixture)return true;
             if(volume.room!=null && volume.floor==cameraFloor && Contains(volume.room,cameraPosition))return true;
+            float now=Time.unscaledTime;
+            if(volume.visibilityCached && now-volume.visibilityTime<.3f &&
+                (volume.visibilityEye-cameraPosition).sqrMagnitude<1.44f)return volume.visibilityResult;
             var position=volume.light.transform.position;
             // A closed office wall/door hides the lamp's entire light pool. Sample
             // multiple heights so an open doorway or a desk does not hide it falsely.
-            return ClearSample(cameraPosition,position) ||
+            bool visible=ClearSample(cameraPosition,position) ||
                 ClearSample(cameraPosition,position+Vector3.down*1.2f) ||
                 ClearSample(cameraPosition,new Vector3(position.x,volume.floor*DeadAirOfficeLayout.FloorHeight+.4f,position.z));
+            volume.visibilityCached=true;volume.visibilityEye=cameraPosition;
+            volume.visibilityTime=now;volume.visibilityResult=visible;
+            return visible;
         }
 
         static Bounds IlluminationBounds(Light light)
@@ -159,7 +172,7 @@ namespace DeadAir
         public void Update(RoomState state, Camera camera, bool force = false)
         {
             if (camera == null || !force && Time.unscaledTime < nextUpdate) return;
-            nextUpdate = Time.unscaledTime + .1f;
+            nextUpdate = Time.unscaledTime + .15f;
             var cameraPosition=camera.transform.position;
             bool inside=InteriorFloor(cameraPosition,out int cameraFloor);
             GeometryUtility.CalculateFrustumPlanes(camera, planes);
@@ -208,7 +221,9 @@ namespace DeadAir
                     }
                 }
             }
-            int shadowBudget=shadowQuality==0?0:shadowQuality==2?3:1;
+            // Two shadowed practicals cover the room the player stands in; a third
+            // point light costs six more shadow faces per frame for little gain.
+            int shadowBudget=shadowQuality==0?0:shadowQuality==2?2:1;
             // Only the nearest one/three candidates matter. Select that prefix
             // without sorting every visible fixture or allocating a comparer.
             for(int i=0;i<Mathf.Min(shadowBudget,shadowCandidates.Count);i++)
@@ -222,7 +237,9 @@ namespace DeadAir
             {
                 var volume=shadowCandidates[i];
                 var shadows=i<shadowBudget?volume.shadows:LightShadows.None;
-                int resolution=shadowQuality==2?1024:512;
+                // Practicals light a small pool; a 512 map is indistinguishable from
+                // 1024 here and halves their shadow pass cost.
+                int resolution=512;
                 if(volume.light.shadowCustomResolution!=resolution)volume.light.shadowCustomResolution=resolution;
                 if(volume.light.shadows!=shadows)volume.light.shadows=shadows;
                 if(shadows!=LightShadows.None)ShadowPracticalCount++;

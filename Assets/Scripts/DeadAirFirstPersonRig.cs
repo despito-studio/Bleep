@@ -364,12 +364,16 @@ namespace DeadAir
         public void ConfigureRenderer(RenderTexture frame)
         {
             if (sourceCamera == null || equipmentCamera == null) return;
-            equipmentCamera.targetTexture = frame;
-            equipmentCamera.aspect = sourceCamera.aspect;
-            equipmentCamera.rect = sourceCamera.rect;
-            equipmentCamera.depth = sourceCamera.depth + .5f;
-            equipmentCamera.targetDisplay = sourceCamera.targetDisplay;
-            equipmentCamera.enabled = visible && sourceCamera.enabled && isActiveAndEnabled;
+            // The frame renderer calls this every frame; only touching changed
+            // camera state keeps it from rebuilding render state needlessly.
+            if (equipmentCamera.targetTexture != frame) equipmentCamera.targetTexture = frame;
+            if (!Mathf.Approximately(equipmentCamera.aspect, sourceCamera.aspect)) equipmentCamera.aspect = sourceCamera.aspect;
+            if (equipmentCamera.rect != sourceCamera.rect) equipmentCamera.rect = sourceCamera.rect;
+            float depth = sourceCamera.depth + .5f;
+            if (!Mathf.Approximately(equipmentCamera.depth, depth)) equipmentCamera.depth = depth;
+            if (equipmentCamera.targetDisplay != sourceCamera.targetDisplay) equipmentCamera.targetDisplay = sourceCamera.targetDisplay;
+            bool enabledState = visible && sourceCamera.enabled && isActiveAndEnabled;
+            if (equipmentCamera.enabled != enabledState) equipmentCamera.enabled = enabledState;
         }
 
         public void RenderEquipment(RenderTexture frame)

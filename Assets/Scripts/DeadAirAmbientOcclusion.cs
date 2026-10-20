@@ -11,8 +11,11 @@ namespace DeadAir
         void Awake() { view = GetComponent<Camera>(); }
         void OnPreCull()
         {
-            if (DeadAirSettings.AmbientOcclusion) view.depthTextureMode |= DepthTextureMode.DepthNormals;
-            else view.depthTextureMode &= ~DepthTextureMode.DepthNormals;
+            // Depth alone is enough: the occlusion shader rebuilds normals from
+            // it. Depth is free in the deferred path, while DepthNormals would add
+            // a second full geometry pass for every opaque object.
+            if (DeadAirSettings.AmbientOcclusion) view.depthTextureMode |= DepthTextureMode.Depth;
+            else view.depthTextureMode &= ~DepthTextureMode.Depth;
         }
 
 

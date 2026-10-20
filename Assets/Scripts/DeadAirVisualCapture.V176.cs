@@ -246,11 +246,11 @@ namespace DeadAir
             DeadAirSettings.AmbientOcclusion = true;
             yield return Save("graphics-13-contact-occlusion-on");
             var ao = player.ViewCamera.GetComponent<DeadAirAmbientOcclusion>();
-            Require(ao != null && ao.IsActive && (player.ViewCamera.depthTextureMode & DepthTextureMode.DepthNormals) != 0,
-                "SSAO must consume the actual camera depth and normal buffer.");
+            Require(ao != null && ao.IsActive && (player.ViewCamera.depthTextureMode & DepthTextureMode.Depth) != 0,
+                "SSAO must consume the actual camera depth buffer.");
             float aoDifference = V176Difference(noOcclusion,ReadV176Frame(frameRenderer.SceneFrame),architecture);
             Require(aoDifference > .0001f, "Enabling ambient occlusion must shade visible scene contacts; difference=" + Number(aoDifference));
-            graphicsChecks.Add("PASSED: actual depth/normal SSAO changes GPU contact shading; mean RGB change=" + Number(aoDifference) + ".");
+            graphicsChecks.Add("PASSED: depth-reconstructed SSAO changes GPU contact shading; mean RGB change=" + Number(aoDifference) + ".");
             DeadAirSettings.AmbientOcclusion = false;
 
             InspectV176(-8,-13,0,-8,3,-20.75f);

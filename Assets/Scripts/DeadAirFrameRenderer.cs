@@ -38,7 +38,8 @@ namespace DeadAir
             previousRenderingPath = camera.renderingPath;
             camera.allowMSAA = false;
             camera.allowHDR = true;
-            camera.depthTextureMode |= DepthTextureMode.DepthNormals;
+            // The occlusion component owns the depth texture mode; asking for it
+            // here as well would keep the extra depth pass alive when SSAO is off.
             camera.gameObject.AddComponent<DeadAirAmbientOcclusion>();
             camera.gameObject.AddComponent<DeadAirPlanarReflections>();
             foreach(var light in camera.GetComponentsInChildren<Light>(true))DeadAirPlanarReflections.RegisterLocalShadowLight(light);
@@ -118,9 +119,10 @@ namespace DeadAir
 			{
 				equipment.ConfigureRenderer(SceneFrame);
 			}
-			OutputCamera.aspect = num3;
-			OutputCamera.depth = worldCamera.depth + 1f;
-			tape.SourceFrame = SceneFrame;
+			if (!Mathf.Approximately(OutputCamera.aspect, num3)) OutputCamera.aspect = num3;
+			float depth = worldCamera.depth + 1f;
+			if (!Mathf.Approximately(OutputCamera.depth, depth)) OutputCamera.depth = depth;
+			if (tape.SourceFrame != SceneFrame) tape.SourceFrame = SceneFrame;
 		}
 
 

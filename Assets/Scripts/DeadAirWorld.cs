@@ -82,7 +82,6 @@ namespace DeadAir
             DeadAirSettings.Changed -= ApplyGraphicsQuality;
             DeadAirSettings.Changed += ApplyGraphicsQuality;
             QualitySettings.vSyncCount = 0;
-            QualitySettings.shadowCascades = 2;
             if(root.Find("station")==null) Instantiate("station").name="station";
             if(root.Find("exterior")==null) Instantiate("exterior").name="exterior";
             DiscardOriginalVanBeams(root.Find("exterior"));
@@ -96,6 +95,7 @@ namespace DeadAir
             if(litShader!=null)
             {
                 interiorLampMaterial = new Material(litShader){name="light-panel / dynamic interior",hideFlags=HideFlags.DontSave};
+                interiorLampMaterial.enableInstancing=true;
                 interiorLampMaterial.SetColor("_EmissionColor",Color.black);
                 interiorLampMaterial.SetColor("_Color",new Color(.20f,.22f,.18f,1f));
                 var stationRoot = root.Find("station");
@@ -179,6 +179,8 @@ namespace DeadAir
                 moon.shadowCustomResolution=1024;
             }
             if(vanPresentation.VehicleRoot!=null)dynamicRoots.Add(vanPresentation.VehicleRoot);
+            LimitPropShadowCasting(root.Find("station"));
+            LimitPropShadowCasting(root.Find("exterior"));
             culling = new DeadAirCulling(data,root.Find("station"),root.Find("exterior"),dynamicRoots,doorAnimations);
             anchor=Instantiate("monster");bloodyAnchor=Instantiate("monster_bloody");
             anchorMotion=anchor.AddComponent<DeadAirMonsterMotion>();
@@ -229,6 +231,9 @@ namespace DeadAir
                     {
                         material=new Material(source) {name=source.name+" / lit",hideFlags=HideFlags.DontSave};
                         material.shader=litShader;
+                        // Repeated office props share one mesh and material. Instancing
+                        // collapses them into far fewer draw calls than per-object draws.
+                        material.enableInstancing=true;
                         bool monitor=IsMonitorMaterial(source);
                         material.SetColor("_EmissionColor",monitor?new Color(.12f,.16f,.13f):Color.black);
                         // Labels converted from the unlit export need a matte
@@ -300,12 +305,32 @@ namespace DeadAir
             }
         }
 
+        // Small desk clutter contributes almost no visible moonlight shadow, but
+        // every piece is submitted to every shadow-casting lamp. The surface pass
+        // still receives shadows, so contact darkening stays intact.
+        static void LimitPropShadowCasting(Transform content)
+        {
+            if(content==null)return;
+            float threshold=DeadAirSettings.ShadowQuality==2?.35f:DeadAirSettings.ShadowQuality==1?.6f:1f;
+            foreach(var renderer in content.GetComponentsInChildren<Renderer>(true))
+            {
+                if(renderer.shadowCastingMode==ShadowCastingMode.Off)continue;
+                if(renderer.name.StartsWith("mirror:",StringComparison.Ordinal))continue;
+                var size=renderer.bounds.size;
+                if(Mathf.Max(size.x,Mathf.Max(size.y,size.z))>=threshold)continue;
+                renderer.shadowCastingMode=ShadowCastingMode.Off;
+            }
+        }
+
         static void ApplyGraphicsQuality()
         {
             QualitySettings.pixelLightCount = DeadAirSettings.GraphicsQuality == 0 ? 6 : 10;
             QualitySettings.shadows = DeadAirSettings.ShadowQuality == 0 ? ShadowQuality.Disable : ShadowQuality.All;
             QualitySettings.shadowResolution = DeadAirSettings.ShadowQuality == 2 ? ShadowResolution.High : ShadowResolution.Medium;
-            QualitySettings.shadowDistance = DeadAirSettings.ShadowQuality == 2 ? 30 : 20;
+            // One cascade across a small interior removes a whole directional shadow
+            // pass; the moon is dim and every lamp already has its own pool.
+            QualitySettings.shadowCascades = 1;
+            QualitySettings.shadowDistance = DeadAirSettings.ShadowQuality == 2 ? 24 : DeadAirSettings.ShadowQuality == 1 ? 18 : 15;
             QualitySettings.anisotropicFiltering = AnisotropicFiltering.ForceEnable;
         }
 

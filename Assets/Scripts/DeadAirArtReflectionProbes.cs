@@ -68,10 +68,12 @@ namespace DeadAir
         Bounds captureVolume;
         FaceVisibility faceVisibility;
         Camera faceCamera;
+        string stableKey;
+        double stableSince;
         int renderedFaces, restoredSurfaces;
         public static bool IsCapturing => capturing;
         public int AllocatedProbeCount => rig != null ? rig.GetComponentsInChildren<ReflectionProbe>(true).Length : 0;
-        public static int ResolutionForQuality(int quality) => quality >= 2 ? 128 : 64;
+        public static int ResolutionForQuality(int quality) => quality >= 2 ? 64 : quality == 1 ? 32 : 0;
 
         public static DeadAirArtReflectionProbes Attach(Transform owner, WorldData office = null)
         {
@@ -87,22 +89,33 @@ namespace DeadAir
             EndProbeFace();
             bool enabledForView = active && viewer != null && DeadAirSettings.Reflections && isActiveAndEnabled &&
                 SystemInfo.graphicsDeviceType != GraphicsDeviceType.Null;
-            if (!enabledForView)
+            if (!enabledForView || ResolutionForQuality(DeadAirSettings.GraphicsQuality) <= 0)
             {
                 if (rig != null) ReleaseOwnedResources();
                 return;
             }
+            // A six-face capture of the whole office must not run while the world
+            // is frozen for a pause or a modal panel.
+            if (state != null && state.paused) return;
             EnsureRig(); rig.SetActive(true);
-            RenderSettings.reflectionIntensity = 1;
             if (!Application.isPlaying) return;
-            QualitySettings.realtimeReflectionProbes = true;
             FinishScheduledCapture();
             var bounds = VolumeForEye(viewer.transform.position, out var key);
             int lighting = LightingRevision(state);
             var slot = Select(key);
             slot.used = Time.realtimeSinceStartupAsDouble;
-            if (slot.key == key && slot.lighting == lighting && slot.probe.resolution == ResolutionForQuality(DeadAirSettings.GraphicsQuality)) return;
-            if (inFlight != null || Time.realtimeSinceStartupAsDouble < nextCapture) return;
+            if (slot.key == key && slot.lighting == lighting && slot.probe.resolution == ResolutionForQuality(DeadAirSettings.GraphicsQuality))
+            {
+                stableKey = key;
+                return;
+            }
+            // A six-face capture costs the scene six times. Entering a doorway
+            // mid-stride is exactly when it would be felt, so wait for the eye to
+            // settle in the new room before paying for it.
+            double now = Time.realtimeSinceStartupAsDouble;
+            if (stableKey != key) { stableKey = key; stableSince = now; return; }
+            if (now - stableSince < .75) return;
+            if (inFlight != null || now < nextCapture) return;
             Configure(slot, viewer.transform.position, bounds, viewer.cullingMask);
             slot.probe.mode = ReflectionProbeMode.Realtime;
             slot.probe.timeSlicingMode = ReflectionProbeTimeSlicingMode.IndividualFaces;
@@ -219,6 +232,10 @@ namespace DeadAir
         void EnsureRig()
         {
             if (rig != null) return;
+            // Both are global switches. Writing them every frame rebuilt lighting
+            // state for the whole scene, so they are set once with the probe rig.
+            QualitySettings.realtimeReflectionProbes = true;
+            RenderSettings.reflectionIntensity = 1;
             rig = new GameObject("Local real-scene specular probes") { hideFlags = HideFlags.HideAndDontSave };
             SceneManager.MoveGameObjectToScene(rig, gameObject.scene);
             for (int i = 0; i < SlotCount; i++)
@@ -243,7 +260,7 @@ namespace DeadAir
             probe.transform.SetPositionAndRotation(eye, Quaternion.identity);
             probe.transform.localScale = Vector3.one;
             probe.center = volume.center - eye; probe.size = volume.size;
-            probe.nearClipPlane = .06f; probe.farClipPlane = 200;
+            probe.nearClipPlane = .06f; probe.farClipPlane = 45;
             probe.cullingMask = mask & ~((1 << 28) | (1 << 29) | (1 << 30));
             probe.shadowDistance = Mathf.Min(QualitySettings.shadowDistance, 35);
         }

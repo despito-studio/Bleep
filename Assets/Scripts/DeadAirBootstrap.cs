@@ -31,6 +31,8 @@ namespace DeadAir
             new GameObject("Blackpine winter").AddComponent<DeadAirWinterWorld>().Initialize(data, session);
             if(Application.isPlaying && DeadAirVisualCapture.IsRequested)
                 new GameObject("Visual capture").AddComponent<DeadAirVisualCapture>().Initialize(session, actor);
+            if(Application.isPlaying && DeadAirPerfProbe.IsRequested)
+                new GameObject("Performance probe").AddComponent<DeadAirPerfProbe>().Initialize(session, actor);
         }
 
         void Update() { world.Apply(session.State); }

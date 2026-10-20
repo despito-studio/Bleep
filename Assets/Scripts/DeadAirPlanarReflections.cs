@@ -12,6 +12,8 @@ namespace DeadAir
         int lastFrame = -1;
         int lastMask;
         float lastFloor = float.NaN;
+        Vector3 lastPosition;
+        Quaternion lastRotation = Quaternion.identity;
         readonly List<Renderer> receivers = new List<Renderer>();
         readonly Plane[] receiverPlanes = new Plane[6];
         static readonly List<Light> localShadowLights = new List<Light>();
@@ -46,21 +48,30 @@ namespace DeadAir
 				return;
 			}
 			int graphicsQuality = DeadAirSettings.GraphicsQuality;
+			// A polished floor is a blurred, low-contrast reflection. Refreshing it
+			// every third frame instead of every frame removes a full second scene
+			// pass from two thirds of the frames without a visible change.
 			int num2 = graphicsQuality switch
 			{
-				1 => 2, 
-				2 => 1, 
-				_ => 3, 
+				1 => 4, 
+				2 => 3, 
+				_ => 6, 
 			};
 			float num3 = graphicsQuality switch
 			{
-				1 => 0.4f, 
-				2 => 0.5f, 
-				_ => 0.33f, 
+				1 => 0.33f, 
+				2 => 0.4f, 
+				_ => 0.25f, 
 			};
 			int num4 = Mathf.Max(192, Mathf.RoundToInt((float)((source.targetTexture != null) ? source.targetTexture.width : Screen.width) * num3));
 			int num5 = Mathf.Max(108, Mathf.RoundToInt((float)((source.targetTexture != null) ? source.targetTexture.height : Screen.height) * num3));
-			if (!IsRenderingReflection || !(frame != null) || frame.width != num4 || frame.height != num5 || lastFloor != num || lastMask != source.cullingMask || Time.frameCount - lastFrame >= num2)
+			// A still camera (menu, pause, inspection pose) repeats the same image.
+			// Once the eye and the view stop, the reflection can age three times
+			// longer before it is worth rendering again.
+			bool still = (source.transform.position - lastPosition).sqrMagnitude < .0004f &&
+				Quaternion.Angle(source.transform.rotation, lastRotation) < .75f;
+			int interval = still ? num2 * 3 : num2;
+			if (!IsRenderingReflection || !(frame != null) || frame.width != num4 || frame.height != num5 || lastFloor != num || lastMask != source.cullingMask || Time.frameCount - lastFrame >= interval)
 			{
 				if (frame == null || frame.width != num4 || frame.height != num5)
 				{
@@ -84,6 +95,9 @@ namespace DeadAir
 				}
 				reflectedCamera.CopyFrom(source);
 				reflectedCamera.enabled = false;
+				// The reflection is a blurred floor image. Geometry past a few rooms
+				// is invisible in it, so the pass does not submit the whole office.
+				reflectedCamera.farClipPlane = Mathf.Min(source.farClipPlane, 32f);
 				reflectedCamera.depthTextureMode = DepthTextureMode.None;
 				reflectedCamera.useOcclusionCulling = false;
 				reflectedCamera.allowMSAA = false;
@@ -102,20 +116,20 @@ namespace DeadAir
 				Vector4 clipPlane = new Vector4(normalized.x, normalized.y, normalized.z, 0f - Vector3.Dot(lhs, normalized));
 				reflectedCamera.projectionMatrix = source.CalculateObliqueMatrix(clipPlane);
 				bool invertCulling = GL.invertCulling;
-				int pixelLightCount = QualitySettings.pixelLightCount;
 				try
 				{
 					rendering = true;
 					Shader.SetGlobalFloat("_DeadAirReflectionEnabled", 0f);
 					GL.invertCulling = !invertCulling;
 					SuspendLocalShadows(reflectedCamera.cullingMask);
-					QualitySettings.pixelLightCount = Mathf.Min(pixelLightCount, 4);
+					// The reflection target is already a quarter of the screen. The
+					// renderer's own pixel-light budget is set per quality, so changing
+					// the global QualitySettings value only forced lighting rebuilds.
 					reflectedCamera.Render();
 				}
 				finally
 				{
 					RestoreLocalShadows();
-					QualitySettings.pixelLightCount = pixelLightCount;
 					GL.invertCulling = invertCulling;
 					rendering = false;
 				}
@@ -127,6 +141,8 @@ namespace DeadAir
 				lastFrame = Time.frameCount;
 				lastFloor = num;
 				lastMask = source.cullingMask;
+				lastPosition = source.transform.position;
+				lastRotation = source.transform.rotation;
 				IsRenderingReflection = true;
 			}
 		}
