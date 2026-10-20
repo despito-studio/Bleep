@@ -14,13 +14,16 @@ namespace DeadAir
             public Renderer[] renderers;
             public ShadowCastingMode[] shadowModes;
             public Bounds[] rendererBounds;
+            public float[] rendererExtents;
             public bool[] dynamicBounds;
             public bool[] shadowOnly;
+            public bool[] lodCulled;
             public Bounds casterBounds;
             public bool hasCaster;
             public LightVolume[] lights;
             public bool visible = true;
             public bool nextVisible, keepShadows;
+            public Vector3 lastEye;
         }
         sealed class LightVolume
         {
@@ -44,6 +47,7 @@ namespace DeadAir
         readonly Plane[] reflectionPlanes = new Plane[6];
         readonly WorldData world;
         readonly List<LightVolume> shadowCandidates=new List<LightVolume>();
+        readonly List<LightVolume> enabledCandidates=new List<LightVolume>(256);
         static readonly RaycastHit[] occlusionHits=new RaycastHit[32];
         float nextUpdate;
         public int VisibilityRaycasts { get; private set; }
@@ -65,11 +69,15 @@ namespace DeadAir
                 Bounds bounds = renderers[0].bounds;
                 foreach (var renderer in renderers) bounds.Encapsulate(renderer.bounds);
                 var shadowModes=new ShadowCastingMode[renderers.Length];
-                var rendererBounds=new Bounds[renderers.Length];var dynamicBounds=new bool[renderers.Length];
+                var rendererBounds=new Bounds[renderers.Length];
+                var rendererExtents=new float[renderers.Length];
+                var dynamicBounds=new bool[renderers.Length];
                 Bounds casterBounds=new Bounds();bool hasCaster=false;
                 for(int i=0;i<renderers.Length;i++)
                 {
                     rendererBounds[i]=renderers[i].bounds;
+                    var size=rendererBounds[i].size;
+                    rendererExtents[i]=Mathf.Max(size.x,Mathf.Max(size.y,size.z));
                     for(var owner=renderers[i].transform;owner!=null&&owner!=station;owner=owner.parent)
                         if(dynamicRoots.Contains(owner)){dynamicBounds[i]=true;break;}
                     shadowModes[i]=renderers[i].shadowCastingMode;
@@ -97,8 +105,8 @@ namespace DeadAir
                     }
                 }
                 sectors.Add(new Sector { bounds = bounds, renderers = renderers, shadowModes=shadowModes,
-                    rendererBounds=rendererBounds,dynamicBounds=dynamicBounds,
-                    shadowOnly=new bool[renderers.Length],
+                    rendererBounds=rendererBounds,rendererExtents=rendererExtents,dynamicBounds=dynamicBounds,
+                    shadowOnly=new bool[renderers.Length],lodCulled=new bool[renderers.Length],
                     casterBounds=casterBounds,hasCaster=hasCaster,lights = volumes });
             }
         }
@@ -186,8 +194,10 @@ namespace DeadAir
                 GeometryUtility.CalculateFrustumPlanes(camera.projectionMatrix*camera.worldToCameraMatrix*mirror,reflectionPlanes);
             }
             shadowCandidates.Clear();
+            enabledCandidates.Clear();
             VisibilityRaycasts=0;EnabledPracticalCount=0;ShadowPracticalCount=0;
             int shadowQuality=DeadAirSettings.ShadowQuality;
+            int graphicsQuality=DeadAirSettings.GraphicsQuality;
             foreach (var sector in sectors)
             {
                 float distanceSquared = sector.bounds.SqrDistance(cameraPosition);
@@ -205,22 +215,44 @@ namespace DeadAir
                         reflectedView&&GeometryUtility.TestPlanesAABB(reflectionPlanes,volume.bounds));
                     // A powered-off fixture has no light pool to expose and needs
                     // neither occlusion queries nor a place in the shadow budget.
-                    bool enabled=light.intensity>.0001f && relevant && VisiblePractical(volume,cameraPosition,cameraFloor);
-                    if(light.enabled!=enabled)light.enabled=enabled;
-                    if(enabled)EnabledPracticalCount++;
+                    bool candidate=light.intensity>.0001f && relevant && VisiblePractical(volume,cameraPosition,cameraFloor);
+                    if(!candidate)
+                    {
+                        if(light.enabled)light.enabled=false;
+                        continue;
+                    }
+                    volume.priority=(light.transform.position-cameraPosition).sqrMagnitude;
+                    // Keep the player's own room lit before any distant doorway.
+                    if(volume.room!=null && volume.floor==cameraFloor && Contains(volume.room,cameraPosition))volume.priority-=1000f;
+                    enabledCandidates.Add(volume);
                     if(volume.ceilingFixture && volume.shadows!=LightShadows.None)
                     {
-                        if(light.enabled&&shadowQuality>0)
-                        {
-                            volume.priority=(light.transform.position-cameraPosition).sqrMagnitude;
-                            // Keep current room contact shadows before a distant doorway.
-                            if(volume.room!=null && volume.floor==cameraFloor && Contains(volume.room,cameraPosition))volume.priority-=1000;
-                            shadowCandidates.Add(volume);
-                        }
-                        else if(light.shadows!=LightShadows.None)light.shadows=LightShadows.None;
+                        if(shadowQuality>0)shadowCandidates.Add(volume);
+                        else if(volume.light.shadows!=LightShadows.None)volume.light.shadows=LightShadows.None;
                     }
                 }
             }
+            // Deferred lighting evaluates every enabled light for every pixel tile.
+            // Shading a couple of dozen practicals keeps the visible pools intact
+            // while dropping the rest, which are only glimpsed through doorways.
+            int lightBudget=graphicsQuality==2?18:graphicsQuality==1?12:8;
+            int enabledCount=enabledCandidates.Count;
+            if(enabledCount>lightBudget)
+            {
+                for(int i=0;i<lightBudget;i++)
+                {
+                    int nearest=i;
+                    for(int j=i+1;j<enabledCount;j++)
+                        if(enabledCandidates[j].priority<enabledCandidates[nearest].priority)nearest=j;
+                    var selected=enabledCandidates[nearest];enabledCandidates[nearest]=enabledCandidates[i];enabledCandidates[i]=selected;
+                }
+                for(int i=lightBudget;i<enabledCount;i++)
+                    if(enabledCandidates[i].light.enabled)enabledCandidates[i].light.enabled=false;
+                enabledCount=lightBudget;
+            }
+            for(int i=0;i<Mathf.Min(lightBudget,enabledCandidates.Count);i++)
+                if(!enabledCandidates[i].light.enabled)enabledCandidates[i].light.enabled=true;
+            EnabledPracticalCount=enabledCount;
             // Two shadowed practicals cover the room the player stands in; a third
             // point light costs six more shadow faces per frame for little gain.
             int shadowBudget=shadowQuality==0?0:shadowQuality==2?2:1;
@@ -259,10 +291,15 @@ namespace DeadAir
                 // A room intersecting one light volume need not submit every
                 // hidden desk and bookcase. Test immutable renderer bounds only
                 // after the broad sector test; moving doors use their live bounds.
-                if(sector.visible!=sector.nextVisible||sector.keepShadows!=keepShadows||keepShadows)
+                bool eyeMoved=(sector.lastEye-cameraPosition).sqrMagnitude>2.25f;
+                if(sector.visible!=sector.nextVisible||sector.keepShadows!=keepShadows||keepShadows||
+                    sector.nextVisible&&eyeMoved)
                 {
                     bool visibilityChanged=sector.visible!=sector.nextVisible;
-                    sector.visible=sector.nextVisible;sector.keepShadows=keepShadows;
+                    sector.visible=sector.nextVisible;sector.keepShadows=keepShadows;sector.lastEye=cameraPosition;
+                    float lodExtent=graphicsQuality==2?.5f:graphicsQuality==1?.8f:1.2f;
+                    float lodDistance=graphicsQuality==2?20f:graphicsQuality==1?15f:10f;
+                    float lodDistanceSquared=lodDistance*lodDistance;
                     for(int i=0;i<sector.renderers.Length;i++)
                     {
                         var renderer=sector.renderers[i];if(renderer==null)continue;
@@ -273,11 +310,17 @@ namespace DeadAir
                             shadowOnly=bounds.SqrDistance(cameraPosition)<shadowReachSquared&&
                                 CasterRelevant(bounds,reflectedFloor,moonRelevant,reflectedView,shadowBudget);
                         }
-                        if(visibilityChanged||sector.shadowOnly[i]!=shadowOnly)
+                        // Scanned props have no authored LODs yet, so small pieces of
+                        // set dressing drop out past the distance at which they cover
+                        // only a few pixels. Moving parts keep their live bounds.
+                        bool lodCulled=sector.visible&&!sector.dynamicBounds[i]&&
+                            sector.rendererExtents[i]<lodExtent&&
+                            sector.rendererBounds[i].SqrDistance(cameraPosition)>lodDistanceSquared;
+                        if(visibilityChanged||eyeMoved||sector.shadowOnly[i]!=shadowOnly||sector.lodCulled[i]!=lodCulled)
                         {
                             renderer.shadowCastingMode=shadowOnly?ShadowCastingMode.ShadowsOnly:sector.shadowModes[i];
-                            renderer.enabled=sector.visible||shadowOnly;
-                            sector.shadowOnly[i]=shadowOnly;
+                            renderer.enabled=(sector.visible&&!lodCulled)||shadowOnly;
+                            sector.shadowOnly[i]=shadowOnly;sector.lodCulled[i]=lodCulled;
                         }
                         if(shadowOnly)ShadowOnlyRendererCount++;
                     }
